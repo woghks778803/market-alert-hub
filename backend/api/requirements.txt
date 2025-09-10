@@ -1,0 +1,9 @@
+# backend/api/requirements.txt
+fastapi
+uvicorn[standard]
+sqlalchemy
+alembic
+pydantic[email]
+python-jose[cryptography]
+passlib[bcrypt]
+redis

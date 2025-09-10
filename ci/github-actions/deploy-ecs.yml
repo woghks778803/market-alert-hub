@@ -1,0 +1,54 @@
+# ECS 서비스 업데이트
+name: deploy-ecs
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: "ECS Service name (ex: mah-api | mah-worker | mah-collectors | mah-gateway)"
+        required: true
+      taskdef_file:
+        description: "Path to taskdef JSON (ex: infra/ecs/api-taskdef.json)"
+        required: true
+      image:
+        description: "ECR image repo (ex: 123456789012.dkr.ecr.ap-northeast-2.amazonaws.com/mah-api)"
+        required: true
+      tag:
+        description: "Image tag (ex: main-<sha>)"
+        required: true
+      cluster:
+        description: "ECS Cluster name (ex: mah-prod)"
+        required: true
+        default: "mah-prod"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions: { contents: read }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Register Task Definition with new image
+        id: reg
+        run: |
+          jq --arg img "${{ inputs.image }}:${{ inputs.tag }}" \
+             '.containerDefinitions |= map(.image = $img)' \
+             "${{ inputs.taskdef_file }}" > /tmp/td.json
+          REV=$(aws ecs register-task-definition --cli-input-json file:///tmp/td.json | jq -r '.taskDefinition.taskDefinitionArn')
+          echo "rev=$REV" >> $GITHUB_OUTPUT
+
+      - name: Update Service
+        run: |
+          aws ecs update-service \
+            --cluster "${{ inputs.cluster }}" \
+            --service "${{ inputs.service }}" \
+            --task-definition "${{ steps.reg.outputs.rev }}" \
+            --force-new-deployment
+          aws ecs wait services-stable \
+            --cluster "${{ inputs.cluster }}" \
+            --services "${{ inputs.service }}"

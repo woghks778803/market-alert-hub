@@ -1,0 +1,4 @@
+# backend/worker/requirements.txt
+sqlalchemy
+redis
+pydantic

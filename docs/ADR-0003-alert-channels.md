@@ -1,0 +1,1 @@
+# Discord/Email 우선, FCM/Kakao 후순위

@@ -1,0 +1,20 @@
+{
+  "family": "mah-frontend",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "containerDefinitions": [{
+    "name": "frontend",
+    "image": "<ECR>/mah-frontend:<TAG>",
+    "portMappings": [{ "containerPort": 80, "protocol": "tcp" }],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/ecs/mah-frontend",
+        "awslogs-region": "ap-northeast-2",
+        "awslogs-stream-prefix": "ecs"
+      }
+    }
+  }]
+}
