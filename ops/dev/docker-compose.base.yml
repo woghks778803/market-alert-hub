@@ -1,3 +1,5 @@
+name: mah-dev
+
 services:
   gateway:
     build: ../../gateway
@@ -15,13 +17,14 @@ services:
   api:
     build: ../../backend/api
     container_name: mah_api
-    expose:
-      - "8000" # 게이트웨이에서만 접근
+    working_dir: /app
+    volumes:
+      - ../../backend/api:/app:cached
+    command: ["/app/entrypoint.sh"]
+    expose: ["8000"]
     depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
     environment:
       - TZ=${TZ:-Asia/Seoul}
       - MYSQL_HOST=${MYSQL_HOST:-db}
@@ -34,17 +37,21 @@ services:
       - JWT_SECRET=${JWT_SECRET:-devsecret}
       - JWT_ACCESS_MINUTES=${JWT_ACCESS_MINUTES:-15}
       - JWT_REFRESH_DAYS=${JWT_REFRESH_DAYS:-7}
+      - RUN_ALEMBIC=${RUN_ALEMBIC:-0}
+      - WATCHFILES_FORCE_POLLING=true
     restart: unless-stopped
     networks: [mahnet]
 
   worker:
     build: ../../backend/worker
     container_name: mah_worker
+    working_dir: /app
+    volumes:
+      - ../../backend/worker:/app:cached
+    # command 지정하지 않음 → Dockerfile의 CMD(무한 루프) 사용
     depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
     environment:
       - TZ=${TZ:-Asia/Seoul}
       - MYSQL_HOST=${MYSQL_HOST:-db}
@@ -58,12 +65,15 @@ services:
     restart: unless-stopped
     networks: [mahnet]
 
-  collectors:
-    build: ../../backend/collectors
-    container_name: mah_collectors
+  collector:
+    build: ../../backend/collector
+    container_name: mah_collector
+    working_dir: /app
+    volumes:
+      - ../../backend/collector:/app:cached
+    # command 지정하지 않음 → Dockerfile의 CMD(무한 루프) 사용
     depends_on:
-      redis:
-        condition: service_healthy
+      redis: { condition: service_healthy }
     environment:
       - TZ=${TZ:-Asia/Seoul}
       - REDIS_HOST=${REDIS_HOST:-redis}
