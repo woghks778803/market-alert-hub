@@ -1,9 +1,27 @@
 # backend/api/requirements.txt
+
+# --- Web framework ---
 fastapi
 uvicorn[standard]
-sqlalchemy
-alembic
-pydantic[email]
-python-jose[cryptography]
-passlib[bcrypt]
+
+# --- DB / ORM ---
+SQLAlchemy>=2.0
+alembic>=1.13
 redis
+pymysql
+
+# --- Web framework ---
+fastapi==0.115.0
+uvicorn[standard]==0.30.1
+
+# --- JWT / 보안 ---
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4      # 비밀번호 해싱
+python-multipart==0.0.9     # Form/OAuth callback 처리에 필요
+
+# --- OAuth2 클라이언트 ---
+authlib==1.3.2
+
+# --- 기타 ---
+pydantic[email]
+watchfiles

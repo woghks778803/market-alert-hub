@@ -1,22 +1,45 @@
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.exc import IntegrityError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
-app = FastAPI()
-
-
-@app.get("/api/healthz")
-def healthz():
-    return {"ok": True}
-
-
-@app.middleware("http")
-async def admin_only(request: Request, call_next):
-    if request.url.path.startswith("/admin-api/"):
-        if request.headers.get("x-admin") != "true":
-            return JSONResponse(status_code=403, content={"detail": "admin only"})
-    return await call_next(request)
+from app.core.logging import setup_logging
+from app.core.middleware import RequestIdMiddleware
+from app.core.exception_handlers import (
+    handle_app_error,
+    handle_http_error,
+    handle_validation_error,
+    handle_integrity_error,
+)
+from app.core.errors import AppError
+from app.router.public import health  # 헬스 라우터(아래 코드 참조)
 
 
-@app.get("/admin-api/healthz")
-def admin_health():
-    return {"admin": True}
+def create_app() -> FastAPI:
+    setup_logging()
+    app = FastAPI(title="Market Alert Hub API")
+
+    app.add_middleware(RequestIdMiddleware)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    # 예외 핸들러
+    app.add_exception_handler(AppError, handle_app_error)
+    app.add_exception_handler(StarletteHTTPException, handle_http_error)
+    from fastapi.exceptions import RequestValidationError
+
+    app.add_exception_handler(RequestValidationError, handle_validation_error)
+    app.add_exception_handler(IntegrityError, handle_integrity_error)
+
+    # 라우터
+    app.include_router(health.router, prefix="/api")
+
+    return app
+
+
+app = create_app()
