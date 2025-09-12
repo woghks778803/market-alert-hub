@@ -4,6 +4,7 @@ from sqlalchemy.orm import declarative_base
 Base = declarative_base()
 
 # (모델 추가 시)
-from app.model.base import Base
-from app.model.user import User  # noqa: F401
-from app.model.alert import Alert  # noqa: F401
+# from app.model.base import Base
+
+from .user import User
+__all__ = ["User", "Alert"]

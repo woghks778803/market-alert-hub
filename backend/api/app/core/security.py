@@ -1,23 +1,38 @@
-import time, jwt
 from datetime import datetime, timedelta
-from typing import Tuple
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+
+SECRET_KEY = "CHANGE_ME"  # .env에서 불러오기
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-SECRET = "change-me"
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
 
 
-def issue_tokens(
-    user_id: int, access_minutes: int = 10, refresh_days: int = 14
-) -> Tuple[str, str]:
-    now = datetime.utcnow()
-    access = jwt.encode(
-        {"sub": user_id, "exp": now + timedelta(minutes=access_minutes)},
-        SECRET,
-        algorithm="HS256",
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+def create_access_token(data: dict, expires_delta: timedelta | None = None):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + (
+        expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
-    refresh = jwt.encode(
-        {"sub": user_id, "exp": now + timedelta(days=refresh_days)},
-        SECRET,
-        algorithm="HS256",
-    )
-    return access, refresh
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+from fastapi import Depends, HTTPException
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+bearer_scheme = HTTPBearer(auto_error=False)
+
+def get_current_user_token(
+    creds: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+) -> str:
+    if not creds or creds.scheme.lower() != "bearer":
+        raise HTTPException(status_code=401, detail="Missing or invalid token")
+    return creds.credentials
