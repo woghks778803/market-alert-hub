@@ -17,6 +17,7 @@ uvicorn[standard]==0.30.1
 # --- JWT / 보안 ---
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4      # 비밀번호 해싱
+bcrypt<4.0
 python-multipart==0.0.9     # Form/OAuth callback 처리에 필요
 
 # --- OAuth2 클라이언트 ---

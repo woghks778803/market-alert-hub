@@ -1,8 +1,17 @@
 {
   "name": "Market Alert Hub (compose)",
-  "dockerComposeFile": ["../ops/dev/docker-compose.base.yml"],
-  "service": "api",                             
-  "runServices": ["db", "redis", "api", "worker", "collector", "gateway"],
+  "dockerComposeFile": [
+    "../ops/dev/docker-compose.base.yml"
+  ],
+  "service": "api",
+  "runServices": [
+    "db",
+    "redis",
+    "api",
+    "worker",
+    "collector",
+    "gateway"
+  ],
   // "workspaceMount": "source=${localWorkspaceFolder},target=/app,type=bind,consistency=cached",
   "workspaceFolder": "/app",
   "shutdownAction": "none", // stopCompose
@@ -12,18 +21,12 @@
     "vscode": {
       "extensions": [
         "ms-python.python",
-        "ms-python.vscode-pylance",
-        "ms-azuretools.vscode-docker",
-        "njpwerner.autodocstring",
-        "ms-python.black-formatter",
-        "dbaeumer.vscode-eslint",
-        "esbenp.prettier-vscode",
-        "redis.redis-for-vscode",
-        "humao.rest-client",
-        "rangav.vscode-thunder-client",
-        "redhat.vscode-yaml",
-        "arjun.swagger-viewer"
-      ]
+        "ms-python.vscode-pylance"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/workspaces/${localWorkspaceFolderBasename}/.venv/bin/python",
+        "python.analysis.indexing": false
+      }
     }
   }
 }
