@@ -14,7 +14,7 @@ from app.core.exception_handlers import (
     handle_validation_error,
     handle_integrity_error,
 )
-from app.core.errors import AppError
+from app.core import AppError
 # from app.router.admin import health
 # from app.router.public import health
 # from app.router.public import auth
