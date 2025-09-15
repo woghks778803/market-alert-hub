@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
-from app.core.settings import settings
+from app.core import settings
 from typing import Iterator
 
 engine = create_engine(settings.SQLALCHEMY_URL, pool_pre_ping=True, future=True)

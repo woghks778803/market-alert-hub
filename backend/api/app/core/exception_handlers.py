@@ -1,4 +1,3 @@
-# exception_handlers.py
 import logging
 from typing import Any, cast
 from fastapi import Request
@@ -7,8 +6,8 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlalchemy.exc import IntegrityError
 
-from app.core.errors import AppError, ConflictError
-from app.schema.error import ErrorResponse, ErrorDetail
+from app.core import AppError, ConflictError
+from app.schema import ErrorResponse, ErrorDetail
 
 log = logging.getLogger(__name__)
 
