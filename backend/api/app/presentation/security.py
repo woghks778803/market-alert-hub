@@ -10,8 +10,7 @@ from jose import jwt, JWTError, ExpiredSignatureError
 from passlib.context import CryptContext
 
 from app.core.settings import settings  # .env 에서 불러오는 설정
-# 전역 핸들링을 쓴다면 AuthError 사용, 아니면 주석 해제하지 말고 HTTPException을 쓰세요.
-from app.core.errors import AuthError  # status=401, code="unauthorized"
+from app.domain import AuthError  # status=401, code="unauthorized"
 
 # --- Password Hashing ---------------------------------------------------------
 _pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")

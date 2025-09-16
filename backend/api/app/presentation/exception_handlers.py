@@ -6,8 +6,8 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlalchemy.exc import IntegrityError
 
-from app.core import AppError, ConflictError
-from app.schema import ErrorResponse, ErrorDetail
+from app.domain import AppError, ConflictError
+from app.presentation.schema import ErrorResponse, ErrorDetail
 
 log = logging.getLogger(__name__)
 

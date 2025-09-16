@@ -1,4 +1,4 @@
-from .unit_of_work import UnitOfWork
+from .uow import UnitOfWork
 from .factory import ServiceFactory
 from .auth_service import AuthService
 from .user_service import UserService
