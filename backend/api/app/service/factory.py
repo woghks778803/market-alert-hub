@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from app.service.unit_of_work import UnitOfWork
+from app.service.uow import UnitOfWork
 from app.service.auth_service import AuthService
 from app.service.user_service import UserService
 

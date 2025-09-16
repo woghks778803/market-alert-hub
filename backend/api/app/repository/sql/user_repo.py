@@ -1,18 +1,10 @@
 from __future__ import annotations
 
-from typing import Optional, Protocol
+from typing import Optional
 from sqlalchemy.orm import Session
 
-from app.model.user import User
-from app.core import hash_password, verify_password
-
-
-class UserRepo(Protocol):
-    """User persistence contract."""
-
-    def create(self, email: str, password: str) -> User: ...
-    def get_by_email(self, email: str) -> Optional[User]: ...
-    def authenticate(self, email: str, password: str) -> Optional[User]: ...
+from app.infra.db.model import User
+from app.presentation.security import hash_password, verify_password
 
 
 class SqlUserRepo:

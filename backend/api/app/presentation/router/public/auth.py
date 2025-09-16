@@ -1,19 +1,17 @@
 # app/router/public/auth.py
 from fastapi import APIRouter, Depends, Body, Security, status
 from sqlalchemy.orm import Session
-from app.core.db import get_db
-from app.core.security import get_current_user_email
+from app.presentation.deps import get_db
+from app.presentation.security import get_current_user_email
 from app.service import ServiceFactory
-from app.schema import UserCreate, UserLogin, UserRead, TokenPair
 
-from app.docs.utils import combine
-from app.docs.errors import ERR_400, ERR_401, ERR_404, ERR_409, ERR_500
-from app.docs.success import OK, CREATED
+import app.presentation.schema as pschema
+import app.presentation.openapi as popenapi
 
 router = APIRouter(
     prefix="/auth",
     tags=["auth"],
-    responses=combine(ERR_401, ERR_500),
+    responses=popenapi.combine(popenapi.ERR_401, popenapi.ERR_500),
 )
 
 def get_services(db: Session = Depends(get_db)) -> ServiceFactory:
@@ -23,17 +21,17 @@ def get_services(db: Session = Depends(get_db)) -> ServiceFactory:
 @router.post(
     "/register",
     status_code=status.HTTP_201_CREATED,
-    response_model=UserRead,
+    response_model=pschema.UserRead,
     summary="유저 회원가입",
     description="이메일 중복 시 `ConflictError`로 처리됩니다(전역 핸들러가 409 반환).",
-    responses=combine(
-        CREATED(UserRead, description="회원가입 성공",
+    responses=popenapi.combine(
+        popenapi.CREATED(pschema.UserRead, description="회원가입 성공",
                 example={"id": 1, "email": "alice@example.com"}),
-        ERR_400, ERR_409,
+        popenapi.ERR_400, popenapi.ERR_409,
     ),
 )
 def register(
-    payload: UserCreate = Body(
+    payload: pschema.UserCreate = Body(
         ...,
         example={"email": "alice@example.com", "password": "P@ssw0rd!"},
     ),
@@ -49,17 +47,17 @@ def register(
 
 @router.post(
     "/login",
-    response_model=TokenPair,
+    response_model=pschema.TokenPair,
     summary="로그인 (JWT 발급)",
     description="이메일/비밀번호가 틀리면 `AuthError`(401)로 처리됩니다.",
-    responses=combine(
-        OK(TokenPair, description="로그인 성공",
+    responses=popenapi.combine(
+        popenapi.OK(pschema.TokenPair, description="로그인 성공",
            example={"access_token": "<jwt>", "token_type": "bearer"}),
-        ERR_400, ERR_401,
+        popenapi.ERR_400, popenapi.ERR_401,
     ),
 )
 def login(
-    payload: UserLogin = Body(
+    payload: pschema.UserLogin = Body(
         ...,
         example={"email": "alice@example.com", "password": "P@ssw0rd!"},
     ),
@@ -72,13 +70,13 @@ def login(
 
 @router.get(
     "/me",
-    response_model=UserRead,
+    response_model=pschema.UserRead,
     summary="내 프로필 조회",
     description="우상단 **Authorize**로 JWT 설정 후 호출하세요.",
-    responses=combine(
-        OK(TokenPair, description="성공",
+    responses=popenapi.combine(
+        popenapi.OK(pschema.TokenPair, description="성공",
            example={"access_token": "<jwt>", "token_type": "bearer"}),
-        ERR_400, ERR_401, ERR_404
+        popenapi.ERR_400, popenapi.ERR_401, popenapi.ERR_404
     ),
 )
 def me(

@@ -1,5 +1,5 @@
-from app.service.unit_of_work import UnitOfWork
-from app.model import User
+from app.service.uow import UnitOfWork
+from app.infra.db.model import User
 
 class UserService:
     """사용자 조회/수정 등 유즈케이스."""

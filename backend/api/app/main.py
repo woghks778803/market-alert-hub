@@ -7,19 +7,15 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.exceptions import RequestValidationError
 
 from app.core.logging import setup_logging
-from app.core.middleware import RequestIdMiddleware
-from app.core.exception_handlers import (
+from app.presentation.middleware import RequestIdMiddleware
+from app.presentation.exception_handlers import (
     handle_app_error,
     handle_http_error,
     handle_validation_error,
     handle_integrity_error,
 )
-from app.core import AppError
-# from app.router.admin import health
-# from app.router.public import health
-# from app.router.public import auth
-from app.router.public import router as public_router
-from app.router.admin import router as admin_router
+from app.domain import AppError
+from app.presentation.router import api
 
 TAGS_METADATA = [
     {"name": "health", "description": "헬스체크/진단"},
@@ -88,8 +84,7 @@ def create_app() -> FastAPI:
     app.add_exception_handler(IntegrityError, handle_integrity_error)
 
     # --- Routers ---
-    app.include_router(public_router)
-    app.include_router(admin_router)
+    app.include_router(api)
 
     # --- OpenAPI(Security) ---
     _install_openapi_with_bearer(app)

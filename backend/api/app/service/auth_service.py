@@ -1,6 +1,6 @@
 from fastapi import HTTPException
-from app.service.unit_of_work import UnitOfWork
-from app.core import create_access_token, verify_password
+from app.service.uow import UnitOfWork
+from app.presentation.security import create_access_token, verify_password
 
 class AuthService:
     """인증 유즈케이스: 회원가입/로그인/JWT 발급."""
