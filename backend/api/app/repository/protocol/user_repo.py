@@ -1,0 +1,9 @@
+from typing import Optional, Protocol
+from app.infra.db.model import User
+
+class UserRepo(Protocol):
+    """User persistence contract."""
+
+    def create(self, email: str, password: str) -> User: ...
+    def get_by_email(self, email: str) -> Optional[User]: ...
+    def authenticate(self, email: str, password: str) -> Optional[User]: ...

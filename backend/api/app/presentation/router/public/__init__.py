@@ -1,4 +1,3 @@
-# app/router/admin/__init__.py
 from fastapi import APIRouter
 from . import health, auth
 
