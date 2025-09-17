@@ -1,12 +1,10 @@
-# app/router/public/auth.py
 from fastapi import APIRouter, Depends, Body, Security, status
 from sqlalchemy.orm import Session
-from app.presentation.deps import get_db
-from app.presentation.security import get_current_user_email
+from app.api.deps import get_db, get_current_user_email
 from app.service import ServiceFactory
 
-import app.presentation.schema as pschema
-import app.presentation.openapi as popenapi
+import app.api.schema as pschema
+import app.api.openapi as popenapi
 
 router = APIRouter(
     prefix="/auth",
@@ -85,7 +83,6 @@ def me(
 ):
     user = svcs.users().get_by_email(email)
     if not user:
-        # 전역 핸들러가 있는 NotFoundError 사용 권장(없으면 ValidationAppError)
-        from app.core import NotFoundError
+        from app.domain import NotFoundError
         raise NotFoundError(message="User not found", target="email")
     return user

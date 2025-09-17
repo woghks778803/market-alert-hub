@@ -8,3 +8,7 @@ class UserService:
 
     def get_by_email(self, email: str) -> User | None:
         return self.uow.users.get_by_email(email)
+    
+    def get(self, user_id: int):
+        with self.uow as u:
+            return u.users.get_by_id(user_id)
