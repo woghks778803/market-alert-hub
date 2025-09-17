@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from app.service.uow import UnitOfWork
 from app.service.auth_service import AuthService
 from app.service.user_service import UserService
+from app.service.alert_service import AlertService
 
 class ServiceFactory:
     """라우터에서 서비스 생성 경로를 단일화."""
@@ -13,3 +14,6 @@ class ServiceFactory:
 
     def users(self) -> UserService:
         return UserService(self.uow)
+    
+    def alerts(self) -> AlertService:
+        return AlertService(self.uow)

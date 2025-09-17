@@ -7,15 +7,15 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.exceptions import RequestValidationError
 
 from app.core.logging import setup_logging
-from app.presentation.middleware import RequestIdMiddleware
-from app.presentation.exception_handlers import (
+from app.api.middleware import RequestIdMiddleware
+from app.api.exception_handlers import (
     handle_app_error,
     handle_http_error,
     handle_validation_error,
     handle_integrity_error,
 )
 from app.domain import AppError
-from app.presentation.router import api
+from app.api.router import api
 
 TAGS_METADATA = [
     {"name": "health", "description": "헬스체크/진단"},
