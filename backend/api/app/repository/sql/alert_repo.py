@@ -6,15 +6,9 @@ class SqlAlertRepo:
     def __init__(self, db: Session) -> None:
         self._db = db
 
-    def add(self, user_id: int, data) -> Alert:
-        a = Alert(
-            user_id=user_id,
-            exchange=data.exchange,
-            symbol=data.symbol,
-            target_price=data.target_price,
-            direction=data.direction,
-            status="active",
-        )
+    def add(self, user_id:int, *, exchange_id:int, symbol:str, target_price:float, direction:str) -> Alert:
+        a = Alert(user_id=user_id, exchange_id=exchange_id, symbol=symbol,
+                target_price=target_price, direction=direction, status="active")
         self._db.add(a)
         self._db.flush()      # id 채우기
         self._db.refresh(a)

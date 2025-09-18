@@ -1,9 +1,16 @@
 from app.service.uow import UnitOfWork
+from app.api.schema.alert import AlertCreate
 
 class AlertService:
     def __init__(self, uow: UnitOfWork) -> None:
         self.uow = uow
 
+    def create(self, user_id: int, data: AlertCreate):
+        with self.uow as u:
+            a = u.alerts.add(user_id, **data.model_dump())  # 타입 안전 + 결합 낮음
+            u.commit()
+            return a
+        
     def create(self, user_id: int, data):
         with self.uow as u:
             a = u.alerts.add(user_id, data)
