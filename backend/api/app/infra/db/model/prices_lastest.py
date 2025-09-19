@@ -12,9 +12,9 @@ class PriceLatest(Base):
     instrument_id: Mapped[int] = mapped_column(ForeignKey("instruments.id", ondelete="RESTRICT"), nullable=False)
 
     last_price:  Mapped[Decimal] = mapped_column(DECIMAL(32, 16), nullable=False)
-    volume_24h:  Mapped[Decimal] | None = mapped_column(DECIMAL(32, 16))
-    high_24h:    Mapped[Decimal] | None = mapped_column(DECIMAL(32, 16))
-    low_24h:     Mapped[Decimal] | None = mapped_column(DECIMAL(32, 16))
+    volume_24h:  Mapped[Decimal | None] = mapped_column(DECIMAL(32, 16))
+    high_24h:    Mapped[Decimal | None] = mapped_column(DECIMAL(32, 16))
+    low_24h:     Mapped[Decimal | None] = mapped_column(DECIMAL(32, 16))
     ts:          Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True, nullable=False)
 
     __table_args__ = (
