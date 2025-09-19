@@ -21,9 +21,9 @@ class UserIdentity(Base):
     )
     provider_user_id:  Mapped[str] = mapped_column(String(128), nullable=False)
 
-    access_token:  Mapped[str] | None = mapped_column(String(2048))
-    refresh_token: Mapped[str] | None = mapped_column(String(2048))
-    expires_at:    Mapped[datetime] | None = mapped_column(DateTime(timezone=True))
+    access_token:  Mapped[str | None] = mapped_column(String(2048))
+    refresh_token: Mapped[str | None] = mapped_column(String(2048))
+    expires_at:    Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at:    Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     __table_args__ = (UniqueConstraint("provider", "provider_user_id", name="uq_identity_provider_uid"),)

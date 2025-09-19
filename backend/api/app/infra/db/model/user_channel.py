@@ -18,9 +18,9 @@ class UserChannel(Base):
         SAEnum(ChannelType, native_enum=False, create_constraint=True, validate_strings=True),
         default=ChannelType.email, nullable=False
     )
-    address:      Mapped[str] | None = mapped_column(String(255))
-    config:       Mapped[dict] | None = mapped_column(JSON)
-    verified_at:  Mapped[datetime] | None = mapped_column(DateTime(timezone=True))
+    address:      Mapped[str | None] = mapped_column(String(255))
+    config:       Mapped[dict | None] = mapped_column(JSON)
+    verified_at:  Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     is_default:   Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at:   Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 

@@ -21,9 +21,9 @@ class Delivery(Base):
     status: Mapped[DeliveryStatus] = mapped_column(
         SAEnum(DeliveryStatus, native_enum=False, create_constraint=True, validate_strings=True), default=DeliveryStatus.queued, nullable=False
     )
-    sent_at:       Mapped[datetime] | None = mapped_column(DateTime(timezone=True))
-    response_code: Mapped[int] | None = mapped_column(Integer)
-    response_body: Mapped[str] | None = mapped_column(Text)
+    sent_at:       Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    response_code: Mapped[int | None] = mapped_column(Integer)
+    response_body: Mapped[str | None] = mapped_column(Text)
     created_at:    Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     __table_args__ = (Index("ix_deliveries_status", "status"),)

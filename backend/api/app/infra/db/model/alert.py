@@ -43,15 +43,15 @@ class Alert(Base):
         default=AlertScope.single, nullable=False
     )
 
-    exchange_id:   Mapped[int] | None = mapped_column(ForeignKey("exchanges.id",  ondelete="RESTRICT"), index=True)
-    instrument_id: Mapped[int] | None = mapped_column(ForeignKey("instruments.id", ondelete="RESTRICT"), index=True)
+    exchange_id:   Mapped[int | None] = mapped_column(ForeignKey("exchanges.id",  ondelete="RESTRICT"), index=True)
+    instrument_id: Mapped[int | None] = mapped_column(ForeignKey("instruments.id", ondelete="RESTRICT"), index=True)
 
     params:            Mapped[dict] = mapped_column(JSON, nullable=False)
     throttle_seconds:  Mapped[int] = mapped_column(Integer, nullable=False, default=300)
-    valid_from:        Mapped[datetime] | None = mapped_column(DateTime(timezone=True))
-    valid_to:          Mapped[datetime] | None = mapped_column(DateTime(timezone=True))
+    valid_from:        Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    valid_to:          Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     timezone:          Mapped[str] = mapped_column(String(64), default="UTC", nullable=False)
-    last_fired_at:     Mapped[datetime] | None = mapped_column(DateTime(timezone=True))
+    last_fired_at:     Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at:        Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at:        Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 

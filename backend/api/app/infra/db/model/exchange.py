@@ -13,9 +13,9 @@ class Exchange(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     code: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    country: Mapped[str] | None = mapped_column(String(64))
+    country: Mapped[str | None] = mapped_column(String(64))
     timezone: Mapped[str] = mapped_column(String(64), default="UTC", nullable=False)    
-    base_url: Mapped[str] | None = mapped_column(String(255))
+    base_url: Mapped[str | None] = mapped_column(String(255))
     status: Mapped[ExchangeStatus] = mapped_column(
         SAEnum(ExchangeStatus, native_enum=False, create_constraint=True, validate_strings=True),
         default=ExchangeStatus.active, nullable=False
