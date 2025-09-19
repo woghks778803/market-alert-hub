@@ -18,11 +18,11 @@ class Instrument(Base):
     base_asset: Mapped[str] = mapped_column(String(32), nullable=False)
     quote_asset: Mapped[str] = mapped_column(String(32), nullable=False)
     asset_type: Mapped[AssetType] = mapped_column(
-        SAEnum(AssetType, native_enum=False, create_constraint=True, validate_strings=True),
+        SAEnum(AssetType, native_enum=True, create_constraint=True, validate_strings=True),
         default=AssetType.crypto, nullable=False
     )
     status: Mapped[InstrumentStatus] = mapped_column(
-        SAEnum(InstrumentStatus, native_enum=False, create_constraint=True, validate_strings=True),
+        SAEnum(InstrumentStatus, native_enum=True, create_constraint=True, validate_strings=True),
         default=InstrumentStatus.active, nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
