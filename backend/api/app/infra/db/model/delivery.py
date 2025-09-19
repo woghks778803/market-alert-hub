@@ -19,7 +19,7 @@ class Delivery(Base):
     user_channel_id: Mapped[int] = mapped_column(ForeignKey("user_channels.id", ondelete="RESTRICT"), nullable=False, index=True)
 
     status: Mapped[DeliveryStatus] = mapped_column(
-        SAEnum(DeliveryStatus, native_enum=False, create_constraint=True, validate_strings=True), default=DeliveryStatus.queued, nullable=False
+        SAEnum(DeliveryStatus, native_enum=True, create_constraint=True, validate_strings=True), default=DeliveryStatus.queued, nullable=False
     )
     sent_at:       Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     response_code: Mapped[int | None] = mapped_column(Integer)

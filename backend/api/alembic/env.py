@@ -8,7 +8,8 @@ from alembic import context
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from app.core import settings
-from app.model.base import Base
+from app.infra.db.base import Base
+import app.infra.db.model
 
 # Alembic 기본 설정
 config = context.config

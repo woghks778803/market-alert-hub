@@ -31,15 +31,15 @@ class Alert(Base):
     name:          Mapped[str] = mapped_column(String(100), nullable=False)
 
     status: Mapped[AlertStatus] = mapped_column(
-        SAEnum(AlertStatus, native_enum=False, create_constraint=True, validate_strings=True), 
+        SAEnum(AlertStatus, native_enum=True, create_constraint=True, validate_strings=True), 
         default=AlertStatus.active, nullable=False, 
     )
     type: Mapped[AlertType] = mapped_column(
-        SAEnum(AlertType, native_enum=False, create_constraint=True, validate_strings=True), 
+        SAEnum(AlertType, native_enum=True, create_constraint=True, validate_strings=True), 
         default=AlertType.price_above, nullable=False
     )
     scope: Mapped[AlertScope] = mapped_column(
-        SAEnum(AlertScope, native_enum=False, create_constraint=True, validate_strings=True), 
+        SAEnum(AlertScope, native_enum=True, create_constraint=True, validate_strings=True), 
         default=AlertScope.single, nullable=False
     )
 

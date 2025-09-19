@@ -17,7 +17,7 @@ class Exchange(Base):
     timezone: Mapped[str] = mapped_column(String(64), default="UTC", nullable=False)    
     base_url: Mapped[str | None] = mapped_column(String(255))
     status: Mapped[ExchangeStatus] = mapped_column(
-        SAEnum(ExchangeStatus, native_enum=False, create_constraint=True, validate_strings=True),
+        SAEnum(ExchangeStatus, native_enum=True, create_constraint=True, validate_strings=True),
         default=ExchangeStatus.active, nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

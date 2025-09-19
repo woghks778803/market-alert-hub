@@ -15,7 +15,7 @@ class UserChannel(Base):
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     channel_type: Mapped[ChannelType] = mapped_column(
-        SAEnum(ChannelType, native_enum=False, create_constraint=True, validate_strings=True),
+        SAEnum(ChannelType, native_enum=True, create_constraint=True, validate_strings=True),
         default=ChannelType.email, nullable=False
     )
     address:      Mapped[str | None] = mapped_column(String(255))

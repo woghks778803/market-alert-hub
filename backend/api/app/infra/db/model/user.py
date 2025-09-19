@@ -23,10 +23,10 @@ class User(Base):
     nickname:      Mapped[str] = mapped_column(String(100))
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
 
-    role:   Mapped[UserRole] = mapped_column(SAEnum(UserRole, native_enum=False, create_constraint=True, validate_strings=True),
+    role:   Mapped[UserRole] = mapped_column(SAEnum(UserRole, native_enum=True, create_constraint=True, validate_strings=True),
                                             nullable=False, default=UserRole.user)
-    status: Mapped[UserStatus] = mapped_column(SAEnum(UserStatus, native_enum=False, create_constraint=True, validate_strings=True),
+    status: Mapped[UserStatus] = mapped_column(SAEnum(UserStatus, native_enum=True, create_constraint=True, validate_strings=True),
                                               nullable=False, default=UserStatus.active)
 
     created_at:    Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    last_login_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
