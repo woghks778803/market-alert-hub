@@ -1,88 +1,101 @@
-from fastapi import APIRouter, Depends, Body, Security, status
-from sqlalchemy.orm import Session
-from app.api.deps import get_db, get_current_user_email
-from app.service import ServiceFactory
+# app/api/router/public/auth.py
+from __future__ import annotations
 
-import app.api.schema as pschema
-import app.api.openapi as popenapi
+from typing import Optional
+from fastapi import APIRouter, Depends, Body, Request, status, Header, HTTPException
+from sqlalchemy.orm import Session as DbSession
+
+import app.api.openapi as OpenApi
+from app.api.schema import UserSchema, AuthSchema
+from app.api.deps import get_db 
+
+from app.service.uow import UnitOfWork
+from app.service.factory import ServiceFactory
+
+from app.core.auth import decode_token, token_hash 
 
 router = APIRouter(
     prefix="/auth",
     tags=["auth"],
-    responses=popenapi.combine(popenapi.ERR_401, popenapi.ERR_500),
+    responses=OpenApi.combine(OpenApi.ERR_401, OpenApi.ERR_500),
 )
 
-def get_services(db: Session = Depends(get_db)) -> ServiceFactory:
-    return ServiceFactory(db)
+def get_services(db: DbSession = Depends(get_db)) -> ServiceFactory:
+    # Factory는 uow_factory만 받는다. 세션은 여기서만 알고 끝.
+    return ServiceFactory(lambda: UnitOfWork(db, owns_session=False))
 
 
 @router.post(
     "/register",
     status_code=status.HTTP_201_CREATED,
-    response_model=pschema.UserRead,
+    response_model=UserSchema.UserReadPublic,
     summary="유저 회원가입",
-    description="이메일 중복 시 `ConflictError`로 처리됩니다(전역 핸들러가 409 반환).",
-    responses=popenapi.combine(
-        popenapi.CREATED(pschema.UserRead, description="회원가입 성공",
-                example={"id": 1, "email": "alice@example.com"}),
-        popenapi.ERR_400, popenapi.ERR_409,
+    description="이메일 중복 시 ConflictError로 처리(전역 핸들러에서 409로 매핑).",
+    responses=OpenApi.combine(
+        OpenApi.CREATED(UserSchema.UserReadPublic, description="회원가입 성공",
+                         example={"id": 1, "email": "alice@example.com"}),
+        OpenApi.ERR_400, OpenApi.ERR_409,
     ),
 )
 def register(
-    payload: pschema.UserCreate = Body(
-        ...,
-        example={"email": "alice@example.com", "password": "P@ssw0rd!"},
-    ),
+    request: Request,
+    payload: UserSchema.UserCreatePublic = Body(..., example={
+        "email": "alice@example.com",
+        "nickname": "Alice",
+        "password": "P@ssw0rd!"
+    }),
     svcs: ServiceFactory = Depends(get_services),
 ):
-    """
-    - 중복 이메일: `ConflictError` 발생(서비스에서 raise) → 전역 핸들러가 JSON 에러 포맷으로 응답
-    - 기타 유효성: FastAPI의 `RequestValidationError` 또는 `ValidationAppError`
-    """
-    # 서비스가 내부에서 중복체크 후 ConflictError(or IntegrityError) 발생시킴
-    return svcs.auth().register(payload.email, payload.password)
+    ip = request.client.host if request.client else None
+    ua = request.headers.get("user-agent")
+    return svcs.auths().register(email=payload.email, nickname=payload.nickname, password=payload.password, ip=ip, ua=ua)
 
 
 @router.post(
     "/login",
-    response_model=pschema.TokenPair,
+    response_model=AuthSchema.TokenOut,
     summary="로그인 (JWT 발급)",
-    description="이메일/비밀번호가 틀리면 `AuthError`(401)로 처리됩니다.",
-    responses=popenapi.combine(
-        popenapi.OK(pschema.TokenPair, description="로그인 성공",
-           example={"access_token": "<jwt>", "token_type": "bearer"}),
-        popenapi.ERR_400, popenapi.ERR_401,
-    ),
+    responses=OpenApi.combine(OpenApi.OK(AuthSchema.TokenOut, description="로그인 성공"), OpenApi.ERR_400, OpenApi.ERR_401),
 )
 def login(
-    payload: pschema.UserLogin = Body(
-        ...,
-        example={"email": "alice@example.com", "password": "P@ssw0rd!"},
-    ),
+    request: Request,
+    payload: AuthSchema.Login = Body(..., example={"email": "alice@example.com", "password": "P@ssw0rd!"}),
     svcs: ServiceFactory = Depends(get_services),
 ):
-    # 서비스가 인증 실패 시 AuthError(status=401, code='unauthorized')를 raise
-    token = svcs.auth().login(payload.email, payload.password)
-    return {"access_token": token, "token_type": "bearer"}
+    ip = request.client.host if request.client else None
+    ua = request.headers.get("user-agent")
+    return svcs.auths().login(email=payload.email, password=payload.password, ip=ip, ua=ua)
+
+
+@router.post(
+    "/logout",
+    response_model=AuthSchema.SimpleOk,
+    summary="로그아웃 (세션 무효화)",
+    responses=OpenApi.combine(OpenApi.OK(AuthSchema.SimpleOk, description="로그아웃 성공"), OpenApi.ERR_401),
+)
+def logout(
+    authorization: Optional[str] = Header(None, description="Bearer <JWT>"),
+    svcs: ServiceFactory = Depends(get_services),
+):
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    jwt = authorization.split(" ", 1)[1].strip()
+    return svcs.auths().logout(token_hash=token_hash(jwt))
 
 
 @router.get(
     "/me",
-    response_model=pschema.UserRead,
-    summary="내 프로필 조회",
-    description="우상단 **Authorize**로 JWT 설정 후 호출하세요.",
-    responses=popenapi.combine(
-        popenapi.OK(pschema.TokenPair, description="성공",
-           example={"access_token": "<jwt>", "token_type": "bearer"}),
-        popenapi.ERR_400, popenapi.ERR_401, popenapi.ERR_404
-    ),
+    response_model=UserSchema.MeRead,
+    summary="내 정보 조회",
+    responses=OpenApi.combine(OpenApi.OK(UserSchema.MeRead, description="내 정보"), OpenApi.ERR_401, OpenApi.ERR_404),
 )
 def me(
-    email: str = Security(get_current_user_email),  # 🔒 Swagger에 보안 표시
+    authorization: Optional[str] = Header(None, description="Bearer <JWT>"),
     svcs: ServiceFactory = Depends(get_services),
 ):
-    user = svcs.users().get_by_email(email)
-    if not user:
-        from app.domain import NotFoundError
-        raise NotFoundError(message="User not found", target="email")
-    return user
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    jwt = authorization.split(" ", 1)[1].strip()
+    claims = decode_token(jwt)  # sub = user.id 규약
+    user_id = int(claims["sub"])
+    return svcs.auths().me(user_id=user_id)

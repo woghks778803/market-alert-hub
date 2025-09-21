@@ -1,10 +1,10 @@
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session as DbSession
 from typing import Optional
 from app.infra.db.model import Exchange
 
 class SqlExchangeRepo:
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: DbSession) -> None:
         self._db = db
 
     def get_by_id(self, ex_id:int) -> Optional[Exchange]: 

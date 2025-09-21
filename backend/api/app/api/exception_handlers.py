@@ -5,9 +5,8 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlalchemy.exc import IntegrityError
-
-from app.domain import AppError, ConflictError
-from app.api.schema import ErrorResponse, ErrorDetail
+from app.domain import AppError, ConflictError, InternalServerError
+from app.api.schema import ErrorSchema
 
 log = logging.getLogger(__name__)
 
@@ -21,12 +20,22 @@ def error_response(
     target: str | None = None,
     meta: dict[str, Any] | None = None,
 ):
-    body = ErrorResponse(
+    body = ErrorSchema.ErrorResponse(
         request_id=request_id,
-        error=ErrorDetail(code=code, message=message, target=target, meta=meta),
+        error=ErrorSchema.ErrorDetail(code=code, message=message, target=target, meta=meta),
     )
     return JSONResponse(status_code=status_code, content=body.model_dump())
 
+async def handle_unexpected_error(request: Request, exc: Exception):
+    req_id = getattr(request.state, "request_id", "-")
+    log.exception("Unhandled error", extra={"request_id": req_id})
+    return error_response(
+        req_id,
+        code=InternalServerError.code,
+        message="Internal server error",
+        status_code=InternalServerError.status_code,
+        meta={"type": exc.__class__.__name__},
+    )
 
 async def handle_app_error(request: Request, exc: Exception):
     app_exc = cast(AppError, exc)  # 또는 assert isinstance(exc, AppError)

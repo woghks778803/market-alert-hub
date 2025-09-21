@@ -1,9 +1,9 @@
 from typing import List, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session as DbSession
 from app.infra.db.model import Alert
 
 class SqlAlertRepo:
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: DbSession) -> None:
         self._db = db
 
     def add(self, user_id:int, *, exchange_id:int, symbol:str, target_price:float, direction:str) -> Alert:
