@@ -5,6 +5,21 @@ from typing import Iterator
 
 
 # --- DB session ---
+# engine = create_engine(
+#     settings.SQLALCHEMY_URL,
+#     future=True,
+#     pool_pre_ping=True,   # 죽은 커넥션 사전 감지
+#     pool_recycle=3600,    # MySQL 권장 (장기 유휴 커넥션 재생성)
+#     # echo=True,          # 필요 시 디버깅
+# )
+
+# SessionLocal = sessionmaker(
+#     bind=engine,
+#     autoflush=False,
+#     autocommit=False,
+#     expire_on_commit=False,  # 커밋 이후도 객체 필드 접근 가능
+#     future=True,
+# )
 engine = create_engine(settings.SQLALCHEMY_URL, pool_pre_ping=True, future=True)
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, future=True)
 

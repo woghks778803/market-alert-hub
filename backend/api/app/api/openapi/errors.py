@@ -1,6 +1,6 @@
 # 공통 응답 스펙/프리셋
 from typing import Any, Dict, Optional
-from app.api.schema import ErrorResponse 
+from app.api.schema import ErrorSchema 
 
 # 기본 에러 예시 생성기
 def err_example(
@@ -26,7 +26,7 @@ def err(status: int, description: str, example: Optional[Dict[str, Any]] = None)
     return {
         status: {
             "description": description,
-            "model": ErrorResponse,        
+            "model": ErrorSchema.ErrorResponse,        
             "content": {
                 "application/json": {
                     "example": example or err_example("unknown_error", "Something went wrong")

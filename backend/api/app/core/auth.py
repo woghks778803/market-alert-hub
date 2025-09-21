@@ -1,11 +1,13 @@
-# app/core/auth.py
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Union, Dict, Any
 from jose import jwt
 from passlib.context import CryptContext
 from app.core.settings import settings
+import hashlib
 
 _pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def token_hash(token: str) -> str: return hashlib.sha256(token.encode("utf-8")).hexdigest()
 def hash_password(p: str) -> str: return _pwd.hash(p)
 def verify_password(p: str, h: str) -> bool: return _pwd.verify(p, h)
 
