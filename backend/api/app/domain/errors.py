@@ -47,3 +47,7 @@ class NotFoundError(AppError):
 class ConflictError(AppError):
     status_code = status.HTTP_409_CONFLICT
     code = "conflict"
+
+class InternalServerError(AppError):
+    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    code = "internal_error"

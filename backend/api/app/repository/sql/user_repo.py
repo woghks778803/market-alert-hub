@@ -1,40 +1,22 @@
 from __future__ import annotations
 
+from sqlalchemy import select
+from sqlalchemy.orm import Session as DbSession
+from app.infra.db.model import User as UserModel
+
 from typing import Optional
-from sqlalchemy.orm import Session
-
-from app.infra.db.model import User
-from app.presentation.security import hash_password, verify_password
-
 
 class SqlUserRepo:
-    """SQLAlchemy-backed implementation of UserRepo.
 
-    Notes:
-        - Each method commits explicitly for predictability.
-        - Session lifecycle is owned by the caller (FastAPI dependency).
-    """
-
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: DbSession) -> None:
         self._db = db
 
-    def create(self, email: str, password: str) -> User:
-        """Create a user with a hashed password."""
-        user = User(email=email, hashed_password=hash_password(password))
-        self._db.add(user)
-        self._db.commit()
-        self._db.refresh(user)
-        return user
+    def add(self, user: UserModel) -> UserModel:
+        self._db.add(user); self._db.flush(); return user
 
-    def get_by_email(self, email: str) -> Optional[User]:
-        """Return a user by email, or None if not found."""
-        return self._db.query(User).filter(User.email == email).first()
+    def get_by_email(self, email: str) -> UserModel | None:
+        return self._db.execute(select(UserModel).where(UserModel.email == email)).scalar_one_or_none()
+    
+    def get_by_id(self, user_id: int) -> Optional[UserModel]:
+        return self._db.get(UserModel, user_id)
 
-    def authenticate(self, email: str, password: str) -> Optional[User]:
-        """Return user if email/password matches; otherwise None."""
-        user = self.get_by_email(email)
-        if not user:
-            return None
-        if not verify_password(password, user.hashed_password):
-            return None
-        return user

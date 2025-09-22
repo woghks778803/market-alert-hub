@@ -1,4 +1,3 @@
-# app/core/settings.py
 from urllib.parse import quote_plus
 from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
