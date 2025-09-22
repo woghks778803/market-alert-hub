@@ -20,7 +20,11 @@ class AlertEvent(Base):
     context:       Mapped[dict | None] = mapped_column(JSON)
 
     dedup_key:     Mapped[str | None] = mapped_column(String(64), unique=True)  # DDL 길이에 맞춰 조정
-    created_at:    Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
+        server_default=func.now(), 
+        default=func.now(), 
+        nullable=False
+    )
 
     alert: Mapped["Alert"] = relationship(back_populates="events")
 

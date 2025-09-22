@@ -1,26 +1,11 @@
 from __future__ import annotations
-import enum
+
 from datetime import datetime
-from sqlalchemy import DateTime, String, Integer, JSON, ForeignKey, Enum as SAEnum, UniqueConstraint, Index, func
+from sqlalchemy import Boolean, DateTime, String, Integer, JSON, ForeignKey, Enum as SAEnum, UniqueConstraint, Index, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infra.db.base import Base
+from app.core.constants import AlertStatus, AlertType, AlertScope
 
-class AlertStatus(str, enum.Enum):
-    active   = "active"
-    paused   = "paused"
-    archived = "archived"
-
-class AlertType(str, enum.Enum):
-    price_above = "price_above"
-    price_below = "price_below"
-    pct_change_window = "pct_change_window"
-    cross_exchange_spread = "cross_exchange_spread"
-    volume_above = "volume_above"
-    moving_avg_cross = "moving_avg_cross"
-
-class AlertScope(str, enum.Enum):
-    single = "single"
-    cross  = "cross"
 
 class Alert(Base):
     __tablename__ = "alerts"
@@ -32,15 +17,15 @@ class Alert(Base):
 
     status: Mapped[AlertStatus] = mapped_column(
         SAEnum(AlertStatus, native_enum=True, create_constraint=True, validate_strings=True), 
-        default=AlertStatus.active, nullable=False, 
+        default=AlertStatus.ACTIVE, server_default=AlertStatus.ACTIVE, nullable=False, 
     )
     type: Mapped[AlertType] = mapped_column(
         SAEnum(AlertType, native_enum=True, create_constraint=True, validate_strings=True), 
-        default=AlertType.price_above, nullable=False
+        default=AlertType.PRICE_ABOVE, server_default=AlertType.PRICE_ABOVE, nullable=False
     )
     scope: Mapped[AlertScope] = mapped_column(
         SAEnum(AlertScope, native_enum=True, create_constraint=True, validate_strings=True), 
-        default=AlertScope.single, nullable=False
+        default=AlertScope.SINGLE, server_default=AlertScope.SINGLE, nullable=False
     )
 
     exchange_id:   Mapped[int | None] = mapped_column(ForeignKey("exchanges.id",  ondelete="RESTRICT"), index=True)
@@ -52,8 +37,18 @@ class Alert(Base):
     valid_to:          Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     timezone:          Mapped[str] = mapped_column(String(64), default="UTC", nullable=False)
     last_fired_at:     Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    created_at:        Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at:        Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
+        server_default=func.now(), 
+        default=func.now(), 
+        nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
+        server_default=func.now(), 
+        default=func.now(), 
+        onupdate=func.now(), 
+        nullable=False
+    )
+    is_valid:   Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("1"))
 
     channels: Mapped[list["AlertChannelTarget"]] = relationship(back_populates="alert", cascade="all, delete-orphan")
     events:   Mapped[list["AlertEvent"]]         = relationship(back_populates="alert", cascade="all, delete-orphan")

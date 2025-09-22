@@ -1,15 +1,10 @@
 from __future__ import annotations
-import enum
 from datetime import datetime
-from sqlalchemy import Integer, String, DateTime, Enum as SAEnum, func
+from sqlalchemy import Boolean, Integer, String, DateTime, Enum as SAEnum, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infra.db.base import Base
+from app.core.constants import ActiveStatus, AssetType
 
-class AssetType(str, enum.Enum):
-    crypto = "CRYPTO"; fx = "FX"; stock = "STOCK"; future = "FUTURE"
-
-class InstrumentStatus(str, enum.Enum):
-    active = "active"; inactive = "inactive"
 
 class Instrument(Base):
     __tablename__ = "instruments"
@@ -19,12 +14,23 @@ class Instrument(Base):
     quote_asset: Mapped[str] = mapped_column(String(32), nullable=False)
     asset_type: Mapped[AssetType] = mapped_column(
         SAEnum(AssetType, native_enum=True, create_constraint=True, validate_strings=True),
-        default=AssetType.crypto, nullable=False
+        default=AssetType.CRYPTO, server_default=AssetType.CRYPTO, nullable=False
     )
-    status: Mapped[InstrumentStatus] = mapped_column(
-        SAEnum(InstrumentStatus, native_enum=True, create_constraint=True, validate_strings=True),
-        default=InstrumentStatus.active, nullable=False
+    status: Mapped[ActiveStatus] = mapped_column(
+        SAEnum(ActiveStatus, native_enum=True, create_constraint=True, validate_strings=True),
+        default=ActiveStatus.ACTIVE, server_default=AssetType.CRYPTO, nullable=False
     )
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
+        server_default=func.now(), 
+        default=func.now(), 
+        nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
+        server_default=func.now(), 
+        default=func.now(), 
+        onupdate=func.now(), 
+        nullable=False
+    )
+    is_valid:   Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("1"))
 
     exchanges: Mapped[list["ExchangeInstrument"]] = relationship(back_populates="instrument")

@@ -10,11 +10,11 @@ class ExchangeInstrument(Base):
     exchange_id: Mapped[int] = mapped_column(ForeignKey("exchanges.id", ondelete="RESTRICT"), index=True, nullable=False)
     instrument_id: Mapped[int] = mapped_column(ForeignKey("instruments.id", ondelete="RESTRICT"), index=True, nullable=False)
 
-    exchange_symbol: Mapped[str] = mapped_column(String(64), index=True, nullable=False)  # 거래소 표기
+    exchange_symbol: Mapped[str] = mapped_column(String(64), index=True, nullable=False) 
     price_precision: Mapped[int] = mapped_column(Integer, nullable=False)
     qty_precision: Mapped[int] = mapped_column(Integer, nullable=False)
     min_notional: Mapped[Decimal | None] = mapped_column(DECIMAL(20, 10))
-    active: Mapped[int] = mapped_column(Integer, nullable=False)  # MySQL TINYINT(1) 매핑
+    active: Mapped[int] = mapped_column(Integer, nullable=False)  
 
     exchange: Mapped["Exchange"] = relationship(back_populates="instruments")
     instrument: Mapped["Instrument"] = relationship(back_populates="exchanges")
