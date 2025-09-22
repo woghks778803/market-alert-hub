@@ -1,18 +1,10 @@
 from __future__ import annotations
-import enum
 from datetime import datetime
-from sqlalchemy import String, DateTime, Enum as SAEnum, func
+from sqlalchemy import Boolean, String, DateTime, Enum as SAEnum, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 from app.infra.db.base import Base
+from app.core.constants import UserRole, UserStatus
 
-class UserRole(str, enum.Enum):
-    user  = "user"
-    admin = "admin"
-
-class UserStatus(str, enum.Enum):
-    active    = "active"
-    suspended = "suspended"
-    deleted   = "deleted"
 
 class User(Base):
     __tablename__ = "users"
@@ -24,9 +16,20 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
 
     role:   Mapped[UserRole] = mapped_column(SAEnum(UserRole, native_enum=True, create_constraint=True, validate_strings=True),
-                                            nullable=False, default=UserRole.user)
+                                            nullable=False, default=UserRole.USER, server_default=UserRole.USER)
     status: Mapped[UserStatus] = mapped_column(SAEnum(UserStatus, native_enum=True, create_constraint=True, validate_strings=True),
-                                              nullable=False, default=UserStatus.active)
+                                              nullable=False, default=UserStatus.ACTIVE, server_default=UserStatus.ACTIVE)
 
-    created_at:    Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
+        server_default=func.now(), 
+        default=func.now(), 
+        nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
+        server_default=func.now(), 
+        default=func.now(), 
+        onupdate=func.now(), 
+        nullable=False
+    )
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    is_valid:      Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("1"))
