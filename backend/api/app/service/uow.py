@@ -1,20 +1,41 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session as DbSession
+
 from app.repository.protocol.user_repo import UserRepo    
 from app.repository.sql.user_repo import SqlUserRepo       
+from app.repository.protocol.alert_repo import AlertRepo    
+from app.repository.sql.alert_repo import SqlAlertRepo    
+from app.repository.protocol.session_repo import SessionRepo    
+from app.repository.sql.session_repo import SqlSessionRepo  
 
 class UnitOfWork:
-    """한 요청 내에서 여러 레포가 같은 DB 세션을 공유하도록 보장."""
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: DbSession, owns_session: bool = True) -> None:
         self.db = db
-        # 여기에 자주 쓰는 Repo들을 미리 구성해둡니다. 직접 수정은 x(_)
         self._users = None
+        self._sessions = None
         self._alerts = None
+        self._done = False
+        self._owns = owns_session
+
+    def __enter__(self): return self
+    def __exit__(self, exc_type, *_):
+        if not self.db: return False
+        try:
+            if exc_type and not self._done:
+                self.db.rollback()
+        finally:
+            if self._owns:
+                self.db.close()
+        return False
 
     def commit(self) -> None:
-        self.db.commit()
+        if not self._done:
+            self.db.commit()
+            self._done = True
 
     def rollback(self) -> None:
-        self.db.rollback()
+        if not self._done:
+            self.db.rollback()
+            self._done = True
 
     # --- Lazy repositories (처음 호출 시 생성 후 캐시) ---
     @property
@@ -22,4 +43,16 @@ class UnitOfWork:
         if self._users is None:
             self._users = SqlUserRepo(self.db)
         return self._users
+    
+    @property
+    def sessions(self) -> SessionRepo:
+        if self._sessions is None:
+            self._sessions = SqlSessionRepo(self.db)
+        return self._sessions
+    
+    @property
+    def alerts(self) -> AlertRepo:
+        if self._alerts is None:
+            self._alerts = SqlAlertRepo(self.db)
+        return self._alerts
 
