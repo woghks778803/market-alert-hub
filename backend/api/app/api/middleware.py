@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 class RequestIdMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         req_id = request.headers.get("x-request-id") or str(uuid.uuid4())
+        request.state.request_id = req_id
         start = time.perf_counter()
         try:
             response: Response = await call_next(request)
@@ -23,5 +24,4 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
                 },
             )
         response.headers["x-request-id"] = req_id
-        request.state.request_id = req_id
         return response

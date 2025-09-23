@@ -5,7 +5,7 @@ from app.core.market_registry import registry
 import app.api.adapters.market.upbit  
 import app.api.adapters.market.binance  
 
-router = APIRouter(prefix="/meta", tags=["meta"])
+router = APIRouter(prefix="/meta")
 
 @router.get("/exchanges")
 def list_exchanges():

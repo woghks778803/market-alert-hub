@@ -5,8 +5,10 @@ from datetime import datetime, timedelta, timezone
 
 from app.service.uow import UnitOfWork
 from app.infra.db.model.user import User
-from app.domain.errors import ValidationAppError, AuthError
+from app.domain.errors import ValidationAppError, AuthError, PermissionError
 from app.core.auth import hash_password, verify_password, create_access_token, token_hash
+from app.core.constants import UserRole
+from app.api.schema import AuthSchema
 
 
 class AuthService:
@@ -31,14 +33,15 @@ class AuthService:
         ip: Optional[str] = None,
         ua: Optional[str] = None,
     ) -> Dict[str, Any]:
+        
         now = datetime.now(timezone.utc)
         expires_at = now + timedelta(minutes=self._ttl)
-
+        
         with self._uow_factory() as uow:
-            # 레포 구현 직접 호출/생성 X → uow.users 사용
+
             if uow.users.get_by_email(email):
                 raise ValidationAppError("email already exists")
-            
+
             user = User(
                 email=email,
                 nickname=nickname,
@@ -46,7 +49,7 @@ class AuthService:
                 # role/status 기본값은 모델 default/enum 디폴트 사용
                 created_at=now,
             )
-            
+
             uow.users.add(user)
 
             token = create_access_token(sub=str(user.id), minutes=self._ttl)
@@ -60,12 +63,7 @@ class AuthService:
 
             uow.commit()
 
-            return {
-                "id": user.id,
-                "email": user.email,
-                "nickname": user.nickname,
-                "created_at": user.created_at
-            }
+            return AuthSchema.TokenOut(user_id=user.id, access_token=token)
 
     # 로그인
     def login(
@@ -78,13 +76,12 @@ class AuthService:
     ) -> Dict[str, Any]:
         now = datetime.now(timezone.utc)
         expires_at = now + timedelta(minutes=self._ttl)
-
+        
         with self._uow_factory() as uow:
             user = uow.users.get_by_email(email)
             if not user or not verify_password(password, user.password_hash):
                 raise AuthError("invalid_credentials")
 
-            user.last_login_at = now  # flush는 레포 내부/세션 정책대로
             token = create_access_token(sub=str(user.id), minutes=self._ttl)
 
             uow.sessions.create(
@@ -95,14 +92,10 @@ class AuthService:
                 user_agent=ua,
             )
 
+            user.last_login_at = now
             uow.commit()
 
-            return {
-                "user_id": user.id,
-                "access_token": token,
-                "token_type": "bearer",
-                "expires_at": int(expires_at.timestamp()),
-            }
+            return AuthSchema.TokenOut(user_id=user.id, access_token=token)
 
     # 로그아웃 (세션 무효화)
     def logout(self, *, token_hash: str) -> Dict[str, Any]:
@@ -111,16 +104,27 @@ class AuthService:
             uow.commit()
             return {"ok": True}
 
-    # 내 정보 (필요하면)
-    def me(self, *, user_id: int) -> Dict[str, Any]:
+    def admin_login(self, *, email: str, password: str, ip: str | None = None, ua: str | None = None):
         with self._uow_factory() as uow:
-            user = uow.users.get_by_id(user_id)
-            if not user:
-                raise AuthError("user_not_found")
-            return {
-                "id": user.id,
-                "email": user.email,
-                "role": str(user.role),
-                "status": str(user.status),
-                "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None,
-            }
+            user = uow.users.get_by_email(email)
+
+            if not user or not verify_password(password, user.password_hash):
+                raise AuthError("Invalid credentials", target="email")
+
+            if user.role != UserRole.ADMIN:
+                raise PermissionError("Admin role required", target="role")
+
+            token = create_access_token(sub=str(user.id), minutes=self._ttl)
+
+            uow.sessions.create(
+                user_id=user.id,
+                token_hash=token_hash(token),
+                expires_at=datetime.now(timezone.utc) + timedelta(minutes=self._ttl),
+                ip_addr=ip,
+                user_agent=ua,
+            )
+
+            user.last_login_at = datetime.now(timezone.utc)
+            uow.commit()
+
+            return AuthSchema.TokenOut(user_id=user.id, access_token=token)

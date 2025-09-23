@@ -1,8 +1,8 @@
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker, Session as DbSession
 from app.core import settings
 from typing import Iterator
-
+from app.service.factory import ServiceFactory
 
 # --- DB session ---
 # engine = create_engine(
@@ -23,7 +23,7 @@ from typing import Iterator
 engine = create_engine(settings.SQLALCHEMY_URL, pool_pre_ping=True, future=True)
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, future=True)
 
-def get_db() -> Iterator[Session]:
+def get_db() -> Iterator[DbSession]:
     db = SessionLocal()
     try:
         yield db
@@ -33,13 +33,19 @@ def get_db() -> Iterator[Session]:
 # --- FastAPI dependencies -----------------------------------------------------
 from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from app.domain import AuthError  # status=401, code="unauthorized"
-from app.core.auth import decode_token  # 순수 유틸만 import
-from app.service.user_service import UserService
+
+from app.domain import AuthError, PermissionError
 from app.service.uow import UnitOfWork
+from app.core.auth import decode_token, token_hash
+from app.core.constants import UserRole
+
 from jose import JWTError, ExpiredSignatureError
+from datetime import datetime, timezone
 
 _bearer = HTTPBearer(auto_error=False)
+
+def get_services(db: DbSession = Depends(get_db)) -> ServiceFactory:
+    return ServiceFactory(lambda: UnitOfWork(db, owns_session=False))
 
 def get_current_token(
     creds: HTTPAuthorizationCredentials | None = Depends(_bearer),
@@ -68,16 +74,48 @@ def get_current_user_email(token: str = Depends(get_current_token)) -> str:
         raise AuthError(message="Invalid token payload")
     return sub
 
-def get_current_user(db=Depends(get_db), token: str = Depends(get_current_token)):
+def get_current_user_id(token: str = Depends(get_current_token)):
     try:
         payload = decode_token(token)
     except ExpiredSignatureError:
         raise AuthError("Token expired")
     except JWTError:
         raise AuthError("Invalid token")
-    uid = int(payload["sub"])
-    user = UserService(UnitOfWork(db)).get(uid)
-    if not user:
-        raise AuthError("User not found")
-    return user
+    sub = int(payload["sub"])
+    if not sub:
+        raise AuthError(message="Invalid token payload")
+    return sub
 
+# --------------------------------------------
+
+
+def get_current_user(
+    svcs: ServiceFactory = Depends(get_services),
+    creds: HTTPAuthorizationCredentials | None = Depends(_bearer),
+):
+    token = get_current_token(creds)
+    payload = decode_token(token)  
+    user_id = int(payload.get("sub", 0) or 0)
+
+    now = datetime.now(timezone.utc)
+    with svcs.uow() as uow:  # 또는 svcs.uow_factory() if you prefer
+        user = uow.users.get_by_id(user_id)
+        if not user:
+            raise AuthError("Invalid credentials", target="token")
+
+        # 세션 유효성(선택이지만 권장)
+        s = uow.sessions.get_by_hash(token_hash(token))  
+        expires_at = s.expires_at
+        revoked_at = s.revoked_at
+        if expires_at is not None and expires_at.tzinfo is None: expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if revoked_at is not None and revoked_at.tzinfo is None: revoked_at = revoked_at.replace(tzinfo=timezone.utc)
+
+        if not s or revoked_at or expires_at <= now:
+            raise AuthError("Missing or invalid token", target="token")
+
+        return user
+
+def require_admin(user = Depends(get_current_user)):
+    if getattr(user, "role", None) != UserRole.ADMIN:
+        raise PermissionError("Admin role required", target="role")
+    return user
