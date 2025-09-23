@@ -4,6 +4,7 @@ from datetime import datetime
 from sqlalchemy import String, Boolean, JSON, DateTime, ForeignKey, Index, Enum as SAEnum, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infra.db.base import Base
+from app.core.datetime_utils import utcnow
 
 class UserChannel(Base):
     __tablename__ = "user_channels"
@@ -24,13 +25,13 @@ class UserChannel(Base):
     is_default:   Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("0"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
         server_default=func.now(), 
-        default=func.now(), 
+        default=utcnow, 
         nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
         server_default=func.now(), 
-        default=func.now(), 
-        onupdate=func.now(), 
+        default=utcnow, 
+        onupdate=utcnow, 
         nullable=False
     )
     is_valid:   Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("1"))

@@ -4,7 +4,7 @@ from sqlalchemy import Text, Integer, DateTime, ForeignKey, Enum as SAEnum, Inde
 from sqlalchemy.orm import Mapped, mapped_column
 from app.infra.db.base import Base
 from app.core.constants import DeliveryStatus
-
+from app.core.datetime_utils import utcnow
 
 class Delivery(Base):
     __tablename__ = "deliveries"
@@ -23,7 +23,7 @@ class Delivery(Base):
     response_body: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
         server_default=func.now(), 
-        default=func.now(), 
+        default=utcnow, 
         nullable=False
     )
 

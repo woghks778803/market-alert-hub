@@ -4,6 +4,7 @@ from datetime import datetime
 from sqlalchemy import String, DateTime, ForeignKey, UniqueConstraint, Enum as SAEnum, func
 from sqlalchemy.orm import Mapped, mapped_column
 from app.infra.db.base import Base
+from app.core.datetime_utils import utcnow
 
 class UserIdentity(Base):
     __tablename__ = "user_identities"
@@ -26,7 +27,7 @@ class UserIdentity(Base):
     expires_at:    Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
         server_default=func.now(), 
-        default=func.now(), 
+        default=utcnow, 
         nullable=False
     )
 
