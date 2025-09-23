@@ -1,10 +1,10 @@
 from datetime import datetime
 from pydantic import BaseModel, EmailStr, Field
 from pydantic.config import ConfigDict
-
+from app.core.constants import UserRole, UserStatus
 
 # 공용: from_attributes=True (Pydantic v2)
-_model_cfg = ConfigDict(from_attributes=True)
+_model_cfg = ConfigDict(from_attributes=True, use_enum_values=True)
 
 class UserCreatePublic(BaseModel):
     email: EmailStr
@@ -19,12 +19,26 @@ class UserReadPublic(BaseModel):
     nickname: str
     created_at: datetime
 
+class UserReadAdmin(BaseModel):
+    model_config = _model_cfg
+    id: int
+    email: EmailStr
+    nickname: str | None = None
+    role: UserRole | None = None
+    status: UserStatus | None = None
+    created_at: datetime 
+    last_login_at: datetime | None = None
+
+class UserUpdateAdmin(BaseModel):
+    role: UserRole | None = Field(default=None, description="user|admin")
+    status: UserStatus | None = Field(default=None, description="active|suspended|deleted")
+
 class MeRead(BaseModel):
     model_config = _model_cfg
 
     id: int
     email: EmailStr
     nickname: str
-    role: str           # enum 문자열 (예: "user" | "admin")
-    status: str         # enum 문자열 (예: "active" | "suspended" | "deleted")
+    role: UserRole | None = Field(default=None, description="user|admin")
+    status: UserStatus | None = Field(default=None, description="active|suspended|deleted") 
     last_login_at: datetime | None = None

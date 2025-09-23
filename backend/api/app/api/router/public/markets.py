@@ -6,7 +6,7 @@ from app.core.market_types import MarketAdapter
 from app.domain import ValidationAppError
 from typing import cast
 
-router = APIRouter(prefix="/markets", tags=["markets"])
+router = APIRouter(prefix="/markets")
 
 @router.get("/ticker", response_model=list[Ticker])
 def get_ticker(q: TickerQuery = Depends()):

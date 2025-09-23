@@ -35,6 +35,15 @@ def _install_openapi_with_bearer(app: FastAPI) -> None:
             description=app.description,
             routes=app.routes,
         )
+        # Swagger UI/Redoc에서 그룹 헤더처럼 보이게 하는 확장
+        schema["x-tagGroups"] = [
+            {"name": "Public", "tags": [
+                "Public • Auth", "Public • Markets", "Public • Meta", "Public • Health"
+            ]},
+            {"name": "Admin", "tags": [
+                "Admin • Auth", "Admin • Alerts", "Admin • Health"
+            ]},
+        ]
         components = schema.setdefault("components", {})
         security_schemes = components.setdefault("securitySchemes", {})
         security_schemes["bearerAuth"] = {

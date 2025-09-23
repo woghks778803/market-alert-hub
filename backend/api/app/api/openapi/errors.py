@@ -36,8 +36,19 @@ def err(status: int, description: str, example: Optional[Dict[str, Any]] = None)
     }
 
 # 자주 쓰는 프리셋
-ERR_400 = err(400, "유효하지 않은 입력(ValidationAppError)",
-              err_example("validation_error", "Invalid input", target="field"))
+ERR_400 = err(
+    400,
+    "유효하지 않은 입력(ValidationAppError)",
+    err_example(
+        "validation_error",
+        "Validation failed",
+        meta={
+            "errors": [
+                {"loc": ["body", "role"], "msg": "Input should be 'user' or 'admin'"},
+            ]
+        },
+    ),
+)
 ERR_401 = err(401, "인증 실패(AuthError)",
               err_example("unauthorized", "Missing or invalid token"))
 ERR_403 = err(403, "권한 없음(PermissionError)",

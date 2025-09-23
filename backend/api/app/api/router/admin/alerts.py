@@ -2,14 +2,13 @@
 from fastapi import APIRouter, Depends, Security, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, get_current_user
+from app.api.deps import get_db, get_current_user_id
 from app.service import ServiceFactory
 import app.api.schema as pschema
 import app.api.openapi as popenapi
 
 router = APIRouter(
     prefix="/alerts",
-    tags=["alerts"],
     responses=popenapi.combine(popenapi.ERR_401, popenapi.ERR_500),
 )
 
@@ -29,7 +28,7 @@ def get_services(db: Session = Depends(get_db)) -> ServiceFactory:
 def create_alert(
     payload: pschema.alert.AlertCreate,
     svcs: ServiceFactory = Depends(get_services),
-    user = Security(get_current_user),   # 로그인 필요 (user.id 사용)
+    user = Security(get_current_user_id),   # 로그인 필요 (user.id 사용)
 ):
     return svcs.alerts().create(user.id, payload)
 
@@ -40,7 +39,7 @@ def create_alert(
 )
 def list_alerts(
     svcs: ServiceFactory = Depends(get_services),
-    user = Security(get_current_user),
+    user = Security(get_current_user_id),
 ):
     return svcs.alerts().list(user.id)
 
@@ -52,7 +51,7 @@ def list_alerts(
 def delete_alert(
     alert_id: int,
     svcs: ServiceFactory = Depends(get_services),
-    user = Security(get_current_user),
+    user = Security(get_current_user_id),
 ):
     svcs.alerts().delete(user.id, alert_id)
     return
