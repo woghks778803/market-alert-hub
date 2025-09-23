@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import String, DateTime, ForeignKey, Index, func
 from sqlalchemy.orm import Mapped, mapped_column
 from app.infra.db.base import Base
+from app.core.datetime_utils import utcnow
 
 class Session(Base):
     __tablename__ = "sessions"
@@ -17,7 +18,7 @@ class Session(Base):
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
         server_default=func.now(), 
-        default=func.now(), 
+        default=utcnow, 
         nullable=False
     )
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

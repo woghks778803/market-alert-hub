@@ -37,10 +37,6 @@ class AlertScope(str, enum.Enum):
     SINGLE = "single"
     CROSS  = "cross"
 
-ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-DEFAULT_PAGE_SIZE: int = 20
-ALERT_MAX_COUNT: int = 50
-
 # 에러 코드 / 메시지
 ERROR_INVALID_TOKEN: str = "Invalid token"
 ERROR_PERMISSION_DENIED: str = "Permission denied"

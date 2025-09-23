@@ -4,6 +4,7 @@ from .auth_service import AuthService
 from .user_service import UserService
 from .alert_service import AlertService
 
+
 from app.core import settings
 
 class ServiceFactory:
@@ -14,7 +15,9 @@ class ServiceFactory:
     #     return AlertService(self.uow)
 
     def users(self) -> UserService:
-        return UserService(self.uow)
+        return UserService(
+            uow_factory=self.uow,
+        )
     
     def auths(self) -> AuthService:
         return AuthService(

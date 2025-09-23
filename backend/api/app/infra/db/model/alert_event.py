@@ -4,6 +4,7 @@ from decimal import Decimal
 from sqlalchemy import DECIMAL, DateTime, String, JSON, ForeignKey, Index, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infra.db.base import Base
+from app.core.datetime_utils import utcnow
 
 class AlertEvent(Base):
     __tablename__ = "alert_events"
@@ -22,7 +23,7 @@ class AlertEvent(Base):
     dedup_key:     Mapped[str | None] = mapped_column(String(64), unique=True)  # DDL 길이에 맞춰 조정
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
         server_default=func.now(), 
-        default=func.now(), 
+        default=utcnow, 
         nullable=False
     )
 
