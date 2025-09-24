@@ -6,7 +6,6 @@ from datetime import datetime, timezone
 from app.core.constants import UserStatus, UserRole
 
 class UserService:
-    """사용자 조회/수정 등 유즈케이스."""
     def __init__(
         self,
         *,

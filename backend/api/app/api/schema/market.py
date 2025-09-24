@@ -1,21 +1,38 @@
-from pydantic import BaseModel, field_validator
-from app.core.market_registry import registry
+from datetime import datetime
+from pydantic import BaseModel, ConfigDict
 
+_model = ConfigDict(from_attributes=True, use_enum_values=True)
 
-class Ticker(BaseModel):
-    exchange: str
-    symbol: str
+class ExchangeRead(BaseModel):
+    model_config = _model
+    id: int
+    code: str
+    name: str
+
+class InstrumentRead(BaseModel):
+    model_config = _model
+    id: int
+    code: str
+    name: str
+
+class MappingItem(BaseModel):
+    exchange_id: int
+    instrument_id: int
+
+class LatestPriceRead(BaseModel):
+    model_config = _model
+    exchange_id: int
+    instrument_id: int
     price: float
-    price_24h_change_pct: float | None = None
-    ts: int
+    as_of: datetime
 
-class TickerQuery(BaseModel):
-    exchange: str
-    symbols: str
-
-    @field_validator("exchange")
-    def _check_exchange(cls, v):
-        if not registry.has(v):
-            from app.domain import ValidationAppError
-            raise ValidationAppError(message="unsupported exchange", target="exchange")
-        return v
+class Candle1mRead(BaseModel):
+    model_config = _model
+    exchange_id: int
+    instrument_id: int
+    bucket: datetime   # 1분 버킷 (UTC)
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: float | None = None

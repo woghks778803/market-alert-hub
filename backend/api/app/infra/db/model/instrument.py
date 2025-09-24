@@ -13,11 +13,11 @@ class Instrument(Base):
     base_asset: Mapped[str] = mapped_column(String(32), nullable=False)
     quote_asset: Mapped[str] = mapped_column(String(32), nullable=False)
     asset_type: Mapped[AssetType] = mapped_column(
-        SAEnum(AssetType, native_enum=True, create_constraint=True, validate_strings=True),
+        SAEnum(AssetType, values_callable=lambda e: [m.value for m in e], native_enum=True, create_constraint=True, validate_strings=True),
         default=AssetType.CRYPTO, server_default=AssetType.CRYPTO, nullable=False
     )
     status: Mapped[ActiveStatus] = mapped_column(
-        SAEnum(ActiveStatus, native_enum=True, create_constraint=True, validate_strings=True),
+        SAEnum(ActiveStatus, values_callable=lambda e: [m.value for m in e], native_enum=True, create_constraint=True, validate_strings=True),
         default=ActiveStatus.ACTIVE, server_default=AssetType.CRYPTO, nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 

@@ -15,7 +15,7 @@ class AlertStatus(str, enum.Enum):
     ARCHIVED = "archived"
 
 class AssetType(str, enum.Enum):
-    CRYPTO = "CRYPTO"; FX = "FX"; STOCK = "STOCK"; FUTURE = "FUTURE"
+    CRYPTO = "crypto"; FX = "fx"; STOCK = "stock"; FUTURE = "future"
 
 class ActiveStatus(str, enum.Enum):
     ACTIVE = "active"; INACTIVE = "inactive"
