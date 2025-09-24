@@ -6,6 +6,8 @@ from app.repository.protocol.alert_repo import AlertRepo
 from app.repository.sql.alert_repo import SqlAlertRepo    
 from app.repository.protocol.session_repo import SessionRepo    
 from app.repository.sql.session_repo import SqlSessionRepo  
+from app.repository.protocol.market_repo import MarketRepo    
+from app.repository.sql.market_repo import SqlMarketRepo  
 
 class UnitOfWork:
     def __init__(self, db: DbSession, owns_session: bool = True) -> None:
@@ -13,6 +15,7 @@ class UnitOfWork:
         self._users = None
         self._sessions = None
         self._alerts = None
+        self._markets = None
         self._done = False
         self._owns = owns_session
 
@@ -55,4 +58,10 @@ class UnitOfWork:
         if self._alerts is None:
             self._alerts = SqlAlertRepo(self.db)
         return self._alerts
+    
+    @property
+    def markets(self) -> MarketRepo:
+        if self._markets is None:
+            self._markets = SqlMarketRepo(self.db)
+        return self._markets
 

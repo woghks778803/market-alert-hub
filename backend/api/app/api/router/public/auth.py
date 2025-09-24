@@ -9,7 +9,6 @@ from app.core.auth import token_hash
 
 router = APIRouter(
     prefix="/auth",
-    responses=OpenApi.combine(OpenApi.ERR_401, OpenApi.ERR_500),
 )
 
 
