@@ -1,6 +1,6 @@
 from typing import Callable
 from app.service.uow import UnitOfWork
-from app.infra.db.model import User as UserModel
+from app.infra.db.model import UserModel
 from app.domain.errors import ValidationAppError, NotFoundError
 from datetime import datetime, timezone
 from app.core.constants import UserStatus, UserRole

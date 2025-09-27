@@ -22,3 +22,5 @@ def OK(model: Type[BaseModel], *, description: str = "성공", example: Optional
 def CREATED(model: Type[BaseModel], *, description: str = "생성됨", example: Optional[Dict[str, Any]] = None):
     return _success(201, model, description, example)
 
+def NO_CONTENT(model: Type[BaseModel], *, description: str = "삭제됨", example: Optional[Dict[str, Any]] = None):
+    return _success(204, model, description, {})

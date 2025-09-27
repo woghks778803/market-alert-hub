@@ -7,7 +7,9 @@ from app.repository.sql.alert_repo import SqlAlertRepo
 from app.repository.protocol.session_repo import SessionRepo    
 from app.repository.sql.session_repo import SqlSessionRepo  
 from app.repository.protocol.market_repo import MarketRepo    
-from app.repository.sql.market_repo import SqlMarketRepo  
+from app.repository.sql.market_repo import SqlMarketRepo    
+from app.repository.protocol.watchlist_repo import WatchlistRepo    
+from app.repository.sql.watchlist_repo import SqlWatchlistRepo  
 
 class UnitOfWork:
     def __init__(self, db: DbSession, owns_session: bool = True) -> None:
@@ -16,6 +18,7 @@ class UnitOfWork:
         self._sessions = None
         self._alerts = None
         self._markets = None
+        self._watchlists = None
         self._done = False
         self._owns = owns_session
 
@@ -64,4 +67,10 @@ class UnitOfWork:
         if self._markets is None:
             self._markets = SqlMarketRepo(self.db)
         return self._markets
+    
+    @property
+    def watchlists(self) -> WatchlistRepo:
+        if self._watchlists is None:
+            self._watchlists = SqlWatchlistRepo(self.db)
+        return self._watchlists
 

@@ -4,7 +4,7 @@ from typing import Callable, Dict, Any, Optional
 from datetime import datetime, timedelta, timezone
 
 from app.service.uow import UnitOfWork
-from app.infra.db.model.user import User
+from app.infra.db.model import UserModel
 from app.domain.errors import ValidationAppError, AuthError, PermissionError
 from app.core.auth import hash_password, verify_password, create_access_token, token_hash
 from app.core.constants import UserRole
@@ -42,7 +42,7 @@ class AuthService:
             if uow.users.get_by_email(email):
                 raise ValidationAppError("email already exists")
 
-            user = User(
+            user = UserModel(
                 email=email,
                 nickname=nickname,
                 password_hash=hash_password(password),

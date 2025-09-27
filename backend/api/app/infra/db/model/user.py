@@ -1,4 +1,3 @@
-from __future__ import annotations
 from datetime import datetime
 from sqlalchemy import Boolean, String, DateTime, Enum as SAEnum, func, text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -23,12 +22,10 @@ class User(Base):
                                             nullable=False, default=UserStatus.ACTIVE, server_default=UserStatus.ACTIVE)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
-        server_default=func.now(), 
         default=utcnow, 
         nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
-        server_default=func.now(), 
         default=utcnow, 
         onupdate=utcnow, 
         nullable=False

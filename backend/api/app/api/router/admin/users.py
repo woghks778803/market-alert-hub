@@ -63,7 +63,13 @@ def update_user(
     user = svcs.users().update(user_id=user_id, role=payload.role, status=payload.status)
     return UserSchema.UserReadAdmin.model_validate(user)
 
-@router.delete("/{user_id}", status_code=204, summary="사용자 삭제(soft)")
+@router.delete(
+    "/{user_id}", 
+    summary="사용자 삭제(soft)",
+    responses=OpenApi.combine(
+        OpenApi.NO_CONTENT({}, description="완료")
+    ),
+)
 def delete_user(
     user_id: int = Path(..., ge=1),
     svcs: ServiceFactory = Depends(get_services),
