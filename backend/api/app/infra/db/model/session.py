@@ -1,4 +1,3 @@
-from __future__ import annotations
 from datetime import datetime
 from sqlalchemy import String, DateTime, ForeignKey, Index, func
 from sqlalchemy.orm import Mapped, mapped_column
@@ -17,7 +16,6 @@ class Session(Base):
     ip_addr: Mapped[str | None] = mapped_column(String(45))
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
-        server_default=func.now(), 
         default=utcnow, 
         nullable=False
     )

@@ -94,11 +94,11 @@ def get_current_user(
     creds: HTTPAuthorizationCredentials | None = Depends(_bearer),
 ):
     token = get_current_token(creds)
-    payload = decode_token(token)  
-    user_id = int(payload.get("sub", 0) or 0)
+    user_id = get_current_user_id(token)
 
     now = datetime.now(timezone.utc)
     with svcs.uow() as uow:  # 또는 svcs.uow_factory() if you prefer
+        
         user = uow.users.get_by_id(user_id)
         if not user:
             raise AuthError("Invalid credentials", target="token")

@@ -1,5 +1,5 @@
 from typing import Protocol
-from app.infra.db.model import User as UserModel
+from app.infra.db.model import UserModel
 
 class UserRepo(Protocol):
 

@@ -1,5 +1,20 @@
 import enum
 
+class CandleBaseInterval(str, enum.Enum):
+    MIN_1 = "1m"
+    HOUR_1 = "1h"
+    DAY_1 = "1d"
+
+class CandleOutputInterval(str, enum.Enum):
+    MIN_1 = "1m"
+    MIN_5 = "5m"
+    MIN_15 = "15m"
+    HOUR_1 = "1h"
+    HOUR_4 = "4h"
+    DAY_1 = "1d"
+    WEEK_1 = "1w"
+    MONTH_1 = "1M"
+
 class UserRole(str, enum.Enum):
     USER  = "user"
     ADMIN = "admin"
@@ -15,10 +30,7 @@ class AlertStatus(str, enum.Enum):
     ARCHIVED = "archived"
 
 class AssetType(str, enum.Enum):
-    CRYPTO = "crypto"; FX = "fx"; STOCK = "stock"; FUTURE = "future"
-
-class ActiveStatus(str, enum.Enum):
-    ACTIVE = "active"; INACTIVE = "inactive"
+    CRYPTO = "crypto"; FIAT = "fiat"; FX = "fx"; STOCK = "stock"; FUTURE = "future"
 
 class DeliveryStatus(str, enum.Enum):
     QUEUED = "queued"

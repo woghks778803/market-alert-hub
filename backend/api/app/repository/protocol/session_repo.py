@@ -1,6 +1,6 @@
 from typing import Protocol
 from datetime import datetime
-from app.infra.db.model import Session as SessionModel
+from app.infra.db.model import SessionModel
 
 class SessionRepo(Protocol):
 
