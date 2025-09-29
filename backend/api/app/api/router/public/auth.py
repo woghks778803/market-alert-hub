@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, Body, Request, status, Security
 
-import app.api.openapi as OpenApi
-from app.api.schema import UserSchema, AuthSchema
-from app.api.deps import get_current_token, get_current_user_id, get_services
-
-from app.service.factory import ServiceFactory
 from app.core.auth import token_hash 
+from app.infra.db.model import UserModel
+from app.service.factory import ServiceFactory
+from app.api.schema import UserSchema, AuthSchema
+from app.api.deps import get_current_token, get_current_user, get_services
+import app.api.openapi as OpenApi
 
 router = APIRouter(
     prefix="/auth",
@@ -19,8 +19,14 @@ router = APIRouter(
     summary="유저 회원가입",
     description="이메일 중복 시 ConflictError로 처리(전역 핸들러에서 409로 매핑).",
     responses=OpenApi.combine(
-        OpenApi.CREATED(AuthSchema.TokenOut, description="회원가입 성공",
-                         example={"id": 1, "email": "alice@example.com"}),
+        OpenApi.CREATED(
+            AuthSchema.TokenOut, 
+            description="회원가입 성공",
+            example={
+                "user_id": 5,
+                "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1IiwiaWF0IjoxNzU5MTM0NjM2LCJleHAiOjE3NTkxMzgyMzZ9.pa5udqz-ZTYAQ7GIznr0FmB9zdrRNmJBpDjecPii0X8",
+                "token_type": "bearer"
+            }),
         OpenApi.ERR_400, OpenApi.ERR_409,
     ),
 )
@@ -51,7 +57,7 @@ def login(
 ):
     ip = request.client.host if request.client else None
     ua = request.headers.get("user-agent")
-    return svcs.auths().login(email=payload.email, password=payload.password, ip=ip, ua=ua)
+    return svcs.auths().login(email=payload.email, password=payload.password, ip=ip, ua=ua, admin_chk=False)
 
 
 @router.post(
@@ -78,8 +84,8 @@ def logout(
     ),
 )
 def me(
-    user_id: str = Security(get_current_user_id),  # 🔒 Swagger에 보안 표시
+    user: UserModel = Security(get_current_user),  # 🔒 Swagger에 보안 표시
     svcs: ServiceFactory = Depends(get_services),
 ):
-    user = svcs.users().get_by_id(user_id=user_id)
+    user = svcs.users().get_by_id(user_id=user.id)
     return UserSchema.UserReadPublic.model_validate(user)

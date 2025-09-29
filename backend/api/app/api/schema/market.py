@@ -1,7 +1,7 @@
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
-_model = ConfigDict(from_attributes=True, use_enum_values=True)
+_model_cfg = ConfigDict(from_attributes=True, use_enum_values=True)
 
 class MarketInstrumentItem(BaseModel):
     id: int
@@ -10,16 +10,10 @@ class MarketInstrumentItem(BaseModel):
     quote_symbol: str
     exchange_name: str
 
-    model_config = _model
+    model_config = _model_cfg
 
 class ExchangeRead(BaseModel):
-    model_config = _model
-    id: int
-    code: str
-    name: str
-
-class InstrumentRead(BaseModel):
-    model_config = _model
+    model_config = _model_cfg
     id: int
     code: str
     name: str
@@ -30,9 +24,18 @@ class MappingItem(BaseModel):
     quote_asset_id: int
 
 class CandleRead(BaseModel):
-    model_config = _model
-    exchange_id: int
-    instrument_id: int
+    model_config = _model_cfg
+    exchange_instrument_id: int
+    ts_open: datetime 
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: float | None = None
+
+class CandleWrite(BaseModel): # 생성 및 업데이트
+    model_config = _model_cfg
+    exchange_instrument_id: int
     ts_open: datetime 
     open: float
     high: float
@@ -45,4 +48,8 @@ class ExchangeInstrumentListItem(BaseModel):
     exchange_symbol: str
     base_symbol: str
     exchange_name: str
+
+class CandleIngestResult(BaseModel):
+    id: int
+    created: bool  # True=insert, False=update(when upsert)
 

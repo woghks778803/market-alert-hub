@@ -3,6 +3,9 @@ from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
+    # deploy
+    DEPLOY_ENV : str = "dev"
+
     # --- DB ---
     MYSQL_HOST: str
     MYSQL_PORT: int = 3306

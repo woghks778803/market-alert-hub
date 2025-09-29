@@ -1,15 +1,15 @@
 from sqlalchemy.orm import Session as DbSession
 
-from app.repository.protocol.user_repo import UserRepo    
-from app.repository.sql.user_repo import SqlUserRepo       
-from app.repository.protocol.alert_repo import AlertRepo    
-from app.repository.sql.alert_repo import SqlAlertRepo    
-from app.repository.protocol.session_repo import SessionRepo    
-from app.repository.sql.session_repo import SqlSessionRepo  
-from app.repository.protocol.market_repo import MarketRepo    
-from app.repository.sql.market_repo import SqlMarketRepo    
-from app.repository.protocol.watchlist_repo import WatchlistRepo    
-from app.repository.sql.watchlist_repo import SqlWatchlistRepo  
+from app.infra.db.repository.protocol.user_repo import UserRepo    
+from app.infra.db.repository.sql.user_repo import SqlUserRepo       
+from app.infra.db.repository.protocol.alert_repo import AlertRepo    
+from app.infra.db.repository.sql.alert_repo import SqlAlertRepo    
+from app.infra.db.repository.protocol.session_repo import SessionRepo    
+from app.infra.db.repository.sql.session_repo import SqlSessionRepo  
+from app.infra.db.repository.protocol.market_repo import MarketRepo    
+from app.infra.db.repository.sql.market_repo import SqlMarketRepo    
+from app.infra.db.repository.protocol.watchlist_repo import WatchlistRepo    
+from app.infra.db.repository.sql.watchlist_repo import SqlWatchlistRepo  
 
 class UnitOfWork:
     def __init__(self, db: DbSession, owns_session: bool = True) -> None:

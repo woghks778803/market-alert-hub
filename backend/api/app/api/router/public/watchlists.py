@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, Query, Path, status
-from app.api.deps import get_services, get_current_user
+
+from app.infra.db.model import UserModel
 from app.service.factory import ServiceFactory
+from app.api.deps import get_services, get_current_user
 from app.api.schema.watchlist import WatchlistCreate, WatchlistItemRead
 import app.api.openapi as OpenApi
 
@@ -18,7 +20,7 @@ router = APIRouter(
 )
 def list_watchlist(
     svcs: ServiceFactory = Depends(get_services),
-    user=Depends(get_current_user),
+    user: UserModel = Depends(get_current_user),
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
     order: str = Query("asc", pattern="^(asc|desc)$"),
@@ -33,13 +35,14 @@ def list_watchlist(
     summary="관심종목 등록",
     status_code=status.HTTP_201_CREATED,
     responses=OpenApi.combine(
-        OpenApi.CREATED(WatchlistItemRead), OpenApi.ERR_409
+        OpenApi.CREATED(WatchlistItemRead), 
+        OpenApi.ERR_409
     ),
 )
 def create_watchlist(
     payload: WatchlistCreate,
     svcs: ServiceFactory = Depends(get_services),
-    user=Depends(get_current_user),
+    user: UserModel = Depends(get_current_user),
 ):
     return svcs.watchlists().create(user_id=user.id, data=payload)
 
@@ -53,7 +56,7 @@ def create_watchlist(
 def delete_watchlist(
     item_id: int = Path(..., ge=1),
     svcs: ServiceFactory = Depends(get_services),
-    user=Depends(get_current_user),
+    user: UserModel = Depends(get_current_user),
 ):
     svcs.watchlists().delete(item_id=item_id, user_id=user.id)
     return None

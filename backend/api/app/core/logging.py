@@ -2,11 +2,11 @@ import logging, sys, json
 from typing import Any
 
 
-def setup_logging() -> None:
+def setup_logging(level: int = logging.INFO) -> None:
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(JSONLogFormatter())
     root = logging.getLogger()
-    root.setLevel(logging.INFO)
+    root.setLevel(level)
     root.handlers = [handler]
 
 

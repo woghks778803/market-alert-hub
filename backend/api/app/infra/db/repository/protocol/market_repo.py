@@ -1,18 +1,15 @@
-from typing import Iterable, Sequence
+from typing import Iterable, Sequence, Tuple
 from datetime import datetime
-from app.infra.db.model import (
-    ExchangeModel, InstrumentModel,
-    PriceSnapshot1mModel, PriceSnapshot1hModel, PriceSnapshot1dModel
-)    
-from app.domain.dto import market as MarketDTO
+from app.infra.db.model import ExchangeModel 
+from app.domain.market import dto as MarketDTO
 
 from decimal import Decimal
 
 class MarketRepo:
 
     def list_exchanges(self, *, limit: int = 100, offset: int = 0) -> Sequence[ExchangeModel]: ...
-    def list_exchange_instruments(self, *, exchange_id: int | None = None, limit: int = 200, offset: int = 0) -> list[MarketDTO.MarketInstrumentBrief]: ...
-    def list_mapping(self, *, exchange_id: int | None = None) -> Iterable[tuple[int, int, int]]: ...
+    def list_exchange_instruments(self, *, exchange_id: int | None = None, limit: int = 200, offset: int = 0) -> list[MarketDTO.MarketInstrumentItem]: ...
+    def list_mapping(self, *, exchange_id: int | None = None) -> list[MarketDTO.MappingItem]: ...
     def _list_candles(
         self,
         model,
@@ -40,16 +37,17 @@ class MarketRepo:
         limit: int, asc_order: bool,
     ): ...
 
-    def seed_snapshot(
+    def upsert_one_1m(self, row: dict) -> Tuple[int, bool]: ...
+    def upsert_one_1h(self, row: dict) -> Tuple[int, bool]: ...
+    def upsert_one_1d(self, row: dict) -> Tuple[int, bool]: ...
+    def _upsert_one_mysql(self, model, row: dict) -> Tuple[int, bool]: ...
+    
+    def seed_snapshots(
         self,
         *,
         interval: str,
-        exchange_instrument_id: int,
-        ts_open: datetime,
-        open: Decimal,
-        high: Decimal,
-        low: Decimal,
-        close: Decimal,
-        volume: Decimal,
+        chunk: list
     ): ...
+
+    def get_symbols(self, exchange_instrument_id: int) -> MarketDTO.MappingSymbol: ...
 

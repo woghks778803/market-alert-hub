@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, Path, Query, Body
 
-import app.api.openapi as OpenApi
-from app.api.deps import get_services
-from app.service.factory import ServiceFactory
-from app.api.schema import UserSchema
 from app.core.constants import UserRole, UserStatus
+from app.service.factory import ServiceFactory
+from app.api.deps import get_services
+from app.api.schema import UserSchema
+import app.api.openapi as OpenApi
 
 router = APIRouter(
     prefix="/users",

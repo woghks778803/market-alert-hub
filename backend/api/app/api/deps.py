@@ -97,12 +97,11 @@ def get_current_user(
     user_id = get_current_user_id(token)
 
     now = datetime.now(timezone.utc)
-    with svcs.uow() as uow:  # 또는 svcs.uow_factory() if you prefer
+    with svcs.uow() as uow:  
         
         user = uow.users.get_by_id(user_id)
         if not user:
             raise AuthError("Invalid credentials", target="token")
-
         # 세션 유효성(선택이지만 권장)
         s = uow.sessions.get_by_hash(token_hash(token))  
         expires_at = s.expires_at
@@ -112,7 +111,6 @@ def get_current_user(
 
         if not s or revoked_at or expires_at <= now:
             raise AuthError("Missing or invalid token", target="token")
-
         return user
 
 def require_admin(user = Depends(get_current_user)):
