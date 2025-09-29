@@ -2,20 +2,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
-from sqlalchemy.exc import IntegrityError
-from starlette.exceptions import HTTPException as StarletteHTTPException
-from fastapi.exceptions import RequestValidationError, ResponseValidationError
 
+import logging
 from app.core.logging import setup_logging
+from app.core.settings import settings
 from app.api.middleware import RequestIdMiddleware
-from app.api.exception_handlers import (
-    handle_app_error,
-    handle_http_error,
-    handle_validation_error,
-    handle_integrity_error,
-    handle_unexpected_error
-)
-from app.domain import AppError
+from app.api.exception_handlers import unified_exception_handler
 from app.api.router import api
 
 TAGS_METADATA = [
@@ -60,7 +52,10 @@ def _install_openapi_with_bearer(app: FastAPI) -> None:
 
 
 def create_app() -> FastAPI:
-    setup_logging()
+    if settings.DEPLOY_ENV == "prod":
+        setup_logging(level=logging.INFO)
+    else:
+        setup_logging(level=logging.DEBUG)
 
     app = FastAPI(
         title="Market Alert Hub API",
@@ -88,14 +83,7 @@ def create_app() -> FastAPI:
     )
 
     # --- Exception Handlers ---
-    app.add_exception_handler(AppError, handle_app_error)
-    app.add_exception_handler(IntegrityError, handle_integrity_error)
-    app.add_exception_handler(StarletteHTTPException, handle_http_error)
-    app.add_exception_handler(RequestValidationError, handle_validation_error)
-    app.add_exception_handler(ResponseValidationError, handle_unexpected_error)  # 응답 직렬화 에러도 JSON으로
-
-    # (모든 미처리 예외)
-    app.add_exception_handler(Exception, handle_unexpected_error)
+    app.add_exception_handler(Exception, unified_exception_handler)
 
     # --- Routers ---
     app.include_router(api)

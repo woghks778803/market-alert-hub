@@ -5,10 +5,9 @@ from datetime import datetime, timedelta, timezone
 
 from app.service.uow import UnitOfWork
 from app.infra.db.model import UserModel
-from app.domain.errors import ValidationAppError, AuthError, PermissionError
+from app.domain import AuthDTO, ValidationAppError, AuthError, PermissionError
 from app.core.auth import hash_password, verify_password, create_access_token, token_hash
-from app.core.constants import UserRole
-from app.api.schema import AuthSchema
+from app.core.constants import UserRole, UserStatus
 
 
 class AuthService:
@@ -30,8 +29,8 @@ class AuthService:
         email: str,
         nickname: str,
         password: str,
-        ip: Optional[str] = None,
-        ua: Optional[str] = None,
+        ip: str | None = None,
+        ua: str | None = None,
     ) -> Dict[str, Any]:
         
         now = datetime.now(timezone.utc)
@@ -63,7 +62,7 @@ class AuthService:
 
             uow.commit()
 
-            return AuthSchema.TokenOut(user_id=user.id, access_token=token)
+            return AuthDTO.UserToken(user_id=user.id, access_token=token)
 
     # 로그인
     def login(
@@ -71,9 +70,10 @@ class AuthService:
         *,
         email: str,
         password: str,
-        ip: Optional[str] = None,
-        ua: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        ip: str | None = None,
+        ua: str | None = None,
+        admin_chk: bool = False,
+    ) -> AuthDTO.UserToken:
         now = datetime.now(timezone.utc)
         expires_at = now + timedelta(minutes=self._ttl)
         
@@ -82,6 +82,12 @@ class AuthService:
             if not user or not verify_password(password, user.password_hash):
                 raise AuthError("invalid_credentials")
 
+            if admin_chk == True and user.role != UserRole.ADMIN:
+                raise PermissionError("Admin role required", target="role")
+            
+            if user.status != UserStatus.ACTIVE:
+                raise PermissionError("User not active status", target="status")
+            
             token = create_access_token(sub=str(user.id), minutes=self._ttl)
 
             uow.sessions.create(
@@ -95,7 +101,7 @@ class AuthService:
             user.last_login_at = now
             uow.commit()
 
-            return AuthSchema.TokenOut(user_id=user.id, access_token=token)
+            return AuthDTO.UserToken(user_id=user.id, access_token=token)
 
     # 로그아웃 (세션 무효화)
     def logout(self, *, token_hash: str) -> Dict[str, Any]:
@@ -103,28 +109,3 @@ class AuthService:
             uow.sessions.revoke(token_hash)
             uow.commit()
             return {"ok": True}
-
-    def admin_login(self, *, email: str, password: str, ip: str | None = None, ua: str | None = None):
-        with self._uow_factory() as uow:
-            user = uow.users.get_by_email(email)
-
-            if not user or not verify_password(password, user.password_hash):
-                raise AuthError("Invalid credentials", target="email")
-
-            if user.role != UserRole.ADMIN:
-                raise PermissionError("Admin role required", target="role")
-
-            token = create_access_token(sub=str(user.id), minutes=self._ttl)
-
-            uow.sessions.create(
-                user_id=user.id,
-                token_hash=token_hash(token),
-                expires_at=datetime.now(timezone.utc) + timedelta(minutes=self._ttl),
-                ip_addr=ip,
-                user_agent=ua,
-            )
-
-            user.last_login_at = datetime.now(timezone.utc)
-            uow.commit()
-
-            return AuthSchema.TokenOut(user_id=user.id, access_token=token)

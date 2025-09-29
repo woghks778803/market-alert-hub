@@ -1,4 +1,4 @@
-from typing import Sequence, Tuple
+from typing import Sequence
 from sqlalchemy import select, func, and_, asc, desc
 from sqlalchemy.orm import aliased, Session as DbSession
 from app.infra.db.model import (
@@ -15,7 +15,7 @@ class SqlWatchlistRepo:
         order = asc if is_asc else desc
         stmt = (
             select(WatchlistItemModel)
-            .where(and_(WatchlistItemModel.user_id == user_id, WatchlistItemModel.is_valid == True))
+            .where(and_(WatchlistItemModel.user_id == user_id, WatchlistItemModel.is_valid.is_(True)))
             .order_by(order(WatchlistItemModel.sort_order), desc(WatchlistItemModel.id))
             .limit(limit)
             .offset(offset)
@@ -45,7 +45,7 @@ class SqlWatchlistRepo:
 
     def next_sort_order(self, *, user_id: int) -> int:
         stmt = select(func.coalesce(func.max(WatchlistItemModel.sort_order), 0)).where(
-            and_(WatchlistItemModel.user_id == user_id, WatchlistItemModel.is_valid == True)
+            and_(WatchlistItemModel.user_id == user_id, WatchlistItemModel.is_valid.is_(True))
         )
         return int(self._db.execute(stmt).scalar_one()) + 1
 
@@ -68,26 +68,4 @@ class SqlWatchlistRepo:
         )
         return self._db.execute(stmt).scalar_one_or_none()
 
-    def pick_display_fields(self, row: WatchlistItemModel) -> Tuple[str, str, str]:
-        ei = ExchangeInstrumentModel
-        b = aliased(InstrumentModel)
-        q = aliased(InstrumentModel)
-
-        stmt = (
-            select(
-                ei.id.label("id"),
-                ei.exchange_symbol.label("exchange_symbol"),
-                b.symbol.label("base_symbol"),
-                q.symbol.label("quote_symbol")
-            )
-            .select_from(ExchangeInstrumentModel)
-            .join(b, ei.base_asset)
-            .join(q, ei.quote_asset)
-            .limit(1)
-        )
-
-        if row.exchange_instrument_id is not None:
-            stmt = stmt.where(ei.id == row.exchange_instrument_id)
-
-        row = self._db.execute(stmt).one_or_none()
-        return row.exchange_symbol, row.base_symbol, row.quote_symbol
+    

@@ -2,8 +2,6 @@ from sqlalchemy import select
 from app.infra.db.model import SessionModel
 from sqlalchemy.orm import Session as DbSession
 from datetime import datetime, timezone
-from typing import Optional
-from ._utils import to_db_value
 
 class SqlSessionRepo:
     def __init__(self, db: DbSession): self._db = db

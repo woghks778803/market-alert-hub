@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, Request, Body
 
-import app.api.openapi as OpenApi
+from app.service.factory import ServiceFactory
 from app.api.schema import auth as AuthSchema
 from app.api.deps import get_services
+import app.api.openapi as OpenApi
 
-from app.service.factory import ServiceFactory
 
 
 router = APIRouter(prefix="/auth")
@@ -29,6 +29,6 @@ def admin_login(
     ip = request.client.host if request.client else None
     ua = request.headers.get("user-agent")
 
-    return svcs.auths().admin_login(
-        email=payload.email, password=payload.password, ip=ip, ua=ua
+    return svcs.auths().login(
+        email=payload.email, password=payload.password, ip=ip, ua=ua, admin_chk=True
     )

@@ -1,8 +1,7 @@
-from fastapi import status
-
+from http import HTTPStatus as HS
 
 class AppError(Exception):
-    status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR
+    status_code: int = HS.INTERNAL_SERVER_ERROR
     code: str = "internal_error"
     message: str = "Internal server error"
     target: str | None = None
@@ -25,29 +24,25 @@ class AppError(Exception):
 
 
 class ValidationAppError(AppError):
-    status_code = status.HTTP_400_BAD_REQUEST
+    status_code = HS.BAD_REQUEST       
     code = "validation_error"
 
-
 class AuthError(AppError):
-    status_code = status.HTTP_401_UNAUTHORIZED
+    status_code = HS.UNAUTHORIZED       
     code = "unauthorized"
 
-
 class PermissionError(AppError):
-    status_code = status.HTTP_403_FORBIDDEN
+    status_code = HS.FORBIDDEN          
     code = "forbidden"
 
-
 class NotFoundError(AppError):
-    status_code = status.HTTP_404_NOT_FOUND
+    status_code = HS.NOT_FOUND                  
     code = "not_found"
 
-
 class ConflictError(AppError):
-    status_code = status.HTTP_409_CONFLICT
+    status_code = HS.CONFLICT
     code = "conflict"
 
 class InternalServerError(AppError):
-    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    status_code = HS.INTERNAL_SERVER_ERROR
     code = "internal_error"

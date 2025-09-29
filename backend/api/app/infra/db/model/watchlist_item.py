@@ -30,8 +30,6 @@ class WatchlistItem(Base):
     is_valid:   Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("1"))
 
     __table_args__ = (
-        # 유저별 중복 등록 방지
-        UniqueConstraint("user_id", "exchange_instrument_id", name="uq_wi_user_exi"),
         # 유저 목록 정렬/조회 최적화
         Index("ix_wi_user_sort", "user_id", "sort_order"),
     )

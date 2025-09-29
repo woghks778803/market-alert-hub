@@ -53,9 +53,6 @@ class UserService:
                 user.role = role
             if status is not None:
                 user.status = status
-                if status == UserStatus.DELETED:
-                    if hasattr(user, "is_valid"):
-                        user.is_valid = False
             user.updated_at = datetime.now(timezone.utc) if hasattr(user, "updated_at") else getattr(user, "updated_at", None)
             uow.commit()
             return user

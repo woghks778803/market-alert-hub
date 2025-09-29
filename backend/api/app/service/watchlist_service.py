@@ -1,7 +1,6 @@
 from typing import List, Callable
 from app.service.uow import UnitOfWork
-from app.api.schema import WatchlistSchema
-from app.domain.errors import ConflictError, ValidationAppError, NotFoundError
+from app.domain import WatchlistDTO, ConflictError, ValidationAppError
 
 class WatchlistService:
     def __init__(
@@ -11,14 +10,14 @@ class WatchlistService:
         ):
         self._uow_factory = uow_factory
 
-    def list(self, *, user_id: int, limit: int, offset: int, is_asc: bool) -> List[WatchlistSchema.WatchlistItemRead]:
+    def list(self, *, user_id: int, limit: int, offset: int, is_asc: bool) -> List[WatchlistDTO.WatchlistItemRead]:
         with self._uow_factory() as uow:
             rows = uow.watchlists.list(user_id=user_id, limit=limit, offset=offset, is_asc=is_asc)
-            result: List[WatchlistSchema.WatchlistItemRead] = []
+            result: List[WatchlistDTO.WatchlistItemRead] = []
             for row in rows:
-                exchange_symbol, base_symbol, quote_symbol = uow.watchlists.pick_display_fields(row)
+                exchange_symbol, base_symbol, quote_symbol = uow.markets.get_symbols(row.exchange_instrument_id)
                 result.append(
-                    WatchlistSchema.WatchlistItemRead(
+                    WatchlistDTO.WatchlistItemRead(
                         id=row.id,
                         exchange_instrument_id=row.exchange_instrument_id,
                         base_symbol=base_symbol,
@@ -30,7 +29,7 @@ class WatchlistService:
                 )
             return result
 
-    def create(self, *, user_id: int, data: WatchlistSchema.WatchlistCreate) -> WatchlistSchema.WatchlistItemRead:
+    def create(self, *, user_id: int, data: WatchlistDTO.WatchlistCreate) -> WatchlistDTO.WatchlistItemRead:
         with self._uow_factory() as uow:
             if not uow.watchlists.mapping_exists(
                 exchange_instrument_id=data.exchange_instrument_id
@@ -48,9 +47,9 @@ class WatchlistService:
                 exchange_instrument_id=data.exchange_instrument_id,
                 sort_order=sort_order,
             )
-            exchange_symbol, base_symbol, quote_symbol = uow.watchlists.pick_display_fields(row)
+            exchange_symbol, base_symbol, quote_symbol = uow.markets.get_symbols(row.exchange_instrument_id)
             uow.commit()
-            return WatchlistSchema.WatchlistItemRead(
+            return WatchlistDTO.WatchlistItemRead(
                 id=row.id,
                 exchange_instrument_id=row.exchange_instrument_id,
                 base_symbol=base_symbol,
@@ -62,7 +61,8 @@ class WatchlistService:
 
     def delete(self, *, item_id: int, user_id: int) -> None:
         with self._uow_factory() as uow:
-            watchlist_items = uow.watchlists.get_by_id(item_id, user_id)
+            
+            watchlist_items = uow.watchlists.get_by_id(item_id=item_id, user_id=user_id)
             if hasattr(watchlist_items, "is_valid"):
                 watchlist_items.is_valid = False
             uow.commit()
