@@ -1,4 +1,3 @@
-from __future__ import annotations
 import enum
 from datetime import datetime
 from sqlalchemy import String, DateTime, ForeignKey, UniqueConstraint, Enum as SAEnum, func
@@ -26,7 +25,6 @@ class UserIdentity(Base):
     refresh_token: Mapped[str | None] = mapped_column(String(2048))
     expires_at:    Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
-        server_default=func.now(), 
         default=utcnow, 
         nullable=False
     )
