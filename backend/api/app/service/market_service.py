@@ -1,9 +1,8 @@
 from typing import Callable, Sequence
 from datetime import datetime, timedelta
-from decimal import Decimal
 
 from app.core.datetime_utils import utcnow
-from app.domain import MarketDTO, MarketRule
+from app.domain import MarketDTO, MarketRule, ValidationAppError, NotFoundError
 from app.infra.db.model import ExchangeModel 
 from app.service.uow import UnitOfWork
 from app.core.constants import CandleBaseInterval, CandleOutputInterval
@@ -30,51 +29,50 @@ class MarketService:
         with self._uow_factory() as uow:
             return uow.markets.list_mapping(exchange_id=exchange_id)
 
-    # 공통 매핑
-    @staticmethod
-    def _to_candle_read_rows(rows) -> list[MarketDTO.CandleRead]:
-        # rows: PriceSnapshot*Model instances
-        return [
-            MarketDTO.CandleRead(
-                exchange_instrument_id=row.exchange_instrument_id,
-                ts_open=row.ts_open,
-                open=float(row.open),
-                high=float(row.high),
-                low=float(row.low),
-                close=float(row.close),
-                volume=float(row.volume) if getattr(row, "volume", None) is not None else None,
-            )
-            for row in rows
-        ]
-
     def list_candles(
         self, *, exchange_instrument_id: int,
         base: CandleBaseInterval, output: CandleOutputInterval,
-        start: datetime | None, end: datetime | None,
+        cursor: datetime | None, start: datetime | None, end: datetime | None,
         limit: int, asc_order: bool,
-    ) -> list[MarketDTO.CandleRead]:
+    ) -> list[MarketDTO.CandleBase]:
+        # cursor 검색 우선
+        if cursor is not None:
+            start, end = None, None
+
+        src_limit = MarketRule.calc_source_limit(base, output, limit)
+
         with self._uow_factory() as uow:
 
             if base == CandleBaseInterval.MIN_1:
                 rows = uow.markets.list_candles_1m(
                     exchange_instrument_id=exchange_instrument_id,
-                    start=start, end=end,
-                    limit=limit, asc_order=asc_order,
+                    cursor=cursor, start=start, end=end,
+                    limit=src_limit, asc_order=asc_order,
                 )
             elif base == CandleBaseInterval.HOUR_1:
                 rows = uow.markets.list_candles_1h(
                     exchange_instrument_id=exchange_instrument_id,
-                    start=start, end=end,
-                    limit=limit, asc_order=asc_order,
+                    cursor=cursor, start=start, end=end,
+                    limit=src_limit, asc_order=asc_order,
                 )
             elif base == CandleBaseInterval.DAY_1:
                 rows = uow.markets.list_candles_1d(
                     exchange_instrument_id=exchange_instrument_id,
-                    start=start, end=end,
-                    limit=limit, asc_order=asc_order,
+                    cursor=cursor, start=start, end=end,
+                    limit=src_limit, asc_order=asc_order,
                 )
+            else:
+                raise ValidationAppError(f"Unsupported base: {base}", target="base")
 
-            return self._to_candle_read_rows(rows)
+            if not MarketRule.same_granularity(base, output):
+                # rows: ORM 모델들 (Decimal). rules.aggregate가 받아 처리
+                out = MarketRule.aggregate(rows, to=output.value, asc=asc_order)
+
+            # limit, order 값에 따라 데이터 절삭
+            if limit is not None and len(out) > limit:
+                out = out[-limit:] if not asc_order else out[:limit]
+            return out
+        
         
     # ------------------------------------ seed snapshots data ------------------------------------------------------
     
@@ -127,7 +125,7 @@ class MarketService:
         return True
     
 
-    def ingest_snapshot(self, *, base: CandleBaseInterval, item: MarketDTO.CandleWrite) -> dict:
+    def ingest_snapshot(self, *, base: CandleBaseInterval, item: MarketDTO.CandleBase) -> dict:
         """
         내부 writer용 단일 캔들 저장. 항상 UPSERT.
         반환: {"id": int, "created": bool}
@@ -143,8 +141,14 @@ class MarketService:
             "volume": MarketRule.dec(item.volume),
         }
 
+        
         with self._uow_factory() as uow:
-            
+            # exchange_instrument_id 유효성 검사
+            exchange_instrument = uow.markets.get_by_exchange_instrument_id(exchange_instrumen_id=item.exchange_instrument_id)
+            if exchange_instrument is None:
+                raise NotFoundError("Not found exchange instrument", target="exchange_instrument_id")
+
+
             if base == CandleBaseInterval.MIN_1:
                 _id, created = uow.markets.upsert_one_1m(row)
             elif base == CandleBaseInterval.HOUR_1:
@@ -152,7 +156,7 @@ class MarketService:
             elif base == CandleBaseInterval.DAY_1:
                 _id, created = uow.markets.upsert_one_1d(row)
             else:
-                raise ValueError(f"Unsupported base interval: {base}")
+                raise ValidationAppError(f"Unsupported base interval: {base}", target="base")
             
             uow.commit()
 
