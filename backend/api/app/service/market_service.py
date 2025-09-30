@@ -31,7 +31,7 @@ class MarketService:
 
     def list_candles(
         self, *, exchange_instrument_id: int,
-        base: CandleBaseInterval, output: CandleOutputInterval,
+        output: CandleOutputInterval,
         cursor: datetime | None, start: datetime | None, end: datetime | None,
         limit: int, asc_order: bool,
     ) -> list[MarketDTO.CandleBase]:
@@ -39,7 +39,8 @@ class MarketService:
         if cursor is not None:
             start, end = None, None
 
-        src_limit = MarketRule.calc_source_limit(base, output, limit)
+        base = MarketRule.choose_source_base(output)
+        limit = MarketRule.calc_source_limit(base, output, limit)
 
         with self._uow_factory() as uow:
 
@@ -47,31 +48,31 @@ class MarketService:
                 rows = uow.markets.list_candles_1m(
                     exchange_instrument_id=exchange_instrument_id,
                     cursor=cursor, start=start, end=end,
-                    limit=src_limit, asc_order=asc_order,
+                    limit=limit, asc_order=asc_order,
                 )
             elif base == CandleBaseInterval.HOUR_1:
                 rows = uow.markets.list_candles_1h(
                     exchange_instrument_id=exchange_instrument_id,
                     cursor=cursor, start=start, end=end,
-                    limit=src_limit, asc_order=asc_order,
+                    limit=limit, asc_order=asc_order,
                 )
             elif base == CandleBaseInterval.DAY_1:
                 rows = uow.markets.list_candles_1d(
                     exchange_instrument_id=exchange_instrument_id,
                     cursor=cursor, start=start, end=end,
-                    limit=src_limit, asc_order=asc_order,
+                    limit=limit, asc_order=asc_order,
                 )
             else:
                 raise ValidationAppError(f"Unsupported base: {base}", target="base")
 
             if not MarketRule.same_granularity(base, output):
                 # rows: ORM 모델들 (Decimal). rules.aggregate가 받아 처리
-                out = MarketRule.aggregate(rows, to=output.value, asc=asc_order)
+                rows = MarketRule.aggregate(rows, to=output.value, asc=asc_order)
 
             # limit, order 값에 따라 데이터 절삭
-            if limit is not None and len(out) > limit:
-                out = out[-limit:] if not asc_order else out[:limit]
-            return out
+            if limit is not None and len(rows) > limit:
+                rows = rows[-limit:] if not asc_order else rows[:limit]
+            return rows
         
         
     # ------------------------------------ seed snapshots data ------------------------------------------------------

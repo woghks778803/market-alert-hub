@@ -18,14 +18,9 @@ class CandleOutputInterval(str, enum.Enum):
     @property
     def calc_mapping(self):
         return {
-            "1m": 1,
-            "5m": 5,
-            "15m": 15,
-            "1h": 1,
-            "4h": 4,
-            "1d": 1,
-            "1w": 7,
-            "1M": 30
+            "1m": {"1m","5m","15m"},
+            "1h": {"1h","4h"},
+            "1d": {"1d","1w","1M"},
         }[self.value]
 
 class UserRole(str, enum.Enum):

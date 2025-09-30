@@ -55,12 +55,14 @@ def list_mapping(
 
 # Prices
 @router.get(
-    "/prices/candles", response_model=list[MarketSchema.CandleBase], summary="캔들 조회"
+    "/prices/candles", 
+    response_model=list[MarketSchema.CandleBase], 
+    summary="캔들 조회",
+    description="cursor > start, end 우선 (같이 값이 들어갈 경우 start, end는 무시됩니다)",
 )
 def list_candles(
     svcs: ServiceFactory = Depends(get_services),
     exchange_instrument_id: int = Query(..., ge=1),
-    base: CandleBaseInterval | None = Query(None),
     output: CandleOutputInterval | None = Query(None),
     cursor: datetime | None = Query(None, description="UTC ISO8601"),
     start: datetime | None = Query(None, description="UTC ISO8601"),
@@ -70,9 +72,8 @@ def list_candles(
 ):
     return svcs.markets().list_candles(
         exchange_instrument_id=exchange_instrument_id,
-        base=base,
-        cursor=cursor,
         output=output,
+        cursor=cursor,
         start=start,
         end=end,
         limit=limit,
