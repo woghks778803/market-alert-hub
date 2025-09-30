@@ -1,5 +1,1 @@
-from .user_repo import UserRepo
-
-__all__ = [
-    "UserRepo",
-]
+__all__ = []

@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session as DbSession
-from app.core import settings
+from app.core.settings import settings
 from typing import Iterator
 from app.service.factory import ServiceFactory
 

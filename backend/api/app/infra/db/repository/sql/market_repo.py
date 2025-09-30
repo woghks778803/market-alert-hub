@@ -8,12 +8,16 @@ from app.infra.db.model import (
 )
 from app.domain import MarketDTO
 from datetime import datetime
-from decimal import Decimal
 
 
 class SqlMarketRepo:
     def __init__(self, db: DbSession):
         self._db = db
+
+    def get_by_exchange_instrument_id(self, *, exchange_instrumen_id: int) -> ExchangeInstrumentModel:
+        ei = ExchangeInstrumentModel
+        stmt = select(ei).where(and_(ei.is_valid.is_(True), ei.id == exchange_instrumen_id))
+        return self._db.execute(stmt).scalar_one_or_none()
 
     # Meta
     def list_exchanges(self, *, limit: int = 100, offset: int = 0) -> Sequence[ExchangeModel]:
@@ -67,18 +71,23 @@ class SqlMarketRepo:
         model,
         *,
         exchange_instrument_id: int,
+        cursor: datetime | None, 
         start: datetime | None,
         end: datetime | None,
         limit: int,
         asc_order: bool,
-    ) -> Sequence:
+    ) -> list[MarketDTO.CandleBase]:
         conds = [
             model.exchange_instrument_id == exchange_instrument_id,
         ]
-        if start is not None:
-            conds.append(model.ts_open >= start)
-        if end is not None:
-            conds.append(model.ts_open < end)
+        if cursor is not None:
+            conds.append(model.ts_open < cursor)
+        else:
+            if start is not None:
+                conds.append(model.ts_open >= start)
+            if end is not None:
+                conds.append(model.ts_open < end)
+
 
         order_by = asc(model.ts_open) if asc_order else desc(model.ts_open)
 
@@ -88,40 +97,53 @@ class SqlMarketRepo:
             .order_by(order_by)
             .limit(limit)
         )
-        return self._db.execute(stmt).scalars().all()
+
+        rows = self._db.execute(stmt).scalars().all()
+        return [
+            MarketDTO.CandleBase(
+                exchange_instrument_id=row.exchange_instrument_id,
+                ts_open=row.ts_open,
+                open=float(row.open),
+                high=float(row.high),
+                low=float(row.low),
+                close=float(row.close),
+                volume=float(row.volume) if getattr(row, "volume", None) is not None else None,
+            )
+            for row in rows
+        ]
     
     # 1m/1h/1d 개별 메서드
     def list_candles_1m(
         self, *, exchange_instrument_id: int,
-        start: datetime | None, end: datetime | None,
+        cursor: datetime | None, start: datetime | None, end: datetime | None,
         limit: int, asc_order: bool,
-    ):
+    ) -> list[MarketDTO.CandleBase]:
         return self._list_candles(
             PriceSnapshot1mModel,
             exchange_instrument_id=exchange_instrument_id,
-            start=start, end=end, limit=limit, asc_order=asc_order,
+            cursor=cursor, start=start, end=end, limit=limit, asc_order=asc_order,
         )
 
     def list_candles_1h(
         self, *, exchange_instrument_id: int,
-        start: datetime | None, end: datetime | None,
+        cursor: datetime | None, start: datetime | None, end: datetime | None,
         limit: int, asc_order: bool,
-    ):
+    ) -> list[MarketDTO.CandleBase]:
         return self._list_candles(
             PriceSnapshot1hModel,
             exchange_instrument_id=exchange_instrument_id,
-            start=start, end=end, limit=limit, asc_order=asc_order,
+            cursor=cursor, start=start, end=end, limit=limit, asc_order=asc_order,
         )
 
     def list_candles_1d(
         self, *, exchange_instrument_id: int,
-        start: datetime | None, end: datetime | None,
+        cursor: datetime | None, start: datetime | None, end: datetime | None,
         limit: int, asc_order: bool,
-    ):
+    ) -> list[MarketDTO.CandleBase]:
         return self._list_candles(
             PriceSnapshot1dModel,
             exchange_instrument_id=exchange_instrument_id,
-            start=start, end=end, limit=limit, asc_order=asc_order,
+            cursor=cursor, start=start, end=end, limit=limit, asc_order=asc_order,
         )
     
     # ---------------------------- add ----------------------------------------------

@@ -23,17 +23,7 @@ class MappingItem(BaseModel):
     base_asset_id: int
     quote_asset_id: int
 
-class CandleRead(BaseModel):
-    model_config = _model_cfg
-    exchange_instrument_id: int
-    ts_open: datetime 
-    open: float
-    high: float
-    low: float
-    close: float
-    volume: float | None = None
-
-class CandleWrite(BaseModel): # 생성 및 업데이트
+class CandleBase(BaseModel):
     model_config = _model_cfg
     exchange_instrument_id: int
     ts_open: datetime 

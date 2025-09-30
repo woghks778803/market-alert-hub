@@ -1,63 +1,106 @@
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, ROUND_DOWN, ROUND_HALF_UP
 from random import Random
-from app.core.constants import CandleBaseInterval
+from app.core.constants import CandleBaseInterval, CandleOutputInterval
 from app.domain.errors import ValidationAppError
+import app.domain.market.dto as MarketDTO
+from typing import Literal
 
-# Interval = Literal["1m","5m","15m","1h","4h","1d","1w","1M"]
+Interval = Literal["1m","5m","15m","1h","4h","1d","1w","1M"]
 
-# def _floor(ts: datetime, out: Interval) -> datetime:
-#     ts = ts.astimezone(timezone.utc).replace(tzinfo=timezone.utc)
-#     if out.endswith("m"):
-#         m = int(out[:-1]); return ts.replace(second=0, microsecond=0, minute=(ts.minute//m)*m)
-#     if out.endswith("h"):
-#         h = int(out[:-1]); return ts.replace(minute=0, second=0, microsecond=0, hour=(ts.hour//h)*h)
-#     if out == "1d":
-#         return ts.replace(hour=0, minute=0, second=0, microsecond=0)
-#     if out == "1w":
-#         d = (ts.isoweekday()-1) % 7
-#         base = ts - timedelta(days=d)
-#         return base.replace(hour=0, minute=0, second=0, microsecond=0)
-#     if out == "1M":
-#         return ts.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-#     raise ValueError(out)
+def same_granularity(base: CandleBaseInterval, output: CandleOutputInterval) -> bool:
+    # base와 output이 같은 크기면 그대로 반환
+    return (
+        (base == CandleBaseInterval.MIN_1  and output == CandleOutputInterval.MIN_1) or
+        (base == CandleBaseInterval.HOUR_1 and output == CandleOutputInterval.HOUR_1) or
+        (base == CandleBaseInterval.DAY_1  and output == CandleOutputInterval.DAY_1)
+    )
 
-# def aggregate(rows: Iterable, to: Interval, *, asc: bool = True):
-#     # rows: 1m/1h/1d 원시 캔들. 속성: exi_id, ts_open, open/high/low/close/volume 가정
-#     buckets: dict[tuple[int, datetime], dict] = {}
-#     for r in rows:
-#         key = (r.exchange_instrument_id, _floor(r.ts_open, to))
-#         b = buckets.get(key)
-#         if b is None:
-#             buckets[key] = {
-#                 "exi": r.exchange_instrument_id, "ts": key[1],
-#                 "high": r.high, "low": r.low,
-#                 "vol": (r.volume or Decimal("0")),
-#                 "_first_ts": r.ts_open, "_first_open": r.open,
-#                 "_last_ts":  r.ts_open, "_last_close": r.close,
-#             }
-#         else:
-#             if r.high > b["high"]: b["high"] = r.high
-#             if r.low  < b["low"]:  b["low"]  = r.low
-#             if r.volume is not None: b["vol"] += r.volume
-#             if r.ts_open < b["_first_ts"]:
-#                 b["_first_ts"], b["_first_open"] = r.ts_open, r.open
-#             if r.ts_open > b["_last_ts"]:
-#                 b["_last_ts"], b["_last_close"] = r.ts_open, r.close
+def interval_seconds(label: str) -> int:
+    # '1m','5m','15m','1h','4h','1d','1w','1M' -> 초
+    if label.endswith("m"): return int(label[:-1]) * 60
+    if label.endswith("h"): return int(label[:-1]) * 60 * 60
+    if label.endswith("d"): return int(label[:-1]) * 60 * 60 * 24
+    if label.endswith("w"): return int(label[:-1]) * 7 * 60 * 60 * 24
+    if label.endswith("M"): return 30 * 60 * 60 * 24  # rough; limit 추정용
+    raise ValueError(label)
 
-#     out = []
-#     for b in buckets.values():
-#         out.append(type("Agg", (), {
-#             "exchange_instrument_id": b["exi"],
-#             "ts_open": b["ts"],
-#             "open": b["_first_open"],
-#             "high": b["high"],
-#             "low": b["low"],
-#             "close": b["_last_close"],
-#             "volume": b["vol"],
-#         }))
-#     out.sort(key=lambda x: x.ts_open, reverse=not asc)
-#     return out
+def calc_source_limit(
+    base: CandleBaseInterval,
+    output: CandleOutputInterval,
+    limit: int | None,
+) -> int | None:
+    """output을 만들기 위해 base에서 얼마나 읽을지 계산."""
+    if limit is None:
+        return None
+    if same_granularity(base, output):
+        return limit
+    
+    # output이 base의 배수가 아니면(예: base=1h, output=15m) 금지
+    base_s   = interval_seconds(base.value)
+    out_s    = interval_seconds(output.value)
+
+    if out_s < base_s or (out_s % base_s) != 0:
+        # 지원 조합: 1m→(5m/15m/1h/4h/1d), 1h→(4h/1d), 1d→(1w/1M)
+        raise ValidationAppError(f"Unsupported rollup combination: base={base.value}, output={output.value}", target="base, output")
+    factor = out_s // base_s
+
+    # 버킷 정렬 오차 대비 + (factor-1) 여유 > 나중에 이상이 있다면 고려
+    return limit * int(factor)
+
+""" output에 따라 롤업 데이터 초기화 """
+def _floor(ts: datetime, out: Interval) -> datetime:
+    ts = ts.astimezone(timezone.utc).replace(tzinfo=timezone.utc)
+    if out.endswith("m"):
+        m = int(out[:-1]); return ts.replace(second=0, microsecond=0, minute=(ts.minute//m)*m)
+    if out.endswith("h"):
+        h = int(out[:-1]); return ts.replace(minute=0, second=0, microsecond=0, hour=(ts.hour//h)*h)
+    if out == "1d":
+        return ts.replace(hour=0, minute=0, second=0, microsecond=0)
+    if out == "1w":
+        d = (ts.isoweekday()-1) % 7
+        base = ts - timedelta(days=d)
+        return base.replace(hour=0, minute=0, second=0, microsecond=0)
+    if out == "1M":
+        return ts.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    raise ValueError(out)
+
+def aggregate(rows: list[MarketDTO.CandleBase], to: Interval, *, asc: bool = True) -> list[MarketDTO.CandleBase]:
+    # rows: 1m/1h/1d 원시 캔들. 속성: exi_id, ts_open, open/high/low/close/volume 가정
+    buckets: dict[tuple[int, datetime], dict] = {}
+    for r in rows:
+        key = (r.exchange_instrument_id, _floor(r.ts_open, to))
+        b = buckets.get(key)
+        if b is None:
+            buckets[key] = {
+                "exi": r.exchange_instrument_id, "ts": key[1],
+                "high": r.high, "low": r.low,
+                "vol": (r.volume or Decimal("0")),
+                "_first_ts": r.ts_open, "_first_open": r.open,
+                "_last_ts":  r.ts_open, "_last_close": r.close,
+            }
+        else:
+            if r.high > b["high"]: b["high"] = r.high
+            if r.low  < b["low"]:  b["low"]  = r.low
+            if r.volume is not None: b["vol"] += r.volume
+            if r.ts_open < b["_first_ts"]:
+                b["_first_ts"], b["_first_open"] = r.ts_open, r.open
+            if r.ts_open > b["_last_ts"]:
+                b["_last_ts"], b["_last_close"] = r.ts_open, r.close
+
+    out = []
+    for b in buckets.values():
+        out.append(MarketDTO.CandleBase(
+            exchange_instrument_id=b["exi"],
+            ts_open=b["ts"],
+            open=float(b["_first_open"]),
+            high=float(b["high"]),
+            low=float(b["low"]),
+            close=float(b["_last_close"]),
+            volume=float(b["vol"]),
+        ))
+    out.sort(key=lambda x: x.ts_open, reverse=not asc)
+    return out
 
 PRICE_Q = Decimal("1e-16")
 VOL_Q   = Decimal("1e-16")
