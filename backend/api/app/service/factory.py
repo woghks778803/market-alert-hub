@@ -3,6 +3,8 @@ from .uow import UnitOfWork
 from .auth_service import AuthService
 from .user_service import UserService
 from .alert_service import AlertService
+from .market_service import MarketService
+from .watchlist_service import WatchlistService
 
 
 from app.core import settings
@@ -10,9 +12,16 @@ from app.core import settings
 class ServiceFactory:
     def __init__(self, uow: Callable[[], UnitOfWork]) -> None:
         self.uow = uow
+
+    def watchlists(self) -> WatchlistService:
+        return WatchlistService(
+            uow_factory=self.uow
+        )
     
-    # def auth(self) -> AlertService:
-    #     return AlertService(self.uow)
+    def markets(self) -> MarketService:
+        return MarketService(
+            uow_factory=self.uow,
+        )
 
     def users(self) -> UserService:
         return UserService(

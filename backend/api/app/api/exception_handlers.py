@@ -8,10 +8,12 @@ from sqlalchemy.exc import IntegrityError
 from app.domain import AppError, ConflictError, InternalServerError
 from app.api.schema import ErrorSchema
 
+from app.core.settings import settings
+
 log = logging.getLogger(__name__)
 
 
-def error_response(
+def _error_response(
     request_id: str,
     code: str,
     message: str,
@@ -26,55 +28,62 @@ def error_response(
     )
     return JSONResponse(status_code=status_code, content=body.model_dump())
 
-async def handle_unexpected_error(request: Request, exc: Exception):
-    req_id = getattr(request.state, "request_id", "-")
-    log.exception("Unhandled error", extra={"request_id": req_id})
-    return error_response(
+def _req_id(request: Request) -> str:
+    return getattr(request.state, "request_id", "-")
+
+def _log(level: int, msg: str, *, req_id: str, exc: BaseException | None = None, extra: dict | None = None):
+    # 운영에선 exc_info 차단(민감정보/스택 노출 방지)
+    exc_info = None if settings.DEPLOY_ENV == "prod" else (True if exc else None)
+    out_extra = {"request_id": req_id}
+    if extra:
+        # 운영에서는 민감한 필드 제거/마스킹
+        if settings.DEPLOY_ENV == "prod":
+            extra = {k: v for k, v in extra.items() if k not in {"db_msg", "params"}}  # 필요시 확장
+        out_extra.update(extra)
+    log.log(level, msg, exc_info=exc_info, extra=out_extra)
+
+async def unified_exception_handler(request: Request, exc: Exception):
+    req_id = _req_id(request)
+
+    # 1) AppError (도메인 에러)
+    if isinstance(exc, AppError):
+        _log(logging.WARNING, "AppError", req_id=req_id, exc=None, extra={"code": exc.code})
+        return _error_response(
+            req_id, exc.code, exc.message, exc.status_code, target=exc.target, meta=exc.meta
+        )
+
+    # 2) HTTPException (Starlette)
+    if isinstance(exc, StarletteHTTPException):
+        detail = exc.detail if isinstance(exc.detail, str) else "HTTP error"
+        # 보통 로그는 INFO/NOTICE 수준
+        _log(logging.INFO, "HTTPException", req_id=req_id, extra={"status": exc.status_code})
+        return _error_response(req_id, "http_error", detail, exc.status_code)
+
+    # 3) Pydantic ValidationError
+    if isinstance(exc, RequestValidationError):
+        details = [{"loc": e["loc"], "msg": e["msg"]} for e in exc.errors()]
+        _log(logging.INFO, "ValidationError", req_id=req_id)
+        return _error_response(req_id, "validation_error", "Validation failed", 400, meta={"errors": details})
+
+    # 4) DB 무결성 위반
+    if isinstance(exc, IntegrityError):
+        # 개발/스테이징: 스택 + DB 원문, 운영: 요약만
+        db_msg = str(exc.orig) if getattr(exc, "orig", None) else None
+        _log(logging.ERROR, "IntegrityError", req_id=req_id, exc=exc, extra={"db_msg": db_msg})
+        return _error_response(
+            req_id,
+            ConflictError.code,
+            "Resource conflict",
+            409,
+            meta={"db": "integrity_error"},
+        )
+
+    # 5) 그 외 미처리 예외
+    _log(logging.ERROR, "Unhandled error", req_id=req_id, exc=exc)
+    return _error_response(
         req_id,
-        code=InternalServerError.code,
-        message="Internal server error",
-        status_code=InternalServerError.status_code,
+        InternalServerError.code,
+        "Internal server error",
+        InternalServerError.status_code,
         meta={"type": exc.__class__.__name__},
-    )
-
-async def handle_app_error(request: Request, exc: Exception):
-    app_exc = cast(AppError, exc)  # 또는 assert isinstance(exc, AppError)
-    req_id = getattr(request.state, "request_id", "-")
-    log.warning("AppError", extra={"request_id": req_id, "code": app_exc.code})
-    return error_response(
-        req_id,
-        app_exc.code,
-        app_exc.message,
-        app_exc.status_code,
-        target=app_exc.target,
-        meta=app_exc.meta,
-    )
-
-
-async def handle_http_error(request: Request, exc: Exception):
-    http_exc = cast(StarletteHTTPException, exc)
-    req_id = getattr(request.state, "request_id", "-")
-    detail = http_exc.detail if isinstance(http_exc.detail, str) else "HTTP error"
-    return error_response(req_id, "http_error", detail, http_exc.status_code)
-
-
-async def handle_validation_error(request: Request, exc: Exception):
-    val_exc = cast(RequestValidationError, exc)
-    req_id = getattr(request.state, "request_id", "-")
-    details = [{"loc": e["loc"], "msg": e["msg"]} for e in val_exc.errors()]
-    return error_response(
-        req_id, "validation_error", "Validation failed", 400, meta={"errors": details}
-    )
-
-
-async def handle_integrity_error(request: Request, exc: Exception):
-    integ_exc = cast(IntegrityError, exc)
-    req_id = getattr(request.state, "request_id", "-")
-    log.warning("IntegrityError", extra={"request_id": req_id})
-    return error_response(
-        req_id,
-        ConflictError.code,
-        "Resource conflict",
-        409,
-        meta={"db": "integrity_error"},
     )

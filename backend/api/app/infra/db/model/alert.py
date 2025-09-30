@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from datetime import datetime
 from sqlalchemy import Boolean, DateTime, String, Integer, JSON, ForeignKey, Enum as SAEnum, UniqueConstraint, Index, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -28,8 +26,9 @@ class Alert(Base):
         default=AlertScope.SINGLE, server_default=AlertScope.SINGLE, nullable=False
     )
 
-    exchange_id:   Mapped[int | None] = mapped_column(ForeignKey("exchanges.id",  ondelete="RESTRICT"), index=True)
-    instrument_id: Mapped[int | None] = mapped_column(ForeignKey("instruments.id", ondelete="RESTRICT"), index=True)
+    exchange_instrument_id: Mapped[int | None] = mapped_column(
+        ForeignKey("exchange_instruments.id", ondelete="RESTRICT"), index=True
+    )
 
     params:            Mapped[dict] = mapped_column(JSON, nullable=False)
     throttle_seconds:  Mapped[int] = mapped_column(Integer, nullable=False, default=300)
@@ -38,12 +37,10 @@ class Alert(Base):
     timezone:          Mapped[str] = mapped_column(String(64), default="UTC", nullable=False)
     last_fired_at:     Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
-        server_default=func.now(), 
         default=utcnow, 
         nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
-        server_default=func.now(), 
         default=utcnow, 
         onupdate=utcnow, 
         nullable=False

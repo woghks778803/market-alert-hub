@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session as DbSession
-from app.core import settings
+from app.core.settings import settings
 from typing import Iterator
 from app.service.factory import ServiceFactory
 
@@ -94,15 +94,14 @@ def get_current_user(
     creds: HTTPAuthorizationCredentials | None = Depends(_bearer),
 ):
     token = get_current_token(creds)
-    payload = decode_token(token)  
-    user_id = int(payload.get("sub", 0) or 0)
+    user_id = get_current_user_id(token)
 
     now = datetime.now(timezone.utc)
-    with svcs.uow() as uow:  # 또는 svcs.uow_factory() if you prefer
+    with svcs.uow() as uow:  
+        
         user = uow.users.get_by_id(user_id)
         if not user:
             raise AuthError("Invalid credentials", target="token")
-
         # 세션 유효성(선택이지만 권장)
         s = uow.sessions.get_by_hash(token_hash(token))  
         expires_at = s.expires_at
@@ -112,7 +111,6 @@ def get_current_user(
 
         if not s or revoked_at or expires_at <= now:
             raise AuthError("Missing or invalid token", target="token")
-
         return user
 
 def require_admin(user = Depends(get_current_user)):

@@ -1,12 +1,11 @@
 from typing import Callable
 from app.service.uow import UnitOfWork
-from app.infra.db.model import User as UserModel
+from app.infra.db.model import UserModel
 from app.domain.errors import ValidationAppError, NotFoundError
 from datetime import datetime, timezone
 from app.core.constants import UserStatus, UserRole
 
 class UserService:
-    """사용자 조회/수정 등 유즈케이스."""
     def __init__(
         self,
         *,
@@ -54,9 +53,6 @@ class UserService:
                 user.role = role
             if status is not None:
                 user.status = status
-                if status == UserStatus.DELETED:
-                    if hasattr(user, "is_valid"):
-                        user.is_valid = False
             user.updated_at = datetime.now(timezone.utc) if hasattr(user, "updated_at") else getattr(user, "updated_at", None)
             uow.commit()
             return user

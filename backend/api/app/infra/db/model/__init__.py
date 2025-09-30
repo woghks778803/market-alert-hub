@@ -1,24 +1,25 @@
-from .user import User
-from .session import Session
-from .user_identity import UserIdentity
-from .password_reset import PasswordReset
-from .exchange import Exchange
-from .instrument import Instrument
-from .exchange_instrument import ExchangeInstrument
-from .prices_latest import PriceLatest
-from .price_snapshots_1m import PriceSnapshot1m
-from .alert import Alert
-from .user_channel import UserChannel
-from .alert_channel_target import AlertChannelTarget
-from .alert_event import AlertEvent
-from .delivery import Delivery
-from .watchlist_item import WatchlistItem
+from .user import User as UserModel
+from .session import Session as SessionModel
+from .user_identity import UserIdentity as UserIdentityModel
+from .password_reset import PasswordReset as PasswordResetModel
+from .exchange import Exchange as ExchangeModel
+from .instrument import Instrument as InstrumentModel
+from .exchange_instrument import ExchangeInstrument as ExchangeInstrumentModel
+from .price_snapshots_1m import PriceSnapshot1m as PriceSnapshot1mModel
+from .price_snapshots_1h import PriceSnapshot1h as PriceSnapshot1hModel
+from .price_snapshots_1d import PriceSnapshot1d as PriceSnapshot1dModel
+from .alert import Alert as AlertModel
+from .user_channel import UserChannel as UserChannelModel
+from .alert_channel_target import AlertChannelTarget as AlertChannelTargetModel
+from .alert_event import AlertEvent as AlertEventModel
+from .delivery import Delivery as DeliveryModel
+from .watchlist_item import WatchlistItem as WatchlistItemModel
 
 
 __all__ = [
-    "User", "Session", "UserIdentity",
-    "PasswordReset", "Exchange", "Instrument", "ExchangeInstrument",
-    "PriceLatest", "PriceSnapshot1m", 
-    "Alert", "UserChannel", "AlertChannelTarget", "AlertEvent",
-    "Delivery", "WatchlistItem",
+    "UserModel", "SessionModel", "UserIdentityModel",
+    "PasswordResetModel", "ExchangeModel", "InstrumentModel", "ExchangeInstrumentModel",
+    "PriceSnapshot1mModel", "PriceSnapshot1hModel", "PriceSnapshot1dModel",
+    "AlertModel", "UserChannelModel", "AlertChannelTargetModel", "AlertEventModel",
+    "DeliveryModel", "WatchlistItemModel",
 ]
