@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 from app.core.datetime_utils import utcnow
 from app.domain import MarketDTO, MarketRule, ValidationAppError, NotFoundError
-from app.infra.db.model import ExchangeModel 
+from app.infra.db.model import ExchangeModel, ExchangeInstrumentModel
 from app.service.uow import UnitOfWork
 from app.core.constants import CandleBaseInterval, CandleOutputInterval
 
@@ -25,7 +25,7 @@ class MarketService:
             rows = uow.markets.list_exchange_instruments(exchange_id=exchange_id, limit=limit, offset=offset)
             return rows
 
-    def list_mapping(self, *, exchange_id: int | None) -> list[MarketDTO.MappingItem]:
+    def list_mapping(self, *, exchange_id: int | None) -> list[ExchangeInstrumentModel]:
         with self._uow_factory() as uow:
             return uow.markets.list_mapping(exchange_id=exchange_id)
 
@@ -82,12 +82,13 @@ class MarketService:
         self,
         *,
         base: CandleBaseInterval,
-    ):
+    ) -> int:
         rand = MarketRule.Randomizer(seed=42)
         n = utcnow()
         times = None
         exchanges = None
         markets = None
+        result = 0
 
         if base == CandleBaseInterval.MIN_1:
             n = n.replace(second=0, microsecond=0)
@@ -117,13 +118,15 @@ class MarketService:
                             "ts_open": t,
                             **rand.ohlcv(base_price),
                         })
-                    # print(rows[-1])
+                    
                     for chunk in MarketRule.batched(rows, 6000):
                         uow.markets.seed_snapshots(interval=base, chunk=chunk)
 
-            uow.commit()
+                    result += len(rows)
 
-        return True
+            uow.commit()
+        
+        return result
     
 
     def ingest_snapshot(self, *, base: CandleBaseInterval, item: MarketDTO.CandleBase) -> dict:

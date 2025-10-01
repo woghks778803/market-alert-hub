@@ -1,6 +1,7 @@
 # 공통 응답 스펙/프리셋
 from typing import Any, Dict, Optional
 from app.api.schema import ErrorSchema 
+from app.api.common.envelope import Envelope, ErrorBody
 
 # 기본 에러 예시 생성기
 def err_example(
