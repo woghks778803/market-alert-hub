@@ -53,16 +53,16 @@ class SqlMarketRepo:
 
         return [MarketDTO.MarketInstrumentItem(**row) for row in rows]
 
-    def list_mapping(self, *, exchange_id: int | None = None) -> list[MarketDTO.MappingItem]:
+    def list_mapping(self, *, exchange_id: int | None = None) -> list[ExchangeInstrumentModel]:
         ei = ExchangeInstrumentModel
 
         stmt = select(ei.exchange_id, ei.base_asset_id, ei.quote_asset_id)
         if exchange_id:
             stmt = stmt.where(ei.exchange_id == exchange_id)
         
-        rows = self._db.execute(stmt).tuples().all()
+        rows = self._db.execute(stmt).mappings().all()
 
-        return [MarketDTO.MappingItem(*row) for row in rows]
+        return rows
 
 
     # 공통 빌더

@@ -24,3 +24,13 @@ def CREATED(model: Type[BaseModel], *, description: str = "생성됨", example: 
 
 def NO_CONTENT(model: Type[BaseModel], *, description: str = "삭제됨", example: Optional[Dict[str, Any]] = None):
     return _success(204, model, description, {})
+
+def wrap_example(data_example: Dict[str, Any], *, request_id: str = "00000000-0000-0000-0000-000000000000"):
+    return {
+        "success": True,
+        "data": data_example,
+        "meta": {
+            "request_id": request_id,
+            "timestamp": "2025-09-30T00:00:00Z"
+        }
+    }
