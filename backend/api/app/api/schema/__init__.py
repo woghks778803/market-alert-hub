@@ -4,8 +4,10 @@ from . import error as ErrorSchema
 from . import alert as AlertSchema
 from . import market as MarketSchema
 from . import watchlist as WatchlistSchema
+from . import seed as SeedSchema
 
 __all__ = [
     "UserSchema", "AuthSchema", "ErrorSchema",
-    "AlertSchema", "MarketSchema", "WatchlistSchema"
+    "AlertSchema", "MarketSchema", "WatchlistSchema",
+    "SeedSchema"
 ]

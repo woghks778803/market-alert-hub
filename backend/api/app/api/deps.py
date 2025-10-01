@@ -31,7 +31,7 @@ def get_db() -> Iterator[DbSession]:
         db.close()
 
 # --- FastAPI dependencies -----------------------------------------------------
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from app.domain import AuthError, PermissionError
@@ -117,3 +117,17 @@ def require_admin(user = Depends(get_current_user)):
     if getattr(user, "role", None) != UserRole.ADMIN:
         raise PermissionError("Admin role required", target="role")
     return user
+
+
+
+# ---------------------------------------------------------
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class RequestMeta:
+    request_id: str
+    timestamp: datetime
+
+def get_request_meta(request: Request) -> RequestMeta:
+    rid = getattr(request.state, "request_id", "-")
+    return RequestMeta(request_id=rid, timestamp=datetime.now(timezone.utc))

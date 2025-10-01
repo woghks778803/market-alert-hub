@@ -8,6 +8,12 @@ from typing import Literal
 
 Interval = Literal["1m","5m","15m","1h","4h","1d","1w","1M"]
 
+def choose_source_base(output):
+    if output in CandleOutputInterval.MIN_1.calc_mapping:     return CandleBaseInterval.MIN_1
+    if output in CandleOutputInterval.HOUR_1.calc_mapping:    return CandleBaseInterval.HOUR_1
+    if output in CandleOutputInterval.DAY_1.calc_mapping:     return CandleBaseInterval.DAY_1
+    raise ValidationAppError(f"Unsupported output : {output}", target="output")
+
 def same_granularity(base: CandleBaseInterval, output: CandleOutputInterval) -> bool:
     # base와 output이 같은 크기면 그대로 반환
     return (
