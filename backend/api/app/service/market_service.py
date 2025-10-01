@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 from app.core.datetime_utils import utcnow
 from app.domain import MarketDTO, MarketRule, ValidationAppError, NotFoundError
-from app.infra.db.model import ExchangeModel 
+from app.infra.db.model import ExchangeModel, ExchangeInstrumentModel
 from app.service.uow import UnitOfWork
 from app.core.constants import CandleBaseInterval, CandleOutputInterval
 
@@ -25,13 +25,13 @@ class MarketService:
             rows = uow.markets.list_exchange_instruments(exchange_id=exchange_id, limit=limit, offset=offset)
             return rows
 
-    def list_mapping(self, *, exchange_id: int | None) -> list[MarketDTO.MappingItem]:
+    def list_mapping(self, *, exchange_id: int | None) -> list[ExchangeInstrumentModel]:
         with self._uow_factory() as uow:
             return uow.markets.list_mapping(exchange_id=exchange_id)
 
     def list_candles(
         self, *, exchange_instrument_id: int,
-        base: CandleBaseInterval, output: CandleOutputInterval,
+        output: CandleOutputInterval,
         cursor: datetime | None, start: datetime | None, end: datetime | None,
         limit: int, asc_order: bool,
     ) -> list[MarketDTO.CandleBase]:
@@ -39,7 +39,8 @@ class MarketService:
         if cursor is not None:
             start, end = None, None
 
-        src_limit = MarketRule.calc_source_limit(base, output, limit)
+        base = MarketRule.choose_source_base(output)
+        limit = MarketRule.calc_source_limit(base, output, limit)
 
         with self._uow_factory() as uow:
 
@@ -47,31 +48,31 @@ class MarketService:
                 rows = uow.markets.list_candles_1m(
                     exchange_instrument_id=exchange_instrument_id,
                     cursor=cursor, start=start, end=end,
-                    limit=src_limit, asc_order=asc_order,
+                    limit=limit, asc_order=asc_order,
                 )
             elif base == CandleBaseInterval.HOUR_1:
                 rows = uow.markets.list_candles_1h(
                     exchange_instrument_id=exchange_instrument_id,
                     cursor=cursor, start=start, end=end,
-                    limit=src_limit, asc_order=asc_order,
+                    limit=limit, asc_order=asc_order,
                 )
             elif base == CandleBaseInterval.DAY_1:
                 rows = uow.markets.list_candles_1d(
                     exchange_instrument_id=exchange_instrument_id,
                     cursor=cursor, start=start, end=end,
-                    limit=src_limit, asc_order=asc_order,
+                    limit=limit, asc_order=asc_order,
                 )
             else:
                 raise ValidationAppError(f"Unsupported base: {base}", target="base")
 
             if not MarketRule.same_granularity(base, output):
                 # rows: ORM 모델들 (Decimal). rules.aggregate가 받아 처리
-                out = MarketRule.aggregate(rows, to=output.value, asc=asc_order)
+                rows = MarketRule.aggregate(rows, to=output.value, asc=asc_order)
 
             # limit, order 값에 따라 데이터 절삭
-            if limit is not None and len(out) > limit:
-                out = out[-limit:] if not asc_order else out[:limit]
-            return out
+            if limit is not None and len(rows) > limit:
+                rows = rows[-limit:] if not asc_order else rows[:limit]
+            return rows
         
         
     # ------------------------------------ seed snapshots data ------------------------------------------------------
@@ -81,12 +82,13 @@ class MarketService:
         self,
         *,
         base: CandleBaseInterval,
-    ):
+    ) -> int:
         rand = MarketRule.Randomizer(seed=42)
         n = utcnow()
         times = None
         exchanges = None
         markets = None
+        result = 0
 
         if base == CandleBaseInterval.MIN_1:
             n = n.replace(second=0, microsecond=0)
@@ -116,13 +118,15 @@ class MarketService:
                             "ts_open": t,
                             **rand.ohlcv(base_price),
                         })
-                    # print(rows[-1])
+                    
                     for chunk in MarketRule.batched(rows, 6000):
                         uow.markets.seed_snapshots(interval=base, chunk=chunk)
 
-            uow.commit()
+                    result += len(rows)
 
-        return True
+            uow.commit()
+        
+        return result
     
 
     def ingest_snapshot(self, *, base: CandleBaseInterval, item: MarketDTO.CandleBase) -> dict:

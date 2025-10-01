@@ -10,6 +10,11 @@ from app.api.middleware import RequestIdMiddleware
 from app.api.exception_handlers import unified_exception_handler
 from app.api.router import api
 
+from fastapi.exceptions import RequestValidationError
+from app.domain import AppError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from sqlalchemy.exc import IntegrityError
+
 TAGS_METADATA = [
     {"name": "health", "description": "헬스체크/진단"},
     {"name": "auth", "description": "회원가입 · 로그인 · 토큰"},
@@ -84,6 +89,12 @@ def create_app() -> FastAPI:
 
     # --- Exception Handlers ---
     app.add_exception_handler(Exception, unified_exception_handler)
+    # --- Exception Handlers ---
+    # app.add_exception_handler(AppError, unified_exception_handler)                 # ✅ 도메인 에러
+    # app.add_exception_handler(StarletteHTTPException, unified_exception_handler)   # ✅ HTTPException
+    # app.add_exception_handler(RequestValidationError, unified_exception_handler)   # ✅ 바디/쿼리 검증 에러
+    # app.add_exception_handler(IntegrityError, unified_exception_handler)           # ✅ DB 무결성
+    # app.add_exception_handler(Exception, unified_exception_handler)                # ✅ 그 외 모든 것(마지막에!)
 
     # --- Routers ---
     app.include_router(api)

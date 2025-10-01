@@ -7,7 +7,7 @@ from .market_service import MarketService
 from .watchlist_service import WatchlistService
 
 
-from app.core import settings
+from app.core.settings import settings
 
 class ServiceFactory:
     def __init__(self, uow: Callable[[], UnitOfWork]) -> None:

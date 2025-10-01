@@ -39,7 +39,7 @@ class AuthService:
         with self._uow_factory() as uow:
 
             if uow.users.get_by_email(email):
-                raise ValidationAppError("email already exists")
+                raise ValidationAppError("email already exists", target="email")
 
             user = UserModel(
                 email=email,
