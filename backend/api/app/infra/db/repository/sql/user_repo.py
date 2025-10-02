@@ -32,5 +32,5 @@ class SqlUserRepo:
             stmt = stmt.where(UserModel.role == to_db_value(role))
 
         stmt = stmt.order_by(desc(UserModel.created_at)).limit(limit).offset(offset)
-        return list(self._db.execute(stmt).scalars().all())
+        return self._db.execute(stmt).scalars().all()
 

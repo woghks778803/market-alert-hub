@@ -26,7 +26,6 @@ router = APIRouter(prefix="/auth")
                 "token_type": "bearer"
             }),
         ),
-        OpenApi.ERR_400,
         OpenApi.ERR_409,
     ),
 )
@@ -61,7 +60,6 @@ def register(
                 "token_type": "bearer"
             }),
         ),
-        OpenApi.ERR_400
     ),
 )
 def login(
@@ -111,7 +109,6 @@ def logout(
                 "status": "active"
             }),
         ),
-        OpenApi.ERR_400, OpenApi.ERR_404
     ),
 )
 def me(

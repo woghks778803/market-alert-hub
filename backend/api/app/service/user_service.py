@@ -21,15 +21,15 @@ class UserService:
         except ValueError:
             raise ValidationAppError(f"Invalid {target_name}", target=target_name)
         
-    def get_by_email(self, email: str) -> UserModel | None:
-        with self._uow_factory() as uow: 
-            return uow.users.get_by_email(email)
-
     def _ensure_user(self, uow: UnitOfWork, user_id: int):
         user = uow.users.get_by_id(user_id)
         if not user:
             raise NotFoundError("User not found", target="user_id")  # 전역핸들러에서 404 매핑되게
         return user
+    
+    def get_by_email(self, email: str) -> UserModel | None:
+        with self._uow_factory() as uow: 
+            return uow.users.get_by_email(email)
 
     def list(self, *, status: UserStatus | None, role: UserRole | None, limit: int, offset: int):
         role = self.coerce(role, UserRole, "role")

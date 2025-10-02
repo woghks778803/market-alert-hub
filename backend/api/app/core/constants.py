@@ -1,5 +1,5 @@
 import enum
-
+    
 class CandleBaseInterval(str, enum.Enum):
     MIN_1 = "1m"
     HOUR_1 = "1h"
