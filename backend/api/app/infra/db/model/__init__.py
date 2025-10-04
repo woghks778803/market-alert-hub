@@ -10,6 +10,7 @@ from .price_snapshots_1h import PriceSnapshot1h as PriceSnapshot1hModel
 from .price_snapshots_1d import PriceSnapshot1d as PriceSnapshot1dModel
 from .alert import Alert as AlertModel
 from .user_channel import UserChannel as UserChannelModel
+from .channel_provider import ChannelProvider as ChannelProviderModel
 from .alert_channel_target import AlertChannelTarget as AlertChannelTargetModel
 from .alert_event import AlertEvent as AlertEventModel
 from .delivery import Delivery as DeliveryModel
@@ -20,6 +21,7 @@ __all__ = [
     "UserModel", "SessionModel", "UserIdentityModel",
     "PasswordResetModel", "ExchangeModel", "InstrumentModel", "ExchangeInstrumentModel",
     "PriceSnapshot1mModel", "PriceSnapshot1hModel", "PriceSnapshot1dModel",
-    "AlertModel", "UserChannelModel", "AlertChannelTargetModel", "AlertEventModel",
+    "AlertModel", "AlertChannelTargetModel", "AlertEventModel", 
+    "UserChannelModel", "ChannelProviderModel",
     "DeliveryModel", "WatchlistItemModel",
 ]

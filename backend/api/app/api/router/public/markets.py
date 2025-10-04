@@ -20,14 +20,13 @@ router = APIRouter()
             Envelope[list[MarketSchema.ExchangeRead]],  # ✅ 스키마도 래퍼로
             description="리스트 조회 성공",
         ),
-        OpenApi.ERR_400,
         OpenApi.ERR_409,
     ),
 )
 def list_exchanges(
-    svcs: ServiceFactory = Depends(get_services),
     limit: int = Query(10, ge=1, le=20),
     offset: int = Query(0, ge=0),
+    svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
     rows = svcs.markets().list_exchanges(limit=limit, offset=offset)
@@ -43,15 +42,14 @@ def list_exchanges(
             Envelope[list[MarketSchema.MarketInstrumentItem]], 
             description="리스트 조회 성공",
         ),
-        OpenApi.ERR_400,
         OpenApi.ERR_409,
     ),
 )
 def list_exchange_instruments(
-    svcs: ServiceFactory = Depends(get_services),
     exchange_id: int | None = Query(None, ge=1),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
     rows = svcs.markets().list_exchange_instruments(
@@ -70,13 +68,12 @@ def list_exchange_instruments(
             Envelope[list[MarketSchema.MappingItem]], 
             description="리스트 조회 성공",
         ),
-        OpenApi.ERR_400,
         OpenApi.ERR_409,
     ),
 )
 def list_mapping(
-    svcs: ServiceFactory = Depends(get_services),
     exchange_id: int | None = Query(None, ge=1),
+    svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
     rows = svcs.markets().list_mapping(exchange_id=exchange_id)
@@ -94,12 +91,10 @@ def list_mapping(
             Envelope[list[MarketSchema.CandleBase]], 
             description="리스트 조회 성공",
         ),
-        OpenApi.ERR_400,
         OpenApi.ERR_409,
     ),
 )
 def list_candles(
-    svcs: ServiceFactory = Depends(get_services),
     exchange_instrument_id: int = Query(..., ge=1),
     output: CandleOutputInterval | None = Query(None),
     cursor: datetime | None = Query(None, description="UTC ISO8601"),
@@ -107,6 +102,7 @@ def list_candles(
     end: datetime | None = Query(None, description="UTC ISO8601"),
     limit: int = Query(500, ge=1, le=500),
     order: str = Query("asc", pattern="^(asc|desc)$"),
+    svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
     rows = svcs.markets().list_candles(
@@ -132,12 +128,11 @@ def list_candles(
             Envelope[MarketSchema.CandleIngestResult],
             description="저장 성공",
         ),
-        OpenApi.ERR_400,
     ),
 )
 def post_candles(
     base: CandleBaseInterval = Path(..., description="기준 간격: 1m / 1h / 1d"),
-    item: MarketSchema.CandleBase = Body(
+    payload: MarketSchema.CandleBase = Body(
         ...,
         example={
             "exchange_instrument_id": 101,
@@ -152,5 +147,5 @@ def post_candles(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    result = svcs.markets().ingest_snapshot(base=base, item=item)
+    result = svcs.markets().ingest_snapshot(base=base, item=payload)
     return created(result, request_id=meta.request_id)

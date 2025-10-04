@@ -1,10 +1,9 @@
-from typing import Iterable, Sequence, Tuple
+from typing import Protocol, Iterable, Sequence, Tuple
 from datetime import datetime
 from app.infra.db.model import ExchangeModel, ExchangeInstrumentModel
 from app.domain.market import dto as MarketDTO
 
-
-class MarketRepo:
+class MarketRepo(Protocol):
 
     def get_by_exchange_instrument_id(self, *, exchange_instrumen_id: int) -> ExchangeInstrumentModel: ...
     def list_exchanges(self, *, limit: int = 100, offset: int = 0) -> Sequence[ExchangeModel]: ...

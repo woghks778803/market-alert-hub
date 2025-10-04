@@ -52,9 +52,6 @@ def get_user(
     summary="사용자 속성 변경",
     responses=OpenApi.combine(
         OpenApi.OK(Envelope[UserSchema.UserReadAdmin]),
-        OpenApi.ERR_400,      
-        OpenApi.ERR_403,
-        OpenApi.ERR_404,
     ),
 )
 def update_user(

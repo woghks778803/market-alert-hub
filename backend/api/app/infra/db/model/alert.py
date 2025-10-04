@@ -45,7 +45,7 @@ class Alert(Base):
         onupdate=utcnow, 
         nullable=False
     )
-    is_valid:   Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("1"))
+    is_deleted:   Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("0"))
 
     channels: Mapped[list["AlertChannelTarget"]] = relationship(back_populates="alert", cascade="all, delete-orphan")
     events:   Mapped[list["AlertEvent"]]         = relationship(back_populates="alert", cascade="all, delete-orphan")

@@ -31,4 +31,4 @@ class User(Base):
         nullable=False
     )
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    is_valid:      Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("1"))
+    is_deleted:      Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("0"))
