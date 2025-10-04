@@ -63,8 +63,8 @@ class WatchlistService:
         with self._uow_factory() as uow:
             
             watchlist_items = uow.watchlists.get_by_id(item_id=item_id, user_id=user_id)
-            if hasattr(watchlist_items, "is_valid"):
-                watchlist_items.is_valid = False
+            if hasattr(watchlist_items, "is_deleted"):
+                watchlist_items.is_deleted = True
             uow.commit()
 
 

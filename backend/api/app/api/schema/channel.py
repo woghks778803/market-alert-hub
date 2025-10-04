@@ -19,7 +19,7 @@ class ChannelRead(BaseModel):
     channel_provider: ChannelProviderBase
     config: dict | None
     verified_at: str | None
-    is_valid: bool
+    is_deleted: bool
 
 
 

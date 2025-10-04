@@ -20,6 +20,11 @@ class ChannelService:
             rows = uow.channels.list_by_user(user_id)
             return rows  
 
+    # 단건
+    def get_by_id(self, *, user_channel_id: int):
+        with self._uow_factory() as uow:
+            return uow.channels.get_by_id(user_channel_id)
+        
     # 생성
     def create(self, *, user_id: int, provider_id: int, config: dict | None):
         
@@ -30,18 +35,29 @@ class ChannelService:
             if not chp.is_active:
                 raise ValidationAppError("Channel provider is not active.", target="provider.is_active")
 
-            existed = uow.channels.find_one_by_provider_id(user_id=user_id, provider_id=provider_id)
-            if existed:
-                raise ConflictError("Channel already exists for provider.", target="provider_id, user_id")
+            channel_cnt = uow.channels.find_one_by_channel_cnt(user_id=user_id, provider_id=provider_id)
+            # TODO 현재는 5개 고정 나중에 결제 서비스 넣을때 변경
+            if channel_cnt >= ChannelRule.MAX_CHANNELS_PER_USER:
+                raise ConflictError("Channel limit already exceed.", target="provider_id, user_id")
 
-            # (선택) provider.user_schema 기반 JSON 검증 훅
+            # provider.user_schema 기반 JSON 검증 훅
             ChannelRule.validate_user_config(code=chp.code, config=config, user_schema=chp.user_schema)
+
+            fingerprint = ChannelRule.make_fingerprint(config)
+            existed = uow.channels.find_one_by_fingerprint(
+                user_id=user_id,
+                provider_id=provider_id,
+                fingerprint=fingerprint,
+            )
+            if existed:
+                raise ConflictError("Channel with same configuration already exists.", target="user_id, provider_id, fingerprint")
 
             row = UserChannelModel(
                 user_id=user_id,
                 channel_provider_id=provider_id,
                 config=config or {},
-                is_valid=True,
+                config_fingerprint=fingerprint,
+                is_deleted=False,
             )
             uow.channels.add(row)
             uow.commit()
@@ -56,7 +72,7 @@ class ChannelService:
         with self._uow_factory() as uow:
             repo = uow.channels
             row = repo.get_by_id(user_channel_id)
-            if not row or not row.is_valid:
+            if not row or not row.is_deleted:
                 raise ValidationAppError("Channel not found or invalid.")
             row.verified_at = utcnow()
             uow.commit()
@@ -69,7 +85,7 @@ class ChannelService:
             row = repo.get_by_id(user_channel_id)
             if not row:
                 return None
-            row.is_valid = False
+            row.is_deleted = True
             uow.commit()
             return row
 

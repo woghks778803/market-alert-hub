@@ -30,6 +30,22 @@ def list_channels(
     rows = svcs.channels().list(user_id=current_user.id)
     return ok(rows, request_id=meta.request_id)
 
+@router.get(
+    "/{user_channel_id}", 
+    response_model=Envelope[ChannelSchema.ChannelRead], 
+    summary="사용자 채널 상세",
+    responses=OpenApi.combine(
+        OpenApi.OK(Envelope[ChannelSchema.ChannelRead]),
+    ),
+)
+def get_channels(
+    user_channel_id: int = Path(..., ge=1),
+    current_user=Depends(get_current_user),
+    svcs: ServiceFactory = Depends(get_services),
+    meta: RequestMeta = Depends(get_request_meta),
+):
+    result = svcs.channels().get_by_id(user_channel_id=user_channel_id)
+    return ok(result, request_id=meta.request_id)
 
 @router.post(
     "", 
