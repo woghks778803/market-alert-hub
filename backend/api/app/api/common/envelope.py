@@ -35,19 +35,12 @@ class Envelope(BaseModel, Generic[T]):
 def ok(data: Any, *, request_id: str, pagination: Pagination | None = None) -> Envelope[Any]:
     return Envelope(success=True, data=data, error=None, meta=Meta(request_id=request_id, timestamp=utcnow(), pagination=pagination))
 
-def created(data: Any, *, request_id: str, location: str | None = None):
-    """
-    201 Created + Envelope 바디 + (선택) Location 헤더
-    FastAPI는 (Response-like) 객체를 반환해도 되고, 튜플을 반환해도 됩니다.
-    여기서는 JSONResponse로 반환합니다.
-    """
-    body = ok(data, request_id=request_id)  # success=True envelope 재사용
-    headers = {"Location": location} if location else None
-    return JSONResponse(
-        status_code=status.HTTP_201_CREATED,
-        content=jsonable_encoder(body),
-        headers=headers,
-    )
+def created(data: Any, *, request_id: str, response: Response, location: str | None = None):
+    response.status_code = status.HTTP_201_CREATED
+    if location:
+        response.headers["Location"] = location
+    # 실제 반환은 Envelope(BaseModel) → response_model 검증 탑승
+    return ok(data, request_id=request_id)
 
 def no_content() -> Response:
     """

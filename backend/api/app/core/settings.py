@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     # --- JWT ---
     JWT_SECRET: str = "change-me"
     JWT_ALG: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 360
 
     # 로컬 개발 편의: .env 읽기 (컨테이너에선 ENV가 우선)
     model_config = SettingsConfigDict(

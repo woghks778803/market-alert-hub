@@ -27,7 +27,7 @@ class WatchlistItem(Base):
         onupdate=utcnow, 
         nullable=False
     )
-    is_valid:   Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("1"))
+    is_deleted:   Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("0"))
 
     __table_args__ = (
         # 유저 목록 정렬/조회 최적화

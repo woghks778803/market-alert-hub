@@ -15,8 +15,6 @@ router = APIRouter(prefix="/auth")
     summary="관리자 로그인 (JWT 발급)",
     responses=OpenApi.combine(
         OpenApi.OK(AuthSchema.TokenOut, description="로그인 성공"),
-        OpenApi.ERR_401,
-        OpenApi.ERR_403,
     ),
 )
 def admin_login(

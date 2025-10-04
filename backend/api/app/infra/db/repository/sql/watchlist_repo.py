@@ -6,8 +6,9 @@ from app.infra.db.model import (
     ExchangeInstrumentModel, 
     InstrumentModel
 )
+from ..protocol.watchlist_repo import WatchlistRepo
 
-class SqlWatchlistRepo:
+class SqlWatchlistRepo(WatchlistRepo):
     def __init__(self, db: DbSession):
         self._db = db
 
@@ -15,7 +16,7 @@ class SqlWatchlistRepo:
         order = asc if is_asc else desc
         stmt = (
             select(WatchlistItemModel)
-            .where(and_(WatchlistItemModel.user_id == user_id, WatchlistItemModel.is_valid.is_(True)))
+            .where(and_(WatchlistItemModel.user_id == user_id, WatchlistItemModel.is_deleted.is_(False)))
             .order_by(order(WatchlistItemModel.sort_order), desc(WatchlistItemModel.id))
             .limit(limit)
             .offset(offset)
@@ -29,7 +30,7 @@ class SqlWatchlistRepo:
                 and_(
                     WatchlistItemModel.user_id == user_id,
                     WatchlistItemModel.exchange_instrument_id == exchange_instrument_id,
-                    WatchlistItemModel.is_valid == True,
+                    WatchlistItemModel.is_deleted == False,
                 )
             )
         )
@@ -45,7 +46,7 @@ class SqlWatchlistRepo:
 
     def next_sort_order(self, *, user_id: int) -> int:
         stmt = select(func.coalesce(func.max(WatchlistItemModel.sort_order), 0)).where(
-            and_(WatchlistItemModel.user_id == user_id, WatchlistItemModel.is_valid.is_(True))
+            and_(WatchlistItemModel.user_id == user_id, WatchlistItemModel.is_deleted.is_(False))
         )
         return int(self._db.execute(stmt).scalar_one()) + 1
 
@@ -54,7 +55,7 @@ class SqlWatchlistRepo:
             user_id=user_id,
             exchange_instrument_id=exchange_instrument_id,
             sort_order=sort_order,
-            is_valid=True,
+            is_deleted=False,
         )
         self._db.add(row)
         self._db.flush()  # id 채우기

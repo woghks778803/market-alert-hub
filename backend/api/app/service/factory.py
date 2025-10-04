@@ -5,7 +5,7 @@ from .user_service import UserService
 from .alert_service import AlertService
 from .market_service import MarketService
 from .watchlist_service import WatchlistService
-
+from .channel_service import ChannelService
 
 from app.core.settings import settings
 
@@ -25,6 +25,11 @@ class ServiceFactory:
 
     def users(self) -> UserService:
         return UserService(
+            uow_factory=self.uow,
+        )
+    
+    def channels(self) -> ChannelService:
+        return ChannelService(
             uow_factory=self.uow,
         )
     
