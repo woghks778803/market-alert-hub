@@ -17,8 +17,8 @@ class UserChannel(Base):
 
     address:      Mapped[str | None] = mapped_column(String(255))
     config:       Mapped[dict | None] = mapped_column(JSON)
+    config_fingerprint: Mapped[str | None] = mapped_column(String(64), index=True)
     verified_at:  Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    is_default:   Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("0"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
         default=utcnow, 
         nullable=False
@@ -28,7 +28,8 @@ class UserChannel(Base):
         onupdate=utcnow, 
         nullable=False
     )
-    is_valid:   Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("1"))
+    is_default:   Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("0"))
+    is_deleted:   Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("0"))
 
     targets: Mapped[list["AlertChannelTarget"]] = relationship(back_populates="user_channel", cascade="all, delete-orphan")
     channel_provider: Mapped["ChannelProvider"] = relationship("ChannelProvider", back_populates="channels")

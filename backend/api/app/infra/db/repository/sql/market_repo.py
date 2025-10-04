@@ -8,20 +8,20 @@ from app.infra.db.model import (
 )
 from app.domain import MarketDTO
 from datetime import datetime
+from ..protocol.market_repo import MarketRepo
 
-
-class SqlMarketRepo:
+class SqlMarketRepo(MarketRepo):
     def __init__(self, db: DbSession):
         self._db = db
 
     def get_by_exchange_instrument_id(self, *, exchange_instrumen_id: int) -> ExchangeInstrumentModel:
         ei = ExchangeInstrumentModel
-        stmt = select(ei).where(and_(ei.is_valid.is_(True), ei.id == exchange_instrumen_id))
+        stmt = select(ei).where(and_(ei.is_deleted.is_(False), ei.id == exchange_instrumen_id))
         return self._db.execute(stmt).scalar_one_or_none()
 
     # Meta
     def list_exchanges(self, *, limit: int = 100, offset: int = 0) -> Sequence[ExchangeModel]:
-        stmt = select(ExchangeModel).where(ExchangeModel.is_valid.is_(True)).order_by(asc(ExchangeModel.id)).limit(limit).offset(offset)
+        stmt = select(ExchangeModel).where(ExchangeModel.is_deleted.is_(False)).order_by(asc(ExchangeModel.id)).limit(limit).offset(offset)
         return self._db.execute(stmt).scalars().all()
 
     def list_exchange_instruments(self, *, exchange_id: int | None = None, limit: int = 200, offset: int = 0) -> list[MarketDTO.MarketInstrumentItem]:
@@ -42,7 +42,7 @@ class SqlMarketRepo:
             .join(e, ei.exchange)
             .join(b, ei.base_asset)
             .join(q, ei.quote_asset)
-            .where(and_(ei.is_valid.is_(True), b.is_valid.is_(True), q.is_valid.is_(True)))
+            .where(and_(ei.is_deleted.is_(False), b.is_deleted.is_(False), q.is_deleted.is_(False)))
             .order_by(asc(ei.exchange_symbol))
             .limit(limit).offset(offset)
         )

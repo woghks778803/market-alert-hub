@@ -2,8 +2,9 @@ from sqlalchemy import select
 from app.infra.db.model import SessionModel
 from sqlalchemy.orm import Session as DbSession
 from datetime import datetime, timezone
+from ..protocol.session_repo import SessionRepo
 
-class SqlSessionRepo:
+class SqlSessionRepo(SessionRepo):
     def __init__(self, db: DbSession): self._db = db
 
     def create(self, *, user_id: int, token_hash: str, expires_at: datetime,

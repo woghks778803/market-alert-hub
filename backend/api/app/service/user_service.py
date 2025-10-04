@@ -61,6 +61,6 @@ class UserService:
         with self._uow_factory() as uow:
             user = self._ensure_user(uow, user_id)
             user.status = UserStatus.DELETED
-            if hasattr(user, "is_valid"):
-                user.is_valid = False
+            if hasattr(user, "is_deleted"):
+                user.is_deleted = True
             uow.commit()
