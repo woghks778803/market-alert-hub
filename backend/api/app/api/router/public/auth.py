@@ -11,7 +11,7 @@ import app.api.openapi as OpenApi
 router = APIRouter(prefix="/auth")
 
 @router.post(
-    "/register",
+    "/signup",
     status_code=status.HTTP_201_CREATED,
     response_model=Envelope[AuthSchema.TokenOut],  # ✅ 래퍼 적용
     summary="유저 회원가입",
@@ -29,7 +29,7 @@ router = APIRouter(prefix="/auth")
         OpenApi.ERR_409,
     ),
 )
-def register(
+def signup(
     request: Request,
     payload: UserSchema.UserCreatePublic = Body(..., example={
         "email": "alice@example.com",
@@ -41,13 +41,14 @@ def register(
 ):
     ip = request.client.host if request.client else None
     ua = request.headers.get("user-agent")
-    token_out = svcs.auths().register(email=payload.email, nickname=payload.nickname, password=payload.password, ip=ip, ua=ua)
+    token_out = svcs.auths().signup(email=payload.email, nickname=payload.nickname, password=payload.password, ip=ip, ua=ua)
+    svcs.emails().send_welcome()
     # ✅ 공통 ok/created 사용
     body, status_code, headers = created(token_out, request_id=meta.request_id, location="/auth/me")
     return body, status_code, headers
 
 @router.post(
-    "/login",
+    "/signin",
     response_model=Envelope[AuthSchema.TokenOut],  # ✅ 래퍼 적용
     summary="로그인 (JWT 발급)",
     responses=OpenApi.combine(
@@ -62,7 +63,7 @@ def register(
         ),
     ),
 )
-def login(
+def signin(
     request: Request,
     payload: AuthSchema.Login = Body(..., example={"email": "alice@example.com", "password": "P@ssw0rd!"}),
     svcs: ServiceFactory = Depends(get_services),
@@ -70,7 +71,7 @@ def login(
 ):
     ip = request.client.host if request.client else None
     ua = request.headers.get("user-agent")
-    token_out = svcs.auths().login(email=payload.email, password=payload.password, ip=ip, ua=ua, admin_chk=False)
+    token_out = svcs.auths().signin(email=payload.email, password=payload.password, ip=ip, ua=ua, admin_chk=False)
     return ok(token_out, request_id=meta.request_id)
 
 @router.post(

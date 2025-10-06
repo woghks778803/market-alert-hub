@@ -25,6 +25,7 @@ class UnitOfWork:
         self._watchlists = None
         self._channels = None
         self._providers = None
+        
         self._done = False
         self._owns = owns_session
 
