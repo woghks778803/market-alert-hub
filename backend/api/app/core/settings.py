@@ -1,5 +1,5 @@
 from urllib.parse import quote_plus
-from pydantic import computed_field
+from pydantic import computed_field, Field, EmailStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -17,6 +17,14 @@ class Settings(BaseSettings):
     JWT_SECRET: str = "change-me"
     JWT_ALG: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 360
+
+    # SES
+    aws_region: str = Field(default="ap-northeast-2")
+    ses_from_email: EmailStr
+    ses_configuration_set: str | None = None  # 없으면 None
+    # 네트워크/보안: 기본은 IAM Role 사용 권장. 로컬 개발 시만 키 사용.
+    aws_access_key_id: str | None = None
+    aws_secret_access_key: str | None = None
 
     # 로컬 개발 편의: .env 읽기 (컨테이너에선 ENV가 우선)
     model_config = SettingsConfigDict(

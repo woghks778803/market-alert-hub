@@ -1,8 +1,9 @@
 from typing import List, Optional
 from sqlalchemy.orm import Session as DbSession
 from app.infra.db.model import AlertModel
+from ..protocol.alert_repo import AlertRepo
 
-class SqlAlertRepo:
+class SqlAlertRepo(AlertRepo):
     def __init__(self, db: DbSession) -> None:
         self._db = db
 

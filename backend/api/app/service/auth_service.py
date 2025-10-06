@@ -23,7 +23,7 @@ class AuthService:
         self._ttl = token_minutes
 
     # 회원가입
-    def register(
+    def signup(
         self,
         *,
         email: str,
@@ -65,7 +65,7 @@ class AuthService:
             return AuthDTO.UserToken(user_id=user.id, access_token=token)
 
     # 로그인
-    def login(
+    def signin(
         self,
         *,
         email: str,
