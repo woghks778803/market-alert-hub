@@ -9,6 +9,7 @@
     "redis",
     "api",
     "worker",
+    "dispatcher",
     "collector",
     "gateway"
   ],
