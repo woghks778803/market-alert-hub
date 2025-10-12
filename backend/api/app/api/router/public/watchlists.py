@@ -27,7 +27,7 @@ def list_watchlist(
     order: str = Query("asc", pattern="^(asc|desc)$"),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    rows = svcs.watchlists().list(user_id=user.id, limit=limit, offset=offset, is_asc=(order == "asc"))
+    rows = svcs.watchlists.list(user_id=user.id, limit=limit, offset=offset, is_asc=(order == "asc"))
     return ok(rows, request_id=meta.request_id)
 
 @router.post(
@@ -46,7 +46,7 @@ def create_watchlist(
     user: UserModel = Depends(get_current_user),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    result = svcs.watchlists().create(user_id=user.id, data=payload)
+    result = svcs.watchlists.create(user_id=user.id, data=payload)
     return created(result, request_id=meta.request_id)
 
 @router.delete(
@@ -61,5 +61,5 @@ def delete_watchlist(
     svcs: ServiceFactory = Depends(get_services),
     user: UserModel = Depends(get_current_user),
 ):
-    svcs.watchlists().delete(item_id=item_id, user_id=user.id)
+    svcs.watchlists.delete(item_id=item_id, user_id=user.id)
     return no_content()

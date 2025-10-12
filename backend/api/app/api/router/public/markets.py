@@ -29,7 +29,7 @@ def list_exchanges(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    rows = svcs.markets().list_exchanges(limit=limit, offset=offset)
+    rows = svcs.markets.list_exchanges(limit=limit, offset=offset)
     return ok(rows, request_id=meta.request_id)
 
 
@@ -52,7 +52,7 @@ def list_exchange_instruments(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    rows = svcs.markets().list_exchange_instruments(
+    rows = svcs.markets.list_exchange_instruments(
         exchange_id=exchange_id, limit=limit, offset=offset
     )
 
@@ -76,7 +76,7 @@ def list_mapping(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    rows = svcs.markets().list_mapping(exchange_id=exchange_id)
+    rows = svcs.markets.list_mapping(exchange_id=exchange_id)
     return ok(rows, request_id=meta.request_id)
 
 
@@ -105,7 +105,7 @@ def list_candles(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    rows = svcs.markets().list_candles(
+    rows = svcs.markets.list_candles(
         exchange_instrument_id=exchange_instrument_id,
         output=output,
         cursor=cursor,
@@ -147,5 +147,5 @@ def post_candles(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    result = svcs.markets().ingest_snapshot(base=base, item=payload)
+    result = svcs.markets.ingest_snapshot(base=base, item=payload)
     return created(result, request_id=meta.request_id)
