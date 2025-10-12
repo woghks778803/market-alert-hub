@@ -27,7 +27,7 @@ def list_channels(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    rows = svcs.channels().list(user_id=current_user.id)
+    rows = svcs.channels.list(user_id=current_user.id)
     return ok(rows, request_id=meta.request_id)
 
 @router.get(
@@ -44,7 +44,7 @@ def get_channels(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    result = svcs.channels().get_by_id(user_channel_id=user_channel_id)
+    result = svcs.channels.get_by_id(user_channel_id=user_channel_id)
     return ok(result, request_id=meta.request_id)
 
 @router.post(
@@ -66,7 +66,7 @@ def create_channel(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    result = svcs.channels().create(
+    result = svcs.channels.create(
         user_id=current_user.id, provider_id=payload.channel_provider_id, config=payload.config
     )
     return created(result, response=response, request_id=meta.request_id)
@@ -82,5 +82,5 @@ def delete_channel(
     user_channel_id: int = Path(..., ge=1),
     svcs: ServiceFactory = Depends(get_services),
 ):
-    svcs.channels().delete_channel(user_channel_id=user_channel_id)
+    svcs.channels.delete_channel(user_channel_id=user_channel_id)
     return no_content()

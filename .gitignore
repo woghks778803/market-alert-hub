@@ -50,9 +50,12 @@ redis_data/
 # ======================
 # Environment / Secrets
 # ======================
+*.env
+*.env.*
 .env
 .env.*
-!.env.example
+!*.env.example
+!**/*.env.example
 
 # ======================
 # VSCode / IDE

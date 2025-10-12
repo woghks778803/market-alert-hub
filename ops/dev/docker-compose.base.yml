@@ -9,10 +9,23 @@ services:
     depends_on:
       api:
         condition: service_started
-    environment:
-      - TZ=${TZ:-Asia/Seoul}
+    env_file:
+      - ./env/common.env
+      - ./env/gateway.env
+    # gateway는 파이썬 안 쓰면 PYTHONPATH 불필요
     restart: unless-stopped
-    networks: [mahnet]
+    networks: [ mahnet ]
+    cpus: 0.20
+    mem_limit: 256m
+
+  # dashboard:
+  #   image: eoranged/rq-dashboard:latest
+  #   ports:
+  #     - "9181:9181"
+  #   environment:
+  #     - RQ_DASHBOARD_REDIS_URL=redis://redis:6379/0
+  #   depends_on:
+  #     - redis
 
   api:
     build: ../../backend/api
@@ -20,27 +33,22 @@ services:
     working_dir: /app
     volumes:
       - ../../backend/api:/app:cached
-    command: ["/app/entrypoint.sh"]
-    expose: ["8000"]
+      - ../../backend/common:/app/common:cached
+    command: [ "/app/entrypoint.sh" ]
+    expose: [ "8000" ]
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
+    env_file:
+      - ./env/common.env
+      - ./env/api.env
     environment:
-      - TZ=${TZ:-Asia/Seoul}
-      - MYSQL_HOST=${MYSQL_HOST:-db}
-      - MYSQL_PORT=${MYSQL_PORT:-3306}
-      - MYSQL_DATABASE=${MYSQL_DATABASE:-mah}
-      - MYSQL_USER=${MYSQL_USER:-mah}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-mahpass}
-      - REDIS_HOST=${REDIS_HOST:-redis}
-      - REDIS_PORT=${REDIS_PORT:-6379}
-      - JWT_SECRET=${JWT_SECRET:-devsecret}
-      - JWT_ACCESS_MINUTES=${JWT_ACCESS_MINUTES:-15}
-      - JWT_REFRESH_DAYS=${JWT_REFRESH_DAYS:-7}
-      - RUN_ALEMBIC=${RUN_ALEMBIC:-0}
-      - WATCHFILES_FORCE_POLLING=true
+      - PYTHONPATH=${PYTHONPATH_COMMON} 
     restart: unless-stopped
-    networks: [mahnet]
+    networks: [ mahnet ]
+    # 개발 중 과부하 방지
+    cpus: 1
+    mem_limit: 1g
 
   worker:
     build: ../../backend/worker
@@ -48,22 +56,47 @@ services:
     working_dir: /app
     volumes:
       - ../../backend/worker:/app:cached
-    # command 지정하지 않음 → Dockerfile의 CMD(무한 루프) 사용
+      - ../../backend/common:/app/common:cached
+    entrypoint: [ "sh", "/app/entrypoint.sh" ]
+    # CMD는 Dockerfile의 ["python","main.py"] 사용
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
+    env_file:
+      - ./env/common.env
+      - ./env/worker.env
     environment:
-      - TZ=${TZ:-Asia/Seoul}
-      - MYSQL_HOST=${MYSQL_HOST:-db}
-      - MYSQL_PORT=${MYSQL_PORT:-3306}
-      - MYSQL_DATABASE=${MYSQL_DATABASE:-mah}
-      - MYSQL_USER=${MYSQL_USER:-mah}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-mahpass}
-      - REDIS_HOST=${REDIS_HOST:-redis}
-      - REDIS_PORT=${REDIS_PORT:-6379}
-      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
+      - PYTHONPATH=${PYTHONPATH_COMMON} 
     restart: unless-stopped
-    networks: [mahnet]
+    tty: true # IDE attach 안정
+    stdin_open: true
+    networks: [ mahnet ]
+    cpus: 0.80
+    mem_limit: 768m
+
+  dispatcher:
+    build: ../../backend/dispatcher
+    container_name: mah_dispatcher
+    working_dir: /app
+    volumes:
+      - ../../backend/dispatcher:/app:cached
+      - ../../backend/common:/app/common:cached
+    entrypoint: [ "sh", "/app/entrypoint.sh" ]
+    # CMD는 Dockerfile의 ["python","main.py"] 사용
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    env_file:
+      - ./env/common.env
+      - ./env/dispatcher.env
+    environment:
+      - PYTHONPATH=${PYTHONPATH_COMMON} 
+    restart: unless-stopped
+    tty: true # IDE attach 안정
+    stdin_open: true
+    networks: [ mahnet ]
+    cpus: 0.50
+    mem_limit: 512m
 
   collector:
     build: ../../backend/collector
@@ -71,15 +104,16 @@ services:
     working_dir: /app
     volumes:
       - ../../backend/collector:/app:cached
-    # command 지정하지 않음 → Dockerfile의 CMD(무한 루프) 사용
+    # CMD는 Dockerfile 기본값
     depends_on:
       redis: { condition: service_healthy }
-    environment:
-      - TZ=${TZ:-Asia/Seoul}
-      - REDIS_HOST=${REDIS_HOST:-redis}
-      - REDIS_PORT=${REDIS_PORT:-6379}
+    env_file:
+      - ./env/common.env
+      - ./env/collector.env
     restart: unless-stopped
-    networks: [mahnet]
+    networks: [ mahnet ]
+    cpus: 0.50
+    mem_limit: 512m
 
   db:
     image: mysql:8.4
@@ -87,48 +121,46 @@ services:
     restart: unless-stopped
     ports:
       - "3306:3306"
-    environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-rootpass}
-      - MYSQL_DATABASE=${MYSQL_DATABASE:-mah}
-      - MYSQL_USER=${MYSQL_USER:-mah}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-mahpass}
+    env_file:
+      - ./env/common.env
     volumes:
       - db_data:/var/lib/mysql
       - ../../backend/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
       - ../../backend/db/my.cnf:/etc/mysql/conf.d/my.cnf:ro
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD --silent",
-        ]
+      test: [ "CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD --silent" ]
       interval: 5s
       timeout: 3s
       retries: 20
       start_period: 10s
-    networks: [mahnet]
+    networks: [ mahnet ]
+    cpus: 0.80
+    mem_limit: 768m
 
   redis:
     image: redis:7-alpine
     container_name: mah_redis
     restart: unless-stopped
-    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
     ports:
       - "6379:6379"
     volumes:
       - ../../backend/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 5s
       timeout: 3s
       retries: 20
       start_period: 5s
-    networks: [mahnet]
+    networks: [ mahnet ]
+    cpus: 0.20
+    mem_limit: 256m
 
 volumes:
   db_data:
   redis_data:
+
 
 networks:
   mahnet:
