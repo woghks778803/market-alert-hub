@@ -29,7 +29,7 @@ class UserChannel(Base):
         nullable=False
     )
     is_default:   Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("0"))
-    is_deleted:   Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("0"))
+    is_deleted:   Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("0"))
 
     targets: Mapped[list["AlertChannelTarget"]] = relationship(back_populates="user_channel", cascade="all, delete-orphan")
     channel_provider: Mapped["ChannelProvider"] = relationship("ChannelProvider", back_populates="channels")
