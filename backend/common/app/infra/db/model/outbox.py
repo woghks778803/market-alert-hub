@@ -6,7 +6,7 @@ from app.core.datetime_utils import utcnow
 from app.core.constants import OutboxStatus
 
 class Outbox(Base):
-    __tablename__ = "outbox"
+    __tablename__ = "outboxs"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     event_type: Mapped[str] = mapped_column(String(100), nullable=False)

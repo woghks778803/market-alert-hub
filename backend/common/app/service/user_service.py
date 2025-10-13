@@ -51,7 +51,6 @@ class UserService:
 
     def get_by_id(self, *, user_id: int) -> UserModel:
         with self._uow_factory() as uow:
-            print("seebal?")
             return self._ensure_user(uow, user_id)
 
     def update(self, *, user_id: int, role: UserRole | None, status: UserStatus | None):
@@ -64,11 +63,7 @@ class UserService:
                 user.role = role
             if status is not None:
                 user.status = status
-            user.updated_at = (
-                datetime.now(timezone.utc)
-                if hasattr(user, "updated_at")
-                else getattr(user, "updated_at", None)
-            )
+
             uow.commit()
             return user
 
