@@ -5,7 +5,7 @@ from fastapi.openapi.utils import get_openapi
 
 import logging
 from app.core.logging import setup_logging
-from app.core.settings import settings
+from app.runtime.settings import settings
 from app.api.middleware import RequestIdMiddleware
 from app.api.exception_handlers import unified_exception_handler
 from app.api.router import api

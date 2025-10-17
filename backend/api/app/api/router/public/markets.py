@@ -1,11 +1,12 @@
 from datetime import datetime
-from fastapi import APIRouter, Depends, Query, Path, Body, status
+from fastapi import Response, APIRouter, Depends, Query, Path, Body, status
 from app.core.constants import CandleBaseInterval, CandleOutputInterval
 from app.service.factory import ServiceFactory
 from app.api.common.envelope import Envelope, ok, created
 from app.api.deps import get_services, get_request_meta, RequestMeta
 from app.api.schema import MarketSchema
 import app.api.openapi as OpenApi
+from app.domain import MarketDTO
 
 router = APIRouter()
 
@@ -29,7 +30,7 @@ def list_exchanges(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    rows = svcs.markets.list_exchanges(limit=limit, offset=offset)
+    rows = svcs.markets.list_exchanges_by_filter(limit=limit, offset=offset)
     return ok(rows, request_id=meta.request_id)
 
 
@@ -52,7 +53,7 @@ def list_exchange_instruments(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    rows = svcs.markets.list_exchange_instruments(
+    rows = svcs.markets.list_exchange_instruments_by_filter(
         exchange_id=exchange_id, limit=limit, offset=offset
     )
 
@@ -60,7 +61,7 @@ def list_exchange_instruments(
 
 
 @router.get(
-    "/markets/mapping",
+    "/markets/mappings",
     response_model=Envelope[list[MarketSchema.MappingItem]],
     summary="거래소-종목 매핑(선택)",
     responses=OpenApi.combine(
@@ -71,12 +72,12 @@ def list_exchange_instruments(
         OpenApi.ERR_409,
     ),
 )
-def list_mapping(
+def list_mappings(
     exchange_id: int | None = Query(None, ge=1),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    rows = svcs.markets.list_mapping(exchange_id=exchange_id)
+    rows = svcs.markets.list_mappings_exchange_id(exchange_id=exchange_id)
     return ok(rows, request_id=meta.request_id)
 
 
@@ -96,7 +97,7 @@ def list_mapping(
 )
 def list_candles(
     exchange_instrument_id: int = Query(..., ge=1),
-    output: CandleOutputInterval | None = Query(None),
+    output: CandleOutputInterval = Query(None),
     cursor: datetime | None = Query(None, description="UTC ISO8601"),
     start: datetime | None = Query(None, description="UTC ISO8601"),
     end: datetime | None = Query(None, description="UTC ISO8601"),
@@ -105,7 +106,7 @@ def list_candles(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    rows = svcs.markets.list_candles(
+    rows = svcs.markets.list_candles_by_filter(
         exchange_instrument_id=exchange_instrument_id,
         output=output,
         cursor=cursor,
@@ -131,6 +132,7 @@ def list_candles(
     ),
 )
 def post_candles(
+    response: Response,
     base: CandleBaseInterval = Path(..., description="기준 간격: 1m / 1h / 1d"),
     payload: MarketSchema.CandleBase = Body(
         ...,
@@ -147,5 +149,6 @@ def post_candles(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    result = svcs.markets.ingest_snapshot(base=base, item=payload)
-    return created(result, request_id=meta.request_id)
+    item=MarketDTO.CandleBase(**payload.model_dump())
+    result = svcs.markets.ingest_snapshot(base=base, item=item)
+    return created(result, response=response, request_id=meta.request_id)

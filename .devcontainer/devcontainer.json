@@ -25,7 +25,9 @@
         "ms-python.vscode-pylance"
       ],
       "settings": {
-        "python.defaultInterpreterPath": "/workspaces/${localWorkspaceFolderBasename}/.venv/bin/python",
+        "python.defaultInterpreterPath": "/usr/local/bin/python3",
+        "python.createEnvironment.trigger": "off",
+        "python.terminal.activateEnvironment": false,
         "python.analysis.indexing": false
       }
     }

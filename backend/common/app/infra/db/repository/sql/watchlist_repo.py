@@ -12,7 +12,7 @@ class SqlWatchlistRepo(WatchlistRepo):
     def __init__(self, db: DbSession):
         self._db = db
 
-    def list(self, *, user_id: int, limit: int, offset: int, is_asc: bool) -> Sequence[WatchlistItemModel]:
+    def list_items_by_filter(self, *, user_id: int, limit: int, offset: int, is_asc: bool) -> Sequence[WatchlistItemModel]:
         order = asc if is_asc else desc
         stmt = (
             select(WatchlistItemModel)
@@ -44,13 +44,13 @@ class SqlWatchlistRepo(WatchlistRepo):
         )
         return self._db.execute(stmt).scalar_one() > 0
 
-    def next_sort_order(self, *, user_id: int) -> int:
+    def get_next_sort(self, *, user_id: int) -> int:
         stmt = select(func.coalesce(func.max(WatchlistItemModel.sort_order), 0)).where(
             and_(WatchlistItemModel.user_id == user_id, WatchlistItemModel.is_deleted.is_(False))
         )
         return int(self._db.execute(stmt).scalar_one()) + 1
 
-    def create(self, *, user_id: int, exchange_instrument_id: int, sort_order: int) -> WatchlistItemModel:
+    def add_item(self, *, user_id: int, exchange_instrument_id: int, sort_order: int) -> WatchlistItemModel:
         row = WatchlistItemModel(
             user_id=user_id,
             exchange_instrument_id=exchange_instrument_id,
@@ -61,7 +61,7 @@ class SqlWatchlistRepo(WatchlistRepo):
         self._db.flush()  # id 채우기
         return row
 
-    def get_by_id(self, *, item_id: int, user_id: int) -> WatchlistItemModel:
+    def get_item_by_filter(self, *, item_id: int, user_id: int) -> WatchlistItemModel:
         stmt = (
             select(WatchlistItemModel)
             .where(and_(WatchlistItemModel.id == item_id, WatchlistItemModel.user_id == user_id))

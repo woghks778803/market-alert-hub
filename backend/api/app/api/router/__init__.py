@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from .public import router as public_router
-from .admin import router as admin_router
+from .admin import public as admin_public_router, protected as admin_protected_router
 import app.api.openapi as OpenApi
 
 api = APIRouter(
@@ -9,6 +9,7 @@ api = APIRouter(
     )
 )
 api.include_router(public_router)
-api.include_router(admin_router)
+api.include_router(admin_public_router)
+api.include_router(admin_protected_router)
 
 __all__ = ["api"]

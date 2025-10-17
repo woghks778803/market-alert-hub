@@ -1,7 +1,7 @@
 import logging
 from rq import Worker, Connection
 from app.core.logging import setup_logging
-from app.core.settings import settings
+from app.runtime.settings import settings
 from .redis_conn import get_redis
 from .queues import q_outbox
 

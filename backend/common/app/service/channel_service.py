@@ -11,21 +11,19 @@ class ChannelService:
         self._uow_factory = uow_factory
 
     # 목록
-    def list(self, user_id: int):
+    def list_channels_by_user_id(self, user_id: int):
         with self._uow_factory() as uow:
-            rows = uow.channels.list_by_user(user_id)
+            rows = uow.channels.list_channels_by_user_id(user_id)
             return rows
 
-    # 단건
-    def get_by_id(self, *, user_channel_id: int):
+    def get_by_channel_id(self, *, user_channel_id: int):
         with self._uow_factory() as uow:
-            return uow.channels.get_by_id(user_channel_id)
+            return uow.channels.get_by_channel_id(user_channel_id)
 
-    # 생성
-    def create(self, *, user_id: int, provider_id: int, config: dict | None):
+    def create_channel(self, *, user_id: int, provider_id: int, config: dict | None):
 
         with self._uow_factory() as uow:
-            chp = uow.providers.get_by_id(provider_id)
+            chp = uow.providers.get_by_provider_id(provider_id)
             if not chp:
                 raise ValidationAppError(
                     "Unknown channel provider.", target="provider_id"
@@ -35,7 +33,7 @@ class ChannelService:
                     "Channel provider is not active.", target="provider.is_active"
                 )
 
-            channel_cnt = uow.channels.find_one_by_channel_cnt(
+            channel_cnt = uow.channels.get_channel_cnt(
                 user_id=user_id, provider_id=provider_id
             )
             # TODO 현재는 5개 고정 나중에 결제 서비스 넣을때 변경
@@ -50,7 +48,7 @@ class ChannelService:
             )
 
             fingerprint = ChannelRule.make_fingerprint(config)
-            existed = uow.channels.find_one_by_fingerprint(
+            existed = uow.channels.get_channel_by_fingerprint(
                 user_id=user_id,
                 provider_id=provider_id,
                 fingerprint=fingerprint,
@@ -68,30 +66,27 @@ class ChannelService:
                 config_fingerprint=fingerprint,
                 is_deleted=False,
             )
-            uow.channels.add(row)
+            uow.channels.add_channel(row)
             uow.commit()
             # refresh가 UoW에 없다면 session.refresh(row) 호출
             uow.db.refresh(row)
 
-            result = uow.channels.get_by_id(user_channel_id=row.id)
+            result = uow.channels.get_by_channel_id(user_channel_id=row.id)
             return result
 
     # (옵션) 검증 완료 마킹
     def mark_verified(self, *, user_channel_id: int):
         with self._uow_factory() as uow:
-            repo = uow.channels
-            row = repo.get_by_id(user_channel_id)
+            row = uow.channels.get_by_channel_id(user_channel_id)
             if not row or not row.is_deleted:
                 raise ValidationAppError("Channel not found or invalid.")
             row.verified_at = utcnow()
             uow.commit()
             return row
 
-    # (옵션) 비활성화
     def delete_channel(self, *, user_channel_id: int):
         with self._uow_factory() as uow:
-            repo = uow.channels
-            row = repo.get_by_id(user_channel_id)
+            row = uow.channels.get_by_channel_id(user_channel_id)
             if not row:
                 return None
             row.is_deleted = True

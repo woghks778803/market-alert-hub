@@ -23,7 +23,7 @@ class Instrument(Base):
         onupdate=utcnow, 
         nullable=False
     )
-    is_deleted:   Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("0"))
+    is_deleted:   Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("0"))
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("0"))  
 
 

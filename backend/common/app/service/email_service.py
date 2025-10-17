@@ -1,9 +1,13 @@
-from typing import Sequence
+from typing import Sequence, Callable
 from email_validator import validate_email, EmailNotValidError
 from app.domain import EmailPort, ValidationAppError
 
 class EmailService:
-    def __init__(self, client: EmailPort.EmailClient, renderer: EmailPort.EmailTemplateRenderer) -> None:
+    def __init__(
+            self, 
+            client: Callable[[], EmailPort.EmailClient], 
+            renderer: Callable[[], EmailPort.EmailTemplateRenderer]
+    ) -> None:
         self.client = client
         self.renderer = renderer
 
@@ -19,29 +23,30 @@ class EmailService:
 
     def send_welcome(self, to: Sequence[str], user_name: str, dashboard_link: str) -> str:
         to = self._validate_recipients(to)
-        html = self.renderer.render("user_welcome.html", {"user_name": user_name, "dashboard_link": dashboard_link})
-        return self.client.send(
-            subject="[Market Alert Hub] 회원가입을 환영합니다",
+        
+        html = self.renderer().render("user_welcome.html", {"user_name": user_name, "dashboard_link": dashboard_link})
+        return self.client().send(
+            subject="[PricePing] 회원가입을 환영합니다",
             html_body=html,
             to=to,
         )
 
     def send_verify(self, to: Sequence[str], user_name: str, verify_link: str) -> str:
         to = self._validate_recipients(to)
-        html = self.renderer.render("user_email_verify.html", {"user_name": user_name, "verify_link": verify_link})
-        return self.client.send(
-            subject="[Market Alert Hub] 회원가입을 환영합니다",
+        html = self.renderer().render("user_email_verify.html", {"user_name": user_name, "verify_link": verify_link})
+        return self.client().send(
+            subject="[PricePing] 회원가입을 환영합니다",
             html_body=html,
             to=to,
         )
 
     def send_alert(self, to: Sequence[str], user_name: str, exchange: str, symbol: str, condition: str, current_price: str, currency: str, settings_link: str, alert_link: str | None = None) -> str:
         to = self._validate_recipients(to)
-        html = self.renderer.render("alert_notification.html", {
+        html = self.renderer().render("alert_notification.html", {
             "user_name": user_name, "exchange": exchange, "symbol": symbol, "condition": condition, 
             "current_price": current_price, "currency": currency, "alert_link": alert_link, "settings_link": settings_link
         })
-        return self.client.send(
+        return self.client().send(
             subject=f"[알림] {symbol} 목표가 도달",
             html_body=html,
             to=to,

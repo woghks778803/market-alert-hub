@@ -1,59 +1,69 @@
 from sqlalchemy import select, update, func
 from sqlalchemy.orm import Session as DbSession
-from app.core.constants import OutboxStatus
+from app.domain import OutboxDTO, ValidationAppError
 from app.infra.db.model import OutboxModel
 from ..protocol.outbox_repo import OutboxRepo
 
 class SqlOutboxRepo(OutboxRepo):
     def __init__(self, db: DbSession):
-        self.db = db
+        self._db = db
 
-    def add(self, row: OutboxModel) -> None:
-        self.db.add(row)
+    def add_outbox(self, row: OutboxModel) -> None:
+        self._db.add(row)
 
-    def get(self, id: int) -> OutboxModel | None:
-        return self.db.execute(select(OutboxModel).where(OutboxModel.id == id)).scalar_one_or_none()
+    def get_by_outbox_id(self, id: int) -> OutboxModel | None:
+        return self._db.execute(select(OutboxModel).where(OutboxModel.id == id)).scalar_one_or_none()
 
-    def mark_inflight(self, ids: list[int]):
-        if not ids:
-            return
-        self.db.execute(
-            update(OutboxModel)
-            .where(OutboxModel.id.in_(ids))
-            .values(status=OutboxStatus.SENDING)
-        )
-
-    def mark_sent(self, id: int, attempts: int):
-        self.db.execute(
-            update(OutboxModel)
-            .where(OutboxModel.id == id)
-            .values(status=OutboxStatus.SENT, attempts=attempts + 1, error_msg=None)
-        )
-
-    def mark_pending(self, id: int, attempts: int, next_at, err: str) -> None:
-        self.db.execute(
-            update(OutboxModel)
-            .where(OutboxModel.id == id)
-            .values(
-                status=OutboxStatus.PENDING,
-                attempts=attempts,
-                next_attempt_at=next_at,
-                error_msg=err,
-            )
-        )
+    def _to_outbox_where_mapping(self, outbox_filter: OutboxDTO.OutboxFilter):
+        wheres = []
         
-    def mark_failed(self, id: int, attempts: int, err: str):
-        self.db.execute(
+        if outbox_filter.id is not None: wheres.append(OutboxModel.id == outbox_filter.id)
+        elif outbox_filter.ids: wheres.append(OutboxModel.id.in_(outbox_filter.ids)) # [] 방지
+
+        if outbox_filter.status is not None: wheres.append(OutboxModel.status == outbox_filter.status)
+
+        return wheres
+
+    def _to_outbox_values_mapping(self, outbox_update: OutboxDTO.OutboxUpdate):
+        values = {}
+
+        if outbox_update.status is not None: values[OutboxModel.status] = outbox_update.status
+        if outbox_update.attempts is not None: values[OutboxModel.attempts] = outbox_update.attempts
+        if outbox_update.next_run_at is not None: values[OutboxModel.next_run_at] = outbox_update.next_run_at
+
+        return values
+
+    def update_outbox_by_filter(self, filters: OutboxDTO.OutboxFilter, updates: OutboxDTO.OutboxUpdate):
+
+        where = self._to_outbox_where_mapping(filters)
+        if not where: raise ValidationAppError("Unsafe update: at least one narrowing filter required", target="filters")
+        values = self._to_outbox_values_mapping(updates)
+        if not values: return 0 
+
+        self._db.execute(
             update(OutboxModel)
-            .where(OutboxModel.id == id)
-            .values(status=OutboxStatus.FAILED, attempts=attempts, error_msg=err)
+            .where(*where)
+            .values(values)
+            .execution_options(synchronize_session=False)
         )
 
-    def due_pending_ids(self, limit: int) -> list[int]:
-        rows = self.db.execute(
-            select(OutboxModel.id)
-            .where(OutboxModel.status == OutboxStatus.PENDING)
-            .order_by(OutboxModel.id)
-            .limit(limit)
-        ).scalars().all()
+    def list_outboxs_by_filter(
+        self, 
+        filters: OutboxDTO.OutboxFilter,
+        *,
+        limit: int | None = None,
+        offset: int = 0,
+        order_desc: bool = False,
+        for_update: bool = False,
+        skip_locked: bool = False,
+    ) -> list[int]:
+
+        where = self._to_outbox_where_mapping(filters)
+        stmt = select(OutboxModel.id).where(*where).order_by(OutboxModel.id.desc() if order_desc else OutboxModel.id.asc())
+
+        if for_update: stmt = stmt.with_for_update(skip_locked=skip_locked)
+        if offset: stmt = stmt.offset(offset)
+        if limit is not None: stmt = stmt.limit(limit)
+        
+        rows = self._db.execute(stmt).scalars().all()
         return list(rows)

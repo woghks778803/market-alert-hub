@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Path, Query, Body
 
 from app.core.constants import UserRole, UserStatus
 from app.service.factory import ServiceFactory
-from app.api.common.envelope import Envelope, ok, created, no_content
+from app.api.common.envelope import Envelope, ok, no_content
 from app.api.deps import get_services, get_request_meta, RequestMeta
 from app.api.schema import UserSchema
 import app.api.openapi as OpenApi
@@ -27,7 +27,7 @@ def list_users(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    rows = svcs.users.list(status=status, role=role, limit=limit, offset=offset)
+    rows = svcs.users.list_users_filter(status=status, role=role, limit=limit, offset=offset)
     return ok(rows, request_id=meta.request_id)
 
 @router.get(
@@ -43,7 +43,7 @@ def get_user(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    result = svcs.users.get_by_id(user_id=user_id)
+    result = svcs.users.get_by_user_id(user_id=user_id)
     return ok(result, request_id=meta.request_id)
 
 @router.patch(
@@ -60,7 +60,7 @@ def update_user(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    result = svcs.users.update(user_id=user_id, role=payload.role, status=payload.status)
+    result = svcs.users.update_user(user_id=user_id, role=payload.role, status=payload.status)
     return ok(result, request_id=meta.request_id)
 
 @router.delete(
@@ -74,5 +74,5 @@ def delete_user(
     user_id: int = Path(..., ge=1),
     svcs: ServiceFactory = Depends(get_services),
 ):
-    svcs.users.delete(user_id=user_id)
+    svcs.users.delete_user(user_id=user_id)
     return no_content()

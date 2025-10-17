@@ -20,7 +20,7 @@ def _as_list(v: Any) -> list[str]:
     except Exception:
         return [str(v)]
 
-def _dispatch_with_svcs(svcs: ServiceFactory, *, event_type: str, channel: str | None, payload: Mapping[str, Any]) -> None:
+def _dispatch_with_svcs(svcs: ServiceFactory, *, event_type: str, payload: Mapping[str, Any]) -> None:
     """
     OutboxService가 호출하는 실제 디스패처.
     - channel이 email일 때 EmailService로 라우팅
@@ -28,13 +28,10 @@ def _dispatch_with_svcs(svcs: ServiceFactory, *, event_type: str, channel: str |
     - 잘못된 payload면 예외 발생 → OutboxService가 재시도/FAILED 처리
     """
     logger.info("dispatch event_type=%s channel=%s keys=%s",
-                event_type, channel, list(payload.keys()))
-
-    if channel and channel != "email":
-        raise ValidationAppError(f"unsupported channel={channel}", target="channel")
+                event_type, list(payload.keys()))
 
     email_svc = svcs.emails
-
+    
     # 공통 필드
     to = _as_list(payload.get("to"))
     if not to:
@@ -84,7 +81,7 @@ def _dispatch_with_svcs(svcs: ServiceFactory, *, event_type: str, channel: str |
 
 # ---- job entrypoint -------------------------------------------------------
 
-def process_outbox_event(event_id: int) -> None:
+def deliver_outbox_event(outbox_id: int) -> None:
     """
     RQ가 실행하는 잡 엔트리.
     OutboxService가 트랜잭션/상태 전이를 담당하고,
@@ -92,9 +89,9 @@ def process_outbox_event(event_id: int) -> None:
     """
     svcs: ServiceFactory = get_services()
 
-    svcs.outboxs.process_one(
-        event_id=event_id,
-        dispatch_fn=lambda event_type, channel, payload: _dispatch_with_svcs(
-            svcs, event_type=event_type, channel=channel, payload=payload
+    svcs.outboxs.deliver_outbox(
+        outbox_id=outbox_id,
+        dispatch_fn=lambda event_type, payload: _dispatch_with_svcs(
+            svcs, event_type=event_type, payload=payload
         ),
     )

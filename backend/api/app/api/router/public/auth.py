@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, Body, Response, Request, status, Security
 
 from app.core.auth import token_hash
-from app.infra.db.model import UserModel
 from app.service.factory import ServiceFactory
+from app.domain import AuthDTO
 from app.api.schema import UserSchema, AuthSchema
 from app.api.common.envelope import Envelope, ok, created
 from app.api.deps import (
@@ -61,11 +61,10 @@ def signup(
         ip=ip,
         ua=ua,
     )
-    # ✅ 공통 ok/created 사용
-    body, status_code, headers = created(
+
+    return created(
         token_out, response=response, request_id=meta.request_id, location="/auth/me"
     )
-    return body, status_code, headers
 
 
 @router.post(
@@ -140,9 +139,9 @@ def logout(
     ),
 )
 def me(
-    user: UserModel = Security(get_current_user),
+    user: AuthDTO.AuthUser = Security(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),  # ✅
 ):
-    u = svcs.users.get_by_id(user_id=user.id)
+    u = svcs.users.get_by_user_id(user_id=user.id)
     return ok(UserSchema.UserReadPublic.model_validate(u), request_id=meta.request_id)
