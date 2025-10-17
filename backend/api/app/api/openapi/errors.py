@@ -3,13 +3,15 @@ from typing import Any, Dict, Optional
 from app.api.schema import ErrorSchema 
 from app.api.common.envelope import Envelope, ErrorBody
 
+from .types import Responses
+
 # 기본 에러 예시 생성기
 def err_example(
     code: str,
     message: str,
     *,
-    target: Optional[str] = None,
-    meta: Optional[Dict[str, Any]] = None,
+    target: str | None = None,
+    meta: Dict[str, Any] | None = None,
     request_id: str = "00000000-0000-0000-0000-000000000000",
 ) -> Dict[str, Any]:
     return {
@@ -23,7 +25,7 @@ def err_example(
     }
 
 # 단일 상태코드 응답 블록 생성
-def err(status: int, description: str, example: Optional[Dict[str, Any]] = None) -> Dict[int, Any]:
+def err(status: int, description: str, example: Dict[str, Any] | None = None) -> Responses:
     return {
         status: {
             "description": description,

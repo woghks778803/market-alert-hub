@@ -16,7 +16,7 @@ from .alert_event import AlertEvent as AlertEventModel
 from .delivery import Delivery as DeliveryModel
 from .watchlist_item import WatchlistItem as WatchlistItemModel
 from .outbox import Outbox as OutboxModel
-
+from .outbox_attempt import OutboxAttempt as OutboxAttemptModel
 
 __all__ = [
     "UserModel", "SessionModel", "UserIdentityModel",
@@ -25,5 +25,5 @@ __all__ = [
     "AlertModel", "AlertChannelTargetModel", "AlertEventModel", 
     "UserChannelModel", "ChannelProviderModel",
     "DeliveryModel", "WatchlistItemModel",
-    "OutboxModel",
+    "OutboxModel", "OutboxAttemptModel",
 ]

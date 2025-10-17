@@ -1,8 +1,10 @@
 from typing import Dict, Any
 
-def combine(*blocks: Dict[int, Any]) -> Dict[int, Any]:
+from .types import Responses
+
+def combine(*blocks: Responses) -> Responses:
     """여러 응답 블록을 합치는 헬퍼."""
-    merged: Dict[int, Any] = {}
+    merged: Responses = {}
     for b in blocks:
         merged.update(b)
     return merged

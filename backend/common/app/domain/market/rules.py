@@ -117,7 +117,7 @@ def dec(x: float | Decimal | None) -> Decimal | None:
         return None
     return Decimal(str(x)).quantize(PRICE_Q, rounding=ROUND_HALF_UP)
 
-def align_utc(ts: datetime, base: CandleBaseInterval, targets: tuple[str]) -> datetime:
+def align_utc(ts: datetime, base: CandleBaseInterval, targets: tuple[str, ...]) -> datetime:
     """ts_open을 UTC로 정규화하고 base 경계에 맞는지 검증."""
     ts = ts.astimezone(timezone.utc) if ts.tzinfo else ts.replace(tzinfo=timezone.utc)
     if base == CandleBaseInterval.MIN_1:

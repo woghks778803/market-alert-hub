@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, Query, Path, status
+from fastapi import Response, APIRouter, Depends, Query, Path, status
 
-from app.infra.db.model import UserModel
 from app.service.factory import ServiceFactory
 from app.api.common.envelope import Envelope, ok, created, no_content
 from app.api.deps import get_services, get_current_user, get_request_meta, RequestMeta
 from app.api.schema.watchlist import WatchlistCreate, WatchlistItemRead
+from app.domain import WatchlistDTO, AuthDTO
 import app.api.openapi as OpenApi
 
 router = APIRouter(
@@ -19,15 +19,15 @@ router = APIRouter(
         OpenApi.OK(Envelope[list[WatchlistItemRead]])
     ),
 )
-def list_watchlist(
-    svcs: ServiceFactory = Depends(get_services),
-    user: UserModel = Depends(get_current_user),
+def list_items(
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
     order: str = Query("asc", pattern="^(asc|desc)$"),
+    user: AuthDTO.AuthUser = Depends(get_current_user),
+    svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    rows = svcs.watchlists.list(user_id=user.id, limit=limit, offset=offset, is_asc=(order == "asc"))
+    rows = svcs.watchlists.list_items_by_filter(user_id=user.id, limit=limit, offset=offset, is_asc=(order == "asc"))
     return ok(rows, request_id=meta.request_id)
 
 @router.post(
@@ -40,14 +40,20 @@ def list_watchlist(
         OpenApi.ERR_409
     ),
 )
-def create_watchlist(
+def create_item(
+    response: Response,
     payload: WatchlistCreate,
+    user: AuthDTO.AuthUser = Depends(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
-    user: UserModel = Depends(get_current_user),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    result = svcs.watchlists.create(user_id=user.id, data=payload)
-    return created(result, request_id=meta.request_id)
+    dto = WatchlistDTO.WatchlistCreate(
+        exchange_instrument_id=payload.exchange_instrument_id,
+        sort_order=payload.sort_order
+    )
+
+    result = svcs.watchlists.create_item(user_id=user.id, dto=dto)
+    return created(result, response=response, request_id=meta.request_id)
 
 @router.delete(
     "/{item_id}",
@@ -56,10 +62,10 @@ def create_watchlist(
         OpenApi.NO_CONTENT({}, description="완료")
     ),
 )
-def delete_watchlist(
+def delete_item(
     item_id: int = Path(..., ge=1),
+    user: AuthDTO.AuthUser = Depends(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
-    user: UserModel = Depends(get_current_user),
 ):
-    svcs.watchlists.delete(item_id=item_id, user_id=user.id)
+    svcs.watchlists.delete_item(item_id=item_id, user_id=user.id)
     return no_content()
