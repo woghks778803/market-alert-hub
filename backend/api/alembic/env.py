@@ -7,7 +7,7 @@ from alembic import context
 # ----- 모듈 경로 보정: /app 를 sys.path에 추가 -----
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
-from app.core.settings import settings
+from app.runtime.settings import settings
 from app.infra.db.base import Base
 import app.infra.db.model
 

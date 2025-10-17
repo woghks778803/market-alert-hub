@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends, Body, Request, Response, status, Security, Path
 
-from app.core.auth import token_hash
-from app.infra.db.model import UserModel
 from app.service.factory import ServiceFactory
 from app.api.schema import ChannelSchema
+from app.domain import AuthDTO
 from app.api.common.envelope import Envelope, ok, created, no_content
-from app.api.deps import get_current_token, get_current_user, get_services, get_request_meta, RequestMeta
+from app.api.deps import get_current_user, get_services, get_request_meta, RequestMeta
 import app.api.openapi as OpenApi
 
 router = APIRouter(prefix="/channels")
@@ -23,11 +22,11 @@ router = APIRouter(prefix="/channels")
     ),
 )
 def list_channels(
-    current_user=Depends(get_current_user),
+    user: AuthDTO.AuthUser = Depends(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    rows = svcs.channels.list(user_id=current_user.id)
+    rows = svcs.channels.list_channels_by_user_id(user_id=user.id)
     return ok(rows, request_id=meta.request_id)
 
 @router.get(
@@ -38,13 +37,13 @@ def list_channels(
         OpenApi.OK(Envelope[ChannelSchema.ChannelRead]),
     ),
 )
-def get_channels(
+def get_channel(
     user_channel_id: int = Path(..., ge=1),
-    current_user=Depends(get_current_user),
+    user: AuthDTO.AuthUser = Depends(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    result = svcs.channels.get_by_id(user_channel_id=user_channel_id)
+    result = svcs.channels.get_by_channel_id(user_channel_id=user_channel_id)
     return ok(result, request_id=meta.request_id)
 
 @router.post(
@@ -62,12 +61,12 @@ def get_channels(
 def create_channel(
     response: Response,
     payload : ChannelSchema.ChannelCreate = Body(...,),
-    current_user=Depends(get_current_user),
+    user: AuthDTO.AuthUser = Depends(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    result = svcs.channels.create(
-        user_id=current_user.id, provider_id=payload.channel_provider_id, config=payload.config
+    result = svcs.channels.create_channel(
+        user_id=user.id, provider_id=payload.channel_provider_id, config=payload.config
     )
     return created(result, response=response, request_id=meta.request_id)
 
@@ -80,6 +79,7 @@ def create_channel(
 )
 def delete_channel(
     user_channel_id: int = Path(..., ge=1),
+    user: AuthDTO.AuthUser = Depends(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
 ):
     svcs.channels.delete_channel(user_channel_id=user_channel_id)

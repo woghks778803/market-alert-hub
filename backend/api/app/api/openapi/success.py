@@ -2,12 +2,14 @@
 from typing import Any, Dict, Optional, Type
 from pydantic import BaseModel
 
+from .types import Responses
+
 def _success(
     status: int,
     model: Type[BaseModel],
     description: str,
     example: Optional[Dict[str, Any]] = None,
-) -> Dict[int, Any]:
+) -> Responses:
     return {
         status: {
             "description": description,

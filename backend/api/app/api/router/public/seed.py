@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status, Depends
+from fastapi import Response, APIRouter, status, Depends
 from app.core.constants import CandleBaseInterval
 
 from app.api.deps import get_services, get_request_meta, RequestMeta
@@ -24,12 +24,13 @@ router = APIRouter(prefix="/seed/snapshots")
     ),
 )
 def seed_price_snapshots(
-    base: CandleBaseInterval | None ,
+    response: Response,
+    base: CandleBaseInterval,
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
     """
     개발/테스트용: price_snapshots_{interval} 테이블에 시드 데이터 삽입
     """
-    result = svcs.markets().seed_snapshots(base=base)
-    return created(SeedSchema.CreateOk(requested_count=result, requested_base=base), request_id=meta.request_id)
+    result = svcs.markets.seed_snapshots(base=base)
+    return created(SeedSchema.CreateOk(requested_count=result, requested_base=base), response=response, request_id=meta.request_id)
