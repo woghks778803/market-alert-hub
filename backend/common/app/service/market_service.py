@@ -17,24 +17,24 @@ class MarketService:
         self._uow_factory = uow_factory
 
     # Meta
-    def list_exchanges(self, *, limit: int, offset: int) -> Sequence[ExchangeModel]:
+    def list_exchanges_by_filter(self, *, limit: int, offset: int) -> Sequence[ExchangeModel]:
         with self._uow_factory() as uow:
-            return uow.markets.list_exchanges(limit=limit, offset=offset)
+            return uow.markets.list_exchanges_by_filter(limit=limit, offset=offset)
 
-    def list_exchange_instruments(
+    def list_exchange_instruments_by_filter(
         self, *, exchange_id: int | None, limit: int, offset: int
     ) -> list[MarketDTO.MarketInstrumentItem]:
         with self._uow_factory() as uow:
-            rows = uow.markets.list_exchange_instruments(
+            rows = uow.markets.list_exchange_instruments_by_filter(
                 exchange_id=exchange_id, limit=limit, offset=offset
             )
             return rows
 
-    def list_mapping(self, *, exchange_id: int | None) -> list[ExchangeInstrumentModel]:
+    def list_mappings_exchange_id(self, *, exchange_id: int | None) -> list[ExchangeInstrumentModel]:
         with self._uow_factory() as uow:
-            return uow.markets.list_mapping(exchange_id=exchange_id)
+            return uow.markets.list_mappings_exchange_id(exchange_id=exchange_id)
 
-    def list_candles(
+    def list_candles_by_filter(
         self,
         *,
         exchange_instrument_id: int,
@@ -42,7 +42,7 @@ class MarketService:
         cursor: datetime | None,
         start: datetime | None,
         end: datetime | None,
-        limit: int,
+        limit: int | None,
         asc_order: bool,
     ) -> list[MarketDTO.CandleBase]:
         # cursor 검색 우선
@@ -55,7 +55,7 @@ class MarketService:
         with self._uow_factory() as uow:
 
             if base == CandleBaseInterval.MIN_1:
-                rows = uow.markets.list_candles_1m(
+                rows = uow.markets.list_1m_by_filter(
                     exchange_instrument_id=exchange_instrument_id,
                     cursor=cursor,
                     start=start,
@@ -64,7 +64,7 @@ class MarketService:
                     asc_order=asc_order,
                 )
             elif base == CandleBaseInterval.HOUR_1:
-                rows = uow.markets.list_candles_1h(
+                rows = uow.markets.list_1h_by_filter(
                     exchange_instrument_id=exchange_instrument_id,
                     cursor=cursor,
                     start=start,
@@ -73,7 +73,7 @@ class MarketService:
                     asc_order=asc_order,
                 )
             elif base == CandleBaseInterval.DAY_1:
-                rows = uow.markets.list_candles_1d(
+                rows = uow.markets.list_1d_by_filter(
                     exchange_instrument_id=exchange_instrument_id,
                     cursor=cursor,
                     start=start,
@@ -122,10 +122,10 @@ class MarketService:
             times = [n - timedelta(days=i) for i in range(365 * 10, 0, -1)]  # 10년분
 
         with self._uow_factory() as uow:
-            exchanges = uow.markets.list_exchanges()
+            exchanges = uow.markets.list_exchanges_by_filter()
 
             for ex in exchanges:
-                markets = uow.markets.list_exchange_instruments(exchange_id=ex.id)
+                markets = uow.markets.list_exchange_instruments_by_filter(exchange_id=ex.id)
 
                 for m in markets:
                     base_price = rand.base_price()
@@ -177,11 +177,11 @@ class MarketService:
                 )
 
             if base == CandleBaseInterval.MIN_1:
-                _id, created = uow.markets.upsert_one_1m(row)
+                _id, created = uow.markets.upsert_1m(row)
             elif base == CandleBaseInterval.HOUR_1:
-                _id, created = uow.markets.upsert_one_1h(row)
+                _id, created = uow.markets.upsert_1h(row)
             elif base == CandleBaseInterval.DAY_1:
-                _id, created = uow.markets.upsert_one_1d(row)
+                _id, created = uow.markets.upsert_1d(row)
             else:
                 raise ValidationAppError(
                     f"Unsupported base interval: {base}", target="base"

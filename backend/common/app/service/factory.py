@@ -11,28 +11,29 @@ from .email_service import EmailService
 from .outbox_service import OutboxService
 
 from app.domain.uow import UnitOfWork
-from app.infra.external.email.ses_client import SesEmailClient
-from app.infra.external.email.jinja_renderer import JinjaEmailRenderer
 from app.domain import EmailPort
 
-from app.core.settings import settings
+from app.runtime.settings import settings
 
 
 class ServiceFactory:
-    def __init__(self, uow: Callable[[], UnitOfWork]) -> None:
+    def __init__(
+            self, 
+            uow: Callable[[], UnitOfWork],
+            email_client: Callable[[], EmailPort.EmailClient],
+            email_renderer: Callable[[], EmailPort.EmailTemplateRenderer],
+            jwt_secret: str,
+            token_minutes: int
+    ) -> None:
         self.uow = uow
-
-    @cached_property
-    def email_client(self) -> EmailPort.EmailClient:
-        return SesEmailClient()
-
-    @cached_property
-    def email_renderer(self) -> EmailPort.EmailTemplateRenderer:
-        return JinjaEmailRenderer()
+        self.email_client = email_client
+        self.email_renderer = email_renderer
+        self.jwt_secret=jwt_secret
+        self.token_minutes=token_minutes
 
     @cached_property
     def emails(self) -> EmailService:
-        return EmailService(client=self.email_client(), renderer=self.email_renderer())
+        return EmailService(client=self.email_client, renderer=self.email_renderer)
 
     @cached_property
     def watchlists(self) -> WatchlistService:
@@ -60,8 +61,8 @@ class ServiceFactory:
     def auths(self) -> AuthService:
         return AuthService(
             uow_factory=self.uow,
-            jwt_secret=settings.JWT_SECRET,
-            token_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
+            jwt_secret=self.jwt_secret,
+            token_minutes=self.token_minutes
         )
 
     @cached_property

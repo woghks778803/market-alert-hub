@@ -8,7 +8,7 @@ class SqlChannelRepo(ChannelRepo):
     def __init__(self, db: DbSession):
         self._db = db
 
-    def list_by_user(self, user_id: int) -> Sequence[UserChannelModel]:
+    def list_channels_by_user_id(self, user_id: int) -> Sequence[UserChannelModel]:
         stmt = (
             select(UserChannelModel)
             .options(selectinload(UserChannelModel.channel_provider))
@@ -17,24 +17,11 @@ class SqlChannelRepo(ChannelRepo):
         )
         return self._db.execute(stmt).scalars().all()
 
-    def get_by_id(self, user_channel_id: int) -> UserChannelModel | None:
+    def get_by_channel_id(self, user_channel_id: int) -> UserChannelModel | None:
         stmt = select(UserChannelModel).options(selectinload(UserChannelModel.channel_provider)).where(UserChannelModel.id == user_channel_id)
         return self._db.execute(stmt).scalar_one_or_none()
 
-    def find_one_by_provider_id(
-        self, *, user_id: int, provider_id: int,
-    ) -> UserChannelModel | None:
-        uc = UserChannelModel
-        
-        stmt = select(uc).where(
-            uc.user_id == user_id,
-            uc.channel_provider_id == provider_id,
-            uc.is_deleted.is_(False),
-        )
-        return self._db.execute(stmt).scalar_one_or_none()
-    
-
-    def find_one_by_channel_cnt(
+    def get_channel_cnt(
         self, *, user_id: int, provider_id: int,
     ) -> int | None:
         uc = UserChannelModel
@@ -46,7 +33,7 @@ class SqlChannelRepo(ChannelRepo):
         )
         return self._db.execute(stmt).scalar()
 
-    def find_one_by_fingerprint(
+    def get_channel_by_fingerprint(
         self, *, user_id: int, provider_id: int, fingerprint: str
     ) -> UserChannelModel:
         uc = UserChannelModel
@@ -66,5 +53,5 @@ class SqlChannelRepo(ChannelRepo):
         return self._db.execute(stmt).scalar()
         
 
-    def add(self, row: UserChannelModel) -> None:
+    def add_channel(self, row: UserChannelModel) -> None:
         self._db.add(row)
