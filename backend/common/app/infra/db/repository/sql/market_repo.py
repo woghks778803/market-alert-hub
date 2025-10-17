@@ -20,11 +20,11 @@ class SqlMarketRepo(MarketRepo):
         return self._db.execute(stmt).scalar_one_or_none()
 
     # Meta
-    def list_exchanges(self, *, limit: int = 100, offset: int = 0) -> Sequence[ExchangeModel]:
+    def list_exchanges_by_filter(self, *, limit: int = 100, offset: int = 0) -> Sequence[ExchangeModel]:
         stmt = select(ExchangeModel).where(ExchangeModel.is_deleted.is_(False)).order_by(asc(ExchangeModel.id)).limit(limit).offset(offset)
         return self._db.execute(stmt).scalars().all()
 
-    def list_exchange_instruments(self, *, exchange_id: int | None = None, limit: int = 200, offset: int = 0) -> list[MarketDTO.MarketInstrumentItem]:
+    def list_exchange_instruments_by_filter(self, *, exchange_id: int | None = None, limit: int = 200, offset: int = 0) -> list[MarketDTO.MarketInstrumentItem]:
         ei = ExchangeInstrumentModel
         e = ExchangeModel
         b = aliased(InstrumentModel)  
@@ -53,7 +53,7 @@ class SqlMarketRepo(MarketRepo):
 
         return [MarketDTO.MarketInstrumentItem(**row) for row in rows]
 
-    def list_mapping(self, *, exchange_id: int | None = None) -> list[ExchangeInstrumentModel]:
+    def list_mappings_exchange_id(self, *, exchange_id: int | None = None) -> list[ExchangeInstrumentModel]:
         ei = ExchangeInstrumentModel
 
         stmt = select(ei.exchange_id, ei.base_asset_id, ei.quote_asset_id)
@@ -66,7 +66,7 @@ class SqlMarketRepo(MarketRepo):
 
 
     # 공통 빌더
-    def _list_candles(
+    def _list_candles_by_filter(
         self,
         model,
         *,
@@ -77,23 +77,23 @@ class SqlMarketRepo(MarketRepo):
         limit: int,
         asc_order: bool,
     ) -> list[MarketDTO.CandleBase]:
-        conds = [
+        wheres = [
             model.exchange_instrument_id == exchange_instrument_id,
         ]
         if cursor is not None:
-            conds.append(model.ts_open < cursor)
+            wheres.append(model.ts_open < cursor)
         else:
             if start is not None:
-                conds.append(model.ts_open >= start)
+                wheres.append(model.ts_open >= start)
             if end is not None:
-                conds.append(model.ts_open < end)
+                wheres.append(model.ts_open < end)
 
 
         order_by = asc(model.ts_open) if asc_order else desc(model.ts_open)
 
         stmt = (
             select(model)
-            .where(and_(*conds))
+            .where(and_(*wheres))
             .order_by(order_by)
             .limit(limit)
         )
@@ -113,47 +113,47 @@ class SqlMarketRepo(MarketRepo):
         ]
     
     # 1m/1h/1d 개별 메서드
-    def list_candles_1m(
+    def list_1m_by_filter(
         self, *, exchange_instrument_id: int,
         cursor: datetime | None, start: datetime | None, end: datetime | None,
         limit: int, asc_order: bool,
     ) -> list[MarketDTO.CandleBase]:
-        return self._list_candles(
+        return self._list_candles_by_filter(
             PriceSnapshot1mModel,
             exchange_instrument_id=exchange_instrument_id,
             cursor=cursor, start=start, end=end, limit=limit, asc_order=asc_order,
         )
 
-    def list_candles_1h(
+    def list_1h_by_filter(
         self, *, exchange_instrument_id: int,
         cursor: datetime | None, start: datetime | None, end: datetime | None,
         limit: int, asc_order: bool,
     ) -> list[MarketDTO.CandleBase]:
-        return self._list_candles(
+        return self._list_candles_by_filter(
             PriceSnapshot1hModel,
             exchange_instrument_id=exchange_instrument_id,
             cursor=cursor, start=start, end=end, limit=limit, asc_order=asc_order,
         )
 
-    def list_candles_1d(
+    def list_1d_by_filter(
         self, *, exchange_instrument_id: int,
         cursor: datetime | None, start: datetime | None, end: datetime | None,
         limit: int, asc_order: bool,
     ) -> list[MarketDTO.CandleBase]:
-        return self._list_candles(
+        return self._list_candles_by_filter(
             PriceSnapshot1dModel,
             exchange_instrument_id=exchange_instrument_id,
             cursor=cursor, start=start, end=end, limit=limit, asc_order=asc_order,
         )
     
     # ---------------------------- add ----------------------------------------------
-    def upsert_one_1m(self, row: dict) -> Tuple[int, bool]:
+    def upsert_1m(self, row: dict) -> Tuple[int, bool]:
         return self._upsert_one_mysql(PriceSnapshot1mModel, row)
 
-    def upsert_one_1h(self, row: dict) -> Tuple[int, bool]:
+    def upsert_1h(self, row: dict) -> Tuple[int, bool]:
         return self._upsert_one_mysql(PriceSnapshot1hModel, row)
 
-    def upsert_one_1d(self, row: dict) -> Tuple[int, bool]:
+    def upsert_1d(self, row: dict) -> Tuple[int, bool]:
         return self._upsert_one_mysql(PriceSnapshot1dModel, row)
 
     def _upsert_one_mysql(self, model, row: dict) -> Tuple[int, bool]:

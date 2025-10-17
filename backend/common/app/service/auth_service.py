@@ -12,6 +12,7 @@ from app.core.auth import (
     token_hash,
 )
 from app.core.constants import UserRole, UserStatus, OutboxStatus
+from app.core.datetime_utils import utcnow
 
 
 class AuthService:
@@ -35,14 +36,13 @@ class AuthService:
         password: str,
         ip: str | None = None,
         ua: str | None = None,
-    ) -> Dict[str, Any]:
-
-        now = datetime.now(timezone.utc)
+    ):
+        now = utcnow()
         expires_at = now + timedelta(minutes=self._ttl)
 
         with self._uow_factory() as uow:
 
-            if uow.users.get_by_email(email):
+            if uow.users.get_user_by_email(email):
                 raise ValidationAppError("email already exists", target="email")
 
             user = UserModel(
@@ -50,13 +50,12 @@ class AuthService:
                 nickname=nickname,
                 password_hash=hash_password(password),
                 # role/status 기본값은 모델 default/enum 디폴트 사용
-                created_at=now,
             )
 
-            uow.users.add(user)
+            uow.users.add_user(user)
 
             token = create_access_token(sub=str(user.id), minutes=self._ttl)
-            uow.sessions.create(
+            uow.sessions.create_session(
                 user_id=user.id,
                 token_hash=token_hash(token),
                 expires_at=expires_at,
@@ -64,26 +63,23 @@ class AuthService:
                 user_agent=ua,
             )
 
-            uow.outboxs.add(OutboxModel(
+            uow.outboxs.add_outbox(OutboxModel(
                 event_type="user_signed_up",
-                channel="email",
+                aggregate_id=user.id,
                 payload=json.dumps({
                     "to": user.email,
-                    "subject": "Welcome!",
-                    "body": f"{nickname}님, 가입을 환영합니다.",
+                    "user_name": user.nickname,
                     # 필요하면 템플릿/파라미터:
                     # "template": "welcome_v1",
                     # "params": {"nickname": nickname}
                 }),
                 status=OutboxStatus.PENDING,
                 attempts=0,
-                error_msg=None,
-                created_at=now,
             ))
             
             uow.commit()
 
-            return AuthDTO.UserToken(user_id=user.id, access_token=token)
+            return AuthDTO.AuthToken(access_token=token)
 
     # 로그인
     def signin(
@@ -94,12 +90,12 @@ class AuthService:
         ip: str | None = None,
         ua: str | None = None,
         admin_chk: bool = False,
-    ) -> AuthDTO.UserToken:
-        now = datetime.now(timezone.utc)
+    ) -> AuthDTO.AuthToken:
+        now = utcnow()
         expires_at = now + timedelta(minutes=self._ttl)
 
         with self._uow_factory() as uow:
-            user = uow.users.get_by_email(email)
+            user = uow.users.get_user_by_email(email)
             if not user or not verify_password(password, user.password_hash):
                 raise AuthError("invalid_credentials")
 
@@ -111,7 +107,7 @@ class AuthService:
 
             token = create_access_token(sub=str(user.id), minutes=self._ttl)
 
-            uow.sessions.create(
+            uow.sessions.create_session(
                 user_id=user.id,
                 token_hash=token_hash(token),
                 expires_at=expires_at,
@@ -122,11 +118,38 @@ class AuthService:
             user.last_login_at = now
             uow.commit()
 
-            return AuthDTO.UserToken(user_id=user.id, access_token=token)
+            return AuthDTO.AuthToken(access_token=token)
 
     # 로그아웃 (세션 무효화)
     def logout(self, *, token_hash: str) -> Dict[str, Any]:
         with self._uow_factory() as uow:
-            uow.sessions.revoke(token_hash)
+            uow.sessions.update_session(token_hash)
             uow.commit()
             return {"ok": True}
+
+    def get_current_user(self, user_id: int, token: str):
+        now = utcnow()
+
+        with self._uow_factory() as uow:
+
+            user = uow.users.get_by_user_id(user_id)
+            if not user:
+                raise AuthError("Invalid credentials", target="token")
+            
+            # 세션 유효성(선택이지만 권장)
+            s = uow.sessions.get_session_by_hash(token_hash(token))
+            if s is None:
+                raise AuthError("Invalid credentials", target="token")
+            
+            expires_at = s.expires_at
+            revoked_at = s.revoked_at
+            
+            if expires_at is not None and expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=timezone.utc)
+            if revoked_at is not None and revoked_at.tzinfo is None:
+                revoked_at = revoked_at.replace(tzinfo=timezone.utc)
+
+            if not s or revoked_at or expires_at <= now:
+                raise AuthError("Missing or invalid token", target="token")
+            
+            return AuthDTO.AuthUser(id=user.id, email=user.email, role=user.role)

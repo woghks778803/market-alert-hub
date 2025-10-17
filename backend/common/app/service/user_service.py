@@ -23,18 +23,18 @@ class UserService:
             raise ValidationAppError(f"Invalid {target_name}", target=target_name)
 
     def _ensure_user(self, uow: UnitOfWork, user_id: int):
-        user = uow.users.get_by_id(user_id)
+        user = uow.users.get_by_user_id(user_id)
         if not user:
             raise NotFoundError(
                 "User not found", target="user_id"
             )  # 전역핸들러에서 404 매핑되게
         return user
 
-    def get_by_email(self, email: str) -> UserModel | None:
+    def get_user_by_email(self, email: str) -> UserModel | None:
         with self._uow_factory() as uow:
-            return uow.users.get_by_email(email)
+            return uow.users.get_user_by_email(email)
 
-    def list(
+    def list_users_filter(
         self,
         *,
         status: UserStatus | None,
@@ -46,14 +46,14 @@ class UserService:
         status = self.coerce(status, UserStatus, "status")
 
         with self._uow_factory() as uow:
-            rows = uow.users.list(status=status, role=role, limit=limit, offset=offset)
+            rows = uow.users.list_users_filter(status=status, role=role, limit=limit, offset=offset)
             return rows
 
-    def get_by_id(self, *, user_id: int) -> UserModel:
+    def get_by_user_id(self, *, user_id: int) -> UserModel:
         with self._uow_factory() as uow:
             return self._ensure_user(uow, user_id)
 
-    def update(self, *, user_id: int, role: UserRole | None, status: UserStatus | None):
+    def update_user(self, *, user_id: int, role: UserRole | None, status: UserStatus | None):
         role = self.coerce(role, UserRole, "role")
         status = self.coerce(status, UserStatus, "status")
 
@@ -67,7 +67,7 @@ class UserService:
             uow.commit()
             return user
 
-    def delete(self, *, user_id: int) -> None:
+    def delete_user(self, *, user_id: int) -> None:
         with self._uow_factory() as uow:
             user = self._ensure_user(uow, user_id)
             user.status = UserStatus.DELETED
