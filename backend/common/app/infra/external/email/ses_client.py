@@ -3,7 +3,7 @@ import boto3
 from botocore.config import Config as BotoConfig
 from botocore.exceptions import ClientError
 from app.domain import EmailPort, EmailSendError
-from app.core.settings import settings
+from app.runtime.settings import settings
 
 
 class SesEmailClient(EmailPort.EmailClient):
@@ -13,6 +13,7 @@ class SesEmailClient(EmailPort.EmailClient):
             connect_timeout=3,
             read_timeout=5,
         )
+
         session = (
             boto3.session.Session(
                 aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
@@ -51,6 +52,7 @@ class SesEmailClient(EmailPort.EmailClient):
                     }
                 },
             }
+
             if reply_to:
                 kwargs["ReplyToAddresses"] = list(reply_to)
             if headers:
@@ -61,6 +63,8 @@ class SesEmailClient(EmailPort.EmailClient):
                 kwargs["ConfigurationSetName"] = self.configuration_set
 
             res = self.client.send_email(**kwargs)
+            print("sees")
+            print(res)
             return res.get("MessageId", "")
         except ClientError as ex:
             code = ex.response.get("Error", {}).get("Code", "unknown")

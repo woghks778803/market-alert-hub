@@ -1,5 +1,5 @@
 from redis import Redis
-from app.core.settings import settings
+from app.runtime.settings import settings
 
 _redis: Redis | None = None
 
