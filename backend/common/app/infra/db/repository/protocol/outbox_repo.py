@@ -1,13 +1,20 @@
 from typing import Protocol, Sequence
 from datetime import datetime
+from app.domain import OutboxDTO
 from app.infra.db.model import OutboxModel
 
 class OutboxRepo(Protocol):
-    def add(self, row: OutboxModel) -> None: ...
-    def get(self, id: int) -> OutboxModel | None: ...
-    def mark_inflight(self, ids: Sequence[int]) -> None: ...          # PENDING→SENDING
-    def mark_sent(self, id: int, attempts: int) -> None: ...
-    def mark_pending(self, id: int, attempts: int, next_at: datetime | None, err: str) -> None: ...
-    def mark_failed(self, id: int, attempts: int, err: str) -> None: ...
-    def due_pending_ids(self, limit: int) -> list[int]: ...           # next_attempt_at IS NULL or <= now()
+    def add_outbox(self, row: OutboxModel) -> None: ...
+    def get_by_outbox_id(self, id: int) -> OutboxModel | None: ...
+    def update_outbox_by_filter(self, filters: OutboxDTO.OutboxFilter, updates: OutboxDTO.OutboxUpdate): ...
+    def list_outboxs_by_filter(
+        self, 
+        filters: OutboxDTO.OutboxFilter,
+        *,
+        limit: int | None = None,
+        offset: int = 0,
+        order_desc: bool = False,
+        for_update: bool = False,
+        skip_locked: bool = False,
+    ) -> list[int]: ...           # next_attempt_at IS NULL or <= now()
 
