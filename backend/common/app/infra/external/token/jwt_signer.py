@@ -12,7 +12,6 @@ from app.core.datetime_utils import utcnow
 from app.domain import CryptoPort
 
 
-
 def _b64url_random(nbytes: int = 16) -> str:
     return base64.urlsafe_b64encode(token_bytes(nbytes)).rstrip(b"=").decode("ascii")
 
@@ -32,7 +31,7 @@ class JwtTokenSigner(CryptoPort.TokenSigner):
     def __init__(
         self,
         *,
-        secret: str | None = None,
+        secret: str,
         algorithm: str = "HS256",
         issuer: str | None = None,
         audience: str | None = None,
@@ -41,50 +40,17 @@ class JwtTokenSigner(CryptoPort.TokenSigner):
         pepper_env: str = "ACCESS_TOKEN_PEPPER",
     ) -> None:
         # 서명용 비밀키: 우선 인자, 없으면 ENV
-        self._secret = (secret or os.environ.get("ACCESS_TOKEN_SECRET") or os.environ.get("JWT_SECRET"))
+        self._secret = secret
         if not self._secret:
-            raise RuntimeError("ACCESS_TOKEN_SECRET (or JWT_SECRET) is not set and no secret was provided.")
-
+            raise RuntimeError(
+                "ACCESS_TOKEN_SECRET (or JWT_SECRET) is not set and no secret was provided."
+            )
         self._algorithm = algorithm
         self._issuer = issuer
         self._audience = audience
         self._default_minutes = default_minutes
         self._leeway = leeway_seconds
         self._pepper_env = pepper_env
-
-    # @classmethod
-    # def from_env(cls) -> "JwtTokenSigner":
-    #     """
-    #     환경변수:
-    #       - ACCESS_TOKEN_SECRET 또는 JWT_SECRET (필수 중 하나)
-    #       - JWT_ISSUER (선택)
-    #       - JWT_AUDIENCE (선택)
-    #       - JWT_ALG (선택, 기본 HS256)
-    #       - JWT_DEFAULT_MIN (선택, 기본 60)
-    #       - JWT_LEEWAY_SEC (선택, 기본 0)
-    #       - ACCESS_TOKEN_PEPPER (선택, token_hash 강화용)
-    #     """
-    #     issuer = os.environ.get("JWT_ISSUER")
-    #     audience = os.environ.get("JWT_AUDIENCE")
-    #     alg = os.environ.get("JWT_ALG", "HS256")
-    #     try:
-    #         default_min = int(os.environ.get("JWT_DEFAULT_MIN", "60"))
-    #     except ValueError:
-    #         default_min = 60
-    #     try:
-    #         leeway_sec = int(os.environ.get("JWT_LEEWAY_SEC", "0"))
-    #     except ValueError:
-    #         leeway_sec = 0
-
-    #     return cls(
-    #         secret=os.environ.get("ACCESS_TOKEN_SECRET") or os.environ.get("JWT_SECRET"),
-    #         algorithm=alg,
-    #         issuer=issuer,
-    #         audience=audience,
-    #         default_minutes=default_min,
-    #         leeway_seconds=leeway_sec,
-    #         pepper_env="ACCESS_TOKEN_PEPPER",
-        # )
 
     def create_access_token(
         self,

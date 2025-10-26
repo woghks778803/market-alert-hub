@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, Body, Response, Request, status, Security
 
-from app.core.auth import token_hash
 from app.service.factory import ServiceFactory
 from app.domain import AuthDTO
 from app.api.schema import UserSchema, AuthSchema
@@ -114,7 +113,7 @@ def logout(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),  # ✅
 ):
-    svcs.auths.logout(token_hash=token_hash(token))
+    svcs.auths.logout(token_hash=svcs.jwt.token_hash(token))
     return ok(AuthSchema.SimpleOk(ok=True), request_id=meta.request_id)
 
 

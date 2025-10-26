@@ -1,7 +1,8 @@
 from urllib.parse import quote_plus
-from pydantic import computed_field, Field, EmailStr
+from pydantic import computed_field, field_validator, Field, EmailStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Any
+
 
 class Settings(BaseSettings):
 
@@ -39,12 +40,15 @@ class Settings(BaseSettings):
     ARGON2_PARALLELISM: int = 8
     BCRYPT_ROUNDS: int = 12
 
-    PASSLIB_SCHEMES: list[str] = ["argon2", "bcrypt"]
+    # PASSLIB_SCHEMES: list[str] = ["argon2", "bcrypt"]
     PASSLIB_DEPRECATED: str = "auto"
 
-    SECRET_MASTER_KEY: str = "1"
-    SECRET_MASTER_KEY_SECRET_ID: str | None = None   # ex) "prod/crypto/master"
-    SECRET_MASTER_KEY_JSON_KEY: str | None = None    # 시크릿이 JSON이면 내부 키명 (예: "key")
+    # --- crypto ---
+    SECRET_MASTER_KEY: str | None = None
+    SECRET_MASTER_KEY_SECRET_ID: str | None = None
+    SECRET_MASTER_KEY_JSON_KEY: str | None = (
+        None  # 시크릿이 JSON이면 내부 키명 (예: "key")
+    )
 
     # SES
     AWS_REGION: str = Field(default="ap-northeast-2")
@@ -87,6 +91,13 @@ class Settings(BaseSettings):
     @property
     def REDIS_URL(self) -> str:
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+
+    # @field_validator("PASSLIB_SCHEMES", mode="before")
+    # def split_schemes(cls, v):
+    #     print("log test")
+    #     # if isinstance(v, str):
+    #     #     return [x.strip() for x in v.split(",")]
+    #     return v
 
 
 settings = Settings()

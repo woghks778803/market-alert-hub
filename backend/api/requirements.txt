@@ -36,6 +36,6 @@ jinja2>=3.1         # (옵션) HTML 템플릿 렌더링용
 
 #--------- worker ----------------
 # Retry Utility
-tenacity==8.2.3
+# tenacity==8.2.3
 
 

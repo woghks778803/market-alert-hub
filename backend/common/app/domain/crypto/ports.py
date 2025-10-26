@@ -1,4 +1,4 @@
-from typing import Protocol, Optional, Mapping, Dict, Any
+from typing import Protocol, Mapping, Dict, Any
 
 
 class SecretCrypto(Protocol):
@@ -11,8 +11,8 @@ class SecretCrypto(Protocol):
         self,
         plaintext: bytes,
         *,
-        aad: Optional[Mapping[str, str]] = None,
-    ) -> Mapping[str, bytes]: 
+        aad: Mapping[str, str] | None = None,
+    ) -> Mapping[str, bytes]:
         ...
         """
         반환 예:
@@ -29,9 +29,9 @@ class SecretCrypto(Protocol):
         *,
         ciphertext: bytes,
         nonce: bytes,
-        aad: Optional[Mapping[str, str]] = None,
-        kms_encrypted_dek: Optional[bytes] = None,
-    ) -> bytes: 
+        aad: Mapping[str, str] | None = None,
+        kms_encrypted_dek: bytes | None = None,
+    ) -> bytes:
         ...
         """암호문 복호화 → 평문 반환"""
 
@@ -42,11 +42,9 @@ class PasswordHasher(Protocol):
     구현 예: passlib(bcrypt/argon2).
     """
 
-    def hash_password(self, plain: str) -> str:
-        ...
+    def hash_password(self, plain: str) -> str: ...
 
-    def verify_password(self, plain: str, hashed: str) -> bool:
-        ...
+    def verify_password(self, plain: str, hashed: str) -> bool: ...
 
 
 class TokenSigner(Protocol):
@@ -61,13 +59,11 @@ class TokenSigner(Protocol):
         self,
         subject: str | int,
         *,
-        minutes: Optional[int] = None,
-        claims: Optional[Dict[str, Any]] = None,
-    ) -> str:
-        ...
+        minutes: int | None = None,
+        claims: Dict[str, Any] | None = None,
+    ) -> str: ...
 
-    def decode_token(self, token: str) -> Dict[str, Any]:
-        ...
+    def decode_token(self, token: str) -> Dict[str, Any]: ...
 
     def token_hash(self, token: str) -> str:
         """
@@ -90,8 +86,6 @@ class TokenFingerprint(Protocol):
     구현 예: HMAC-SHA256(pepper 포함).
     """
 
-    def fingerprint(self, value_utf8: str) -> str:
-        ...
+    def fingerprint(self, value_utf8: str) -> str: ...
 
-    def last4(self, value_utf8: str) -> str:
-        ...
+    def last4(self, value_utf8: str) -> str: ...
