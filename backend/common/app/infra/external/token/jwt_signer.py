@@ -37,7 +37,7 @@ class JwtTokenSigner(CryptoPort.TokenSigner):
         audience: str | None = None,
         default_minutes: int = 60,
         leeway_seconds: int = 0,
-        pepper_env: str = "ACCESS_TOKEN_PEPPER",
+        token_pepper: str = "ACCESS_TOKEN_PEPPER",
     ) -> None:
         # 서명용 비밀키: 우선 인자, 없으면 ENV
         self._secret = secret
@@ -50,7 +50,7 @@ class JwtTokenSigner(CryptoPort.TokenSigner):
         self._audience = audience
         self._default_minutes = default_minutes
         self._leeway = leeway_seconds
-        self._pepper_env = pepper_env
+        self._token_pepper = token_pepper
 
     def create_access_token(
         self,
@@ -112,9 +112,8 @@ class JwtTokenSigner(CryptoPort.TokenSigner):
         - 64-hex 길이 반환
         """
         data = token.encode("utf-8")
-        pepper = os.environ.get(self._pepper_env)
-        if pepper:
-            return hmac.new(pepper.encode("utf-8"), data, hashlib.sha256).hexdigest()
+        if self._token_pepper:
+            return hmac.new(self._token_pepper.encode("utf-8"), data, hashlib.sha256).hexdigest()
         return hashlib.sha256(data).hexdigest()
 
     def consteq(self, a: str, b: str) -> bool:

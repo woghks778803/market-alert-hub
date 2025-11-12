@@ -18,14 +18,14 @@ def _load_master_key_from_aws() -> str:
     import boto3
 
     sm = boto3.client("secretsmanager", region_name=settings.AWS_REGION)
-    resp = sm.get_secret_value(SecretId=settings.SECRET_MASTER_KEY_SECRET_ID)
+    resp = sm.get_secret_value(SecretId=settings.CRYPTO_DATA_ENC_SECRET_ID)
 
     if "SecretString" in resp and resp["SecretString"] is not None:
         raw = resp["SecretString"]
         # JSON이면 키 추출
-        if settings.SECRET_MASTER_KEY_JSON_KEY:
+        if settings.CRYPTO_DATA_ENC_SECRET_FIELD:
             data = json.loads(raw)
-            return str(data[settings.SECRET_MASTER_KEY_JSON_KEY])
+            return str(data[settings.CRYPTO_DATA_ENC_SECRET_FIELD])
         return raw
     # Binary인 경우
     b = base64.b64decode(resp["SecretBinary"])
@@ -33,13 +33,13 @@ def _load_master_key_from_aws() -> str:
 
 
 def _resolve_master_key() -> str:
-    if settings.SECRET_MASTER_KEY_SECRET_ID:
+    if settings.CRYPTO_DATA_ENC_SECRET_ID:
         return _load_master_key_from_aws()
-    if settings.SECRET_MASTER_KEY:
-        return settings.SECRET_MASTER_KEY
+    if settings.CRYPTO_DATA_ENC_KEY_V1:
+        return settings.CRYPTO_DATA_ENC_KEY_V1
     raise RuntimeError(
         "Secret master key is not configured. "
-        "Set SECRET_MASTER_KEY or SECRET_MASTER_KEY_SECRET_ID."
+        "Set CRYPTO_DATA_ENC_KEY_V1 or CRYPTO_DATA_ENC_SECRET_ID."
     )
 
 
@@ -63,9 +63,9 @@ class Providers:
             schemes=settings.PASSLIB_SCHEMES,
             deprecated=settings.PASSLIB_DEPRECATED,
             # argon2 옵션
-            # argon2__time_cost=settings.ARGON2_TIME_COST,
-            # argon2__memory_cost=settings.ARGON2_MEMORY_COST,
-            # argon2__parallelism=settings.ARGON2_PARALLELISM,
+            argon2__time_cost=settings.ARGON2_TIME_COST,
+            argon2__memory_cost=settings.ARGON2_MEMORY_COST,
+            argon2__parallelism=settings.ARGON2_PARALLELISM,
             # bcrypt 옵션
             bcrypt__rounds=settings.BCRYPT_ROUNDS,
         )
@@ -81,7 +81,7 @@ class Providers:
             audience=settings.JWT_AUDIENCE,
             default_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
             leeway_seconds=settings.JWT_LEEWAY_SECONDS,
-            pepper_env=settings.ACCESS_TOKEN_PEPPER_ENV,
+            token_pepper=settings.TOKEN_PEPPER,
         )
 
     @staticmethod

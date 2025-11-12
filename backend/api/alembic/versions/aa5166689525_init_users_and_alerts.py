@@ -31,7 +31,6 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
     op.create_index(op.f('ix_users_id'), 'users', ['id'], unique=False)
     op.create_table('alerts',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -55,6 +54,5 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_alerts_id'), table_name='alerts')
     op.drop_table('alerts')
     op.drop_index(op.f('ix_users_id'), table_name='users')
-    op.drop_index(op.f('ix_users_email'), table_name='users')
     op.drop_table('users')
     # ### end Alembic commands ###

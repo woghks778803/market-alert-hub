@@ -63,6 +63,11 @@ class AlertScope(str, enum.Enum):
     SINGLE = "single"
     CROSS  = "cross"
 
+class EmailVerificationStatus(str, enum.Enum):
+    PENDING = "pending"
+    CONSUMED = "consumed"
+    CANCELLED = "cancelled"
+
 # 에러 코드 / 메시지
 ERROR_INVALID_TOKEN: str = "Invalid token"
 ERROR_PERMISSION_DENIED: str = "Permission denied"

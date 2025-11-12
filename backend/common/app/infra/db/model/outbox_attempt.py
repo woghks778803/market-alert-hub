@@ -1,11 +1,8 @@
-from __future__ import annotations
 from datetime import datetime
-from typing import Optional
 
-from sqlalchemy import ForeignKey, Index, String, Text, Integer, BigInteger, DateTime
-from sqlalchemy.orm import Mapped, mapped_column, declarative_base
-
-Base = declarative_base()
+from sqlalchemy import ForeignKey, Index, String, Text, Integer, JSON, DateTime
+from sqlalchemy.orm import Mapped, mapped_column
+from app.infra.db.base import Base
 
 class OutboxAttempt(Base):
     __tablename__ = "outbox_attempts"
@@ -19,6 +16,7 @@ class OutboxAttempt(Base):
     retryable: Mapped[int] = mapped_column(Integer, nullable=False, default=1) 
     result_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
     result_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    result_payload: Mapped[dict] = mapped_column(JSON, nullable=False) 
 
     # 타이밍
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

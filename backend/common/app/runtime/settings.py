@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     REDIS_PORT: int = Field(default=6379)
     REDIS_DB: int = Field(default=0)
 
+    # --- version switch ---
+    ACTIVE_JWT_KID: str = "v1"
+    ACTIVE_TOKEN_PEPPER_VER: str = "h1"
+
     # --- JWT ---
     JWT_SECRET: str = "change-me"
     JWT_ALG: str = "HS256"
@@ -32,7 +36,7 @@ class Settings(BaseSettings):
     JWT_AUDIENCE: str | None = None
     JWT_LEEWAY_SECONDS: int = 0
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 360
-    ACCESS_TOKEN_PEPPER_ENV: str = "ACCESS_TOKEN_PEPPER"
+    TOKEN_PEPPER: str = "ACCESS_TOKEN_PEPPER"
 
     # --- password ---
     ARGON2_TIME_COST: int = 2
@@ -40,13 +44,13 @@ class Settings(BaseSettings):
     ARGON2_PARALLELISM: int = 8
     BCRYPT_ROUNDS: int = 12
 
-    # PASSLIB_SCHEMES: list[str] = ["argon2", "bcrypt"]
+    PASSLIB_SCHEMES: str | list[str] = ["argon2", "bcrypt"]
     PASSLIB_DEPRECATED: str = "auto"
 
     # --- crypto ---
-    SECRET_MASTER_KEY: str | None = None
-    SECRET_MASTER_KEY_SECRET_ID: str | None = None
-    SECRET_MASTER_KEY_JSON_KEY: str | None = (
+    CRYPTO_DATA_ENC_KEY_V1: str | None = None
+    CRYPTO_DATA_ENC_SECRET_ID: str | None = None
+    CRYPTO_DATA_ENC_SECRET_FIELD: str | None = (
         None  # 시크릿이 JSON이면 내부 키명 (예: "key")
     )
 
@@ -92,12 +96,11 @@ class Settings(BaseSettings):
     def REDIS_URL(self) -> str:
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
 
-    # @field_validator("PASSLIB_SCHEMES", mode="before")
-    # def split_schemes(cls, v):
-    #     print("log test")
-    #     # if isinstance(v, str):
-    #     #     return [x.strip() for x in v.split(",")]
-    #     return v
+    @field_validator("PASSLIB_SCHEMES", mode="before")
+    def split_schemes(cls, v):
+        if isinstance(v, str):
+            return [x.strip() for x in v.split(",")]
+        return v
 
 
 settings = Settings()
