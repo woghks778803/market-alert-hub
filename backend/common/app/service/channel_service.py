@@ -1,14 +1,15 @@
 from typing import List, Callable
 from app.domain.uow import UnitOfWork
+from app.domain import CryptoPort
 from app.domain import ConflictError, ValidationAppError
 from app.infra.db.model import UserChannelModel
 from app.core.datetime_utils import utcnow
 from app.domain import ChannelRule
 
-
 class ChannelService:
-    def __init__(self, *, uow_factory: Callable[[], UnitOfWork]):
+    def __init__(self, *, uow_factory: Callable[[], UnitOfWork], hmac: CryptoPort.TokenHasher):
         self._uow_factory = uow_factory
+        self._hmac = hmac
 
     # 목록
     def list_channels_by_user_id(self, user_id: int):
@@ -47,7 +48,9 @@ class ChannelService:
                 code=chp.code, config=config, user_schema=chp.user_schema
             )
 
-            fingerprint = ChannelRule.make_fingerprint(config)
+            fingerprint = ChannelRule.to_canonical_json(config)
+            if fingerprint is not None: fingerprint= self._hmac.fp_hash(fingerprint)
+
             existed = uow.channels.get_channel_by_fingerprint(
                 user_id=user_id,
                 provider_id=provider_id,
@@ -69,7 +72,7 @@ class ChannelService:
             uow.channels.add_channel(row)
             uow.commit()
             # refresh가 UoW에 없다면 session.refresh(row) 호출
-            uow.db.refresh(row)
+            # uow.db.refresh(row)
 
             result = uow.channels.get_by_channel_id(user_channel_id=row.id)
             return result

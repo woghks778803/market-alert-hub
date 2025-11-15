@@ -26,7 +26,7 @@ def _parse_key(raw: str) -> bytes:
     """
     # 1) base64
     try:
-        k = base64.b64decode(raw, validate=True)
+        k = base64.urlsafe_b64decode(raw)
         if len(k) in (16, 24, 32):
             return k
     except Exception:

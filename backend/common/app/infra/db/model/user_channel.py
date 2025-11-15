@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import String, Boolean, JSON, DateTime, ForeignKey, func, text
+from sqlalchemy import String, Boolean, JSON, DateTime, ForeignKey, func, text, BINARY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infra.db.base import Base
 from app.core.datetime_utils import utcnow
@@ -17,7 +17,7 @@ class UserChannel(Base):
 
     address:      Mapped[str | None] = mapped_column(String(255))
     config:       Mapped[dict | None] = mapped_column(JSON)
-    config_fingerprint: Mapped[str | None] = mapped_column(String(64), index=True)
+    config_fingerprint: Mapped[bytes | None] = mapped_column(BINARY(32), index=True)
     verified_at:  Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
         default=utcnow, 

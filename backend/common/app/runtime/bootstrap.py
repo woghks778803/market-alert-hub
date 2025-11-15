@@ -1,10 +1,12 @@
 from .settings import settings
+from app.core import dto as CoreDTO
 from app.infra.external.email.ses_client import SesEmailClient
 from app.infra.external.email.jinja_renderer import JinjaEmailRenderer
 from app.infra.db.uow import UnitOfWork
 from app.infra.db.engine import SessionLocal
 from app.infra.external.password.passlib_hasher import PasslibPasswordHasher
 from app.infra.external.token.jwt_signer import JwtTokenSigner
+from app.infra.external.token.hmac_hasher import HmacTokenHasher
 from app.infra.external.crypto.local_aesgcm import LocalAesGcmCrypto
 from app.infra.external.crypto.local_aesgcm_from_secrets import LocalAesGcmFromSecrets
 from app.service.factory import ServiceFactory
@@ -28,20 +30,19 @@ def _load_master_key_from_aws() -> str:
             return str(data[settings.CRYPTO_DATA_ENC_SECRET_FIELD])
         return raw
     # Binary인 경우
-    b = base64.b64decode(resp["SecretBinary"])
+    b = base64.urlsafe_b64decode(resp["SecretBinary"])
     return b.decode("utf-8")  # 네 구현이 문자열→키 파싱을 하므로 utf-8 가정
 
 
 def _resolve_master_key() -> str:
     if settings.CRYPTO_DATA_ENC_SECRET_ID:
         return _load_master_key_from_aws()
-    if settings.CRYPTO_DATA_ENC_KEY_V1:
-        return settings.CRYPTO_DATA_ENC_KEY_V1
+    if settings.CRYPTO_DATA_ENC_KEY:
+        return settings.CRYPTO_DATA_ENC_KEY
     raise RuntimeError(
         "Secret master key is not configured. "
-        "Set CRYPTO_DATA_ENC_KEY_V1 or CRYPTO_DATA_ENC_SECRET_ID."
+        "Set CRYPTO_DATA_ENC_KEY or CRYPTO_DATA_ENC_SECRET_ID."
     )
-
 
 class Providers:
     @staticmethod
@@ -81,7 +82,13 @@ class Providers:
             audience=settings.JWT_AUDIENCE,
             default_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
             leeway_seconds=settings.JWT_LEEWAY_SECONDS,
-            token_pepper=settings.TOKEN_PEPPER,
+        )
+
+    @staticmethod
+    def hmac_hasher_provider() -> Callable[[], HmacTokenHasher]:
+        return lambda: HmacTokenHasher(
+            token_pepper=settings.TOKEN_MASTER_PEPPER,
+            fp_pepper=settings.FP_MASTER_PEPPER,
         )
 
     @staticmethod
@@ -98,17 +105,23 @@ class Providers:
 
 providers = Providers()
 
+def build_config_bag() -> CoreDTO.ConfigBag:
+    return CoreDTO.ConfigBag(
+        access_token_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
+        crypto_data_kid=settings.CRYPTO_DATA_ENC_KID,
+    )
 
 def create_service_factory(uow_provider: Callable[[], UnitOfWork]) -> ServiceFactory:
+
     return ServiceFactory(
         uow=uow_provider,
         email_client=providers.email_client_provider(),
         email_renderer=providers.email_renderer_provider(),
         password_hasher=providers.password_hasher_provider(),
+        hmac_hasher=providers.hmac_hasher_provider(),
         jwt_signer=providers.jwt_signer_provider(),
         secret_crypto=providers.secret_crypto_provider(),
-        jwt_secret=settings.JWT_SECRET,
-        token_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
+        config=build_config_bag(),
     )
 
 

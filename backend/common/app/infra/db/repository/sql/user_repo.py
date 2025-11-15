@@ -14,9 +14,9 @@ class SqlUserRepo(UserRepo):
     def add_user(self, user: UserModel) -> UserModel:
         self._db.add(user); self._db.flush(); return user
 
-    def get_user_by_email(self, email: str) -> UserModel | None:
+    def get_user_by_email_fingerprint(self, email_fingerprint: bytes) -> UserModel | None:
         stmt = (
-            select(UserModel).where(UserModel.email == email)
+            select(UserModel).where(UserModel.email_fingerprint == email_fingerprint)
         )
 
         return self._db.execute(stmt).scalar_one_or_none()

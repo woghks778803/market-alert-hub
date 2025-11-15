@@ -18,7 +18,7 @@ class EmailVerification(Base):
     email_nonce: Mapped[bytes] = mapped_column(BINARY(12), nullable=False)
     email_key_version: Mapped[int] = mapped_column(SMALLINT, nullable=False) # (unsigned=True)
 
-    token_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    token_hash: Mapped[bytes] = mapped_column(BINARY(32), nullable=False)
     status: Mapped[EmailVerificationStatus] = mapped_column(SAEnum(EmailVerificationStatus, values_callable=lambda e: [m.value for m in e],
                                                             native_enum=True, create_constraint=True, validate_strings=True),
                                                             default=EmailVerificationStatus.PENDING, nullable=False)
@@ -31,4 +31,4 @@ class EmailVerification(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
 
-    user: Mapped["User"] = relationship(back_populates="email_verifications")
+    # user: Mapped["User"] = relationship(back_populates="email_verifications")

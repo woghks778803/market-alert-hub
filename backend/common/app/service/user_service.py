@@ -32,7 +32,7 @@ class UserService:
 
     def get_user_by_email(self, email: str) -> UserModel | None:
         with self._uow_factory() as uow:
-            return uow.users.get_user_by_email(email)
+            return uow.users.get_user_by_email_fingerprint(email)
 
     def list_users_filter(
         self,

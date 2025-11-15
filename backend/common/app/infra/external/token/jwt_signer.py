@@ -1,7 +1,5 @@
 import base64
-import os
-import hmac
-import hashlib
+
 from datetime import timedelta
 from secrets import token_bytes
 from typing import Dict, Any
@@ -37,7 +35,6 @@ class JwtTokenSigner(CryptoPort.TokenSigner):
         audience: str | None = None,
         default_minutes: int = 60,
         leeway_seconds: int = 0,
-        token_pepper: str = "ACCESS_TOKEN_PEPPER",
     ) -> None:
         # 서명용 비밀키: 우선 인자, 없으면 ENV
         self._secret = secret
@@ -50,7 +47,6 @@ class JwtTokenSigner(CryptoPort.TokenSigner):
         self._audience = audience
         self._default_minutes = default_minutes
         self._leeway = leeway_seconds
-        self._token_pepper = token_pepper
 
     def create_access_token(
         self,
@@ -102,20 +98,3 @@ class JwtTokenSigner(CryptoPort.TokenSigner):
         decoded = jwt.decode(token, self._secret, **kwargs)  # type: ignore[arg-type]
         # PyJWT는 dict 반환
         return decoded  # type: ignore[return-value]
-
-    # === 지문/비교 ===
-
-    def token_hash(self, token: str) -> str:
-        """
-        DB/블랙리스트/세션 추적용 지문.
-        - ACCESS_TOKEN_PEPPER가 설정되면 HMAC-SHA256(pepper), 아니면 SHA-256
-        - 64-hex 길이 반환
-        """
-        data = token.encode("utf-8")
-        if self._token_pepper:
-            return hmac.new(self._token_pepper.encode("utf-8"), data, hashlib.sha256).hexdigest()
-        return hashlib.sha256(data).hexdigest()
-
-    def consteq(self, a: str, b: str) -> bool:
-        """상수시간 비교"""
-        return hmac.compare_digest(a, b)

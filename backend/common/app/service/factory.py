@@ -12,7 +12,7 @@ from .outbox_service import OutboxService
 
 from app.domain.uow import UnitOfWork
 from app.domain import EmailPort, CryptoPort
-
+from app.core import dto as CoreDTO
 
 class ServiceFactory:
     def __init__(
@@ -22,19 +22,19 @@ class ServiceFactory:
         email_client: Callable[[], EmailPort.EmailClient],
         email_renderer: Callable[[], EmailPort.EmailTemplateRenderer],
         password_hasher: Callable[[], CryptoPort.PasswordHasher],
+        hmac_hasher: Callable[[], CryptoPort.TokenHasher],
         jwt_signer: Callable[[], CryptoPort.TokenSigner],
         secret_crypto: Callable[[], CryptoPort.SecretCrypto],
-        jwt_secret: str,
-        token_minutes: int,
+        config : CoreDTO.ConfigBag,
     ) -> None:
         self._uow = uow
         self._email_client = email_client
         self._email_renderer = email_renderer
         self._password_hasher = password_hasher
+        self._hmac_hasher = hmac_hasher
         self._jwt_signer = jwt_signer
         self._secret_crypto = secret_crypto
-        self._jwt_secret = jwt_secret
-        self._token_minutes = token_minutes
+        self._config = config 
 
     @cached_property
     def password(self):
@@ -48,6 +48,11 @@ class ServiceFactory:
     def jwt(self):
         # 필요 시마다 새 인스턴스 반환(상태 없음)
         return self._jwt_signer()
+
+    @cached_property
+    def hmac(self):
+        # 필요 시마다 새 인스턴스 반환(상태 없음)
+        return self._hmac_hasher()
 
     @cached_property
     def emails(self) -> EmailService:
@@ -73,6 +78,7 @@ class ServiceFactory:
     def channels(self) -> ChannelService:
         return ChannelService(
             uow_factory=self._uow,
+            hmac=self.hmac,
         )
 
     @cached_property
@@ -80,9 +86,10 @@ class ServiceFactory:
         return AuthService(
             uow_factory=self._uow,
             password=self.password,
+            hmac=self.hmac,
             jwt=self.jwt,
-            jwt_secret=self._jwt_secret,
-            token_minutes=self._token_minutes,
+            secrets=self.secrets,
+            config=self._config,
         )
 
     @cached_property

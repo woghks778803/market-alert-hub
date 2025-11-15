@@ -18,6 +18,7 @@ from .delivery import Delivery as DeliveryModel
 from .watchlist_item import WatchlistItem as WatchlistItemModel
 from .outbox import Outbox as OutboxModel
 from .outbox_attempt import OutboxAttempt as OutboxAttemptModel
+from .email_verification import EmailVerification as EmailVerificationModel
 
 __all__ = [
     "UserModel", "SessionModel", "UserOauthAccountModel", "OauthProviderModel",
@@ -26,5 +27,5 @@ __all__ = [
     "AlertModel", "AlertChannelTargetModel", "AlertEventModel", 
     "UserChannelModel", "ChannelProviderModel",
     "DeliveryModel", "WatchlistItemModel",
-    "OutboxModel", "OutboxAttemptModel",
+    "OutboxModel", "OutboxAttemptModel", "EmailVerificationModel"
 ]

@@ -26,8 +26,9 @@ class Settings(BaseSettings):
     REDIS_DB: int = Field(default=0)
 
     # --- version switch ---
-    ACTIVE_JWT_KID: str = "v1"
-    ACTIVE_TOKEN_PEPPER_VER: str = "h1"
+    ACTIVE_JWT_KID: int = 1
+    ACTIVE_TOKEN_PEPPER_KID: int = 1
+    ACTIVE_FP_PEPPER_KID: int = 1
 
     # --- JWT ---
     JWT_SECRET: str = "change-me"
@@ -36,7 +37,8 @@ class Settings(BaseSettings):
     JWT_AUDIENCE: str | None = None
     JWT_LEEWAY_SECONDS: int = 0
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 360
-    TOKEN_PEPPER: str = "ACCESS_TOKEN_PEPPER"
+    TOKEN_MASTER_PEPPER: str = "TOKEN_MASTER_PEPPER"
+    FP_MASTER_PEPPER: str = "FP_MASTER_PEPPER"
 
     # --- password ---
     ARGON2_TIME_COST: int = 2
@@ -48,7 +50,8 @@ class Settings(BaseSettings):
     PASSLIB_DEPRECATED: str = "auto"
 
     # --- crypto ---
-    CRYPTO_DATA_ENC_KEY_V1: str | None = None
+    CRYPTO_DATA_ENC_KID: int = 1
+    CRYPTO_DATA_ENC_KEY: str | None = None
     CRYPTO_DATA_ENC_SECRET_ID: str | None = None
     CRYPTO_DATA_ENC_SECRET_FIELD: str | None = (
         None  # 시크릿이 JSON이면 내부 키명 (예: "key")

@@ -65,7 +65,18 @@ class TokenSigner(Protocol):
 
     def decode_token(self, token: str) -> Dict[str, Any]: ...
 
-    def token_hash(self, token: str) -> str:
+
+class TokenHasher(Protocol):
+    """
+    API 키 등 '원문 저장 없이 식별/중복검사'용 지문 포트.
+    구현 예: HMAC-SHA256(pepper 포함).
+    """
+
+    def fp_hash(self, normalize: str) -> bytes: ...
+
+    def token_hash(self, token: str) -> bytes: ...
+
+    def hmac_hash(self, data: str, pepper: str) -> bytes:
         """
         DB/블랙리스트/세션 추적용 지문.
         구현체는 SHA-256 또는 HMAC-SHA256(pepper) 중 정책에 맞게 선택.
@@ -78,14 +89,3 @@ class TokenSigner(Protocol):
         토큰 지문 비교 시 상수시간 비교 제공.
         """
         ...
-
-
-class TokenFingerprint(Protocol):
-    """
-    API 키 등 '원문 저장 없이 식별/중복검사'용 지문 포트.
-    구현 예: HMAC-SHA256(pepper 포함).
-    """
-
-    def fingerprint(self, value_utf8: str) -> str: ...
-
-    def last4(self, value_utf8: str) -> str: ...
