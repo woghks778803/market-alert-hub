@@ -6,7 +6,7 @@ from typing import Dict, Any
 
 import jwt  # PyJWT
 
-from app.core.datetime_utils import utcnow
+from app.core.util.datetime import utcnow
 from app.domain import CryptoPort
 
 

@@ -2,7 +2,7 @@ from datetime import datetime
 from sqlalchemy import String, DateTime, Enum as SAEnum, ForeignKey, SmallInteger, UniqueConstraint, BINARY, LargeBinary, SMALLINT
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infra.db.base import Base
-from app.core.datetime_utils import utcnow
+from app.core.util.datetime import utcnow
 from app.core.constants import EmailVerificationStatus  
 
 class EmailVerification(Base):
@@ -24,7 +24,7 @@ class EmailVerification(Base):
                                                             default=EmailVerificationStatus.PENDING, nullable=False)
 
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     fail_count: Mapped[int] = mapped_column(SmallInteger, default=0, nullable=False)
 

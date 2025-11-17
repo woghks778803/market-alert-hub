@@ -2,7 +2,7 @@ from datetime import datetime
 from sqlalchemy import Boolean, String, Integer, DateTime, ForeignKey, UniqueConstraint, Index, text
 from sqlalchemy.orm import Mapped, mapped_column
 from app.infra.db.base import Base
-from app.core.datetime_utils import utcnow
+from app.core.util.datetime import utcnow
 
 class WatchlistItem(Base):
     __tablename__ = "watchlist_items"

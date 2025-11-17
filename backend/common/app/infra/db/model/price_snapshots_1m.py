@@ -3,7 +3,7 @@ from decimal import Decimal
 from sqlalchemy import DECIMAL, DateTime, ForeignKey, UniqueConstraint, Index, func
 from sqlalchemy.orm import Mapped, mapped_column
 from app.infra.db.base import Base
-from app.core.datetime_utils import utcnow
+from app.core.util.datetime import utcnow
 
 class PriceSnapshot1m(Base):
     __tablename__ = "price_snapshots_1m"

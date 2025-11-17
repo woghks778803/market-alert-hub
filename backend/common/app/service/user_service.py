@@ -1,7 +1,7 @@
 from typing import Callable
 from app.domain.uow import UnitOfWork
 from app.infra.db.model import UserModel
-from app.domain.errors import ValidationAppError, NotFoundError
+from app.domain import CryptoPort, ValidationAppError, NotFoundError
 from datetime import datetime, timezone
 from app.core.constants import UserStatus, UserRole
 
@@ -11,8 +11,10 @@ class UserService:
         self,
         *,
         uow_factory: Callable[[], UnitOfWork],
+        hmac: CryptoPort.TokenHasher,
     ) -> None:
         self._uow_factory = uow_factory
+        self._hmac = hmac
 
     def coerce(self, value, EnumClass, target_name):
         if value is None or isinstance(value, EnumClass):
@@ -32,7 +34,7 @@ class UserService:
 
     def get_user_by_email(self, email: str) -> UserModel | None:
         with self._uow_factory() as uow:
-            return uow.users.get_user_by_email_fingerprint(email)
+            return uow.users.get_user_by_email_fingerprint(self._hmac.fp_hash(email))
 
     def list_users_filter(
         self,

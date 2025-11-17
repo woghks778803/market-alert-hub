@@ -2,7 +2,7 @@ from datetime import datetime
 from sqlalchemy import String, Boolean, JSON, DateTime, ForeignKey, func, text, BINARY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infra.db.base import Base
-from app.core.datetime_utils import utcnow
+from app.core.util.datetime import utcnow
 
 class UserChannel(Base):
     __tablename__ = "user_channels"

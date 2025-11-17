@@ -3,7 +3,7 @@ from decimal import Decimal
 from sqlalchemy import DECIMAL, DateTime, String, JSON, ForeignKey, Index, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infra.db.base import Base
-from app.core.datetime_utils import utcnow
+from app.core.util.datetime import utcnow
 
 class AlertEvent(Base):
     __tablename__ = "alert_events"

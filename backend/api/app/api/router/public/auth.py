@@ -19,19 +19,15 @@ router = APIRouter(prefix="/auth")
 @router.post(
     "/signup",
     status_code=status.HTTP_201_CREATED,
-    response_model=Envelope[AuthSchema.TokenOut],  # ✅ 래퍼 적용
+    response_model=Envelope[AuthSchema.SimpleOk],  # ✅ 래퍼 적용
     summary="유저 회원가입",
     description="이메일 중복 시 ConflictError로 처리(전역 핸들러에서 409로 매핑).",
     responses=OpenApi.combine(
         OpenApi.CREATED(
-            Envelope[AuthSchema.TokenOut],  # ✅ 스키마도 래퍼로
+            Envelope[AuthSchema.SimpleOk],  # ✅ 스키마도 래퍼로
             description="회원가입 성공",
             example=OpenApi.wrap_example(
-                {  # ✅ 예시를 래퍼로 감쌈
-                    "user_id": 5,
-                    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1IiwiaWF0IjoxNzU5MTM0NjM2LCJleHAiOjE3NTkxMzgyMzZ9.pa5udqz-ZTYAQ7GIznr0FmB9zdrRNmJBpDjecPii0X8",
-                    "token_type": "bearer",
-                }
+                {"ok": True}
             ),
         ),
         OpenApi.ERR_409,
@@ -51,14 +47,10 @@ def signup(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),  # ✅ request_id 주입
 ):
-    ip = request.client.host if request.client else None
-    ua = request.headers.get("user-agent")
     token_out = svcs.auths.signup(
         email=payload.email,
         nickname=payload.nickname,
         password=payload.password,
-        ip=ip,
-        ua=ua,
     )
 
     return created(
@@ -113,7 +105,7 @@ def logout(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),  # ✅
 ):
-    svcs.auths.logout(token_hash=svcs.jwt.token_hash(token))
+    svcs.auths.logout(token=token)
     return ok(AuthSchema.SimpleOk(ok=True), request_id=meta.request_id)
 
 

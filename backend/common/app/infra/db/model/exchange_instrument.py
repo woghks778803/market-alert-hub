@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import DateTime, Boolean, Integer, String, DECIMAL, ForeignKey, UniqueConstraint, Index, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infra.db.base import Base
-from app.core.datetime_utils import utcnow
+from app.core.util.datetime import utcnow
 
 class ExchangeInstrument(Base):
     __tablename__ = "exchange_instruments"

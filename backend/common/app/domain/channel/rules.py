@@ -14,8 +14,3 @@ def validate_user_config(code: str, config: dict | None, user_schema: dict | Non
     if code == "DISCORD" and not cfg.get("webhook_url"):
         raise ValidationAppError("Discord config.webhook_url is required.", target="config")
     # user_schema가 있으면 fastjsonschema로 추가 검증 가능
-
-def to_canonical_json(config: dict | None) -> str | None:
-    if not config:
-        return None
-    return json.dumps(config, sort_keys=True, separators=(",", ":"))

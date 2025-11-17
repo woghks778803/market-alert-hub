@@ -1,7 +1,7 @@
 from typing import Any, Generic, TypeVar
 from datetime import datetime
 from pydantic import BaseModel, Field
-from app.core.datetime_utils import utcnow
+from app.core.util.datetime import utcnow
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi import Response, status

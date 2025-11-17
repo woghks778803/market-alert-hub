@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 from app.core.constants import UserRole
 from app.domain import AuthError, PermissionError
-from app.runtime.bootstrap import get_services
+from app.runtime.bootstrap import get_services as get_core_services
 from app.service.factory import ServiceFactory
 
 
@@ -25,7 +25,7 @@ def get_current_token(
 
 
 def get_current_user(
-    svcs: ServiceFactory = Depends(get_services),
+    svcs: ServiceFactory = Depends(get_core_services),
     token: str = Depends(get_current_token),
 ):
     try:
@@ -39,7 +39,6 @@ def get_current_user(
         raise AuthError(message="Invalid token payload")
 
     return svcs.auths.get_current_user(user_id, token)
-
 
 def require_admin(user=Depends(get_current_user)):
     if getattr(user, "role", None) != UserRole.ADMIN:
@@ -59,3 +58,10 @@ class RequestMeta:
 def get_request_meta(request: Request) -> RequestMeta:
     rid = getattr(request.state, "request_id", "-")
     return RequestMeta(request_id=rid, timestamp=datetime.now(timezone.utc))
+
+def get_services(
+    meta: RequestMeta = Depends(get_request_meta),
+    svcs: ServiceFactory = Depends(get_core_services),
+):
+    svcs._trace_id = meta.request_id
+    return svcs

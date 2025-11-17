@@ -4,14 +4,15 @@ import logging
 # from tenacity import retry, stop_after_attempt, wait_exponential
 from app.domain.uow import UnitOfWork
 from app.core.constants import OutboxStatus
-from app.core.datetime_utils import utcnow
+from app.core.util.datetime import utcnow
 from app.domain import OutboxDTO, OutboxRule
 
 logger = logging.getLogger(__name__)
 
 
 class OutboxService:
-    def __init__(self, uow_factory: Callable[[], UnitOfWork]) -> None:
+    def __init__(self, trace_id: str | None, uow_factory: Callable[[], UnitOfWork]) -> None:
+        self._trace_id = trace_id
         self._uow_factory = uow_factory
 
     def enqueue_outbox_pending(self, limit: int, q_outbox):

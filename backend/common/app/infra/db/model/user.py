@@ -3,7 +3,7 @@ from sqlalchemy import Boolean, String, DateTime, Enum as SAEnum, SMALLINT, BINA
 from sqlalchemy.orm import Mapped, mapped_column
 from app.infra.db.base import Base
 from app.core.constants import UserRole, UserStatus
-from app.core.datetime_utils import utcnow
+from app.core.util.datetime import utcnow
 
 class User(Base):
     __tablename__ = "users"

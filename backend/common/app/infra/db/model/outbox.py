@@ -1,8 +1,8 @@
 from datetime import datetime
-from sqlalchemy import BigInteger, String, Integer, DateTime, Enum as SAEnum, JSON, Index
+from sqlalchemy import BigInteger, String, Integer, DateTime, Enum as SAEnum, JSON, Index, BINARY
 from sqlalchemy.orm import Mapped, mapped_column
 from app.infra.db.base import Base 
-from app.core.datetime_utils import utcnow
+from app.core.util.datetime import utcnow
 from app.core.constants import OutboxStatus
 
 class Outbox(Base):
@@ -13,7 +13,7 @@ class Outbox(Base):
     event_type: Mapped[str] = mapped_column(String(100), nullable=False)
     aggregate_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
     aggregate_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    dedupe_key: Mapped[str | None] = mapped_column(String(256), nullable=True, unique=True)
+    outbox_fingerprint: Mapped[bytes | None] = mapped_column(BINARY(32), nullable=True, unique=True)
     payload: Mapped[dict] = mapped_column(JSON, nullable=False) 
     
     status: Mapped[OutboxStatus] = mapped_column(

@@ -3,7 +3,7 @@ from sqlalchemy import Text, Integer, DateTime, ForeignKey, Enum as SAEnum, Inde
 from sqlalchemy.orm import Mapped, mapped_column
 from app.infra.db.base import Base
 from app.core.constants import DeliveryStatus
-from app.core.datetime_utils import utcnow
+from app.core.util.datetime import utcnow
 
 class Delivery(Base):
     __tablename__ = "deliveries"

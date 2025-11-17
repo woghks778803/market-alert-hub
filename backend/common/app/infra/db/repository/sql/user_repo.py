@@ -1,8 +1,7 @@
-from __future__ import annotations
-
+from typing import Sequence
 from sqlalchemy import select, desc, and_
 from sqlalchemy.orm import Session as DbSession
-from app.infra.db.model import UserModel
+from app.infra.db.model import UserModel, EmailVerificationModel
 from ._utils import to_db_value
 from ..protocol.user_repo import UserRepo
 
@@ -13,6 +12,9 @@ class SqlUserRepo(UserRepo):
 
     def add_user(self, user: UserModel) -> UserModel:
         self._db.add(user); self._db.flush(); return user
+    
+    def add_email_verification(self, email_verification: EmailVerificationModel) -> EmailVerificationModel:
+        self._db.add(email_verification); self._db.flush(); return email_verification
 
     def get_user_by_email_fingerprint(self, email_fingerprint: bytes) -> UserModel | None:
         stmt = (
@@ -25,7 +27,7 @@ class SqlUserRepo(UserRepo):
         stmt = select(UserModel).where(and_(UserModel.is_deleted.is_(False), UserModel.id == user_id))
         return self._db.execute(stmt).scalar_one_or_none()
     
-    def list_users_filter(self, *, status: str | None, role: str | None, limit: int, offset: int) -> list[UserModel]:
+    def list_users_filter(self, *, status: str | None, role: str | None, limit: int, offset: int) -> Sequence[UserModel]:
         stmt = select(UserModel).where(UserModel.is_deleted.is_(False))
         if status:
             stmt = stmt.where(UserModel.status == to_db_value(status))

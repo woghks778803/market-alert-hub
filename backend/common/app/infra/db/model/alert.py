@@ -3,7 +3,7 @@ from sqlalchemy import Boolean, DateTime, String, Integer, JSON, ForeignKey, Enu
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infra.db.base import Base
 from app.core.constants import AlertStatus, AlertType, AlertScope
-from app.core.datetime_utils import utcnow
+from app.core.util.datetime import utcnow
 
 class Alert(Base):
     __tablename__ = "alerts"

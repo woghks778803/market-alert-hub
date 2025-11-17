@@ -27,6 +27,7 @@ class ServiceFactory:
         secret_crypto: Callable[[], CryptoPort.SecretCrypto],
         config : CoreDTO.ConfigBag,
     ) -> None:
+        self._trace_id: str | None = None
         self._uow = uow
         self._email_client = email_client
         self._email_renderer = email_renderer
@@ -72,6 +73,7 @@ class ServiceFactory:
     def users(self) -> UserService:
         return UserService(
             uow_factory=self._uow,
+            hmac=self.hmac,
         )
 
     @cached_property
@@ -84,6 +86,7 @@ class ServiceFactory:
     @cached_property
     def auths(self) -> AuthService:
         return AuthService(
+            trace_id=self._trace_id,
             uow_factory=self._uow,
             password=self.password,
             hmac=self.hmac,
@@ -95,5 +98,6 @@ class ServiceFactory:
     @cached_property
     def outboxs(self) -> OutboxService:
         return OutboxService(
+            trace_id=self._trace_id,
             uow_factory=self._uow,
         )

@@ -3,7 +3,7 @@ from sqlalchemy import Boolean, Integer, String, DateTime, Enum as SAEnum, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infra.db.base import Base
 from app.core.constants import AssetType
-from app.core.datetime_utils import utcnow
+from app.core.util.datetime import utcnow
 
 class Instrument(Base):
     __tablename__ = "instruments"

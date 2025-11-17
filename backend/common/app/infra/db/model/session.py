@@ -2,7 +2,7 @@ from datetime import datetime
 from sqlalchemy import String, DateTime, ForeignKey, Index, func, BINARY
 from sqlalchemy.orm import Mapped, mapped_column
 from app.infra.db.base import Base
-from app.core.datetime_utils import utcnow
+from app.core.util.datetime import utcnow
 
 class Session(Base):
     __tablename__ = "sessions"

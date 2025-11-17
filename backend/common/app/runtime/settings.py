@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     JWT_ISSUER: str | None = None
     JWT_AUDIENCE: str | None = None
     JWT_LEEWAY_SECONDS: int = 0
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 360
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     TOKEN_MASTER_PEPPER: str = "TOKEN_MASTER_PEPPER"
     FP_MASTER_PEPPER: str = "FP_MASTER_PEPPER"
 

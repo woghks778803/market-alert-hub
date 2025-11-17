@@ -1,7 +1,7 @@
 from typing import Callable, Sequence
 from datetime import datetime, timedelta
 
-from app.core.datetime_utils import utcnow
+from app.core.util.datetime import utcnow
 from app.domain import MarketDTO, MarketRule, ValidationAppError, NotFoundError
 from app.infra.db.model import ExchangeModel, ExchangeInstrumentModel
 from app.domain.uow import UnitOfWork

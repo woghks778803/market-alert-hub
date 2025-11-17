@@ -3,18 +3,19 @@ from typing import Callable, Dict, Any
 from datetime import datetime, timedelta, timezone
 
 from app.domain.uow import UnitOfWork
-from app.infra.db.model import UserModel, OutboxModel
-from app.domain import AuthDTO, ValidationAppError, AuthError, PermissionError
-from app.core.constants import UserRole, UserStatus, OutboxStatus
-from app.core.datetime_utils import utcnow
+from app.infra.db.model import UserModel, OutboxModel, EmailVerificationModel
+from app.domain import AuthDTO, ValidationAppError, AuthError, PermissionError, CryptoPort
+from app.core.constants import UserRole, UserStatus, OutboxStatus, EmailVerificationStatus
 from app.core import dto as CoreDTO
-from app.domain import CryptoPort
+from app.core.util.datetime import utcnow
+from app.core.util.serialization import to_canonical_json
 
 
 class AuthService:
     def __init__(
         self,
         *,
+        trace_id: str | None,
         uow_factory: Callable[[], UnitOfWork],
         password: CryptoPort.PasswordHasher,
         hmac: CryptoPort.TokenHasher,
@@ -22,6 +23,7 @@ class AuthService:
         secrets: CryptoPort.SecretCrypto,
         config: CoreDTO.ConfigBag,
     ) -> None:
+        self._trace_id = trace_id
         self._uow_factory = uow_factory
         self._password = password
         self._hmac = hmac
@@ -36,8 +38,6 @@ class AuthService:
         email: str,
         nickname: str,
         password: str,
-        ip: str | None = None,
-        ua: str | None = None,
     ):
         now = utcnow()
         expires_at = now + timedelta(minutes=self._config.access_token_minutes)
@@ -64,40 +64,40 @@ class AuthService:
             token = self._jwt.create_access_token(
                 subject=str(user.id), minutes=self._config.access_token_minutes
             )
-            uow.sessions.create_session(
+
+            email_verification = EmailVerificationModel(
                 user_id=user.id,
+                email_fingerprint=email_fingerprint,
+                email_ciphertext=email_secrets["ciphertext"],
+                email_nonce=email_secrets["nonce"],
+                email_key_version=self._config.crypto_data_kid,
                 token_hash=self._hmac.token_hash(token),
+                status=EmailVerificationStatus.PENDING,
                 expires_at=expires_at,
-                ip_addr=ip,
-                user_agent=ua,
             )
 
-            # uow.outboxs.add_outbox(
-            #     OutboxModel(
-            #         event_type="EMAIL_AUTH_CODE",
-            #         aggregate_type="user",
-            #         aggregate_id=user.id,
-            #         status=OutboxStatus.PENDING,
-            #         attempts=0,
-            #     )
-            # )
+            uow.users.add_email_verification(email_verification)
 
-            # trace_id 생성
+            outbox_fingerprint_dict = {"event_type": "EMAIL_AUTH_CODE", "aggregate_type": "user", "aggregate_id": user.id}
+            outbox_fingerprint = to_canonical_json(outbox_fingerprint_dict)
+            if outbox_fingerprint is not None: outbox_fingerprint= self._hmac.fp_hash(outbox_fingerprint)
 
-            #
-
-            # uow.outboxs.add_outbox(OutboxModel(
-            #     event_type="EMAIL_SIGNUP",
-            #     aggregate_type="user",
-            #     aggregate_id=user.id,
-            #     status=OutboxStatus.PENDING,
-            #     attempts=0,
-            # ))
+            uow.outboxs.add_outbox(
+                OutboxModel(
+                    trace_id=self._trace_id,
+                    event_type="EMAIL_AUTH_CODE",
+                    aggregate_type="user",
+                    aggregate_id=user.id,
+                    outbox_fingerprint=outbox_fingerprint,
+                    payload={"user_id": user.id, "email_verification_id": email_verification.id},
+                    status=OutboxStatus.PENDING,
+                    attempts=0,
+                )
+            )
 
             uow.commit()
 
-            return AuthDTO.AuthToken(access_token=token)
-            return 0
+            return {"ok": True}
 
     # 로그인
     def signin(
@@ -144,9 +144,9 @@ class AuthService:
             return AuthDTO.AuthToken(access_token=token)
 
     # 로그아웃 (세션 무효화)
-    def logout(self, *, token_hash: str) -> Dict[str, Any]:
+    def logout(self, *, token: str) -> Dict[str, Any]:
         with self._uow_factory() as uow:
-            uow.sessions.update_session(token_hash)
+            uow.sessions.update_session(self._hmac.token_hash(token))
             uow.commit()
             return {"ok": True}
 

@@ -3,7 +3,8 @@ from app.domain.uow import UnitOfWork
 from app.domain import CryptoPort
 from app.domain import ConflictError, ValidationAppError
 from app.infra.db.model import UserChannelModel
-from app.core.datetime_utils import utcnow
+from app.core.util.datetime import utcnow
+from app.core.util.serialization import to_canonical_json
 from app.domain import ChannelRule
 
 class ChannelService:
@@ -48,7 +49,7 @@ class ChannelService:
                 code=chp.code, config=config, user_schema=chp.user_schema
             )
 
-            fingerprint = ChannelRule.to_canonical_json(config)
+            fingerprint = to_canonical_json(config)
             if fingerprint is not None: fingerprint= self._hmac.fp_hash(fingerprint)
 
             existed = uow.channels.get_channel_by_fingerprint(

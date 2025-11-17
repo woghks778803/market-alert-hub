@@ -1,5 +1,5 @@
 from sqlalchemy import select
-from app.core.datetime_utils import utcnow
+from app.core.util.datetime import utcnow
 from app.infra.db.model import SessionModel
 from sqlalchemy.orm import Session as DbSession
 from datetime import datetime, timezone
