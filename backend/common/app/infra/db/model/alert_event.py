@@ -1,14 +1,14 @@
 from datetime import datetime
 from decimal import Decimal
-from sqlalchemy import DECIMAL, DateTime, String, JSON, ForeignKey, Index, func
+from sqlalchemy import DECIMAL, DateTime, String, JSON, ForeignKey, Index, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infra.db.base import Base
-from app.core.datetime_utils import utcnow
+from app.core.util.datetime import utcnow
 
 class AlertEvent(Base):
     __tablename__ = "alert_events"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     alert_id: Mapped[int] = mapped_column(
         ForeignKey("alerts.id", ondelete="RESTRICT"),

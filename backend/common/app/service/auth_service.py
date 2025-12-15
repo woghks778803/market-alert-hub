@@ -3,29 +3,33 @@ from typing import Callable, Dict, Any
 from datetime import datetime, timedelta, timezone
 
 from app.domain.uow import UnitOfWork
-from app.infra.db.model import UserModel, OutboxModel
-from app.domain import AuthDTO, ValidationAppError, AuthError, PermissionError
-from app.core.auth import (
-    hash_password,
-    verify_password,
-    create_access_token,
-    token_hash,
-)
-from app.core.constants import UserRole, UserStatus, OutboxStatus
-from app.core.datetime_utils import utcnow
+from app.infra.db.model import UserModel, OutboxModel, EmailVerificationModel
+from app.domain import AuthDTO, ValidationAppError, AuthError, PermissionError, CryptoPort
+from app.core.constants import UserRole, UserStatus, OutboxStatus, EmailVerificationStatus
+from app.core import dto as CoreDTO
+from app.core.util.datetime import utcnow
+from app.core.util.serialization import to_canonical_json
 
 
 class AuthService:
     def __init__(
         self,
         *,
+        trace_id: str | None,
         uow_factory: Callable[[], UnitOfWork],
-        jwt_secret: str,
-        token_minutes: int,
+        password: CryptoPort.PasswordHasher,
+        hmac: CryptoPort.TokenHasher,
+        jwt: CryptoPort.TokenSigner,
+        secrets: CryptoPort.SecretCrypto,
+        config: CoreDTO.ConfigBag,
     ) -> None:
+        self._trace_id = trace_id
         self._uow_factory = uow_factory
-        self._secret = jwt_secret
-        self._ttl = token_minutes
+        self._password = password
+        self._hmac = hmac
+        self._jwt = jwt
+        self._secrets = secrets
+        self._config = config
 
     # 회원가입
     def signup(
@@ -34,52 +38,66 @@ class AuthService:
         email: str,
         nickname: str,
         password: str,
-        ip: str | None = None,
-        ua: str | None = None,
     ):
         now = utcnow()
-        expires_at = now + timedelta(minutes=self._ttl)
+        expires_at = now + timedelta(minutes=self._config.access_token_minutes)
 
         with self._uow_factory() as uow:
+            email_fingerprint = self._hmac.fp_hash(email)
+            email_secrets = self._secrets.encrypt(email.encode("utf-8"))
 
-            if uow.users.get_user_by_email(email):
-                raise ValidationAppError("email already exists", target="email")
+            if uow.users.get_user_by_email_fingerprint(email_fingerprint):
+                raise ValidationAppError("email_fingerprint already exists", target="email_fingerprint")
 
             user = UserModel(
-                email=email,
+                # email_fingerprint=email_fingerprint,
+                # email_ciphertext=email_secrets["ciphertext"],
+                # email_nonce=email_secrets["nonce"],
+                # email_key_version=self._config.crypto_data_kid,
                 nickname=nickname,
-                password_hash=hash_password(password),
+                password_hash=self._password.hash_password(password),
                 # role/status 기본값은 모델 default/enum 디폴트 사용
             )
 
             uow.users.add_user(user)
 
-            token = create_access_token(sub=str(user.id), minutes=self._ttl)
-            uow.sessions.create_session(
-                user_id=user.id,
-                token_hash=token_hash(token),
-                expires_at=expires_at,
-                ip_addr=ip,
-                user_agent=ua,
+            token = self._jwt.create_access_token(
+                subject=str(user.id), minutes=self._config.access_token_minutes
             )
 
-            uow.outboxs.add_outbox(OutboxModel(
-                event_type="user_signed_up",
-                aggregate_id=user.id,
-                payload=json.dumps({
-                    "to": user.email,
-                    "user_name": user.nickname,
-                    # 필요하면 템플릿/파라미터:
-                    # "template": "welcome_v1",
-                    # "params": {"nickname": nickname}
-                }),
-                status=OutboxStatus.PENDING,
-                attempts=0,
-            ))
-            
+            email_verification = EmailVerificationModel(
+                user_id=user.id,
+                email_fingerprint=email_fingerprint,
+                email_ciphertext=email_secrets["ciphertext"],
+                email_nonce=email_secrets["nonce"],
+                email_key_version=self._config.crypto_data_kid,
+                token_hash=self._hmac.token_hash(token),
+                status=EmailVerificationStatus.PENDING,
+                expires_at=expires_at,
+            )
+
+            uow.users.add_email_verification(email_verification)
+
+            outbox_fingerprint_dict = {"event_type": "EMAIL_AUTH_CODE", "aggregate_type": "user", "aggregate_id": user.id}
+            outbox_fingerprint = to_canonical_json(outbox_fingerprint_dict)
+            if outbox_fingerprint is not None: outbox_fingerprint= self._hmac.fp_hash(outbox_fingerprint)
+
+            uow.outboxs.add_outbox(
+                OutboxModel(
+                    trace_id=self._trace_id,
+                    event_type="EMAIL_AUTH_CODE",
+                    aggregate_type="user",
+                    aggregate_id=user.id,
+                    outbox_fingerprint=outbox_fingerprint,
+                    payload={"user_id": user.id, "email_verification_id": email_verification.id},
+                    status=OutboxStatus.PENDING,
+                    attempts=0,
+                )
+            )
+
             uow.commit()
 
-            return AuthDTO.AuthToken(access_token=token)
+            return {"ok": True}
 
     # 로그인
     def signin(
@@ -92,11 +110,14 @@ class AuthService:
         admin_chk: bool = False,
     ) -> AuthDTO.AuthToken:
         now = utcnow()
-        expires_at = now + timedelta(minutes=self._ttl)
+        expires_at = now + timedelta(minutes=self._config.access_token_minutes)
 
         with self._uow_factory() as uow:
-            user = uow.users.get_user_by_email(email)
-            if not user or not verify_password(password, user.password_hash):
+            email_fingerprint = self._hmac.fp_hash(email)
+            user = uow.users.get_user_by_email_fingerprint(email_fingerprint)
+            if not user or not self._password.verify_password(
+                password, user.password_hash
+            ):
                 raise AuthError("invalid_credentials")
 
             if admin_chk == True and user.role != UserRole.ADMIN:
@@ -105,11 +126,13 @@ class AuthService:
             if user.status != UserStatus.ACTIVE:
                 raise PermissionError("User not active status", target="status")
 
-            token = create_access_token(sub=str(user.id), minutes=self._ttl)
+            token = self._jwt.create_access_token(
+                subject=str(user.id), minutes=self._config.access_token_minutes
+            )
 
             uow.sessions.create_session(
                 user_id=user.id,
-                token_hash=token_hash(token),
+                token_hash=self._hmac.token_hash(token),
                 expires_at=expires_at,
                 ip_addr=ip,
                 user_agent=ua,
@@ -121,11 +144,42 @@ class AuthService:
             return AuthDTO.AuthToken(access_token=token)
 
     # 로그아웃 (세션 무효화)
-    def logout(self, *, token_hash: str) -> Dict[str, Any]:
+    def logout(self, *, token: str) -> Dict[str, Any]:
         with self._uow_factory() as uow:
-            uow.sessions.update_session(token_hash)
+            uow.sessions.update_session(self._hmac.token_hash(token))
             uow.commit()
             return {"ok": True}
+
+    def verify_email(self, *, token: str) -> None:
+        now = utcnow()
+
+        with self._uow_factory() as uow:
+            token_hash = self._hmac.token_hash(token)
+            email_verification = uow.users.get_email_verification_by_token_hash(token_hash)
+
+            if not email_verification:
+                raise ValidationAppError("Token not found", target="token")
+
+            if email_verification.status != EmailVerificationStatus.SENT:
+                raise ValidationAppError("Invalid token", target="token")
+
+            if email_verification.expires_at <= now:
+                raise ValidationAppError("Token expired", target="token")
+
+            user = uow.users.get_by_user_id(email_verification.user_id)
+            if not user:
+                raise ValidationAppError("User not found", target="user_id")
+
+            user.email_fingerprint = email_verification.email_fingerprint
+            user.email_ciphertext = email_verification.email_ciphertext
+            user.email_nonce = email_verification.email_nonce
+            user.email_key_version = email_verification.email_key_version
+            user.email_verified_at = now
+
+            email_verification.status = EmailVerificationStatus.CONSUMED
+            email_verification.consumed_at = now
+
+            uow.commit()
 
     def get_current_user(self, user_id: int, token: str):
         now = utcnow()
@@ -135,15 +189,15 @@ class AuthService:
             user = uow.users.get_by_user_id(user_id)
             if not user:
                 raise AuthError("Invalid credentials", target="token")
-            
+
             # 세션 유효성(선택이지만 권장)
-            s = uow.sessions.get_session_by_hash(token_hash(token))
+            s = uow.sessions.get_session_by_hash(self._hmac.token_hash(token))
             if s is None:
                 raise AuthError("Invalid credentials", target="token")
-            
+
             expires_at = s.expires_at
             revoked_at = s.revoked_at
-            
+
             if expires_at is not None and expires_at.tzinfo is None:
                 expires_at = expires_at.replace(tzinfo=timezone.utc)
             if revoked_at is not None and revoked_at.tzinfo is None:
@@ -151,5 +205,5 @@ class AuthService:
 
             if not s or revoked_at or expires_at <= now:
                 raise AuthError("Missing or invalid token", target="token")
-            
+
             return AuthDTO.AuthUser(id=user.id, email=user.email, role=user.role)

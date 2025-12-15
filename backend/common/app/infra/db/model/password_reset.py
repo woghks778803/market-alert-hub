@@ -1,16 +1,16 @@
 from datetime import datetime
-from sqlalchemy import String, DateTime, ForeignKey, func
+from sqlalchemy import Integer, DateTime, ForeignKey, func, BINARY
 from sqlalchemy.orm import Mapped, mapped_column
 from app.infra.db.base import Base
-from app.core.datetime_utils import utcnow
+from app.core.util.datetime import utcnow
 
 class PasswordReset(Base):
     __tablename__ = "password_resets"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     user_id:    Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    token_hash: Mapped[str] = mapped_column(String(128), nullable=False, unique=True)  # DDL 길이에 맞게 조정
+    token_hash: Mapped[bytes] = mapped_column(BINARY(32), nullable=False, unique=True)  # DDL 길이에 맞게 조정
 
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     used_at:    Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

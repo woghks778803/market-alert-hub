@@ -32,7 +32,13 @@ class OutboxStatus(str, enum.Enum):
     SENDING = "sending"
     SENT = "sent"
     FAILED = "failed"
-    
+
+class EmailVerificationStatus(str, enum.Enum):
+    PENDING = "pending"
+    SENT = "sent"
+    CONSUMED = "consumed"
+    CANCELLED = "cancelled"
+
 class UserStatus(str, enum.Enum):
     ACTIVE    = "active"
     SUSPENDED = "suspended"

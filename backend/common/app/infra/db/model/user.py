@@ -1,16 +1,22 @@
 from datetime import datetime
-from sqlalchemy import Boolean, String, DateTime, Enum as SAEnum, func, text
+from sqlalchemy import Integer, Boolean, String, DateTime, Enum as SAEnum, SMALLINT, BINARY, LargeBinary, func, text, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from app.infra.db.base import Base
 from app.core.constants import UserRole, UserStatus
-from app.core.datetime_utils import utcnow
+from app.core.util.datetime import utcnow
 
 class User(Base):
     __tablename__ = "users"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
-    email:         Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    # email:         Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    email_ciphertext: Mapped[bytes | None] = mapped_column(LargeBinary)
+    email_fingerprint: Mapped[bytes | None] = mapped_column(BINARY(32), unique=True)
+    email_nonce: Mapped[bytes | None] = mapped_column(BINARY(12))
+    email_key_version: Mapped[int | None] = mapped_column(SMALLINT)
+
+
     nickname:      Mapped[str] = mapped_column(String(100))
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
 
@@ -21,6 +27,7 @@ class User(Base):
                                             native_enum=True, create_constraint=True, validate_strings=True),
                                             nullable=False, default=UserStatus.ACTIVE, server_default=UserStatus.ACTIVE)
 
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=False))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
         default=utcnow, 
         nullable=False
@@ -32,3 +39,13 @@ class User(Base):
     )
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     is_deleted:      Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("0"))
+
+
+    __table_args__ = (
+        # ciphertext/nonce/key_version는 셋이 함께 NULL이거나 함께 NOT NULL이어야 함
+        CheckConstraint(
+            "(email_ciphertext IS NULL AND email_nonce IS NULL AND email_key_version IS NULL) "
+            "OR (email_ciphertext IS NOT NULL AND email_nonce IS NOT NULL AND email_key_version IS NOT NULL)",
+            name="ck_users_email_crypto_all_or_none"
+        ),
+    )

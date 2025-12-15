@@ -10,3 +10,6 @@ class TokenOut(BaseModel):
 
 class SimpleOk(BaseModel):
     ok: bool = True
+
+class EmailVerifyToken(BaseModel):
+    token: str  

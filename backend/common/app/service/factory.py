@@ -11,62 +11,98 @@ from .email_service import EmailService
 from .outbox_service import OutboxService
 
 from app.domain.uow import UnitOfWork
-from app.domain import EmailPort
-
-from app.runtime.settings import settings
-
+from app.domain import EmailPort, CryptoPort
+from app.core import dto as CoreDTO
 
 class ServiceFactory:
     def __init__(
-            self, 
-            uow: Callable[[], UnitOfWork],
-            email_client: Callable[[], EmailPort.EmailClient],
-            email_renderer: Callable[[], EmailPort.EmailTemplateRenderer],
-            jwt_secret: str,
-            token_minutes: int
+        self,
+        *,
+        uow: Callable[[], UnitOfWork],
+        email_client: Callable[[], EmailPort.EmailClient],
+        email_renderer: Callable[[], EmailPort.EmailTemplateRenderer],
+        password_hasher: Callable[[], CryptoPort.PasswordHasher],
+        hmac_hasher: Callable[[], CryptoPort.TokenHasher],
+        jwt_signer: Callable[[], CryptoPort.TokenSigner],
+        secret_crypto: Callable[[], CryptoPort.SecretCrypto],
+        config : CoreDTO.ConfigBag,
     ) -> None:
-        self.uow = uow
-        self.email_client = email_client
-        self.email_renderer = email_renderer
-        self.jwt_secret=jwt_secret
-        self.token_minutes=token_minutes
+        self._trace_id: str | None = None
+        self._uow = uow
+        self._email_client = email_client
+        self._email_renderer = email_renderer
+        self._password_hasher = password_hasher
+        self._hmac_hasher = hmac_hasher
+        self._jwt_signer = jwt_signer
+        self._secret_crypto = secret_crypto
+        self._config = config 
+
+    @cached_property
+    def password(self):
+        return self._password_hasher()
+
+    @cached_property
+    def secrets(self):
+        return self._secret_crypto()
+
+    @cached_property
+    def jwt(self):
+        # 필요 시마다 새 인스턴스 반환(상태 없음)
+        return self._jwt_signer()
+
+    @cached_property
+    def hmac(self):
+        # 필요 시마다 새 인스턴스 반환(상태 없음)
+        return self._hmac_hasher()
 
     @cached_property
     def emails(self) -> EmailService:
-        return EmailService(client=self.email_client, renderer=self.email_renderer)
+        return EmailService(
+            client=self._email_client, 
+            renderer=self._email_renderer,
+            secrets=self.secrets,
+            config=self._config,
+        )
 
     @cached_property
     def watchlists(self) -> WatchlistService:
-        return WatchlistService(uow_factory=self.uow)
+        return WatchlistService(uow_factory=self._uow)
 
     @cached_property
     def markets(self) -> MarketService:
         return MarketService(
-            uow_factory=self.uow,
+            uow_factory=self._uow,
         )
 
     @cached_property
     def users(self) -> UserService:
         return UserService(
-            uow_factory=self.uow,
+            uow_factory=self._uow,
+            hmac=self.hmac,
         )
 
     @cached_property
     def channels(self) -> ChannelService:
         return ChannelService(
-            uow_factory=self.uow,
+            uow_factory=self._uow,
+            hmac=self.hmac,
         )
 
     @cached_property
     def auths(self) -> AuthService:
         return AuthService(
-            uow_factory=self.uow,
-            jwt_secret=self.jwt_secret,
-            token_minutes=self.token_minutes
+            trace_id=self._trace_id,
+            uow_factory=self._uow,
+            password=self.password,
+            hmac=self.hmac,
+            jwt=self.jwt,
+            secrets=self.secrets,
+            config=self._config,
         )
 
     @cached_property
     def outboxs(self) -> OutboxService:
         return OutboxService(
-            uow_factory=self.uow,
+            trace_id=self._trace_id,
+            uow_factory=self._uow,
         )

@@ -23,7 +23,7 @@ class SqlChannelRepo(ChannelRepo):
 
     def get_channel_cnt(
         self, *, user_id: int, provider_id: int,
-    ) -> int | None:
+    ) -> int:
         uc = UserChannelModel
         
         stmt = select(func.count(uc.id)).where(
@@ -34,7 +34,7 @@ class SqlChannelRepo(ChannelRepo):
         return self._db.execute(stmt).scalar()
 
     def get_channel_by_fingerprint(
-        self, *, user_id: int, provider_id: int, fingerprint: str
+        self, *, user_id: int, provider_id: int, fingerprint: bytes | None
     ) -> UserChannelModel:
         uc = UserChannelModel
         stmt = (

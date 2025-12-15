@@ -1,14 +1,14 @@
 from datetime import datetime
 from decimal import Decimal
-from sqlalchemy import DECIMAL, DateTime, ForeignKey, UniqueConstraint, Index, func
+from sqlalchemy import Integer, DECIMAL, DateTime, ForeignKey, UniqueConstraint, Index, func
 from sqlalchemy.orm import Mapped, mapped_column
 from app.infra.db.base import Base
-from app.core.datetime_utils import utcnow
+from app.core.util.datetime import utcnow
 
 class PriceSnapshot1m(Base):
     __tablename__ = "price_snapshots_1m"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     exchange_instrument_id: Mapped[int] = mapped_column(
         ForeignKey("exchange_instruments.id", ondelete="RESTRICT"),

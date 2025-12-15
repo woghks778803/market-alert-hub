@@ -1,11 +1,18 @@
 from urllib.parse import quote_plus
-from pydantic import computed_field, Field, EmailStr
+from pydantic import computed_field, field_validator, Field, EmailStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Any
 
 
 class Settings(BaseSettings):
+
+    def __init__(self, **data: Any):
+        # ✅ Pylance에 "키워드 가변 인자 받는다"를 알려줘서 경고 제거
+        super().__init__(**data)
+
     # deploy
     DEPLOY_ENV: str = "dev"
+    PUBLIC_WEB_BASE_URL: str = "http://localhost:8000"
 
     # --- DB ---
     MYSQL_HOST: str
@@ -19,10 +26,37 @@ class Settings(BaseSettings):
     REDIS_PORT: int = Field(default=6379)
     REDIS_DB: int = Field(default=0)
 
+    # --- version switch ---
+    ACTIVE_JWT_KID: int = 1
+    ACTIVE_TOKEN_PEPPER_KID: int = 1
+    ACTIVE_FP_PEPPER_KID: int = 1
+
     # --- JWT ---
     JWT_SECRET: str = "change-me"
     JWT_ALG: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 360
+    JWT_ISSUER: str | None = None
+    JWT_AUDIENCE: str | None = None
+    JWT_LEEWAY_SECONDS: int = 0
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    TOKEN_MASTER_PEPPER: str = "TOKEN_MASTER_PEPPER"
+    FP_MASTER_PEPPER: str = "FP_MASTER_PEPPER"
+
+    # --- password ---
+    ARGON2_TIME_COST: int = 2
+    ARGON2_MEMORY_COST: int = 102_400
+    ARGON2_PARALLELISM: int = 8
+    BCRYPT_ROUNDS: int = 12
+
+    PASSLIB_SCHEMES: str | list[str] = ["argon2", "bcrypt"]
+    PASSLIB_DEPRECATED: str = "auto"
+
+    # --- crypto ---
+    CRYPTO_DATA_ENC_KID: int = 1
+    CRYPTO_DATA_ENC_KEY: str | None = None
+    CRYPTO_DATA_ENC_SECRET_ID: str | None = None
+    CRYPTO_DATA_ENC_SECRET_FIELD: str | None = (
+        None  # 시크릿이 JSON이면 내부 키명 (예: "key")
+    )
 
     # SES
     AWS_REGION: str = Field(default="ap-northeast-2")
@@ -65,6 +99,12 @@ class Settings(BaseSettings):
     @property
     def REDIS_URL(self) -> str:
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+
+    @field_validator("PASSLIB_SCHEMES", mode="before")
+    def split_schemes(cls, v):
+        if isinstance(v, str):
+            return [x.strip() for x in v.split(",")]
+        return v
 
 
 settings = Settings()

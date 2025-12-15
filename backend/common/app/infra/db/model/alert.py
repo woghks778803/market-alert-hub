@@ -3,12 +3,12 @@ from sqlalchemy import Boolean, DateTime, String, Integer, JSON, ForeignKey, Enu
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infra.db.base import Base
 from app.core.constants import AlertStatus, AlertType, AlertScope
-from app.core.datetime_utils import utcnow
+from app.core.util.datetime import utcnow
 
 class Alert(Base):
     __tablename__ = "alerts"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     user_id:       Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     name:          Mapped[str] = mapped_column(String(100), nullable=False)

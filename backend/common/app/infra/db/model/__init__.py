@@ -1,6 +1,7 @@
 from .user import User as UserModel
 from .session import Session as SessionModel
-from .user_identity import UserIdentity as UserIdentityModel
+from .user_oauth_account import UserOauthAccount as UserOauthAccountModel
+from .oauth_provider import OauthProvider as OauthProviderModel
 from .password_reset import PasswordReset as PasswordResetModel
 from .exchange import Exchange as ExchangeModel
 from .instrument import Instrument as InstrumentModel
@@ -17,13 +18,14 @@ from .delivery import Delivery as DeliveryModel
 from .watchlist_item import WatchlistItem as WatchlistItemModel
 from .outbox import Outbox as OutboxModel
 from .outbox_attempt import OutboxAttempt as OutboxAttemptModel
+from .email_verification import EmailVerification as EmailVerificationModel
 
 __all__ = [
-    "UserModel", "SessionModel", "UserIdentityModel",
+    "UserModel", "SessionModel", "UserOauthAccountModel", "OauthProviderModel",
     "PasswordResetModel", "ExchangeModel", "InstrumentModel", "ExchangeInstrumentModel",
     "PriceSnapshot1mModel", "PriceSnapshot1hModel", "PriceSnapshot1dModel",
     "AlertModel", "AlertChannelTargetModel", "AlertEventModel", 
     "UserChannelModel", "ChannelProviderModel",
     "DeliveryModel", "WatchlistItemModel",
-    "OutboxModel", "OutboxAttemptModel",
+    "OutboxModel", "OutboxAttemptModel", "EmailVerificationModel"
 ]

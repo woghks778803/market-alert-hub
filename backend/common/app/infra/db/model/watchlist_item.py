@@ -1,13 +1,13 @@
 from datetime import datetime
-from sqlalchemy import Boolean, String, Integer, DateTime, ForeignKey, UniqueConstraint, Index, text
+from sqlalchemy import Integer, Boolean, String, Integer, DateTime, ForeignKey, UniqueConstraint, Index, text
 from sqlalchemy.orm import Mapped, mapped_column
 from app.infra.db.base import Base
-from app.core.datetime_utils import utcnow
+from app.core.util.datetime import utcnow
 
 class WatchlistItem(Base):
     __tablename__ = "watchlist_items"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     user_id:       Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     exchange_instrument_id: Mapped[int] = mapped_column(

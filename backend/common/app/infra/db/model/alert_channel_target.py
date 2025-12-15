@@ -1,11 +1,11 @@
-from sqlalchemy import ForeignKey, UniqueConstraint
+from sqlalchemy import Integer, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infra.db.base import Base
 
 class AlertChannelTarget(Base):
     __tablename__ = "alert_channel_targets"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     alert_id:       Mapped[int] = mapped_column(ForeignKey("alerts.id", ondelete="CASCADE"), nullable=False, index=True)
     user_channel_id: Mapped[int] = mapped_column(ForeignKey("user_channels.id", ondelete="CASCADE"), nullable=False, index=True)

@@ -1,13 +1,13 @@
 from datetime import datetime
-from sqlalchemy import String, Boolean, JSON, DateTime, ForeignKey, func, text
+from sqlalchemy import Integer, String, Boolean, JSON, DateTime, ForeignKey, func, text, BINARY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infra.db.base import Base
-from app.core.datetime_utils import utcnow
+from app.core.util.datetime import utcnow
 
 class UserChannel(Base):
     __tablename__ = "user_channels"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     channel_provider_id: Mapped[int] = mapped_column(
@@ -17,7 +17,7 @@ class UserChannel(Base):
 
     address:      Mapped[str | None] = mapped_column(String(255))
     config:       Mapped[dict | None] = mapped_column(JSON)
-    config_fingerprint: Mapped[str | None] = mapped_column(String(64), index=True)
+    config_fingerprint: Mapped[bytes | None] = mapped_column(BINARY(32), index=True)
     verified_at:  Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
         default=utcnow, 

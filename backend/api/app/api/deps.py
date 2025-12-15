@@ -1,27 +1,16 @@
-# --- FastAPI dependencies -----------------------------------------------------
 from fastapi import Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.orm import Session as DbSession
-from typing import Iterator
-from app.service.factory import ServiceFactory
-
-from app.domain import AuthError, PermissionError
-from app.infra.db.uow import UnitOfWork
-from app.infra.db.engine import SessionLocal
-from app.core.auth import decode_token, token_hash
-from app.core.constants import UserRole
-
-from jose import JWTError, ExpiredSignatureError
+from jwt import ExpiredSignatureError, InvalidTokenError
 from datetime import datetime, timezone
-from app.runtime.bootstrap import create_service_factory
 
-
-def get_services() -> ServiceFactory:
-    uow_provider = lambda: UnitOfWork(SessionLocal, owns_session=True)
-    return create_service_factory(uow_provider)
+from app.core.constants import UserRole
+from app.domain import AuthError, PermissionError
+from app.runtime.bootstrap import get_core_services
+from app.service.factory import ServiceFactory
 
 
 _bearer = HTTPBearer(auto_error=False)
+
 
 def get_current_token(
     creds: HTTPAuthorizationCredentials | None = Depends(_bearer),
@@ -36,21 +25,20 @@ def get_current_token(
 
 
 def get_current_user(
-    svcs: ServiceFactory = Depends(get_services),
+    svcs: ServiceFactory = Depends(get_core_services),
     token: str = Depends(get_current_token),
 ):
     try:
-        payload = decode_token(token)
+        payload = svcs.jwt.decode_token(token)
     except ExpiredSignatureError:
         raise AuthError("Token expired")
-    except JWTError:
+    except InvalidTokenError:
         raise AuthError("Invalid token")
     user_id = int(payload["sub"])
     if not user_id:
         raise AuthError(message="Invalid token payload")
 
     return svcs.auths.get_current_user(user_id, token)
-
 
 def require_admin(user=Depends(get_current_user)):
     if getattr(user, "role", None) != UserRole.ADMIN:
@@ -70,3 +58,10 @@ class RequestMeta:
 def get_request_meta(request: Request) -> RequestMeta:
     rid = getattr(request.state, "request_id", "-")
     return RequestMeta(request_id=rid, timestamp=datetime.now(timezone.utc))
+
+def get_services(
+    meta: RequestMeta = Depends(get_request_meta),
+    svcs: ServiceFactory = Depends(get_core_services),
+):
+    svcs._trace_id = meta.request_id
+    return svcs

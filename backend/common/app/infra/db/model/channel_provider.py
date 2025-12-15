@@ -1,12 +1,12 @@
 from datetime import datetime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, Boolean, DateTime, JSON, Index, text
+from sqlalchemy import Integer, String, Boolean, DateTime, JSON, Index, text
 from app.infra.db.base import Base
 
 class ChannelProvider(Base):
     __tablename__ = "channel_providers"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     code: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(64), nullable=False)
     description: Mapped[str | None] = mapped_column(String(255))

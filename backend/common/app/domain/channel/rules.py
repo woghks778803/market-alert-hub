@@ -14,9 +14,3 @@ def validate_user_config(code: str, config: dict | None, user_schema: dict | Non
     if code == "DISCORD" and not cfg.get("webhook_url"):
         raise ValidationAppError("Discord config.webhook_url is required.", target="config")
     # user_schema가 있으면 fastjsonschema로 추가 검증 가능
-
-def make_fingerprint(config: dict | None) -> str | None:
-    if not config:
-        return None
-    normalized = json.dumps(config, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()

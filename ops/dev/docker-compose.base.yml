@@ -42,8 +42,6 @@ services:
     env_file:
       - ./env/common.env
       - ./env/api.env
-    environment:
-      - PYTHONPATH=${PYTHONPATH_COMMON} 
     restart: unless-stopped
     networks: [ mahnet ]
     # 개발 중 과부하 방지
@@ -65,8 +63,6 @@ services:
     env_file:
       - ./env/common.env
       - ./env/worker.env
-    environment:
-      - PYTHONPATH=${PYTHONPATH_COMMON} 
     restart: unless-stopped
     tty: true # IDE attach 안정
     stdin_open: true
@@ -89,14 +85,14 @@ services:
     env_file:
       - ./env/common.env
       - ./env/dispatcher.env
-    environment:
-      - PYTHONPATH=${PYTHONPATH_COMMON} 
     restart: unless-stopped
     tty: true # IDE attach 안정
     stdin_open: true
     networks: [ mahnet ]
-    cpus: 0.50
-    mem_limit: 512m
+    cpus: 0.80
+    mem_limit: 768m
+    # cpus: 0.50
+    # mem_limit: 512m
 
   collector:
     build: ../../backend/collector
@@ -112,8 +108,10 @@ services:
       - ./env/collector.env
     restart: unless-stopped
     networks: [ mahnet ]
-    cpus: 0.50
-    mem_limit: 512m
+    cpus: 0.80
+    mem_limit: 768m
+    # cpus: 0.50
+    # mem_limit: 512m
 
   db:
     image: mysql:8.4
