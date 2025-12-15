@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 from app.core.constants import UserRole
 from app.domain import AuthError, PermissionError
-from app.runtime.bootstrap import get_services as get_core_services
+from app.runtime.bootstrap import get_core_services
 from app.service.factory import ServiceFactory
 
 

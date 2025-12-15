@@ -109,6 +109,7 @@ def build_config_bag() -> CoreDTO.ConfigBag:
     return CoreDTO.ConfigBag(
         access_token_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
         crypto_data_kid=settings.CRYPTO_DATA_ENC_KID,
+        public_web_base_url=settings.PUBLIC_WEB_BASE_URL
     )
 
 def create_service_factory(uow_provider: Callable[[], UnitOfWork]) -> ServiceFactory:
@@ -125,6 +126,6 @@ def create_service_factory(uow_provider: Callable[[], UnitOfWork]) -> ServiceFac
     )
 
 
-def get_services() -> ServiceFactory:
+def get_core_services() -> ServiceFactory:
     uow_provider = lambda: UnitOfWork(SessionLocal, owns_session=True)
     return create_service_factory(uow_provider)

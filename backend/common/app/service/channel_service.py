@@ -78,15 +78,6 @@ class ChannelService:
             result = uow.channels.get_by_channel_id(user_channel_id=row.id)
             return result
 
-    # (옵션) 검증 완료 마킹
-    def mark_verified(self, *, user_channel_id: int):
-        with self._uow_factory() as uow:
-            row = uow.channels.get_by_channel_id(user_channel_id)
-            if not row or not row.is_deleted:
-                raise ValidationAppError("Channel not found or invalid.")
-            row.verified_at = utcnow()
-            uow.commit()
-            return row
 
     def delete_channel(self, *, user_channel_id: int):
         with self._uow_factory() as uow:
