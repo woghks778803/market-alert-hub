@@ -57,7 +57,12 @@ class ServiceFactory:
 
     @cached_property
     def emails(self) -> EmailService:
-        return EmailService(client=self._email_client, renderer=self._email_renderer)
+        return EmailService(
+            client=self._email_client, 
+            renderer=self._email_renderer,
+            secrets=self.secrets,
+            config=self._config,
+        )
 
     @cached_property
     def watchlists(self) -> WatchlistService:

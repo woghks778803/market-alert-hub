@@ -27,6 +27,14 @@ class SqlUserRepo(UserRepo):
         stmt = select(UserModel).where(and_(UserModel.is_deleted.is_(False), UserModel.id == user_id))
         return self._db.execute(stmt).scalar_one_or_none()
     
+    def get_email_verification_by_id(self, email_verification_id: int) -> EmailVerificationModel | None:
+        stmt = select(EmailVerificationModel).where(EmailVerificationModel.id == email_verification_id)
+        return self._db.execute(stmt).scalar_one_or_none()
+
+    def get_email_verification_by_token_hash(self, token_hash: bytes) -> EmailVerificationModel | None:
+        stmt = select(EmailVerificationModel).where(EmailVerificationModel.token_hash == token_hash)
+        return self._db.execute(stmt).scalar_one_or_none()
+
     def list_users_filter(self, *, status: str | None, role: str | None, limit: int, offset: int) -> Sequence[UserModel]:
         stmt = select(UserModel).where(UserModel.is_deleted.is_(False))
         if status:

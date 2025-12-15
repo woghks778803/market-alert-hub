@@ -50,10 +50,10 @@ class AuthService:
                 raise ValidationAppError("email_fingerprint already exists", target="email_fingerprint")
 
             user = UserModel(
-                email_fingerprint=email_fingerprint,
-                email_ciphertext=email_secrets["ciphertext"],
-                email_nonce=email_secrets["nonce"],
-                email_key_version=self._config.crypto_data_kid,
+                # email_fingerprint=email_fingerprint,
+                # email_ciphertext=email_secrets["ciphertext"],
+                # email_nonce=email_secrets["nonce"],
+                # email_key_version=self._config.crypto_data_kid,
                 nickname=nickname,
                 password_hash=self._password.hash_password(password),
                 # role/status 기본값은 모델 default/enum 디폴트 사용
@@ -149,6 +149,37 @@ class AuthService:
             uow.sessions.update_session(self._hmac.token_hash(token))
             uow.commit()
             return {"ok": True}
+
+    def verify_email(self, *, token: str) -> None:
+        now = utcnow()
+
+        with self._uow_factory() as uow:
+            token_hash = self._hmac.token_hash(token)
+            email_verification = uow.users.get_email_verification_by_token_hash(token_hash)
+
+            if not email_verification:
+                raise ValidationAppError("Token not found", target="token")
+
+            if email_verification.status != EmailVerificationStatus.SENT:
+                raise ValidationAppError("Invalid token", target="token")
+
+            if email_verification.expires_at <= now:
+                raise ValidationAppError("Token expired", target="token")
+
+            user = uow.users.get_by_user_id(email_verification.user_id)
+            if not user:
+                raise ValidationAppError("User not found", target="user_id")
+
+            user.email_fingerprint = email_verification.email_fingerprint
+            user.email_ciphertext = email_verification.email_ciphertext
+            user.email_nonce = email_verification.email_nonce
+            user.email_key_version = email_verification.email_key_version
+            user.email_verified_at = now
+
+            email_verification.status = EmailVerificationStatus.CONSUMED
+            email_verification.consumed_at = now
+
+            uow.commit()
 
     def get_current_user(self, user_id: int, token: str):
         now = utcnow()

@@ -16,6 +16,7 @@ import app.api.openapi as OpenApi
 router = APIRouter(prefix="/auth")
 
 
+
 @router.post(
     "/signup",
     status_code=status.HTTP_201_CREATED,
@@ -86,6 +87,30 @@ def signin(
         email=payload.email, password=payload.password, ip=ip, ua=ua, admin_chk=False
     )
     return ok(token_out, request_id=meta.request_id)
+
+@router.post(
+    "/verify-email",
+    response_model=Envelope[AuthSchema.SimpleOk],
+    summary="이메일 인증",
+    description="메일 링크로 전달된 토큰을 검증하여 이메일을 인증합니다.",
+    # responses=OpenApi.ERR_400,  # TODO: 필요하면 에러 스펙 추가
+)
+def verify_email(
+    payload: AuthSchema.EmailVerifyToken = Body(
+        ...,
+        example={"token": "base64url-encoded-token"},
+    ),
+    svcs: ServiceFactory = Depends(get_services),
+    meta: RequestMeta = Depends(get_request_meta),
+):
+    svcs.auths.verify_email(
+        token=payload.token,
+    )
+
+    return ok(
+        AuthSchema.SimpleOk(ok=True),
+        request_id=meta.request_id,
+    )
 
 
 @router.post(

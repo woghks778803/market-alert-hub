@@ -29,52 +29,63 @@ def _dispatch_with_svcs(svcs: ServiceFactory, *, event_type: str, payload: Mappi
     """
     logger.info("dispatch event_type=%s channel=%s keys=%s",
                 event_type, list(payload.keys()))
-
-    email_svc = svcs.emails
     
     # 공통 필드
-    to = _as_list(payload.get("to"))
-    if not to:
-        raise ValidationAppError("payload 'to' is required", target="payload.to")
+    user_id = payload.get("user_id")
+    if not user_id:
+        raise ValidationAppError("payload 'user_id' is required", target="payload.user_id")
+
+    user = svcs.users.get_by_user_id(user_id=user_id)
 
     # --- 라우팅 ---
-    if event_type in ("user_signed_up", "user_welcome"):
-        user_name = (payload.get("user_name")
-                     or payload.get("name")
-                     or "")
-        dashboard_link = payload.get("dashboard_link", "")
-        email_svc.send_welcome(
-            to=to,
-            user_name=user_name,
-            dashboard_link=dashboard_link,
+    if event_type in ("EMAIL_AUTH_CODE"):
+        
+        email_verification_id = payload.get("email_verification_id")
+        if not email_verification_id:
+            raise ValidationAppError("payload 'email_verification_id' is required", target="payload.email_verification_id")
+        
+        email_verification = svcs.users.get_email_verification_by_id(
+            email_verification_id=email_verification_id
         )
+
+        svcs.emails.send_verify(
+            user=user,
+            email_verification=email_verification,
+        )
+
+        svcs.users.set_email_verification_sent(
+            email_verification_id=email_verification.id
+        )
+
         return
 
-    if event_type in ("user_verify", "email_verify"):
-        user_name = payload.get("user_name", "")
-        verify_link = payload.get("verify_link") or payload.get("link") or ""
-        if not verify_link:
-            raise ValidationAppError("payload 'verify_link' is required", target="verify_link")
-        email_svc.send_verify(
-            to=to,
-            user_name=user_name,
-            verify_link=verify_link,
-        )
-        return
 
-    if event_type in ("alert_triggered", "price_alert"):
-        email_svc.send_alert(
-            to=to,
-            user_name=payload.get("user_name", ""),
-            exchange=payload.get("exchange", ""),
-            symbol=payload.get("symbol", ""),
-            condition=payload.get("condition", ""),
-            current_price=payload.get("current_price", ""),
-            currency=payload.get("currency", ""),
-            alert_link=payload.get("alert_link", ""),
-            settings_link=payload.get("settings_link", ""),
-        )
-        return
+    # if event_type in ("user_signed_up", "user_welcome"):
+    #     user_name = (payload.get("user_name")
+    #                  or payload.get("name")
+    #                  or "")
+    #     dashboard_link = payload.get("dashboard_link", "")
+    #     email_svc.send_welcome(
+    #         to=to,
+    #         user_name=user_name,
+    #         dashboard_link=dashboard_link,
+    #     )
+    #     return
+
+
+    # if event_type in ("alert_triggered", "price_alert"):
+    #     email_svc.send_alert(
+    #         to=to,
+    #         user_name=payload.get("user_name", ""),
+    #         exchange=payload.get("exchange", ""),
+    #         symbol=payload.get("symbol", ""),
+    #         condition=payload.get("condition", ""),
+    #         current_price=payload.get("current_price", ""),
+    #         currency=payload.get("currency", ""),
+    #         alert_link=payload.get("alert_link", ""),
+    #         settings_link=payload.get("settings_link", ""),
+    #     )
+    #     return
 
     # 알 수 없는 이벤트
     raise ValidationAppError(f"unsupported event_type={event_type}", target="event_type")

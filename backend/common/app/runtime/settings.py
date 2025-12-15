@@ -12,6 +12,7 @@ class Settings(BaseSettings):
 
     # deploy
     DEPLOY_ENV: str = "dev"
+    PUBLIC_WEB_BASE_URL: str = "http://localhost:8000"
 
     # --- DB ---
     MYSQL_HOST: str

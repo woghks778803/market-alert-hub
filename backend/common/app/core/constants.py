@@ -32,7 +32,13 @@ class OutboxStatus(str, enum.Enum):
     SENDING = "sending"
     SENT = "sent"
     FAILED = "failed"
-    
+
+class EmailVerificationStatus(str, enum.Enum):
+    PENDING = "pending"
+    SENT = "sent"
+    CONSUMED = "consumed"
+    CANCELLED = "cancelled"
+
 class UserStatus(str, enum.Enum):
     ACTIVE    = "active"
     SUSPENDED = "suspended"
@@ -62,11 +68,6 @@ class AlertType(str, enum.Enum):
 class AlertScope(str, enum.Enum):
     SINGLE = "single"
     CROSS  = "cross"
-
-class EmailVerificationStatus(str, enum.Enum):
-    PENDING = "pending"
-    CONSUMED = "consumed"
-    CANCELLED = "cancelled"
 
 # 에러 코드 / 메시지
 ERROR_INVALID_TOKEN: str = "Invalid token"
