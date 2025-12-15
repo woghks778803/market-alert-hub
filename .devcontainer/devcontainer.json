@@ -22,7 +22,8 @@
     "vscode": {
       "extensions": [
         "ms-python.python",
-        "ms-python.vscode-pylance"
+        "ms-python.vscode-pylance",
+        "openai.chatgpt"
       ],
       "settings": {
         "python.defaultInterpreterPath": "/usr/local/bin/python3",
