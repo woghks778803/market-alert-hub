@@ -8,7 +8,7 @@ from app.core.util.datetime import utcnow
 class Delivery(Base):
     __tablename__ = "deliveries"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     alert_event_id: Mapped[int] = mapped_column(ForeignKey("alert_events.id", ondelete="CASCADE"), nullable=False, index=True)
     user_channel_id: Mapped[int] = mapped_column(ForeignKey("user_channels.id", ondelete="RESTRICT"), nullable=False, index=True)

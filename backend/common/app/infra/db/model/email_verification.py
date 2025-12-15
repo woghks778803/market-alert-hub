@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import String, DateTime, Enum as SAEnum, ForeignKey, SmallInteger, UniqueConstraint, BINARY, LargeBinary, SMALLINT
+from sqlalchemy import Integer, DateTime, Enum as SAEnum, ForeignKey, SmallInteger, UniqueConstraint, BINARY, LargeBinary, SMALLINT
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infra.db.base import Base
 from app.core.util.datetime import utcnow
@@ -8,7 +8,7 @@ from app.core.constants import EmailVerificationStatus
 class EmailVerification(Base):
     __tablename__ = "email_verifications"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False,
     )

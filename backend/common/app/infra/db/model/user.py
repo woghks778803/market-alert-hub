@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Boolean, String, DateTime, Enum as SAEnum, SMALLINT, BINARY, LargeBinary, func, text, CheckConstraint
+from sqlalchemy import Integer, Boolean, String, DateTime, Enum as SAEnum, SMALLINT, BINARY, LargeBinary, func, text, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from app.infra.db.base import Base
 from app.core.constants import UserRole, UserStatus
@@ -8,7 +8,7 @@ from app.core.util.datetime import utcnow
 class User(Base):
     __tablename__ = "users"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     # email:         Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     email_ciphertext: Mapped[bytes | None] = mapped_column(LargeBinary)

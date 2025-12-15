@@ -7,7 +7,7 @@ from app.infra.db.base import Base
 class OutboxAttempt(Base):
     __tablename__ = "outbox_attempts"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     outbox_id: Mapped[int] = mapped_column(ForeignKey("outboxs.id", ondelete="CASCADE"), nullable=False, index=True)
     attempt_no: Mapped[int] = mapped_column(Integer, nullable=False)  
 

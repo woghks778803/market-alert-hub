@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import String, Boolean, JSON, DateTime, ForeignKey, func, text, BINARY
+from sqlalchemy import Integer, String, Boolean, JSON, DateTime, ForeignKey, func, text, BINARY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infra.db.base import Base
 from app.core.util.datetime import utcnow
@@ -7,7 +7,7 @@ from app.core.util.datetime import utcnow
 class UserChannel(Base):
     __tablename__ = "user_channels"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     channel_provider_id: Mapped[int] = mapped_column(

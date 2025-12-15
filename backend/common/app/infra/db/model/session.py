@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import String, DateTime, ForeignKey, Index, func, BINARY
+from sqlalchemy import Integer, String, DateTime, ForeignKey, Index, func, BINARY
 from sqlalchemy.orm import Mapped, mapped_column
 from app.infra.db.base import Base
 from app.core.util.datetime import utcnow
@@ -7,7 +7,7 @@ from app.core.util.datetime import utcnow
 class Session(Base):
     __tablename__ = "sessions"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     user_id:    Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     token_hash: Mapped[bytes] = mapped_column(BINARY(32), nullable=False, unique=True) 

@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import BigInteger, String, Integer, DateTime, Enum as SAEnum, JSON, Index, BINARY
+from sqlalchemy import String, Integer, DateTime, Enum as SAEnum, JSON, Index, BINARY
 from sqlalchemy.orm import Mapped, mapped_column
 from app.infra.db.base import Base 
 from app.core.util.datetime import utcnow
@@ -8,11 +8,11 @@ from app.core.constants import OutboxStatus
 class Outbox(Base):
     __tablename__ = "outboxs"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     trace_id: Mapped[str] = mapped_column(String(36), nullable=False)  # ix_outbox_trace
     event_type: Mapped[str] = mapped_column(String(100), nullable=False)
     aggregate_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    aggregate_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    aggregate_id: Mapped[int] = mapped_column(Integer, nullable=False)
     outbox_fingerprint: Mapped[bytes | None] = mapped_column(BINARY(32), nullable=True, unique=True)
     payload: Mapped[dict] = mapped_column(JSON, nullable=False) 
     
