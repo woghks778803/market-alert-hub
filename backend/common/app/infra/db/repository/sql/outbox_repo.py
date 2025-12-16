@@ -1,7 +1,7 @@
 from sqlalchemy import select, update, func
 from sqlalchemy.orm import Session as DbSession
 from app.domain import OutboxDTO, ValidationAppError
-from app.infra.db.model import OutboxModel
+from app.infra.db.model import OutboxModel, OutboxAttemptModel
 from ..protocol.outbox_repo import OutboxRepo
 
 class SqlOutboxRepo(OutboxRepo):
@@ -9,6 +9,9 @@ class SqlOutboxRepo(OutboxRepo):
         self._db = db
 
     def add_outbox(self, row: OutboxModel) -> None:
+        self._db.add(row)
+
+    def add_outbox_attempt(self, row: OutboxAttemptModel) -> None:
         self._db.add(row)
 
     def get_by_outbox_id(self, id: int) -> OutboxModel | None:
@@ -20,6 +23,7 @@ class SqlOutboxRepo(OutboxRepo):
         if outbox_filter.id is not None: wheres.append(OutboxModel.id == outbox_filter.id)
         elif outbox_filter.ids: wheres.append(OutboxModel.id.in_(outbox_filter.ids)) # [] 방지
 
+        if outbox_filter.next_run_at is not None: wheres.append(OutboxModel.next_run_at < outbox_filter.next_run_at)
         if outbox_filter.status is not None: wheres.append(OutboxModel.status == outbox_filter.status)
 
         return wheres

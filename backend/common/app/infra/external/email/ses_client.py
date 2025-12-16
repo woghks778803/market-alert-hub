@@ -36,7 +36,7 @@ class SesEmailClient(EmailPort.EmailClient):
         bcc: Sequence[str] | None = None,
         reply_to: Sequence[str] | None = None,
         headers: Mapping[str, str] | None = None,
-    ) -> str:
+    ) -> dict:
         try:
             kwargs = {
                 "FromEmailAddress": self.from_email,
@@ -62,9 +62,10 @@ class SesEmailClient(EmailPort.EmailClient):
             if self.configuration_set:
                 kwargs["ConfigurationSetName"] = self.configuration_set
 
-            res = self.client.send_email(**kwargs)
+            # res = self.client.send_email(**kwargs)
             # {'ResponseMetadata': {'RequestId': 'f8bb7ab3-2578-4ce2-a632-2ab80f0858f4', 'HTTPStatusCode': 200, 'HTTPHeaders': {'date': 'Mon, 15 Dec 2025 06:56:15 GMT', 'content-type': 'application/json', 'content-length': '76', 'connection': 'keep-alive', 'x-amzn-requestid': 'f8bb7ab3-2578-4ce2-a632-2ab80f0858f4'}, 'RetryAttempts': 0}, 'MessageId': '010c019b20cba5c1-b201a0a0-5f10-443b-a696-cdab0a1fec66-000000'}
-            return res.get("MessageId", "")
+            # return res.get("MessageId", "")
+            return self.client.send_email(**kwargs)
         except ClientError as ex:
             code = ex.response.get("Error", {}).get("Code", "unknown")
             raise EmailSendError(f"SES send_email failed: {code}") from ex

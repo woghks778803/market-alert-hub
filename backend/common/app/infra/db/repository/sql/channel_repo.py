@@ -1,7 +1,7 @@
 from typing import Sequence
 from sqlalchemy.orm import aliased, Session as DbSession, selectinload
 from sqlalchemy import insert, select, func, and_
-from app.infra.db.model import UserChannelModel
+from app.infra.db.model import UserChannelModel, ChannelProviderModel
 from ..protocol.channel_repo import ChannelRepo
 
 class SqlChannelRepo(ChannelRepo): 
@@ -21,9 +21,13 @@ class SqlChannelRepo(ChannelRepo):
         stmt = select(UserChannelModel).options(selectinload(UserChannelModel.channel_provider)).where(UserChannelModel.id == user_channel_id)
         return self._db.execute(stmt).scalar_one_or_none()
 
+    def get_channel_by_code(self, code: str) -> ChannelProviderModel:
+        stmt = select(ChannelProviderModel).where(ChannelProviderModel.code == code)
+        return self._db.execute(stmt).scalar_one_or_none()
+
     def get_channel_cnt(
         self, *, user_id: int, provider_id: int,
-    ) -> int:
+    ) -> int | None:
         uc = UserChannelModel
         
         stmt = select(func.count(uc.id)).where(

@@ -20,7 +20,7 @@ def _as_list(v: Any) -> list[str]:
     except Exception:
         return [str(v)]
 
-def _dispatch_with_svcs(svcs: ServiceFactory, *, event_type: str, payload: Mapping[str, Any]) -> None:
+def _dispatch_with_svcs(svcs: ServiceFactory, *, event_type: str, payload: Mapping[str, Any]):
     """
     OutboxService가 호출하는 실제 디스패처.
     - channel이 email일 때 EmailService로 라우팅
@@ -48,7 +48,7 @@ def _dispatch_with_svcs(svcs: ServiceFactory, *, event_type: str, payload: Mappi
             email_verification_id=email_verification_id
         )
 
-        svcs.emails.send_verify(
+        ses_result = svcs.emails.send_verify(
             user=user,
             email_verification=email_verification,
         )
@@ -57,7 +57,7 @@ def _dispatch_with_svcs(svcs: ServiceFactory, *, event_type: str, payload: Mappi
             email_verification_id=email_verification.id
         )
 
-        return
+        return ses_result
 
 
     # if event_type in ("user_signed_up", "user_welcome"):

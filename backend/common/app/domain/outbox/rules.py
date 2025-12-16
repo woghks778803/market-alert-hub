@@ -3,17 +3,30 @@ import json, random
 
 MAX_ATTEMPTS = 5
 
+
 def parse_payload(v) -> dict:
-    if v is None: return {}
+    if v is None:
+        return {}
     if isinstance(v, (bytes, bytearray)):
         v = v.decode("utf-8", errors="ignore")
     if isinstance(v, str):
-        try: return json.loads(v)
-        except Exception: return {"raw": v}
-    if isinstance(v, dict): return v
+        try:
+            return json.loads(v)
+        except Exception:
+            return {"raw": v}
+    if isinstance(v, dict):
+        return v
     return {"value": v}
 
-def compute_backoff(attempts: int) -> timedelta:
-    base = min(600, 2 ** max(0, attempts-1))  # 1s, 2s, 4s... capped
-    jitter = random.uniform(0, min(5, base * 0.1))
-    return timedelta(seconds=base + jitter)
+
+def compute_backoff(
+    attempts: int,
+    *,
+    base_delay_sec: int,
+    max_delay_sec: int,
+) -> timedelta:
+    # attempts: 1 → base_delay, 2 → base_delay*2, 3 → base_delay*4 ...
+    n = max(0, attempts - 1)
+    delay = base_delay_sec * (2**n)
+    delay = min(delay, max_delay_sec)
+    return timedelta(seconds=delay)

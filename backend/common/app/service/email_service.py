@@ -46,7 +46,7 @@ class EmailService:
 
     def send_verify(
         self, *, user: UserModel, email_verification: EmailVerificationModel
-    ) -> str:
+    ) -> dict:
 
         if user.email_ciphertext is None or user.email_nonce is None:
             raise ValidationAppError("user email is not set", target="user.email")

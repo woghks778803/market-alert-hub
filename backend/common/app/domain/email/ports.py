@@ -10,7 +10,7 @@ class EmailClient(Protocol):
         bcc: Sequence[str] | None = None,
         reply_to: Sequence[str] | None = None,
         headers: Mapping[str, str] | None = None,
-    ) -> str: ...
+    ) -> dict: ...
     
     # def send_template(
     #     self,

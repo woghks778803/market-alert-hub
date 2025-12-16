@@ -16,7 +16,7 @@ class OutboxFilter:
     # payload: dict | None = None
     # status: OutboxStatus | None = None
     # attempts: int | None = None
-    # next_run_at: datetime | None = None
+    next_run_at: datetime | None = None
     # last_attempted_at: datetime | None = None
     # sent_at: datetime | None = None
     # final_failed_at: datetime | None = None
