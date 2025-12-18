@@ -18,7 +18,7 @@ router = APIRouter(prefix="/auth")
 
 
 @router.post(
-    "/signup",
+    "/register",
     status_code=status.HTTP_201_CREATED,
     response_model=Envelope[AuthSchema.SimpleOk],  # ✅ 래퍼 적용
     summary="유저 회원가입",
@@ -34,7 +34,7 @@ router = APIRouter(prefix="/auth")
         OpenApi.ERR_409,
     ),
 )
-def signup(
+def register(
     response: Response,
     request: Request,
     payload: UserSchema.UserCreatePublic = Body(
@@ -48,7 +48,7 @@ def signup(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),  # ✅ request_id 주입
 ):
-    token_out = svcs.auths.signup(
+    token_out = svcs.auths.register(
         email=payload.email,
         nickname=payload.nickname,
         password=payload.password,
@@ -60,7 +60,7 @@ def signup(
 
 
 @router.post(
-    "/signin",
+    "/login",
     response_model=Envelope[AuthSchema.TokenOut],  # ✅ 래퍼 적용
     summary="로그인 (JWT 발급)",
     responses=OpenApi.combine(
@@ -73,7 +73,7 @@ def signup(
         ),
     ),
 )
-def signin(
+def login(
     request: Request,
     payload: AuthSchema.Login = Body(
         ..., example={"email": "alice@example.com", "password": "P@ssw0rd!"}
@@ -83,7 +83,7 @@ def signin(
 ):
     ip = request.client.host if request.client else None
     ua = request.headers.get("user-agent")
-    token_out = svcs.auths.signin(
+    token_out = svcs.auths.login(
         email=payload.email, password=payload.password, ip=ip, ua=ua, admin_chk=False
     )
     return ok(token_out, request_id=meta.request_id)
@@ -96,6 +96,7 @@ def signin(
     # responses=OpenApi.ERR_400,  # TODO: 필요하면 에러 스펙 추가
 )
 def verify_email(
+    request: Request,
     payload: AuthSchema.EmailVerifyToken = Body(
         ...,
         example={"token": "base64url-encoded-token"},
@@ -103,8 +104,10 @@ def verify_email(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
+    ip = request.client.host if request.client else None
+    ua = request.headers.get("user-agent")
     svcs.auths.verify_email(
-        token=payload.token,
+        token=payload.token, ip=ip, ua=ua
     )
 
     return ok(
@@ -112,6 +115,43 @@ def verify_email(
         request_id=meta.request_id,
     )
 
+@router.post(
+    "/change-email",
+    response_model=Envelope[AuthSchema.SimpleOk],
+    summary="이메일 변경",
+    description="현재 비밀번호를 확인한 뒤 새 이메일로 인증 메일을 발송합니다.",
+    responses=OpenApi.combine(
+        OpenApi.ERR_400,
+        OpenApi.ERR_401,
+        OpenApi.ERR_409,   # 예: 이미 사용 중인 이메일 등
+    ),
+)
+def change_email(
+    payload: AuthSchema.ChangeEmailIn = Body(
+        ...,
+        example={
+            "current_password": "P@ssw0rd!",
+            "new_email": "new@example.com",
+        },
+    ),
+    user: AuthDTO.AuthUser = Security(get_current_user),
+    svcs: ServiceFactory = Depends(get_services),
+    meta: RequestMeta = Depends(get_request_meta),
+):
+    """
+    - 액세스 토큰으로 유저 식별
+    - current_password 검증
+    - 새 이메일로 인증 메일 발송 + 내부 상태 업데이트
+    """
+
+    svcs.auths.change_email(
+        user_id=user.id,
+        session_token=user.access_token,
+        current_password=payload.current_password,
+        new_email=payload.new_email,
+    )
+
+    return ok(AuthSchema.SimpleOk(ok=True), request_id=meta.request_id)
 
 @router.post(
     "/logout",
@@ -134,30 +174,4 @@ def logout(
     return ok(AuthSchema.SimpleOk(ok=True), request_id=meta.request_id)
 
 
-@router.get(
-    "/me",
-    response_model=Envelope[UserSchema.UserReadPublic],  # ✅ 래퍼 적용
-    summary="내 프로필 조회",
-    description="우상단 **Authorize**로 JWT 설정 후 호출하세요.",
-    responses=OpenApi.combine(
-        OpenApi.OK(
-            Envelope[UserSchema.UserReadPublic],
-            description="성공",
-            example=OpenApi.wrap_example(
-                {
-                    "id": 5,
-                    "email": "alice@example.com",
-                    "nickname": "Alice",
-                    "status": "active",
-                }
-            ),
-        ),
-    ),
-)
-def me(
-    user: AuthDTO.AuthUser = Security(get_current_user),
-    svcs: ServiceFactory = Depends(get_services),
-    meta: RequestMeta = Depends(get_request_meta),  # ✅
-):
-    u = svcs.users.get_by_user_id(user_id=user.id)
-    return ok(UserSchema.UserReadPublic.model_validate(u), request_id=meta.request_id)
+

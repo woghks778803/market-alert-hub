@@ -1,7 +1,6 @@
 from typing import Sequence, Callable
 from email_validator import validate_email, EmailNotValidError
-from app.infra.db.model import UserModel, EmailVerificationModel
-from app.domain import EmailPort, ValidationAppError, CryptoPort
+from app.domain import UserDTO, EmailDTO, EmailPort, ValidationAppError, CryptoPort
 from app.core import dto as CoreDTO
 import base64
 
@@ -45,7 +44,7 @@ class EmailService:
     #     )
 
     def send_verify(
-        self, *, user: UserModel, email_verification: EmailVerificationModel
+        self, *, user: UserDTO.UserEmailInfo, verify_token: str
     ) -> dict:
 
         if user.email_ciphertext is None or user.email_nonce is None:
@@ -57,12 +56,9 @@ class EmailService:
         )  # 복호화 검증용 호출
 
         to = self._validate_recipients([to.decode("utf-8")])
-        token_code = base64.urlsafe_b64encode(email_verification.token_hash).decode(
-            "utf-8"
-        )
 
         verify_link = (
-            f"{self._config.public_web_base_url}/auth/verify-email?token={token_code}"
+            f"{self._config.public_web_base_url}/auth/verify-email?token={verify_token}"
         )
 
         html = self.renderer().render(
@@ -80,34 +76,34 @@ class EmailService:
             to=to,
         )
 
-    def send_alert(
-        self,
-        to: Sequence[str],
-        user_name: str,
-        exchange: str,
-        symbol: str,
-        condition: str,
-        current_price: str,
-        currency: str,
-        settings_link: str,
-        alert_link: str | None = None,
-    ) -> str:
-        to = self._validate_recipients(to)
-        html = self.renderer().render(
-            "alert_notification.html",
-            {
-                "user_name": user_name,
-                "exchange": exchange,
-                "symbol": symbol,
-                "condition": condition,
-                "current_price": current_price,
-                "currency": currency,
-                "alert_link": alert_link,
-                "settings_link": settings_link,
-            },
-        )
-        return self.client().send(
-            subject=f"[알림] {symbol} 목표가 도달",
-            html_body=html,
-            to=to,
-        )
+    # def send_alert(
+    #     self,
+    #     to: Sequence[str],
+    #     user_name: str,
+    #     exchange: str,
+    #     symbol: str,
+    #     condition: str,
+    #     current_price: str,
+    #     currency: str,
+    #     settings_link: str,
+    #     alert_link: str | None = None,
+    # ) -> dict:
+    #     to = self._validate_recipients(to)
+    #     html = self.renderer().render(
+    #         "alert_notification.html",
+    #         {
+    #             "user_name": user_name,
+    #             "exchange": exchange,
+    #             "symbol": symbol,
+    #             "condition": condition,
+    #             "current_price": current_price,
+    #             "currency": currency,
+    #             "alert_link": alert_link,
+    #             "settings_link": settings_link,
+    #         },
+    #     )
+    #     return self.client().send(
+    #         subject=f"[알림] {symbol} 목표가 도달",
+    #         html_body=html,
+    #         to=to,
+    #     )

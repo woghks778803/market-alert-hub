@@ -79,6 +79,7 @@ class ServiceFactory:
         return UserService(
             uow_factory=self._uow,
             hmac=self.hmac,
+            secrets=self.secrets,
         )
 
     @cached_property

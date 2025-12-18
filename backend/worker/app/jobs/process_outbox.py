@@ -3,7 +3,7 @@ from typing import Any, Mapping
 
 from app.deps import get_services
 from app.service.factory import ServiceFactory
-from app.domain import ValidationAppError
+from app.domain import UserDTO, EmailDTO, ValidationAppError
 
 logger = logging.getLogger(__name__)
 
@@ -32,29 +32,29 @@ def _dispatch_with_svcs(svcs: ServiceFactory, *, event_type: str, payload: Mappi
     
     # 공통 필드
     user_id = payload.get("user_id")
+    
     if not user_id:
         raise ValidationAppError("payload 'user_id' is required", target="payload.user_id")
 
-    user = svcs.users.get_by_user_id(user_id=user_id)
-
     # --- 라우팅 ---
     if event_type in ("EMAIL_AUTH_CODE"):
-        
+        user_email_info = svcs.users.get_user_email_info(user_id=user_id)
+
         email_verification_id = payload.get("email_verification_id")
         if not email_verification_id:
             raise ValidationAppError("payload 'email_verification_id' is required", target="payload.email_verification_id")
         
-        email_verification = svcs.users.get_email_verification_by_id(
-            email_verification_id=email_verification_id
-        )
+        verify_token = payload.get("verify_token")
+        if not verify_token:
+            raise ValidationAppError("payload 'verify_token' is required", target="payload.verify_token")
 
         ses_result = svcs.emails.send_verify(
-            user=user,
-            email_verification=email_verification,
+            user=user_email_info,
+            verify_token=verify_token,
         )
 
         svcs.users.set_email_verification_sent(
-            email_verification_id=email_verification.id
+            email_verification_id=email_verification_id
         )
 
         return ses_result

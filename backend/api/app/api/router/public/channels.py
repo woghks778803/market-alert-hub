@@ -39,7 +39,6 @@ def list_channels(
 )
 def get_channel(
     user_channel_id: int = Path(..., ge=1),
-    user: AuthDTO.AuthUser = Depends(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
@@ -79,7 +78,6 @@ def create_channel(
 )
 def delete_channel(
     user_channel_id: int = Path(..., ge=1),
-    user: AuthDTO.AuthUser = Depends(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
 ):
     svcs.channels.delete_channel(user_channel_id=user_channel_id)

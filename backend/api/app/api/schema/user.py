@@ -18,6 +18,7 @@ class UserReadPublic(BaseModel):
     email: EmailStr
     nickname: str
     created_at: datetime
+    last_login_at: datetime | None = None
 
 class UserReadAdmin(BaseModel):
     model_config = _model_cfg

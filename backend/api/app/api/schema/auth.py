@@ -13,3 +13,8 @@ class SimpleOk(BaseModel):
 
 class EmailVerifyToken(BaseModel):
     token: str  
+
+class ChangeEmailIn(BaseModel):
+    current_password: str
+    new_email: EmailStr
+    

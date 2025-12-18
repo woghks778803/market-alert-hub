@@ -14,7 +14,7 @@ class EmailVerification(Base):
     )
 
     email_ciphertext: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
-    email_fingerprint: Mapped[bytes] = mapped_column(BINARY(32), unique=True, nullable=False)
+    email_fingerprint: Mapped[bytes] = mapped_column(BINARY(32), nullable=False)
     email_nonce: Mapped[bytes] = mapped_column(BINARY(12), nullable=False)
     email_key_version: Mapped[int] = mapped_column(SMALLINT, nullable=False) # (unsigned=True)
 

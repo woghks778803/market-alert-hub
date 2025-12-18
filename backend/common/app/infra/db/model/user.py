@@ -10,7 +10,6 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
-    # email:         Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     email_ciphertext: Mapped[bytes | None] = mapped_column(LargeBinary)
     email_fingerprint: Mapped[bytes | None] = mapped_column(BINARY(32), unique=True)
     email_nonce: Mapped[bytes | None] = mapped_column(BINARY(12))

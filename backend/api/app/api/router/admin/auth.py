@@ -29,7 +29,7 @@ def admin_login(
     ip = request.client.host if request.client else None
     ua = request.headers.get("user-agent")
 
-    result = svcs.auths.signin(
+    result = svcs.auths.login(
         email=payload.email, password=payload.password, ip=ip, ua=ua, admin_chk=True
     )
     return ok(result, request_id=meta.request_id)

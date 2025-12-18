@@ -7,6 +7,6 @@ class AuthToken:
 
 @dataclass(slots=True, frozen=True)
 class AuthUser:
+    access_token: str
     id: int
-    email: str | None = None
     role: UserRole = UserRole.USER  # ✅ 단일 권한
