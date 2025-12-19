@@ -4,6 +4,9 @@ from typing import Any, Mapping
 from app.deps import get_services
 from app.service.factory import ServiceFactory
 from app.domain import UserDTO, EmailDTO, ValidationAppError
+from app.core.util.datetime import utcnow
+from app.infra.db.model.email_verification import EmailVerificationStatus
+from datetime import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +51,31 @@ def _dispatch_with_svcs(svcs: ServiceFactory, *, event_type: str, payload: Mappi
         if not verify_token:
             raise ValidationAppError("payload 'verify_token' is required", target="payload.verify_token")
 
+        # --- ✅ 발송 직전 재검사(중요) ---
+        # 1) email_verification 레코드 조회
+        email_verification = svcs.users.get_email_verification_by_id(
+            email_verification_id=email_verification_id
+        )
+
+        # 2) 유효성 체크: "아직 발송해도 되는 상태"만 통과
+        #    - resend에서 기존 건 CANCELLED + expires_at=now 처리하니까 여기서 걸러짐
+        now = utcnow()
+        if email_verification.status != EmailVerificationStatus.PENDING:
+            # 이미 취소/소비/발송완료 등 → 보내면 안 됨
+            # (스킵 정책: 발송 호출 없이 종료)
+            return {"ok": True, "skipped": True, "reason": f"status={email_verification.status}"}
+
+        # expires_at tz 보정
+        expires_at = email_verification.expires_at
+        if getattr(expires_at, "tzinfo", None) is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+        if expires_at <= now:
+            # 만료(재발송으로 expires_at 당겨진 케이스 포함)
+            return {"ok": True, "skipped": True, "reason": "expired"}
+
+
+        # 3) 발송
         ses_result = svcs.emails.send_verify(
             user=user_email_info,
             verify_token=verify_token,

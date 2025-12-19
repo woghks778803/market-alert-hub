@@ -27,7 +27,8 @@ def list_channels(
     meta: RequestMeta = Depends(get_request_meta),
 ):
     rows = svcs.channels.list_channels_by_user_id(user_id=user.id)
-    return ok(rows, request_id=meta.request_id)
+    out = [ChannelSchema.ChannelRead.model_validate(r) for r in rows]
+    return ok(out, request_id=meta.request_id)
 
 @router.get(
     "/{user_channel_id}", 
@@ -43,7 +44,8 @@ def get_channel(
     meta: RequestMeta = Depends(get_request_meta),
 ):
     result = svcs.channels.get_by_channel_id(user_channel_id=user_channel_id)
-    return ok(result, request_id=meta.request_id)
+    out = ChannelSchema.ChannelRead.model_validate(result)
+    return ok(out, request_id=meta.request_id)
 
 @router.post(
     "", 

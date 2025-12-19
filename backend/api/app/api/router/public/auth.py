@@ -89,6 +89,38 @@ def login(
     return ok(token_out, request_id=meta.request_id)
 
 @router.post(
+    "/resend-email-verification",
+    response_model=Envelope[AuthSchema.SimpleOk],
+    summary="이메일 인증 재발송",
+    description="현재 로그인된 사용자 기준으로 이메일 인증 메일을 재발송합니다. (쿨다운/레이트리밋 정책 적용)",
+    responses=OpenApi.combine(
+        OpenApi.ERR_401,
+        OpenApi.ERR_403,  # 예: 계정 비활성/차단 등 정책
+        OpenApi.ERR_409,  # 예: 이미 인증됨
+        OpenApi.ERR_429,  # 예: 쿨다운/레이트리밋
+    ),
+)
+def resend_email_verification(
+    request: Request,
+    payload: AuthSchema.Login = Body(
+        ..., example={"email": "alice@example.com", "password": "P@ssw0rd!"}
+    ),
+    svcs: ServiceFactory = Depends(get_services),
+    meta: RequestMeta = Depends(get_request_meta),
+) -> Envelope[AuthSchema.SimpleOk]:
+    """
+    - 액세스 토큰으로 유저 식별
+    - 이메일 미검증 상태면 인증 메일 재발송(Outbox 생성)
+    - 이미 인증된 경우 409 등으로 처리 가능
+    """
+    ip = request.client.host if request.client else None
+    ua = request.headers.get("user-agent")
+    svcs.auths.resend_email_verification(
+        email=payload.email, password=payload.password, ip=ip, ua=ua
+    )
+    return ok(AuthSchema.SimpleOk(ok=True), request_id=meta.request_id)
+
+@router.post(
     "/verify-email",
     response_model=Envelope[AuthSchema.SimpleOk],
     summary="이메일 인증",

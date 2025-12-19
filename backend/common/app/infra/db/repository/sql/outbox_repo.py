@@ -37,19 +37,21 @@ class SqlOutboxRepo(OutboxRepo):
 
         return values
 
-    def update_outbox_by_filter(self, filters: OutboxDTO.OutboxFilter, updates: OutboxDTO.OutboxUpdate):
+    def update_outbox_by_filter(self, filters: OutboxDTO.OutboxFilter, updates: OutboxDTO.OutboxUpdate) -> int:
 
         where = self._to_outbox_where_mapping(filters)
         if not where: raise ValidationAppError("Unsafe update: at least one narrowing filter required", target="filters")
         values = self._to_outbox_values_mapping(updates)
         if not values: return 0 
 
-        self._db.execute(
+        result = self._db.execute(
             update(OutboxModel)
             .where(*where)
             .values(values)
             .execution_options(synchronize_session=False)
         )
+
+        return int(getattr(result, "rowcount", 0) or 0)
 
     def list_outboxs_by_filter(
         self, 

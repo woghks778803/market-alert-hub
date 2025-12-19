@@ -4,7 +4,7 @@ from app.infra.db.model import SessionModel
 
 class SessionRepo(Protocol):
 
-    def create_session(self, *, user_id: int, token_hash: bytes, expires_at: datetime,
+    def add_session(self, *, user_id: int, token_hash: bytes, expires_at: datetime,
                ip_addr: str | None, user_agent: str | None) -> SessionModel: ...
 
     def update_session(self, token_hash: bytes) -> int: ...

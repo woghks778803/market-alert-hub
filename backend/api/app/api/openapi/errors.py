@@ -60,6 +60,8 @@ ERR_404 = err(404, "리소스 없음(NotFoundError)",
               err_example("not_found", "Resource not found"))
 ERR_409 = err(409, "충돌(ConflictError)",
               err_example("conflict", "Email already exists", target="email"))
+ERR_429 = err(429, "레이트리밋/쿨다운 초과(TooManyRequestsError)",
+              err_example("too_many_requests", "Too many requests, please try again later"))
 ERR_500 = err(500, "서버 오류(AppError)",
               err_example("internal_error", "Internal server error"))
 

@@ -8,7 +8,7 @@ from ..protocol.session_repo import SessionRepo
 class SqlSessionRepo(SessionRepo):
     def __init__(self, db: DbSession): self._db = db
 
-    def create_session(self, *, user_id: int, token_hash: bytes, expires_at: datetime,
+    def add_session(self, *, user_id: int, token_hash: bytes, expires_at: datetime,
                ip_addr: str | None, user_agent: str | None) -> SessionModel:
         s = SessionModel(user_id=user_id, token_hash=token_hash,
                          expires_at=expires_at, ip_addr=ip_addr, user_agent=user_agent)

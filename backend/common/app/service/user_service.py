@@ -34,9 +34,6 @@ class UserService:
             )  # 전역핸들러에서 404 매핑되게
         return user
     
-    def _get_user_model(self, uow, user_id: int) -> UserModel:
-        return self._ensure_user(uow, user_id)
-    
     def _ensure_email_verification(self, uow: UnitOfWork, email_verification_id: int):
         email_verification = uow.users.get_email_verification_by_id(email_verification_id)
         if not email_verification:
@@ -44,10 +41,6 @@ class UserService:
                 "EmailVerification not found", target="email_verification_id"
             )  
         return email_verification
-
-    def get_user_by_email(self, email: str) -> UserModel | None:
-        with self._uow_factory() as uow:
-            return uow.users.get_user_by_email_fingerprint(self._hmac.fp_hash(email))
 
     def list_users_filter(
         self,
@@ -161,9 +154,17 @@ class UserService:
     def set_email_verification_sent(self, *, email_verification_id: int) -> None:
         now = utcnow()
         with self._uow_factory() as uow:
-            email_verification = self._ensure_email_verification(uow, email_verification_id)
-            email_verification.status = EmailVerificationStatus.SENT
-            email_verification.sent_at = now
+            uow.users.update_email_verification_by_filter(
+                filters=EmailDTO.EmailVerificationFilter(
+                    id=email_verification_id,
+                    statuses=(EmailVerificationStatus.PENDING,),
+                    expires_after=now,  # 만료 안 된 것만
+                ),
+                updates=EmailDTO.EmailVerificationUpdate(
+                    status=EmailVerificationStatus.SENT,
+                    sent_at=now,
+                ),
+            )
             uow.commit()
 
     def delete_user(self, *, user_id: int) -> None:
