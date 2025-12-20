@@ -1,5 +1,7 @@
 from .settings import settings
 from app.core import dto as CoreDTO
+from app.runtime.app_context import AppContext
+from app.infra.external.redis.redis_client import RedisClient, get_redis_client
 from app.infra.external.email.ses_client import SesEmailClient
 from app.infra.external.email.jinja_renderer import JinjaEmailRenderer
 from app.infra.db.uow import UnitOfWork
@@ -10,8 +12,9 @@ from app.infra.external.token.hmac_hasher import HmacTokenHasher
 from app.infra.external.crypto.local_aesgcm import LocalAesGcmCrypto
 from app.infra.external.crypto.local_aesgcm_from_secrets import LocalAesGcmFromSecrets
 from app.service.factory import ServiceFactory
-from typing import Callable
 
+from typing import Callable
+from functools import lru_cache
 from passlib.context import CryptContext
 
 
@@ -44,7 +47,12 @@ def _resolve_master_key() -> str:
         "Set CRYPTO_DATA_ENC_KEY or CRYPTO_DATA_ENC_SECRET_ID."
     )
 
+
 class Providers:
+    @staticmethod
+    def redis_provider() -> Callable[[], RedisClient]:
+        return lambda: get_redis_client(settings.REDIS_URL)
+    
     @staticmethod
     def email_client_provider() -> Callable[[], SesEmailClient]:
         return lambda: SesEmailClient()
@@ -105,17 +113,44 @@ class Providers:
 
 providers = Providers()
 
+
 def build_config_bag() -> CoreDTO.ConfigBag:
     return CoreDTO.ConfigBag(
+        email_verify_resend_cooldown_sec=settings.EMAIL_VERIFY_RESEND_COOLDOWN_SEC,
         access_token_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
         crypto_data_kid=settings.CRYPTO_DATA_ENC_KID,
-        public_web_base_url=settings.PUBLIC_WEB_BASE_URL
+        public_web_base_url=settings.PUBLIC_WEB_BASE_URL,
     )
+
+
+def build_worker_config_bag() -> CoreDTO.WorkerConfigBag:
+    return CoreDTO.WorkerConfigBag(
+        redis_url=settings.REDIS_URL,
+        log_level=settings.LOG_LEVEL,
+        outbox_poll_limit=settings.OUTBOX_POLL_LIMIT,
+        outbox_idle_sleep=settings.OUTBOX_IDLE_SLEEP,
+        outbox_retry_delay_sec=settings.OUTBOX_RETRY_DELAY_SEC,
+        outbox_send_lock_ttl_sec=settings.OUTBOX_SEND_LOCK_TTL_SEC,
+        outbox_concurrency=settings.OUTBOX_CONCURRENCY,
+        redis_stream_alerts=settings.REDIS_STREAM_ALERTS,
+        redis_stream_deliveries=settings.REDIS_STREAM_DELIVERIES,
+    )
+
+
+def build_dispatcher_config_bag() -> CoreDTO.DispatcherConfigBag:
+    return CoreDTO.DispatcherConfigBag(
+        redis_url=settings.REDIS_URL,
+        log_level=settings.LOG_LEVEL,
+        outbox_poll_limit=settings.OUTBOX_POLL_LIMIT,
+        outbox_idle_sleep=settings.OUTBOX_IDLE_SLEEP,
+    )
+
 
 def create_service_factory(uow_provider: Callable[[], UnitOfWork]) -> ServiceFactory:
 
     return ServiceFactory(
         uow=uow_provider,
+        redis_client=providers.redis_provider(),
         email_client=providers.email_client_provider(),
         email_renderer=providers.email_renderer_provider(),
         password_hasher=providers.password_hasher_provider(),
@@ -126,6 +161,21 @@ def create_service_factory(uow_provider: Callable[[], UnitOfWork]) -> ServiceFac
     )
 
 
+def get_core_worker_config_bag() -> CoreDTO.WorkerConfigBag:
+    return build_worker_config_bag()
+
+
+def get_core_dispatcher_config_bag() -> CoreDTO.DispatcherConfigBag:
+    return build_dispatcher_config_bag()
+
+
 def get_core_services() -> ServiceFactory:
     uow_provider = lambda: UnitOfWork(SessionLocal, owns_session=True)
     return create_service_factory(uow_provider)
+
+@lru_cache
+def create_app_context() -> AppContext:
+    svcs = get_core_services() 
+    redis = get_redis_client(settings.REDIS_URL)
+    redis_conn = redis.conn() 
+    return AppContext(svcs=svcs, redis_conn=redis_conn)

@@ -6,7 +6,7 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 def ensure_utc(dt: datetime) -> datetime:
-    if dt.tzinfo is None :
+    if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     else:
         dt = dt.astimezone(timezone.utc)

@@ -37,7 +37,7 @@ class OutboxService:
                 q_outbox.enqueue(
                     "app.jobs.process_outbox.deliver_outbox_event",
                     oid,
-                    job_id=f"outbox-{oid}",  # 중복 enqueue 방지
+                    job_id=f"outbox-{oid}",  # 중복 outbox enqueue 방지
                     retry=None,
                 )
                 logger.info("enqueued outbox id=%s", oid)

@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     TOKEN_MASTER_PEPPER: str = "TOKEN_MASTER_PEPPER"
     FP_MASTER_PEPPER: str = "FP_MASTER_PEPPER"
 
+    # --- email ---
+    EMAIL_VERIFY_RESEND_COOLDOWN_SEC: int = 60
+
     # --- password ---
     ARGON2_TIME_COST: int = 2
     ARGON2_MEMORY_COST: int = 102_400
@@ -66,11 +69,13 @@ class Settings(BaseSettings):
     AWS_ACCESS_KEY_ID: str | None = None
     AWS_SECRET_ACCESS_KEY: str | None = None
 
-    # --- Worker 전용 ---
+    # --- Dispatcher, Worker ---
     LOG_LEVEL: str = Field(default="INFO")
     OUTBOX_POLL_LIMIT: int = Field(default=50)
     OUTBOX_IDLE_SLEEP: float = Field(default=1.0)
+    # --- Worker 전용 ---
     OUTBOX_RETRY_DELAY_SEC: int = Field(default=60)
+    OUTBOX_SEND_LOCK_TTL_SEC: int = Field(default=120)
     OUTBOX_CONCURRENCY: int = Field(default=4)
 
     REDIS_STREAM_ALERTS: str = Field(default="alerts")

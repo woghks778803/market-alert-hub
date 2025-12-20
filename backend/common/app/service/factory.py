@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Any
 from functools import cached_property
 
 from .auth_service import AuthService
@@ -19,6 +19,7 @@ class ServiceFactory:
         self,
         *,
         uow: Callable[[], UnitOfWork],
+        redis_client: Callable[[], Any],
         email_client: Callable[[], EmailPort.EmailClient],
         email_renderer: Callable[[], EmailPort.EmailTemplateRenderer],
         password_hasher: Callable[[], CryptoPort.PasswordHasher],
@@ -29,6 +30,7 @@ class ServiceFactory:
     ) -> None:
         self._trace_id: str | None = None
         self._uow = uow
+        self._redis_client = redis_client
         self._email_client = email_client
         self._email_renderer = email_renderer
         self._password_hasher = password_hasher
@@ -37,6 +39,10 @@ class ServiceFactory:
         self._secret_crypto = secret_crypto
         self._config = config 
 
+    @cached_property
+    def redis(self):
+        return self._redis_client()
+    
     @cached_property
     def password(self):
         return self._password_hasher()
@@ -93,6 +99,7 @@ class ServiceFactory:
     def auths(self) -> AuthService:
         return AuthService(
             trace_id=self._trace_id,
+            redis_client=self._redis_client,
             uow_factory=self._uow,
             password=self.password,
             hmac=self.hmac,

@@ -14,16 +14,6 @@ class UserRepo(Protocol):
     def get_email_verification_by_id(self, email_verification_id: int) -> EmailVerificationModel | None: ...
     def get_email_verification_by_token_hash(self, token_hash: bytes) -> EmailVerificationModel | None: ...
     def list_users_filter(self, *, status: str | None, role: str | None, limit: int, offset: int) -> list[UserModel]: ...
-    def update_email_verifications_status_by_user_id(
-        self,
-        user_id: int,
-        *,
-        from_statuses: Iterable[EmailVerificationStatus],
-        to_status: EmailVerificationStatus,
-        set_expires_at: datetime,
-        set_expires_at_to_now: bool = True,
-        only_not_expired: bool = True,
-    ) -> int: ...
     def update_email_verification_by_filter(
         self,
         filters: EmailDTO.EmailVerificationFilter,

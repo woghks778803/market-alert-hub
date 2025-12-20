@@ -15,6 +15,7 @@ class AuthService:
         self,
         *,
         trace_id: str | None,
+        redis_client: Callable[[], Any],
         uow_factory: Callable[[], UnitOfWork],
         password: CryptoPort.PasswordHasher,
         hmac: CryptoPort.TokenHasher,
@@ -23,6 +24,7 @@ class AuthService:
         config: CoreDTO.ConfigBag,
     ) -> None:
         self._trace_id = trace_id
+        self._redis_client = redis_client
         self._uow_factory = uow_factory
         self._password = password
         self._hmac = hmac
@@ -174,18 +176,22 @@ class AuthService:
 
             if user.email_verified_at is not None:
                 raise ValidationAppError("Email already verified", target="email_verified_at")
+            
+            # ✅ 쿨다운 (연타 방지)
+            cooldown_sec = self._config.email_verify_resend_cooldown_sec
+            key = f"cooldown:email_verify_resend:{user.id}"
+            ok = self._redis_client().set(key, b"1", nx=True, ex_sec=cooldown_sec)
+            if not ok:
+                remain = self._redis_client().ttl(key)  # -2/-1 처리만 조심
+                remain = remain if remain > 0 else 0 # 가드
+                raise ValidationAppError(
+                    "Too many requests. Please try again later.",
+                    target="resend",
+                    meta={"cooldown_remaining_sec": max(remain, 0)},
+                )
 
             # 이전 pending, send 인증 메일 무효화
-            # affected = uow.users.update_email_verifications_status_by_user_id(
-            #     user_id=user.id,
-            #     from_statuses=[EmailVerificationStatus.PENDING, EmailVerificationStatus.SENT],
-            #     to_status=EmailVerificationStatus.CANCELLED,
-            #     set_expires_at=now,        # expires_at = now로 당김
-            #     set_expires_at_to_now=True,
-            #     only_not_expired=True,     # expires_at > now 조건
-            # )
-
-            uow.users.update_email_verification_by_filter(
+            affected = uow.users.update_email_verification_by_filter(
                 filters=EmailDTO.EmailVerificationFilter(
                     user_id=user.id,
                     statuses=(EmailVerificationStatus.PENDING, EmailVerificationStatus.SENT),

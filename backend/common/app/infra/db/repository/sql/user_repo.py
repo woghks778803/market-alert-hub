@@ -50,43 +50,6 @@ class SqlUserRepo(UserRepo):
         return self._db.execute(stmt).scalars().all()
 
 
-    def update_email_verifications_status_by_user_id(
-        self,
-        user_id: int,
-        *,
-        from_statuses: Iterable[EmailVerificationStatus],
-        to_status: EmailVerificationStatus,
-        set_expires_at: datetime,
-        set_expires_at_to_now: bool = True,
-        only_not_expired: bool = True,
-    ) -> int:
-        """
-        user_id 기준으로 특정 상태(from_statuses)의 email_verifications를 일괄 업데이트한다.
-
-        - 기본 의도: (PENDING, SENT) -> CANCELLED 로 바꾸고, expires_at을 now로 당겨 즉시 무효화
-        - SELECT 없이 UPDATE 1회로 처리됨
-        - 반환값: 영향을 받은 row 수
-        """
-
-        stmt = (
-            update(EmailVerificationModel)
-            .where(EmailVerificationModel.user_id == user_id)
-            .where(EmailVerificationModel.status.in_(list(from_statuses)))
-        )
-
-        if only_not_expired:
-            stmt = stmt.where(EmailVerificationModel.expires_at > set_expires_at)
-
-        values: dict = {"status": to_status}
-        if set_expires_at_to_now:
-            values["expires_at"] = set_expires_at
-
-        stmt = stmt.values(**values)
-
-        # synchronize_session=False: 세션에 로딩된 엔티티 동기화 안 함(성능/안전)
-        result = self._db.execute(stmt.execution_options(synchronize_session=False))
-        return int(getattr(result, "rowcount", 0) or 0)
-
     def _to_email_verification_where_mapping(self, filters: EmailDTO.EmailVerificationFilter):
         wheres = []
         if filters.id is not None:
