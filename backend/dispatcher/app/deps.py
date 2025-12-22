@@ -1,17 +1,7 @@
 from app.runtime.bootstrap import get_core_services, get_core_dispatcher_config_bag
 from app.service.factory import ServiceFactory
 
-from redis import Redis
-
-_redis: Redis | None = None
 dispatcher_config = get_core_dispatcher_config_bag()
-
-
-def get_redis() -> Redis:
-    global _redis
-    if _redis is None:
-        _redis = Redis.from_url(dispatcher_config.redis_url)
-    return _redis
 
 
 def get_services() -> ServiceFactory:
