@@ -1,154 +1,296 @@
+# import logging
+# from typing import Any, Mapping
+# from redis import Redis
+# from app.wiring import build_worker_runtime, worker_config
+# from app.service.factory import ServiceFactory
+# from app.domain import UserDTO, EmailDTO, ValidationAppError
+# from app.core.util.datetime import utcnow, ensure_utc
+# from app.infra.db.model.email_verification import EmailVerificationStatus
+# import uuid
+
+# logger = logging.getLogger(__name__)
+# # ---- helpers --------------------------------------------------------------
+
+
+# def _try_acquire_lock(r, key: str, ttl_sec: int) -> str | None:
+#     token = uuid.uuid4().hex
+#     ok = r.set(key, token, nx=True, ex=ttl_sec)
+#     return token if ok else None
+
+
+# def _release_lock(r, key: str, token: str) -> None:
+#     # 토큰 일치할 때만 해제(안전)
+#     if r.get(key) == token:
+#         r.delete(key)
+
+
+# def _as_list(v: Any) -> list[str]:
+#     if v is None:
+#         return []
+#     if isinstance(v, str):
+#         return [v]
+#     # Sequence[str] 같은 형태도 허용
+#     try:
+#         return list(v)
+#     except Exception:
+#         return [str(v)]
+
+
+# def _dispatch_with_svcs(
+#     svcs: ServiceFactory,
+#     redis_conn: Redis,
+#     *,
+#     event_type: str,
+#     payload: Mapping[str, Any],
+# ):
+#     """
+#     OutboxService가 호출하는 실제 디스패처.
+#     - channel이 email일 때 EmailService로 라우팅
+#     - event_type에 따라 EmailService 메서드 매핑
+#     - 잘못된 payload면 예외 발생 → OutboxService가 재시도/FAILED 처리
+#     """
+#     logger.info("dispatch event_type=%s keys=%s", event_type, list(payload.keys()))
+
+#     # 공통 필드
+#     user_id = payload.get("user_id")
+
+#     if not user_id:
+#         raise ValidationAppError(
+#             "payload 'user_id' is required", target="payload.user_id"
+#         )
+
+#     # --- 라우팅 ---
+#     if event_type in ("EMAIL_AUTH_CODE"):
+#         user_email_info = svcs.users.get_user_email_info(user_id=user_id)
+
+#         email_verification_id = payload.get("email_verification_id")
+#         if not email_verification_id:
+#             raise ValidationAppError(
+#                 "payload 'email_verification_id' is required",
+#                 target="payload.email_verification_id",
+#             )
+
+#         verify_token = payload.get("verify_token")
+#         if not verify_token:
+#             raise ValidationAppError(
+#                 "payload 'verify_token' is required", target="payload.verify_token"
+#             )
+
+#         # --- ✅ 발송 직전 재검사(중요) ---
+#         # 1) email_verification 레코드 조회
+#         email_verification = svcs.users.get_email_verification_by_id(
+#             email_verification_id=email_verification_id
+#         )
+
+#         # 2) 유효성 체크: "아직 발송해도 되는 상태"만 통과
+#         #    - resend에서 기존 건 CANCELLED + expires_at=now 처리하니까 여기서 걸러짐
+#         now = utcnow()
+#         if email_verification.status != EmailVerificationStatus.PENDING:
+#             # 이미 취소/소비/발송완료 등 → 보내면 안 됨
+#             # (스킵 정책: 발송 호출 없이 종료)
+#             return {
+#                 "ok": True,
+#                 "skipped": True,
+#                 "reason": f"status={email_verification.status}",
+#             }
+
+#         expires_at = ensure_utc(email_verification.expires_at)
+#         if expires_at <= now:
+#             # 만료(재발송으로 expires_at 당겨진 케이스 포함)
+#             return {"ok": True, "skipped": True, "reason": "expired"}
+
+#         lock_key = f"lock:email_verify_send:{email_verification_id}"
+#         token = _try_acquire_lock(
+#             redis_conn, lock_key, ttl_sec=worker_config.outbox_send_lock_ttl_sec
+#         )
+#         if not token:
+#             return {"ok": True, "skipped": True, "reason": "locked"}
+
+#         try:
+#             ses_result = svcs.emails.send_verify(
+#                 user=user_email_info,
+#                 verify_token=verify_token,
+#             )
+#             svcs.users.set_email_verification_sent(
+#                 email_verification_id=email_verification_id
+#             )
+
+#             return ses_result
+#         finally:
+#             _release_lock(redis_conn, lock_key, token)
+
+#     # if event_type in ("user_signed_up", "user_welcome"):
+#     #     user_name = (payload.get("user_name")
+#     #                  or payload.get("name")
+#     #                  or "")
+#     #     dashboard_link = payload.get("dashboard_link", "")
+#     #     email_svc.send_welcome(
+#     #         to=to,
+#     #         user_name=user_name,
+#     #         dashboard_link=dashboard_link,
+#     #     )
+#     #     return
+
+#     # if event_type in ("alert_triggered", "price_alert"):
+#     #     email_svc.send_alert(
+#     #         to=to,
+#     #         user_name=payload.get("user_name", ""),
+#     #         exchange=payload.get("exchange", ""),
+#     #         symbol=payload.get("symbol", ""),
+#     #         condition=payload.get("condition", ""),
+#     #         current_price=payload.get("current_price", ""),
+#     #         currency=payload.get("currency", ""),
+#     #         alert_link=payload.get("alert_link", ""),
+#     #         settings_link=payload.get("settings_link", ""),
+#     #     )
+#     #     return
+
+#     # 알 수 없는 이벤트
+#     raise ValidationAppError(
+#         f"unsupported event_type={event_type}", target="event_type"
+#     )
+
+
+# # ---- job entrypoint -------------------------------------------------------
+
+
+# def deliver_outbox_event(outbox_id: int) -> None:
+#     """
+#     RQ가 실행하는 잡 엔트리.
+#     OutboxService가 트랜잭션/상태 전이를 담당하고,
+#     실제 발송은 _dispatch_with_svcs가 EmailService로 위임한다.
+#     """
+#     rt = build_worker_runtime()
+
+#     rt.svcs.outboxs.deliver_outbox(
+#         outbox_id=outbox_id,
+#         dispatch_fn=lambda event_type, payload: _dispatch_with_svcs(
+#             rt.svcs, redis_conn=rt.redis_conn, event_type=event_type, payload=payload
+#         ),
+#     )
+
+
 import logging
-from typing import Any, Mapping
+import uuid
+from typing import Any, Callable, Mapping
+
 from redis import Redis
-from app.deps import get_services, get_redis, worker_config
+
+from app.wiring import get_app_context, worker_config
 from app.service.factory import ServiceFactory
-from app.domain import UserDTO, EmailDTO, ValidationAppError
+from app.domain import ValidationAppError
 from app.core.util.datetime import utcnow, ensure_utc
 from app.infra.db.model.email_verification import EmailVerificationStatus
-import uuid
 
 logger = logging.getLogger(__name__)
+Handler = Callable[[ServiceFactory, Redis, Mapping[str, Any]], Any]
 # ---- helpers --------------------------------------------------------------
 
 
-def _try_acquire_lock(r, key: str, ttl_sec: int) -> str | None:
+def _require(payload: Mapping[str, Any], key: str, *, target: str) -> Any:
+    v = payload.get(key)
+    if v is None or v == "":
+        raise ValidationAppError(f"payload '{key}' is required", target=target)
+    return v
+
+
+def _get_worker_config():
+    # worker_config를 "값(bag)"으로 들고 있든, "함수"로 들고 있든 둘 다 대응
+    return worker_config() if callable(worker_config) else worker_config
+
+
+def _try_acquire_lock(r: Redis, key: str, ttl_sec: int) -> str | None:
     token = uuid.uuid4().hex
     ok = r.set(key, token, nx=True, ex=ttl_sec)
     return token if ok else None
 
 
-def _release_lock(r, key: str, token: str) -> None:
+def _release_lock(r: Redis, key: str, token: str) -> None:
     # 토큰 일치할 때만 해제(안전)
-    if r.get(key) == token:
+    cur = r.get(key)
+    if cur is None:
+        return
+    if isinstance(cur, bytes):
+        cur = cur.decode("utf-8", errors="ignore")
+    if cur == token:
         r.delete(key)
 
 
-def _as_list(v: Any) -> list[str]:
-    if v is None:
-        return []
-    if isinstance(v, str):
-        return [v]
-    # Sequence[str] 같은 형태도 허용
+def _skip(reason: str) -> dict:
+    return {"ok": True, "skipped": True, "reason": reason}
+
+
+# ---- handlers -------------------------------------------------------------
+
+
+def _handle_email_auth_code(
+    svcs: ServiceFactory,
+    redis_conn: Redis,
+    payload: Mapping[str, Any],
+) -> Any:
+    user_id = _require(payload, "user_id", target="payload.user_id")
+    email_verification_id = _require(
+        payload, "email_verification_id", target="payload.email_verification_id"
+    )
+    verify_token = _require(payload, "verify_token", target="payload.verify_token")
+
+    user_email_info = svcs.users.get_user_email_info(user_id=user_id)
+
+    # --- ✅ 발송 직전 재검사(중요) ---
+    email_verification = svcs.users.get_email_verification_by_id(
+        email_verification_id=email_verification_id
+    )
+
+    now = utcnow()
+    if email_verification.status != EmailVerificationStatus.PENDING:
+        return _skip(f"status={email_verification.status}")
+
+    expires_at = ensure_utc(email_verification.expires_at)
+    if expires_at <= now:
+        return _skip("expired")
+
+    cfg = _get_worker_config()
+    lock_key = f"lock:email_verify_send:{email_verification_id}"
+    token = _try_acquire_lock(
+        redis_conn, lock_key, ttl_sec=cfg.outbox_send_lock_ttl_sec
+    )
+    if not token:
+        return _skip("locked")
+
     try:
-        return list(v)
-    except Exception:
-        return [str(v)]
+        ses_result = svcs.emails.send_verify(
+            user=user_email_info,
+            verify_token=verify_token,
+        )
+        svcs.users.set_email_verification_sent(
+            email_verification_id=email_verification_id
+        )
+        return ses_result
+    finally:
+        _release_lock(redis_conn, lock_key, token)
 
 
-def _dispatch_with_svcs(
+_HANDLERS: dict[str, Handler] = {
+    "EMAIL_AUTH_CODE": _handle_email_auth_code,
+}
+
+
+def _dispatch(
     svcs: ServiceFactory,
     redis_conn: Redis,
     *,
     event_type: str,
     payload: Mapping[str, Any],
-):
-    """
-    OutboxService가 호출하는 실제 디스패처.
-    - channel이 email일 때 EmailService로 라우팅
-    - event_type에 따라 EmailService 메서드 매핑
-    - 잘못된 payload면 예외 발생 → OutboxService가 재시도/FAILED 처리
-    """
+) -> Any:
     logger.info("dispatch event_type=%s keys=%s", event_type, list(payload.keys()))
 
-    # 공통 필드
-    user_id = payload.get("user_id")
-
-    if not user_id:
+    handler = _HANDLERS.get(event_type)
+    if handler is None:
         raise ValidationAppError(
-            "payload 'user_id' is required", target="payload.user_id"
+            f"unsupported event_type={event_type}", target="event_type"
         )
 
-    # --- 라우팅 ---
-    if event_type in ("EMAIL_AUTH_CODE"):
-        user_email_info = svcs.users.get_user_email_info(user_id=user_id)
-
-        email_verification_id = payload.get("email_verification_id")
-        if not email_verification_id:
-            raise ValidationAppError(
-                "payload 'email_verification_id' is required",
-                target="payload.email_verification_id",
-            )
-
-        verify_token = payload.get("verify_token")
-        if not verify_token:
-            raise ValidationAppError(
-                "payload 'verify_token' is required", target="payload.verify_token"
-            )
-
-        # --- ✅ 발송 직전 재검사(중요) ---
-        # 1) email_verification 레코드 조회
-        email_verification = svcs.users.get_email_verification_by_id(
-            email_verification_id=email_verification_id
-        )
-
-        # 2) 유효성 체크: "아직 발송해도 되는 상태"만 통과
-        #    - resend에서 기존 건 CANCELLED + expires_at=now 처리하니까 여기서 걸러짐
-        now = utcnow()
-        if email_verification.status != EmailVerificationStatus.PENDING:
-            # 이미 취소/소비/발송완료 등 → 보내면 안 됨
-            # (스킵 정책: 발송 호출 없이 종료)
-            return {
-                "ok": True,
-                "skipped": True,
-                "reason": f"status={email_verification.status}",
-            }
-
-        expires_at = ensure_utc(email_verification.expires_at)
-        if expires_at <= now:
-            # 만료(재발송으로 expires_at 당겨진 케이스 포함)
-            return {"ok": True, "skipped": True, "reason": "expired"}
-
-        lock_key = f"lock:email_verify_send:{email_verification_id}"
-        token = _try_acquire_lock(
-            redis_conn, lock_key, ttl_sec=worker_config.outbox_send_lock_ttl_sec
-        )
-        if not token:
-            return {"ok": True, "skipped": True, "reason": "locked"}
-
-        try:
-            ses_result = svcs.emails.send_verify(
-                user=user_email_info,
-                verify_token=verify_token,
-            )
-            svcs.users.set_email_verification_sent(
-                email_verification_id=email_verification_id
-            )
-
-            return ses_result
-        finally:
-            _release_lock(redis_conn, lock_key, token)
-
-    # if event_type in ("user_signed_up", "user_welcome"):
-    #     user_name = (payload.get("user_name")
-    #                  or payload.get("name")
-    #                  or "")
-    #     dashboard_link = payload.get("dashboard_link", "")
-    #     email_svc.send_welcome(
-    #         to=to,
-    #         user_name=user_name,
-    #         dashboard_link=dashboard_link,
-    #     )
-    #     return
-
-    # if event_type in ("alert_triggered", "price_alert"):
-    #     email_svc.send_alert(
-    #         to=to,
-    #         user_name=payload.get("user_name", ""),
-    #         exchange=payload.get("exchange", ""),
-    #         symbol=payload.get("symbol", ""),
-    #         condition=payload.get("condition", ""),
-    #         current_price=payload.get("current_price", ""),
-    #         currency=payload.get("currency", ""),
-    #         alert_link=payload.get("alert_link", ""),
-    #         settings_link=payload.get("settings_link", ""),
-    #     )
-    #     return
-
-    # 알 수 없는 이벤트
-    raise ValidationAppError(
-        f"unsupported event_type={event_type}", target="event_type"
-    )
+    return handler(svcs, redis_conn, payload)
 
 
 # ---- job entrypoint -------------------------------------------------------
@@ -158,14 +300,16 @@ def deliver_outbox_event(outbox_id: int) -> None:
     """
     RQ가 실행하는 잡 엔트리.
     OutboxService가 트랜잭션/상태 전이를 담당하고,
-    실제 발송은 _dispatch_with_svcs가 EmailService로 위임한다.
+    실제 발송은 handler로 위임한다.
     """
-    svcs: ServiceFactory = get_services()
-    redis_conn: Redis = get_redis()
+    ctx = get_app_context() 
 
-    svcs.outboxs.deliver_outbox(
+    ctx.svcs.outboxs.deliver_outbox(
         outbox_id=outbox_id,
-        dispatch_fn=lambda event_type, payload: _dispatch_with_svcs(
-            svcs, redis_conn=redis_conn, event_type=event_type, payload=payload
+        dispatch_fn=lambda event_type, payload: _dispatch(
+            ctx.svcs,
+            ctx.redis_conn,
+            event_type=event_type,
+            payload=payload,
         ),
     )

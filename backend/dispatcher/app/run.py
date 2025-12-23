@@ -3,8 +3,7 @@ import signal
 import time
 
 from app.core.logging import setup_logging
-from .deps import dispatcher_config
-from .wiring import build_dispatcher_runtime
+from .wiring import build_dispatcher_runtime, dispatcher_config
 
 log = logging.getLogger("dispatcher")
 

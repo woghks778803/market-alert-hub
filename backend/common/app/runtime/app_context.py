@@ -1,7 +1,8 @@
 from dataclasses import dataclass
-from typing import Any
+from app.service.factory import ServiceFactory
+from redis.client import Redis
 
 @dataclass(frozen=True)
 class AppContext:
-    svcs: Any
-    redis_conn: Any
+    svcs: ServiceFactory
+    redis_conn: Redis
