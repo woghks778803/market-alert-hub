@@ -15,7 +15,7 @@ def run() -> None:
 
     w = Worker([rt.q_outbox], connection=rt.redis_conn)
 
-    # ✅ 운영 느낌 핵심: SIGTERM 받으면 현재 job 끝내고 종료
+    # SIGTERM 받으면 현재 job 끝내고 종료
     def _handle_stop(signum, frame):  # noqa: ARG001
         log.warning("worker stopping by signal=%s", signum)
         try:

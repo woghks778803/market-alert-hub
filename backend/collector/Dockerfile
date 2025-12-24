@@ -1,7 +1,11 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
+
 WORKDIR /app
-ENV TZ=${TZ:-Asia/Seoul}
-RUN pip install --no-cache-dir redis
-COPY . .
-CMD ["python", "-c", "import time,sys; print('collectors up'); sys.stdout.flush(); \
-[time.sleep(60) for _ in iter(int,1)]"]
+
+COPY requirements.txt .
+RUN pip install --upgrade pip && pip install -r /app/requirements.txt
+
+COPY . /app
+
+RUN chmod +x /app/entrypoint.sh
+ENTRYPOINT ["/app/entrypoint.sh"]

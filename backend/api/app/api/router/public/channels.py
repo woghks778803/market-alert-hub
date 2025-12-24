@@ -9,13 +9,14 @@ import app.api.openapi as OpenApi
 
 router = APIRouter(prefix="/channels")
 
+
 @router.get(
-    "", 
+    "",
     response_model=Envelope[list[ChannelSchema.ChannelRead]],
     summary="사용자 채널 목록",
     responses=OpenApi.combine(
         OpenApi.OK(
-            Envelope[list[ChannelSchema.ChannelRead]],  # ✅ 스키마도 래퍼로
+            Envelope[list[ChannelSchema.ChannelRead]],  #  스키마도 래퍼로
             description="리스트 조회 성공",
         ),
         OpenApi.ERR_409,
@@ -30,9 +31,10 @@ def list_channels(
     out = [ChannelSchema.ChannelRead.model_validate(r) for r in rows]
     return ok(out, request_id=meta.request_id)
 
+
 @router.get(
-    "/{user_channel_id}", 
-    response_model=Envelope[ChannelSchema.ChannelRead], 
+    "/{user_channel_id}",
+    response_model=Envelope[ChannelSchema.ChannelRead],
     summary="사용자 채널 상세",
     responses=OpenApi.combine(
         OpenApi.OK(Envelope[ChannelSchema.ChannelRead]),
@@ -47,13 +49,14 @@ def get_channel(
     out = ChannelSchema.ChannelRead.model_validate(result)
     return ok(out, request_id=meta.request_id)
 
+
 @router.post(
-    "", 
+    "",
     response_model=Envelope[ChannelSchema.ChannelRead],
     summary="사용자 채널 등록",
     responses=OpenApi.combine(
         OpenApi.CREATED(
-            Envelope[list[ChannelSchema.ChannelRead]],  # ✅ 스키마도 래퍼로
+            Envelope[list[ChannelSchema.ChannelRead]],  #  스키마도 래퍼로
             description="리스트 조회 성공",
         ),
         OpenApi.ERR_409,
@@ -61,7 +64,9 @@ def get_channel(
 )
 def create_channel(
     response: Response,
-    payload : ChannelSchema.ChannelCreate = Body(...,),
+    payload: ChannelSchema.ChannelCreate = Body(
+        ...,
+    ),
     user: AuthDTO.AuthUser = Depends(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
@@ -71,12 +76,11 @@ def create_channel(
     )
     return created(result, response=response, request_id=meta.request_id)
 
+
 @router.delete(
-    "/{user_channel_id}", 
+    "/{user_channel_id}",
     summary="사용자 채널 삭제(soft)",
-    responses=OpenApi.combine(
-        OpenApi.NO_CONTENT({}, description="완료")
-    ),
+    responses=OpenApi.combine(OpenApi.NO_CONTENT({}, description="완료")),
 )
 def delete_channel(
     user_channel_id: int = Path(..., ge=1),

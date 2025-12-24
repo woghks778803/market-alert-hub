@@ -47,6 +47,38 @@ class DispatcherConfigBag:
     outbox_idle_sleep: float
 
 
+@dataclass(frozen=True)
+class CollectorConfigBag:
+    # 공통
+    log_level: str
+    redis_url: str
+
+    # exchange
+    exchange: str
+
+    # 1) catalog sync
+    enable_catalog_sync: bool
+    catalog_sync_interval_sec: int
+
+    # 2) market stream
+    enable_stream: bool
+    stream_reconnect_backoff_sec: float
+
+    # restart policy (supervisor)
+    restart_base_backoff_sec: float
+    restart_max_backoff_sec: float
+    restart_jitter_ratio: float
+
+    # checkpoint(state)
+    checkpoint_backend: str  # memory | file | redis
+    checkpoint_key_prefix: str
+    checkpoint_file_path: str
+
+    # (optional) backfill
+    enable_backfill: bool
+    backfill_lookback_minutes: int
+
+
 # 페이징/정렬 -------------------------------------------------------------------
 
 

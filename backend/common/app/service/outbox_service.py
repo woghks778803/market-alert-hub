@@ -1,6 +1,7 @@
 from typing import Callable, Any
 import logging
 from datetime import datetime
+
 # from tenacity import retry, stop_after_attempt, wait_exponential
 from app.domain.uow import UnitOfWork
 from app.core.constants import OutboxStatus
@@ -12,16 +13,18 @@ logger = logging.getLogger(__name__)
 
 
 class OutboxService:
-    def __init__(self, trace_id: str | None, uow_factory: Callable[[], UnitOfWork]) -> None:
+    def __init__(
+        self, trace_id: str | None, uow_factory: Callable[[], UnitOfWork]
+    ) -> None:
         self._trace_id = trace_id
         self._uow_factory = uow_factory
 
     def enqueue_outbox_pending(self, limit: int, q_outbox):
         with self._uow_factory() as uow:
-            outbox_filter = OutboxDTO.OutboxFilter(status=OutboxStatus.PENDING, next_run_at=utcnow())
-            ids = uow.outboxs.list_outboxs_by_filter(
-                outbox_filter, limit=limit
-            )  
+            outbox_filter = OutboxDTO.OutboxFilter(
+                status=OutboxStatus.PENDING, next_run_at=utcnow()
+            )
+            ids = uow.outboxs.list_outboxs_by_filter(outbox_filter, limit=limit)
             if not ids:
                 return 0
 
@@ -42,7 +45,7 @@ class OutboxService:
                 )
                 logger.info("enqueued outbox id=%s", oid)
 
-            uow.commit()  # ✅ enqueue까지 성공하면 commit
+            uow.commit()  #  enqueue까지 성공하면 commit
             return len(ids)
 
     # @retry(
@@ -72,7 +75,7 @@ class OutboxService:
         result_code: str | None = None
         result_message: str | None = None
         result_payload: dict[str, Any] | None = None
-        
+
         try:
             send_result = dispatch_fn(event_type=row.event_type, payload=payload)
             if isinstance(send_result, dict):
@@ -80,7 +83,9 @@ class OutboxService:
                 result_payload = {
                     "provider": "ses",
                     "message_id": send_result.get("MessageId"),
-                    "request_id": send_result.get("ResponseMetadata", {}).get("RequestId"),
+                    "request_id": send_result.get("ResponseMetadata", {}).get(
+                        "RequestId"
+                    ),
                 }
             elif send_result is not None:
                 # 문자열(MessageId) 같은 단일 값이면 래핑
@@ -102,7 +107,10 @@ class OutboxService:
                 policy = provider.retry_policy  # JSON → dict 파싱
 
                 if policy is None:
-                    raise InternalServerError("retry policy not configured", target="channel_provider.retry_policy")
+                    raise InternalServerError(
+                        "retry policy not configured",
+                        target="channel_provider.retry_policy",
+                    )
                 max_attempts = policy["max_attempts"]
                 base_delay = policy["base_delay_sec"]
                 max_delay = policy["max_delay_sec"]
@@ -117,7 +125,9 @@ class OutboxService:
                     )
                     next_run_at = utcnow() + delay
 
-                    print(f"max_attempts={max_attempts}, base_delay={base_delay}, max_delay={max_delay}, attempts={attempts},  next_at={next_run_at}")
+                    print(
+                        f"max_attempts={max_attempts}, base_delay={base_delay}, max_delay={max_delay}, attempts={attempts},  next_at={next_run_at}"
+                    )
 
                 else:
                     retryable = False
@@ -164,5 +174,3 @@ class OutboxService:
                 )
 
                 uow.commit()
-
-        

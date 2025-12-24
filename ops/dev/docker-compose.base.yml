@@ -100,8 +100,11 @@ services:
     working_dir: /app
     volumes:
       - ../../backend/collector:/app:cached
+      - ../../backend/common:/app/common:cached
+    entrypoint: [ "sh", "/app/entrypoint.sh" ]
     # CMD는 Dockerfile 기본값
     depends_on:
+      db: { condition: service_healthy }
       redis: { condition: service_healthy }
     env_file:
       - ./env/common.env

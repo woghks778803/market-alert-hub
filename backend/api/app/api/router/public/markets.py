@@ -18,7 +18,7 @@ router = APIRouter()
     summary="거래소 목록",
     responses=OpenApi.combine(
         OpenApi.OK(
-            Envelope[list[MarketSchema.ExchangeRead]],  # ✅ 스키마도 래퍼로
+            Envelope[list[MarketSchema.ExchangeRead]],  #  스키마도 래퍼로
             description="리스트 조회 성공",
         ),
         OpenApi.ERR_409,
@@ -40,7 +40,7 @@ def list_exchanges(
     summary="거래소 종목 목록",
     responses=OpenApi.combine(
         OpenApi.OK(
-            Envelope[list[MarketSchema.MarketInstrumentItem]], 
+            Envelope[list[MarketSchema.MarketInstrumentItem]],
             description="리스트 조회 성공",
         ),
         OpenApi.ERR_409,
@@ -66,7 +66,7 @@ def list_exchange_instruments(
     summary="거래소-종목 매핑(선택)",
     responses=OpenApi.combine(
         OpenApi.OK(
-            Envelope[list[MarketSchema.MappingItem]], 
+            Envelope[list[MarketSchema.MappingItem]],
             description="리스트 조회 성공",
         ),
         OpenApi.ERR_409,
@@ -83,13 +83,13 @@ def list_mappings(
 
 # Prices
 @router.get(
-    "/prices/candles", 
-    response_model=Envelope[list[MarketSchema.CandleBase]], 
+    "/prices/candles",
+    response_model=Envelope[list[MarketSchema.CandleBase]],
     summary="캔들 조회",
     description="cursor > start, end 우선 (같이 값이 들어갈 경우 start, end는 무시됩니다)",
     responses=OpenApi.combine(
         OpenApi.OK(
-            Envelope[list[MarketSchema.CandleBase]], 
+            Envelope[list[MarketSchema.CandleBase]],
             description="리스트 조회 성공",
         ),
         OpenApi.ERR_409,
@@ -149,6 +149,6 @@ def post_candles(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    item=MarketDTO.CandleBase(**payload.model_dump())
+    item = MarketDTO.CandleBase(**payload.model_dump())
     result = svcs.markets.ingest_snapshot(base=base, item=item)
     return created(result, response=response, request_id=meta.request_id)

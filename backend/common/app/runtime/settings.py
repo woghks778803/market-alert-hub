@@ -7,7 +7,7 @@ from typing import Any
 class Settings(BaseSettings):
 
     def __init__(self, **data: Any):
-        # ✅ Pylance에 "키워드 가변 인자 받는다"를 알려줘서 경고 제거
+        #  Pylance에 "키워드 가변 인자 받는다"를 알려줘서 경고 제거
         super().__init__(**data)
 
     # deploy
@@ -70,7 +70,8 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: str | None = None
 
     # --- Dispatcher, Worker ---
-    LOG_LEVEL: str = Field(default="INFO")
+    WORKER_LOG_LEVEL: str = Field(default="INFO")
+    DISPATCHER_LOG_LEVEL: str = Field(default="INFO")
     OUTBOX_POLL_LIMIT: int = Field(default=50)
     OUTBOX_IDLE_SLEEP: float = Field(default=1.0)
     # --- Worker 전용 ---
@@ -80,6 +81,28 @@ class Settings(BaseSettings):
 
     REDIS_STREAM_ALERTS: str = Field(default="alerts")
     REDIS_STREAM_DELIVERIES: str = Field(default="deliveries")
+
+    # --- Collector ---
+    COLLECTOR_LOG_LEVEL: str = Field(default="INFO")
+
+    COLLECTOR_EXCHANGE: str = "upbit"
+
+    COLLECTOR_ENABLE_CATALOG_SYNC: bool = True
+    COLLECTOR_CATALOG_SYNC_INTERVAL_SEC: int = 21600  # 6h
+
+    COLLECTOR_ENABLE_STREAM: bool = False
+    COLLECTOR_STREAM_RECONNECT_BACKOFF_SEC: float = 3.0
+
+    COLLECTOR_RESTART_BASE_BACKOFF_SEC: float = 2.0
+    COLLECTOR_RESTART_MAX_BACKOFF_SEC: float = 30.0
+    COLLECTOR_RESTART_JITTER_RATIO: float = 0.2
+
+    COLLECTOR_CHECKPOINT_BACKEND: str = "redis"  # memory|file|redis
+    COLLECTOR_CHECKPOINT_KEY_PREFIX: str = "collector:checkpoint:"
+    COLLECTOR_CHECKPOINT_FILE_PATH: str = "/tmp/collector_checkpoint.json"
+
+    COLLECTOR_ENABLE_BACKFILL: bool = False
+    COLLECTOR_BACKFILL_LOOKBACK_MINUTES: int = 60
 
     # 로컬 개발 편의: .env 읽기 (컨테이너에선 ENV가 우선)
     model_config = SettingsConfigDict(

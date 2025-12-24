@@ -3,8 +3,20 @@ from datetime import datetime, timedelta, timezone
 
 from app.domain.uow import UnitOfWork
 from app.infra.db.model import UserModel, OutboxModel, EmailVerificationModel
-from app.domain import AuthDTO, EmailDTO, ValidationAppError, AuthError, PermissionError, CryptoPort
-from app.core.constants import UserRole, UserStatus, OutboxStatus, EmailVerificationStatus
+from app.domain import (
+    AuthDTO,
+    EmailDTO,
+    ValidationAppError,
+    AuthError,
+    PermissionError,
+    CryptoPort,
+)
+from app.core.constants import (
+    UserRole,
+    UserStatus,
+    OutboxStatus,
+    EmailVerificationStatus,
+)
 from app.core import dto as CoreDTO
 from app.core.util.datetime import utcnow, ensure_utc
 from app.core.util.serialization import to_canonical_json
@@ -48,7 +60,9 @@ class AuthService:
             email_secrets = self._secrets.encrypt(email.encode("utf-8"))
 
             if uow.users.get_user_by_email_fingerprint(email_fingerprint):
-                raise ValidationAppError("email_fingerprint already exists", target="email_fingerprint")
+                raise ValidationAppError(
+                    "email_fingerprint already exists", target="email_fingerprint"
+                )
 
             user = UserModel(
                 email_fingerprint=email_fingerprint,
@@ -80,9 +94,15 @@ class AuthService:
 
             uow.users.add_email_verification(email_verification)
 
-            outbox_fingerprint_dict = {"event_type": "EMAIL_AUTH_CODE", "aggregate_type": "user", "aggregate_id": user.id, "email_verification_id": email_verification.id}
+            outbox_fingerprint_dict = {
+                "event_type": "EMAIL_AUTH_CODE",
+                "aggregate_type": "user",
+                "aggregate_id": user.id,
+                "email_verification_id": email_verification.id,
+            }
             outbox_fingerprint = to_canonical_json(outbox_fingerprint_dict)
-            if outbox_fingerprint is not None: outbox_fingerprint= self._hmac.fp_hash(outbox_fingerprint)
+            if outbox_fingerprint is not None:
+                outbox_fingerprint = self._hmac.fp_hash(outbox_fingerprint)
 
             uow.outboxs.add_outbox(
                 OutboxModel(
@@ -91,7 +111,11 @@ class AuthService:
                     aggregate_type="user",
                     aggregate_id=user.id,
                     outbox_fingerprint=outbox_fingerprint,
-                    payload={"user_id": user.id, "email_verification_id": email_verification.id, "verify_token": email_token},
+                    payload={
+                        "user_id": user.id,
+                        "email_verification_id": email_verification.id,
+                        "verify_token": email_token,
+                    },
                     status=OutboxStatus.PENDING,
                     attempts=0,
                 )
@@ -127,7 +151,7 @@ class AuthService:
 
             if user.status != UserStatus.ACTIVE:
                 raise PermissionError("User not active status", target="status")
-            
+
             if user.email_verified_at is None:
                 raise PermissionError("Email not verified", target="email_verified_at")
 
@@ -175,15 +199,17 @@ class AuthService:
                 raise AuthError("Invalid credentials")
 
             if user.email_verified_at is not None:
-                raise ValidationAppError("Email already verified", target="email_verified_at")
-            
-            # ✅ 쿨다운 (연타 방지)
+                raise ValidationAppError(
+                    "Email already verified", target="email_verified_at"
+                )
+
+            #  쿨다운 (연타 방지)
             cooldown_sec = self._config.email_verify_resend_cooldown_sec
             key = f"cooldown:email_verify_resend:{user.id}"
             ok = self._redis_client().set(key, b"1", nx=True, ex_sec=cooldown_sec)
             if not ok:
                 remain = self._redis_client().ttl(key)  # -2/-1 처리만 조심
-                remain = remain if remain > 0 else 0 # 가드
+                remain = remain if remain > 0 else 0  # 가드
                 raise ValidationAppError(
                     "Too many requests. Please try again later.",
                     target="resend",
@@ -194,7 +220,10 @@ class AuthService:
             affected = uow.users.update_email_verification_by_filter(
                 filters=EmailDTO.EmailVerificationFilter(
                     user_id=user.id,
-                    statuses=(EmailVerificationStatus.PENDING, EmailVerificationStatus.SENT),
+                    statuses=(
+                        EmailVerificationStatus.PENDING,
+                        EmailVerificationStatus.SENT,
+                    ),
                     expires_after=now,  # expires_at > now 인 것만
                 ),
                 updates=EmailDTO.EmailVerificationUpdate(
@@ -220,9 +249,15 @@ class AuthService:
 
             uow.users.add_email_verification(email_verification)
 
-            outbox_fingerprint_dict = {"event_type": "EMAIL_AUTH_CODE", "aggregate_type": "user", "aggregate_id": user.id, "email_verification_id": email_verification.id}
+            outbox_fingerprint_dict = {
+                "event_type": "EMAIL_AUTH_CODE",
+                "aggregate_type": "user",
+                "aggregate_id": user.id,
+                "email_verification_id": email_verification.id,
+            }
             outbox_fingerprint = to_canonical_json(outbox_fingerprint_dict)
-            if outbox_fingerprint is not None: outbox_fingerprint= self._hmac.fp_hash(outbox_fingerprint)
+            if outbox_fingerprint is not None:
+                outbox_fingerprint = self._hmac.fp_hash(outbox_fingerprint)
 
             uow.outboxs.add_outbox(
                 OutboxModel(
@@ -231,7 +266,11 @@ class AuthService:
                     aggregate_type="user",
                     aggregate_id=user.id,
                     outbox_fingerprint=outbox_fingerprint,
-                    payload={"user_id": user.id, "email_verification_id": email_verification.id, "verify_token": email_token},
+                    payload={
+                        "user_id": user.id,
+                        "email_verification_id": email_verification.id,
+                        "verify_token": email_token,
+                    },
                     status=OutboxStatus.PENDING,
                     attempts=0,
                 )
@@ -242,8 +281,8 @@ class AuthService:
             return {"ok": True}
 
     def verify_email(
-        self, 
-        *, 
+        self,
+        *,
         token: str,
         ip: str | None = None,
         ua: str | None = None,
@@ -253,8 +292,10 @@ class AuthService:
         token_hash = self._hmac.token_hash(token)
 
         with self._uow_factory() as uow:
-            
-            email_verification = uow.users.get_email_verification_by_token_hash(token_hash)
+
+            email_verification = uow.users.get_email_verification_by_token_hash(
+                token_hash
+            )
 
             if not email_verification:
                 raise ValidationAppError("Token not found", target="token")
@@ -274,9 +315,8 @@ class AuthService:
             email_verification.status = EmailVerificationStatus.CONSUMED
             email_verification.consumed_at = now
 
-
             uow.commit()
-    
+
     def change_email(
         self, *, user_id: int, session_token: str, current_password: str, new_email: str
     ):
@@ -287,18 +327,19 @@ class AuthService:
             user = uow.users.get_by_user_id(user_id)
             if not user:
                 raise ValidationAppError("User not found", target="user_id")
-            
-            if not self._password.verify_password(
-                current_password, user.password_hash
-            ):
-                raise ValidationAppError("Current password is incorrect", target="current_password")
-            
+
+            if not self._password.verify_password(current_password, user.password_hash):
+                raise ValidationAppError(
+                    "Current password is incorrect", target="current_password"
+                )
+
             new_email_fingerprint = self._hmac.fp_hash(new_email)
             new_email_secrets = self._secrets.encrypt(new_email.encode("utf-8"))
             if uow.users.get_user_by_email_fingerprint(new_email_fingerprint):
-                raise ValidationAppError("email_fingerprint already exists", target="new_email")
+                raise ValidationAppError(
+                    "email_fingerprint already exists", target="new_email"
+                )
 
-            
             email_token = self._jwt.create_access_token(
                 subject=str(user.id), minutes=self._config.access_token_minutes
             )
@@ -315,10 +356,16 @@ class AuthService:
             )
 
             uow.users.add_email_verification(email_verification)
-            
-            outbox_fingerprint_dict = {"event_type": "EMAIL_AUTH_CODE", "aggregate_type": "user", "aggregate_id": user.id, "email_verification_id": email_verification.id}
+
+            outbox_fingerprint_dict = {
+                "event_type": "EMAIL_AUTH_CODE",
+                "aggregate_type": "user",
+                "aggregate_id": user.id,
+                "email_verification_id": email_verification.id,
+            }
             outbox_fingerprint = to_canonical_json(outbox_fingerprint_dict)
-            if outbox_fingerprint is not None: outbox_fingerprint= self._hmac.fp_hash(outbox_fingerprint)
+            if outbox_fingerprint is not None:
+                outbox_fingerprint = self._hmac.fp_hash(outbox_fingerprint)
 
             uow.outboxs.add_outbox(
                 OutboxModel(
@@ -327,14 +374,18 @@ class AuthService:
                     aggregate_type="user",
                     aggregate_id=user.id,
                     outbox_fingerprint=outbox_fingerprint,
-                    payload={"user_id": user.id, "email_verification_id": email_verification.id, "verify_token": email_token},
+                    payload={
+                        "user_id": user.id,
+                        "email_verification_id": email_verification.id,
+                        "verify_token": email_token,
+                    },
                     status=OutboxStatus.PENDING,
                     attempts=0,
                 )
             )
 
             user.email_fingerprint = new_email_fingerprint
-            user.email_ciphertext = new_email_secrets["ciphertext"] 
+            user.email_ciphertext = new_email_secrets["ciphertext"]
             user.email_nonce = new_email_secrets["nonce"]
             user.email_key_version = self._config.crypto_data_kid
             user.email_verified_at = None
