@@ -1,5 +1,5 @@
 from typing import List, Callable
-from app.domain.uow import UnitOfWork
+from app.domain.shared.uow import UnitOfWork
 from app.domain import WatchlistDTO, ConflictError, ValidationAppError
 
 

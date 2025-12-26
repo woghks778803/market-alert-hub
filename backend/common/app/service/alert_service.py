@@ -1,4 +1,4 @@
-from app.domain.uow import UnitOfWork
+from app.domain.shared.uow import UnitOfWork
 
 class AlertService:
     def __init__(self, uow: UnitOfWork) -> None:

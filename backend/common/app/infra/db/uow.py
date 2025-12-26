@@ -1,6 +1,6 @@
 from typing import Union
 from sqlalchemy.orm import Session as DbSession, sessionmaker
-from app.domain.uow import UnitOfWork as UnitOfWorkPort
+from app.domain.shared.uow import UnitOfWork as UnitOfWorkPort
 
 from app.infra.db.repository.protocol.user_repo import UserRepo
 from app.infra.db.repository.protocol.session_repo import SessionRepo

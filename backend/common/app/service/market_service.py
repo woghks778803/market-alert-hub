@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from app.core.util.datetime import utcnow
 from app.domain import MarketDTO, MarketRule, ValidationAppError, NotFoundError
 from app.infra.db.model import ExchangeModel, ExchangeInstrumentModel
-from app.domain.uow import UnitOfWork
+from app.domain.shared.uow import UnitOfWork
 from app.core.constants import CandleBaseInterval, CandleOutputInterval
 
 

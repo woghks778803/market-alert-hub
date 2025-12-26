@@ -10,7 +10,7 @@ from .channel_service import ChannelService
 from .email_service import EmailService
 from .outbox_service import OutboxService
 
-from app.domain.uow import UnitOfWork
+from app.domain.shared.uow import UnitOfWork
 from app.domain import EmailPort, CryptoPort
 from app.core import dto as CoreDTO
 

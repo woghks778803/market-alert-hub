@@ -1,5 +1,5 @@
 from typing import Callable
-from app.domain.uow import UnitOfWork
+from app.domain.shared.uow import UnitOfWork
 from app.infra.db.model import UserModel, EmailVerificationModel
 from app.domain import UserDTO, EmailDTO, CryptoPort, ValidationAppError, NotFoundError
 from app.core.constants import UserStatus, UserRole, EmailVerificationStatus

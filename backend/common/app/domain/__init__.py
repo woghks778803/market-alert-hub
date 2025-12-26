@@ -1,4 +1,4 @@
-from .errors import (
+from .shared.errors import (
     AppError, ValidationAppError, AuthError, PermissionError, ConflictError, NotFoundError, InternalServerError,
     TemplateRenderError, EmailSendError
 )

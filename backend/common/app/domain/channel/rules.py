@@ -1,4 +1,4 @@
-from app.domain.errors import ValidationAppError
+from app.domain.shared.errors import ValidationAppError
 import hashlib
 import json
 

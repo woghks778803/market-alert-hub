@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal, ROUND_DOWN, ROUND_HALF_UP
 from random import Random
 from app.core.constants import CandleBaseInterval, CandleOutputInterval
-from app.domain.errors import ValidationAppError
+from app.domain.shared.errors import ValidationAppError
 import app.domain.market.dto as MarketDTO
 from typing import Literal
 

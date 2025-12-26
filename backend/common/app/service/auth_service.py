@@ -1,7 +1,7 @@
 from typing import Callable, Dict, Any
 from datetime import datetime, timedelta, timezone
 
-from app.domain.uow import UnitOfWork
+from app.domain.shared.uow import UnitOfWork
 from app.infra.db.model import UserModel, OutboxModel, EmailVerificationModel
 from app.domain import (
     AuthDTO,

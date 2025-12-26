@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 
 # from tenacity import retry, stop_after_attempt, wait_exponential
-from app.domain.uow import UnitOfWork
+from app.domain.shared.uow import UnitOfWork
 from app.core.constants import OutboxStatus
 from app.core.util.datetime import utcnow
 from app.domain import OutboxDTO, OutboxRule, InternalServerError
