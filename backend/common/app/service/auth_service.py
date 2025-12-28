@@ -1,14 +1,12 @@
 from typing import Callable, Dict, Any
 from datetime import datetime, timedelta, timezone
 
-from app.domain.shared.uow import UnitOfWork
 from app.infra.db.model import UserModel, OutboxModel, EmailVerificationModel
+from app.domain.shared.uow import UnitOfWork
+from app.domain.shared.errors import ValidationAppError, PermissionError, AuthError
 from app.domain import (
     AuthDTO,
     EmailDTO,
-    ValidationAppError,
-    AuthError,
-    PermissionError,
     CryptoPort,
 )
 from app.core.constants import (
@@ -206,7 +204,7 @@ class AuthService:
             #  쿨다운 (연타 방지)
             cooldown_sec = self._config.email_verify_resend_cooldown_sec
             key = f"cooldown:email_verify_resend:{user.id}"
-            ok = self._redis_client().set(key, b"1", nx=True, ex_sec=cooldown_sec)
+            ok = self._redis_client().set(key, b"1", nx=True, ex=cooldown_sec)
             if not ok:
                 remain = self._redis_client().ttl(key)  # -2/-1 처리만 조심
                 remain = remain if remain > 0 else 0  # 가드

@@ -4,16 +4,16 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlalchemy.exc import IntegrityError
 
-from app.runtime.settings import settings
-from app.api.common.envelope import fail, ErrorBody
-from app.domain import (
-    AppError,
-)  # ConflictError, InternalServerError 역할은 핸들러 쪽에서 직접 정의로 흡수
 from app.core.error.error_model import (
     ErrorSpec,
     from_exception_minimal,
     build_log_fields,
 )
+from app.domain.shared.errors import (
+    AppError,
+)  # ConflictError, InternalServerError 역할은 핸들러 쪽에서 직접 정의로 흡수
+from app.runtime.settings import settings
+from app.api.common.envelope import fail, ErrorBody
 
 log = logging.getLogger(__name__)
 

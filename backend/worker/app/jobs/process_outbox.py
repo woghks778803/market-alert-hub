@@ -1,17 +1,37 @@
 import logging
 import uuid
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Mapping, Protocol, runtime_checkable
 
-from redis import Redis
-
-from app.wiring import get_app_context, worker_config
-from app.service.factory import ServiceFactory
-from app.domain import ValidationAppError
+from app.core.constants import EmailVerificationStatus
 from app.core.util.datetime import utcnow, ensure_utc
-from app.infra.db.model.email_verification import EmailVerificationStatus
+from app.domain.shared.errors import ValidationAppError
+from app.service.factory import ServiceFactory
+from app.wiring import get_app_context, worker_config
+
+@runtime_checkable
+class RedisClientLike(Protocol):
+    """
+    worker jobs 레벨에서 필요한 최소 API.
+    - redis-py(외부 라이브러리) 타입을 여기로 끌고 오지 않기 위한 목적.
+    """
+
+    def set(
+        self,
+        key: str,
+        value: bytes,
+        *,
+        nx: bool = False,
+        ex: int | None = None,
+    ) -> bool: ...
+
+    def ttl(self, key: str) -> int: ...
+    def delete(self, key: str) -> int: ...
+    def conn(self) -> Any: ...
 
 logger = logging.getLogger(__name__)
-Handler = Callable[[ServiceFactory, Redis, Mapping[str, Any]], Any]
+Handler = Callable[[ServiceFactory, RedisClientLike, Mapping[str, Any]], Any]
+
+
 # ---- helpers --------------------------------------------------------------
 
 
@@ -27,21 +47,25 @@ def _get_worker_config():
     return worker_config() if callable(worker_config) else worker_config
 
 
-def _try_acquire_lock(r: Redis, key: str, ttl_sec: int) -> str | None:
+def _try_acquire_lock(redis_client: RedisClientLike, key: str, ttl_sec: int) -> str | None:
     token = uuid.uuid4().hex
-    ok = r.set(key, token, nx=True, ex=ttl_sec)
+    redis_conn = redis_client.conn()
+    ok = redis_conn.set(key, token.encode("utf-8"), nx=True, ex=ttl_sec)
     return token if ok else None
 
 
-def _release_lock(r: Redis, key: str, token: str) -> None:
-    # 토큰 일치할 때만 해제(안전)
-    cur = r.get(key)
+def _release_lock(redis_client: RedisClientLike, key: str, token: str) -> None:
+    # 토큰 일치할 때만 해제(최소 안전장치)
+    redis_conn = redis_client.conn()
+    cur = redis_conn.get(key)
     if cur is None:
         return
-    if isinstance(cur, bytes):
-        cur = cur.decode("utf-8", errors="ignore")
-    if cur == token:
-        r.delete(key)
+    try:
+        cur_s = cur.decode("utf-8", errors="ignore")
+    except Exception:
+        return
+    if cur_s == token:
+        redis_client.delete(key)
 
 
 def _skip(reason: str) -> dict:
@@ -53,7 +77,7 @@ def _skip(reason: str) -> dict:
 
 def _handle_email_auth_code(
     svcs: ServiceFactory,
-    redis_conn: Redis,
+    redis_client: RedisClientLike,
     payload: Mapping[str, Any],
 ) -> Any:
     user_id = _require(payload, "user_id", target="payload.user_id")
@@ -79,9 +103,7 @@ def _handle_email_auth_code(
 
     cfg = _get_worker_config()
     lock_key = f"lock:email_verify_send:{email_verification_id}"
-    token = _try_acquire_lock(
-        redis_conn, lock_key, ttl_sec=cfg.outbox_send_lock_ttl_sec
-    )
+    token = _try_acquire_lock(redis_client, lock_key, ttl_sec=cfg.outbox_send_lock_ttl_sec)
     if not token:
         return _skip("locked")
 
@@ -95,7 +117,7 @@ def _handle_email_auth_code(
         )
         return ses_result
     finally:
-        _release_lock(redis_conn, lock_key, token)
+        _release_lock(redis_client, lock_key, token)
 
 
 _HANDLERS: dict[str, Handler] = {
@@ -105,7 +127,7 @@ _HANDLERS: dict[str, Handler] = {
 
 def _dispatch(
     svcs: ServiceFactory,
-    redis_conn: Redis,
+    redis_client: RedisClientLike,
     *,
     event_type: str,
     payload: Mapping[str, Any],
@@ -118,7 +140,7 @@ def _dispatch(
             f"unsupported event_type={event_type}", target="event_type"
         )
 
-    return handler(svcs, redis_conn, payload)
+    return handler(svcs, redis_client, payload)
 
 
 # ---- job entrypoint -------------------------------------------------------
@@ -136,7 +158,7 @@ def deliver_outbox_event(outbox_id: int) -> None:
         outbox_id=outbox_id,
         dispatch_fn=lambda event_type, payload: _dispatch(
             ctx.svcs,
-            ctx.redis_conn,
+            ctx.redis_client,  
             event_type=event_type,
             payload=payload,
         ),

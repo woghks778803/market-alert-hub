@@ -1,9 +1,11 @@
 from typing import Mapping, Any
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape, TemplateError
-from app.domain import EmailPort, TemplateRenderError
+from app.domain import EmailPort
+from app.domain.shared.errors import TemplateRenderError
 
 TEMPLATE_DIR = Path(__file__).parent.parent.parent.parent / "templates" / "email"
+
 
 class JinjaEmailRenderer(EmailPort.EmailTemplateRenderer):
     def __init__(self) -> None:
@@ -19,4 +21,6 @@ class JinjaEmailRenderer(EmailPort.EmailTemplateRenderer):
             tpl = self.env.get_template(template_name)
             return tpl.render(**context)
         except TemplateError as ex:
-            raise TemplateRenderError(f"Failed to render template: {template_name}") from ex
+            raise TemplateRenderError(
+                f"Failed to render template: {template_name}"
+            ) from ex

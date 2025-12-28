@@ -1,7 +1,6 @@
 import base64
 from secrets import token_bytes
 from typing import Mapping
-
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from app.domain import CryptoPort

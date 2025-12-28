@@ -1,14 +1,15 @@
-from typing import List, Callable
-from app.domain.shared.uow import UnitOfWork
-from app.domain import CryptoPort
-from app.domain import ConflictError, ValidationAppError
-from app.infra.db.model import UserChannelModel
-from app.core.util.datetime import utcnow
+from typing import Callable
 from app.core.util.serialization import to_canonical_json
-from app.domain import ChannelRule
+from app.infra.db.model import UserChannelModel
+from app.domain.shared.uow import UnitOfWork
+from app.domain.shared.errors import ConflictError, ValidationAppError
+from app.domain import CryptoPort, ChannelRule
+
 
 class ChannelService:
-    def __init__(self, *, uow_factory: Callable[[], UnitOfWork], hmac: CryptoPort.TokenHasher):
+    def __init__(
+        self, *, uow_factory: Callable[[], UnitOfWork], hmac: CryptoPort.TokenHasher
+    ):
         self._uow_factory = uow_factory
         self._hmac = hmac
 
@@ -50,7 +51,8 @@ class ChannelService:
             )
 
             fingerprint = to_canonical_json(config)
-            if fingerprint is not None: fingerprint= self._hmac.fp_hash(fingerprint)
+            if fingerprint is not None:
+                fingerprint = self._hmac.fp_hash(fingerprint)
 
             existed = uow.channels.get_channel_by_fingerprint(
                 user_id=user_id,
@@ -77,7 +79,6 @@ class ChannelService:
 
             result = uow.channels.get_by_channel_id(user_channel_id=row.id)
             return result
-
 
     def delete_channel(self, *, user_channel_id: int):
         with self._uow_factory() as uow:

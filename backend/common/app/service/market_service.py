@@ -1,11 +1,12 @@
 from typing import Callable, Sequence
 from datetime import datetime, timedelta
 
-from app.core.util.datetime import utcnow
-from app.domain import MarketDTO, MarketRule, ValidationAppError, NotFoundError
-from app.infra.db.model import ExchangeModel, ExchangeInstrumentModel
-from app.domain.shared.uow import UnitOfWork
 from app.core.constants import CandleBaseInterval, CandleOutputInterval
+from app.core.util.datetime import utcnow
+from app.domain.shared.uow import UnitOfWork
+from app.domain.shared.errors import ValidationAppError, NotFoundError
+from app.domain import MarketDTO, MarketRule
+from app.infra.db.model import ExchangeModel, ExchangeInstrumentModel
 
 
 class MarketService:
@@ -17,7 +18,9 @@ class MarketService:
         self._uow_factory = uow_factory
 
     # Meta
-    def list_exchanges_by_filter(self, *, limit: int, offset: int) -> Sequence[ExchangeModel]:
+    def list_exchanges_by_filter(
+        self, *, limit: int, offset: int
+    ) -> Sequence[ExchangeModel]:
         with self._uow_factory() as uow:
             return uow.markets.list_exchanges_by_filter(limit=limit, offset=offset)
 
@@ -30,7 +33,9 @@ class MarketService:
             )
             return rows
 
-    def list_mappings_exchange_id(self, *, exchange_id: int | None) -> list[ExchangeInstrumentModel]:
+    def list_mappings_exchange_id(
+        self, *, exchange_id: int | None
+    ) -> list[ExchangeInstrumentModel]:
         with self._uow_factory() as uow:
             return uow.markets.list_mappings_exchange_id(exchange_id=exchange_id)
 
@@ -125,7 +130,9 @@ class MarketService:
             exchanges = uow.markets.list_exchanges_by_filter()
 
             for ex in exchanges:
-                markets = uow.markets.list_exchange_instruments_by_filter(exchange_id=ex.id)
+                markets = uow.markets.list_exchange_instruments_by_filter(
+                    exchange_id=ex.id
+                )
 
                 for m in markets:
                     base_price = rand.base_price()

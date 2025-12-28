@@ -1,10 +1,11 @@
 from typing import Callable
-from app.domain.shared.uow import UnitOfWork
-from app.infra.db.model import UserModel, EmailVerificationModel
-from app.domain import UserDTO, EmailDTO, CryptoPort, ValidationAppError, NotFoundError
-from app.core.constants import UserStatus, UserRole, EmailVerificationStatus
 from app.core.util.datetime import utcnow
-import base64
+from app.core.constants import UserStatus, UserRole, EmailVerificationStatus
+from app.domain.shared.uow import UnitOfWork
+from app.domain.shared.errors import ValidationAppError, NotFoundError
+from app.domain import UserDTO, EmailDTO, CryptoPort
+from app.infra.db.model import EmailVerificationModel
+
 
 class UserService:
     def __init__(
@@ -33,13 +34,15 @@ class UserService:
                 "User not found", target="user_id"
             )  # 전역핸들러에서 404 매핑되게
         return user
-    
+
     def _ensure_email_verification(self, uow: UnitOfWork, email_verification_id: int):
-        email_verification = uow.users.get_email_verification_by_id(email_verification_id)
+        email_verification = uow.users.get_email_verification_by_id(
+            email_verification_id
+        )
         if not email_verification:
             raise NotFoundError(
                 "EmailVerification not found", target="email_verification_id"
-            )  
+            )
         return email_verification
 
     def list_users_filter(
@@ -54,16 +57,18 @@ class UserService:
         status = self.coerce(status, UserStatus, "status")
 
         with self._uow_factory() as uow:
-            rows = uow.users.list_users_filter(status=status, role=role, limit=limit, offset=offset)
+            rows = uow.users.list_users_filter(
+                status=status, role=role, limit=limit, offset=offset
+            )
             return rows
 
     def get_user_public_info(self, *, user_id: int) -> UserDTO.UserPublicInfo:
         with self._uow_factory() as uow:
             user = self._ensure_user(uow, user_id)
-            
+
             if user.email_ciphertext is None or user.email_nonce is None:
                 raise ValidationAppError("user email is not set", target="user.email")
-        
+
             user_info = UserDTO.UserPublicInfo(
                 id=user.id,
                 nickname=user.nickname,
@@ -76,14 +81,14 @@ class UserService:
             )
 
             return user_info
-    
+
     def get_user_email_info(self, *, user_id: int) -> UserDTO.UserEmailInfo:
         with self._uow_factory() as uow:
             user = self._ensure_user(uow, user_id)
-            
+
             if user.email_ciphertext is None or user.email_nonce is None:
                 raise ValidationAppError("user email is not set", target="user.email")
-        
+
             user_info = UserDTO.UserEmailInfo(
                 id=user.id,
                 nickname=user.nickname,
@@ -99,10 +104,10 @@ class UserService:
     def get_user_admin_info(self, *, user_id: int) -> UserDTO.UserAdminInfo:
         with self._uow_factory() as uow:
             user = self._ensure_user(uow, user_id)
-            
+
             if user.email_ciphertext is None or user.email_nonce is None:
                 raise ValidationAppError("user email is not set", target="user.email")
-        
+
             user_info = UserDTO.UserAdminInfo(
                 id=user.id,
                 email=self._secrets.decrypt(
@@ -117,27 +122,31 @@ class UserService:
             )
 
             return user_info
-        
 
-
-    def get_email_verification_by_id(self, *, email_verification_id: int) -> EmailVerificationModel:
+    def get_email_verification_by_id(
+        self, *, email_verification_id: int
+    ) -> EmailVerificationModel:
         with self._uow_factory() as uow:
-            email_verification = self._ensure_email_verification(uow, email_verification_id)
+            email_verification = self._ensure_email_verification(
+                uow, email_verification_id
+            )
             return email_verification
-            
-    
-    def get_email_verification_by_token_hash(self, *, token_hash: bytes) -> EmailVerificationModel:
+
+    def get_email_verification_by_token_hash(
+        self, *, token_hash: bytes
+    ) -> EmailVerificationModel:
         with self._uow_factory() as uow:
-            email_verification = uow.users.get_email_verification_by_token_hash(token_hash)
+            email_verification = uow.users.get_email_verification_by_token_hash(
+                token_hash
+            )
             if not email_verification:
-                raise NotFoundError(
-                    "EmailVerification not found", target="token_hash"
-                )
-            
+                raise NotFoundError("EmailVerification not found", target="token_hash")
 
             return email_verification
 
-    def ensure_user(self, *, user_id: int, role: UserRole | None, status: UserStatus | None):
+    def ensure_user(
+        self, *, user_id: int, role: UserRole | None, status: UserStatus | None
+    ):
         role = self.coerce(role, UserRole, "role")
         status = self.coerce(status, UserStatus, "status")
 

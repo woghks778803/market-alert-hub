@@ -46,16 +46,16 @@ class RedisClient:
         value: bytes,
         *,
         nx: bool = False,
-        ex_sec: int | None = None,
+        ex: int | None = None,
     ) -> bool:
         """
         redis SET wrapper
         - nx=True : NX
-        - ex_sec  : EX seconds
+        - ex  : EX seconds
         returns: True if key was set, False otherwise
         """
         try:
-            ok = self._client.set(name=key, value=value, nx=nx, ex=ex_sec)
+            ok = self._client.set(name=key, value=value, nx=nx, ex=ex)
             return bool(ok)
         except RedisError:
             log.exception("redis set failed: key=%s", key)
@@ -89,7 +89,7 @@ class RedisClient:
     #     """
     #     NX + EX ttl
     #     """
-    #     return self.set(key, b"1", nx=True, ex_sec=ttl_sec)
+    #     return self.set(key, b"1", nx=True, ex=ttl_sec)
 
     # def get_retry_after_sec(self, key: str, *, fallback: int) -> int:
     #     """

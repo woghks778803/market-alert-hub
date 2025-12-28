@@ -4,9 +4,10 @@ from datetime import datetime
 
 # from tenacity import retry, stop_after_attempt, wait_exponential
 from app.domain.shared.uow import UnitOfWork
+from app.domain.shared.errors import InternalServerError
+from app.domain import OutboxDTO, OutboxRule
 from app.core.constants import OutboxStatus
 from app.core.util.datetime import utcnow
-from app.domain import OutboxDTO, OutboxRule, InternalServerError
 from app.infra.db.model import OutboxAttemptModel
 
 logger = logging.getLogger(__name__)

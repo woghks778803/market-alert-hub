@@ -1,6 +1,10 @@
 from typing import Callable, Any
 from functools import cached_property
 
+from app.core import dto as CoreDTO
+from app.domain.shared.uow import UnitOfWork
+from app.domain import EmailPort, CryptoPort
+
 from .auth_service import AuthService
 from .user_service import UserService
 from .alert_service import AlertService
@@ -10,9 +14,6 @@ from .channel_service import ChannelService
 from .email_service import EmailService
 from .outbox_service import OutboxService
 
-from app.domain.shared.uow import UnitOfWork
-from app.domain import EmailPort, CryptoPort
-from app.core import dto as CoreDTO
 
 class ServiceFactory:
     def __init__(
@@ -26,7 +27,7 @@ class ServiceFactory:
         hmac_hasher: Callable[[], CryptoPort.TokenHasher],
         jwt_signer: Callable[[], CryptoPort.TokenSigner],
         secret_crypto: Callable[[], CryptoPort.SecretCrypto],
-        config : CoreDTO.ConfigBag,
+        config: CoreDTO.ConfigBag,
     ) -> None:
         self._trace_id: str | None = None
         self._uow = uow
@@ -37,12 +38,12 @@ class ServiceFactory:
         self._hmac_hasher = hmac_hasher
         self._jwt_signer = jwt_signer
         self._secret_crypto = secret_crypto
-        self._config = config 
+        self._config = config
 
     @cached_property
     def redis(self):
         return self._redis_client()
-    
+
     @cached_property
     def password(self):
         return self._password_hasher()
@@ -64,7 +65,7 @@ class ServiceFactory:
     @cached_property
     def emails(self) -> EmailService:
         return EmailService(
-            client=self._email_client, 
+            client=self._email_client,
             renderer=self._email_renderer,
             secrets=self.secrets,
             config=self._config,

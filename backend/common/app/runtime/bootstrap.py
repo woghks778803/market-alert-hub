@@ -1,6 +1,14 @@
 from .settings import settings
 from app.core import dto as CoreDTO
+from app.service.factory import ServiceFactory
 from app.runtime.app_context import AppContext
+
+# from app.infra.external.rq.queue_factory import RqQueueFactory, RqQueueConfig
+# from app.infra.external.rq.worker_factory import RqWorkerFactory, RqWorkerConfig
+from app.infra.external.redis.async_redis_client import (
+    AsyncRedisClient,
+    get_async_redis_client,
+)
 from app.infra.external.redis.redis_client import RedisClient, get_redis_client
 from app.infra.external.email.ses_client import SesEmailClient
 from app.infra.external.email.jinja_renderer import JinjaEmailRenderer
@@ -11,7 +19,7 @@ from app.infra.external.token.jwt_signer import JwtTokenSigner
 from app.infra.external.token.hmac_hasher import HmacTokenHasher
 from app.infra.external.crypto.local_aesgcm import LocalAesGcmCrypto
 from app.infra.external.crypto.local_aesgcm_from_secrets import LocalAesGcmFromSecrets
-from app.service.factory import ServiceFactory
+
 
 from typing import Callable
 from functools import lru_cache
@@ -52,6 +60,26 @@ class Providers:
     @staticmethod
     def redis_provider() -> Callable[[], RedisClient]:
         return lambda: get_redis_client(settings.REDIS_URL)
+
+    # @staticmethod
+    # def rq_queue_factory_provider() -> Callable[[], RqQueueFactory]:
+    #     def _build() -> RqQueueFactory:
+    #         redis_client = get_redis_client(settings.REDIS_URL)
+    #         redis_conn_provider = redis_client.conn  # callable
+    #         cfg = RqQueueConfig()
+    #         return RqQueueFactory(redis_conn_provider, cfg=cfg)
+
+    #     return _build
+
+    # @staticmethod
+    # def rq_worker_factory_provider() -> Callable[[], RqWorkerFactory]:
+    #     def _build() -> RqWorkerFactory:
+    #         redis_client = get_redis_client(settings.REDIS_URL)
+    #         redis_conn_provider = redis_client.conn  # callable
+    #         cfg = RqWorkerConfig()
+    #         return RqWorkerFactory(redis_conn_provider, cfg=cfg)
+
+    #     return _build
 
     @staticmethod
     def email_client_provider() -> Callable[[], SesEmailClient]:
@@ -202,5 +230,17 @@ def get_core_services() -> ServiceFactory:
 def create_app_context() -> AppContext:
     svcs = get_core_services()
     redis = get_redis_client(settings.REDIS_URL)
-    redis_conn = redis.conn()
-    return AppContext(svcs=svcs, redis_conn=redis_conn)
+    return AppContext(svcs=svcs, redis_client=redis)
+
+
+# @lru_cache(maxsize=1)
+# def get_rq_queue_factory() -> RqQueueFactory:
+#     return providers.rq_queue_factory_provider()
+
+
+# @lru_cache(maxsize=1)
+# def get_rq_worker_factory() -> RqWorkerFactory:
+#     return providers.rq_worker_factory_provider()
+
+# rq_queue_factory = get_rq_queue_factory()
+# rq_worker_factory = get_rq_worker_factory()

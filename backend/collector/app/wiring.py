@@ -1,4 +1,3 @@
-# collector/app/wiring.py
 import logging
 from dataclasses import dataclass
 from typing import Any, Callable
@@ -8,7 +7,6 @@ from app.internal.state.checkpoint_store import (
     CheckpointStore,
     FileCheckpointStore,
     MemoryCheckpointStore,
-    RedisCheckpointStore,
 )
 from app.runtime.bootstrap import get_core_collector_config_bag
 
@@ -71,10 +69,10 @@ def _build_checkpoint_store() -> CheckpointStore:
     현재 settings에 collector 전용 값이 없을 수 있으니 안전하게 기본값을 둔다.
     """
 
-    if collector_config.checkpoint_backend == "redis":
-        redis_url = collector_config.redis_url
-        key_prefix = collector_config.checkpoint_key_prefix
-        return RedisCheckpointStore(redis_url=redis_url, key_prefix=key_prefix)
+    # if collector_config.checkpoint_backend == "redis":
+    #     redis_url = collector_config.redis_url
+    #     key_prefix = collector_config.checkpoint_key_prefix
+    #     return RedisCheckpointStore(redis_url=redis_url, key_prefix=key_prefix)
 
     if collector_config.checkpoint_backend == "file":
         return FileCheckpointStore(path=collector_config.checkpoint_file_path)
@@ -110,7 +108,8 @@ def _build_jobs(runtime: CollectorRuntime) -> list[tuple[str, TaskFactory]]:
 
     각 task_factory는 '코루틴'을 반환해야 한다.
     """
-    # from app.jobs.sync_instruments import run_sync_instruments_loop
+    from app.jobs.sync_instruments import run_sync_instruments_loop
+
     # from app.jobs.stream_marketdata import run_stream_marketdata_loop
 
     enable_catalog = collector_config.enable_catalog_sync
@@ -120,21 +119,27 @@ def _build_jobs(runtime: CollectorRuntime) -> list[tuple[str, TaskFactory]]:
     stream_reconnect_backoff = collector_config.stream_reconnect_backoff_sec
     jobs: list[tuple[str, TaskFactory]] = []
 
-    # if enable_catalog:
+    if enable_catalog:
 
-    #     def catalog_factory() -> Any:
-    #         if runtime.stop_event is None:
-    #             raise RuntimeError(
-    #                 "runtime.stop_event is not bound (run.py should set it before starting tasks)"
-    #             )
-    #         return run_sync_instruments_loop(
-    #             stop_event=runtime.stop_event,
-    #             checkpoint_store=runtime.checkpoint_store,
-    #             interval_sec=catalog_interval,
-    #             # 실제 거래소/DB 의존성은 이후 단계에서 주입
-    #         )
+        def catalog_factory() -> Any:
+            if runtime.stop_event is None:
+                raise RuntimeError(
+                    "runtime.stop_event is not bound (run.py should set it before starting tasks)"
+                )
 
-    #     jobs.append(("catalog_sync", catalog_factory))
+            async def _sync_once() -> None:
+                # TODO: 여기서 거래소 REST 호출 + DB upsert 서비스 호출로 교체
+                raise RuntimeError("sync_once is not wired yet")
+
+            return run_sync_instruments_loop(
+                stop_event=runtime.stop_event,
+                checkpoint_store=runtime.checkpoint_store,
+                interval_sec=catalog_interval,
+                sync_once=_sync_once,
+                # 실제 거래소/DB 의존성은 이후 단계에서 주입
+            )
+
+        jobs.append(("catalog_sync", catalog_factory))
 
     # if enable_stream:
 

@@ -4,11 +4,13 @@ from jwt import ExpiredSignatureError, InvalidTokenError
 from datetime import datetime, timezone
 
 from app.core.constants import UserRole
-from app.domain import AuthError, PermissionError
+from app.domain.shared.errors import AuthError, PermissionError
 from app.runtime.bootstrap import get_core_services
 from app.service.factory import ServiceFactory
 from dataclasses import dataclass
+
 _bearer = HTTPBearer(auto_error=False)
+
 
 @dataclass(frozen=True)
 class RequestMeta:
@@ -20,6 +22,7 @@ def get_request_meta(request: Request) -> RequestMeta:
     rid = getattr(request.state, "request_id", "-")
     return RequestMeta(request_id=rid, timestamp=datetime.now(timezone.utc))
 
+
 def get_services(
     meta: RequestMeta = Depends(get_request_meta),
     svcs: ServiceFactory = Depends(get_core_services),
@@ -27,6 +30,7 @@ def get_services(
 
     svcs._trace_id = meta.request_id
     return svcs
+
 
 def get_current_token(
     creds: HTTPAuthorizationCredentials | None = Depends(_bearer),
@@ -55,8 +59,7 @@ def get_current_user(
         raise AuthError(message="Invalid token payload")
     return svcs.auths.get_current_user(user_id, token)
 
+
 def require_admin(user=Depends(get_current_user)):
     if getattr(user, "role", None) != UserRole.ADMIN:
         raise PermissionError("Admin role required", target="role")
-
-

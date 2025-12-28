@@ -1,8 +1,9 @@
 from typing import Sequence, Callable
 from email_validator import validate_email, EmailNotValidError
-from app.domain import UserDTO, EmailDTO, EmailPort, ValidationAppError, CryptoPort
+
 from app.core import dto as CoreDTO
-import base64
+from app.domain.shared.errors import ValidationAppError
+from app.domain import UserDTO, EmailPort, CryptoPort
 
 
 class EmailService:
@@ -43,9 +44,7 @@ class EmailService:
     #         to=to,
     #     )
 
-    def send_verify(
-        self, *, user: UserDTO.UserEmailInfo, verify_token: str
-    ) -> dict:
+    def send_verify(self, *, user: UserDTO.UserEmailInfo, verify_token: str) -> dict:
 
         if user.email_ciphertext is None or user.email_nonce is None:
             raise ValidationAppError("user email is not set", target="user.email")

@@ -7,7 +7,7 @@ from common.core.error.error_model import (
     from_exception_minimal,
     build_log_fields,
 )
-from app.domain import AppError  # 도메인에서 선언한 AppError 계열 가정
+from app.domain.shared.errors import AppError  # 도메인에서 선언한 AppError 계열 가정
 from app.runtime.settings import settings  # worker도 DEPLOY_ENV, etc 쓸 수 있다고 가정
 
 log = logging.getLogger(__name__)

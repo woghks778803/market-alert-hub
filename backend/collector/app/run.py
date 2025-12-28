@@ -37,7 +37,6 @@ async def run(runtime: Any) -> None:
         - 예: [("catalog", make_catalog_task), ("stream", make_stream_task)]
     - (optional) runtime.restart_policy: RestartPolicy
     - (optional) runtime.on_task_error: callable(name: str, exc: BaseException) -> None
-    - (optional) runtime.checkpoint_store: close 가능한 객체(예: RedisCheckpointStore)
 
     stop_event는 run()에서 생성하고 signals가 set()한다.
     각 job은 stop_event를 직접 받는 방식으로 wiring에서 closure로 캡쳐시키는 걸 권장.

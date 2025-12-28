@@ -1,6 +1,5 @@
 from typing import Optional, Mapping, Dict
 
-# 도메인 포트 / 로컬 AESGCM 구현
 from app.domain import CryptoPort
 from app.infra.external.crypto.local_aesgcm import LocalAesGcmCrypto
 
@@ -31,4 +30,6 @@ class LocalAesGcmFromSecrets(CryptoPort.SecretCrypto):
         aad: Optional[Mapping[str, str]] = None,
         kms_encrypted_dek: Optional[bytes] = None,  # 인터페이스 호환(미사용)
     ) -> bytes:
-        return self._inner.decrypt(ciphertext=ciphertext, nonce=nonce, aad=aad, kms_encrypted_dek=None)
+        return self._inner.decrypt(
+            ciphertext=ciphertext, nonce=nonce, aad=aad, kms_encrypted_dek=None
+        )

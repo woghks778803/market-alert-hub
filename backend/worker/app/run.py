@@ -13,17 +13,17 @@ def run() -> None:
 
     rt = build_worker_runtime()
 
-    w = Worker([rt.q_outbox], connection=rt.redis_conn)
+    worker = Worker([rt.q_outbox], connection=rt.redis_conn)
 
     # SIGTERM 받으면 현재 job 끝내고 종료
     def _handle_stop(signum, frame):  # noqa: ARG001
         log.warning("worker stopping by signal=%s", signum)
         try:
-            w.request_stop()
+            worker.request_stop(signum=signum, frame=frame)
         except Exception:
             log.exception("failed to request_stop")
 
     signal.signal(signal.SIGTERM, _handle_stop)
     signal.signal(signal.SIGINT, _handle_stop)
 
-    w.work(with_scheduler=True)
+    worker.work(with_scheduler=True)

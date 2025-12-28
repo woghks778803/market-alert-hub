@@ -1,6 +1,7 @@
 from typing import List, Callable
 from app.domain.shared.uow import UnitOfWork
-from app.domain import WatchlistDTO, ConflictError, ValidationAppError
+from app.domain.shared.errors import ConflictError, ValidationAppError
+from app.domain import WatchlistDTO
 
 
 class WatchlistService:
@@ -77,7 +78,9 @@ class WatchlistService:
     def delete_item(self, *, item_id: int, user_id: int) -> None:
         with self._uow_factory() as uow:
 
-            watchlist_items = uow.watchlists.get_item_by_filter(item_id=item_id, user_id=user_id)
+            watchlist_items = uow.watchlists.get_item_by_filter(
+                item_id=item_id, user_id=user_id
+            )
             if hasattr(watchlist_items, "is_deleted"):
                 watchlist_items.is_deleted = True
             uow.commit()
