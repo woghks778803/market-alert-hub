@@ -2,12 +2,19 @@ from typing import Sequence, Mapping
 import boto3
 from botocore.config import Config as BotoConfig
 from botocore.exceptions import ClientError
-from app.domain import EmailPort, EmailSendError
-from app.runtime.settings import settings
+from app.domain import EmailPort
+from app.domain.shared.errors import EmailSendError
 
 
 class SesEmailClient(EmailPort.EmailClient):
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        region_name: str,
+        access_key_id: str | None,
+        secret_access_key: str | None,
+        from_email: str,
+        configuration_set: str | None = None,
+    ) -> None:
         cfg = BotoConfig(
             retries={"max_attempts": 3, "mode": "standard"},
             connect_timeout=3,
@@ -16,16 +23,16 @@ class SesEmailClient(EmailPort.EmailClient):
 
         session = (
             boto3.session.Session(
-                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-                region_name=settings.AWS_REGION,
+                aws_access_key_id=access_key_id,
+                aws_secret_access_key=secret_access_key,
+                region_name=region_name,
             )
-            if settings.AWS_ACCESS_KEY_ID and settings.AWS_SECRET_ACCESS_KEY
-            else boto3.session.Session(region_name=settings.AWS_REGION)
+            if access_key_id and secret_access_key
+            else boto3.session.Session(region_name=region_name)
         )
         self.client = session.client("sesv2", config=cfg)
-        self.from_email = settings.SES_FROM_EMAIL
-        self.configuration_set = settings.SES_CONFIGURATION_SET
+        self.from_email = from_email
+        self.configuration_set = configuration_set
 
     def send(
         self,

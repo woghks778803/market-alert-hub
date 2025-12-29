@@ -13,7 +13,7 @@ from app.infra.external.redis.redis_client import RedisClient, get_redis_client
 from app.infra.external.email.ses_client import SesEmailClient
 from app.infra.external.email.jinja_renderer import JinjaEmailRenderer
 from app.infra.db.uow import UnitOfWork
-from app.infra.db.engine import SessionLocal
+from app.infra.db.engine import create_sqlalchemy_engine, create_sessionmaker
 from app.infra.external.password.passlib_hasher import PasslibPasswordHasher
 from app.infra.external.token.jwt_signer import JwtTokenSigner
 from app.infra.external.token.hmac_hasher import HmacTokenHasher
@@ -61,6 +61,18 @@ class Providers:
     def redis_provider() -> Callable[[], RedisClient]:
         return lambda: get_redis_client(settings.REDIS_URL)
 
+    @staticmethod
+    def create_uow_provider(sqlalchemy_url: str) -> Callable[[], UnitOfWork]:
+        engine = create_sqlalchemy_engine(sqlalchemy_url)
+        SessionLocal = create_sessionmaker(engine)
+
+        def _provide() -> UnitOfWork:
+            # owns_session=True 같은 옵션은 네 UnitOfWork 시그니처에 맞춰서
+            db_session = SessionLocal()
+            return UnitOfWork(db_session, owns_session=True)
+
+        return _provide
+
     # @staticmethod
     # def rq_queue_factory_provider() -> Callable[[], RqQueueFactory]:
     #     def _build() -> RqQueueFactory:
@@ -83,15 +95,21 @@ class Providers:
 
     @staticmethod
     def email_client_provider() -> Callable[[], SesEmailClient]:
-        return lambda: SesEmailClient()
+        return lambda: SesEmailClient(
+            region_name=settings.AWS_REGION,
+            access_key_id=settings.AWS_ACCESS_KEY_ID,
+            secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            from_email=settings.SES_FROM_EMAIL,
+            configuration_set=settings.SES_CONFIGURATION_SET,
+        )
 
     @staticmethod
     def email_renderer_provider() -> Callable[[], JinjaEmailRenderer]:
         return lambda: JinjaEmailRenderer()
 
-    @staticmethod
-    def create_uow_from_session(db_session) -> Callable[[], UnitOfWork]:
-        return lambda: UnitOfWork(db_session, owns_session=True)
+    # @staticmethod
+    # def create_uow_from_session(db_session) -> Callable[[], UnitOfWork]:
+    #     return lambda: UnitOfWork(db_session, owns_session=True)
 
     @staticmethod
     def password_hasher_provider() -> Callable[[], PasslibPasswordHasher]:
@@ -142,8 +160,14 @@ class Providers:
 providers = Providers()
 
 
-def build_config_bag() -> CoreDTO.ConfigBag:
-    return CoreDTO.ConfigBag(
+def build_config_api_bag() -> CoreDTO.ApiConfigBag:
+    return CoreDTO.ApiConfigBag(
+        deploy_env=settings.DEPLOY_ENV,
+    )
+
+
+def build_config_service_bag() -> CoreDTO.ServiceConfigBag:
+    return CoreDTO.ServiceConfigBag(
         email_verify_resend_cooldown_sec=settings.EMAIL_VERIFY_RESEND_COOLDOWN_SEC,
         access_token_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
         crypto_data_kid=settings.CRYPTO_DATA_ENC_KID,
@@ -153,6 +177,7 @@ def build_config_bag() -> CoreDTO.ConfigBag:
 
 def build_worker_config_bag() -> CoreDTO.WorkerConfigBag:
     return CoreDTO.WorkerConfigBag(
+        deploy_env=settings.DEPLOY_ENV,
         redis_url=settings.REDIS_URL,
         log_level=settings.WORKER_LOG_LEVEL,
         outbox_poll_limit=settings.OUTBOX_POLL_LIMIT,
@@ -205,8 +230,12 @@ def create_service_factory(uow_provider: Callable[[], UnitOfWork]) -> ServiceFac
         hmac_hasher=providers.hmac_hasher_provider(),
         jwt_signer=providers.jwt_signer_provider(),
         secret_crypto=providers.secret_crypto_provider(),
-        config=build_config_bag(),
+        config=build_config_service_bag(),
     )
+
+
+def get_core_api_config_bag() -> CoreDTO.ApiConfigBag:
+    return build_config_api_bag()
 
 
 def get_core_worker_config_bag() -> CoreDTO.WorkerConfigBag:
@@ -222,6 +251,8 @@ def get_core_collector_config_bag() -> CoreDTO.CollectorConfigBag:
 
 
 def get_core_services() -> ServiceFactory:
+    engine = create_sqlalchemy_engine(settings.SQLALCHEMY_URL)
+    SessionLocal = create_sessionmaker(engine)
     uow_provider = lambda: UnitOfWork(SessionLocal, owns_session=True)
     return create_service_factory(uow_provider)
 

@@ -5,11 +5,12 @@ from datetime import datetime, timezone
 
 from app.core.constants import UserRole
 from app.domain.shared.errors import AuthError, PermissionError
-from app.runtime.bootstrap import get_core_services
+from app.runtime.bootstrap import get_core_services, get_core_api_config_bag
 from app.service.factory import ServiceFactory
 from dataclasses import dataclass
 
 _bearer = HTTPBearer(auto_error=False)
+api_config = get_core_api_config_bag()
 
 
 @dataclass(frozen=True)

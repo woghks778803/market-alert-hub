@@ -15,7 +15,7 @@ class Base:
 
 
 @dataclass(frozen=True)
-class ConfigBag:
+class ServiceConfigBag:
     # 이메일 재전송 쿨다운 초
     email_verify_resend_cooldown_sec: int
     # 토큰/세션 등 서비스용 상수
@@ -27,7 +27,13 @@ class ConfigBag:
 
 
 @dataclass(frozen=True)
+class ApiConfigBag:
+    deploy_env: str
+
+
+@dataclass(frozen=True)
 class WorkerConfigBag:
+    deploy_env: str
     redis_url: str
     log_level: str
     outbox_poll_limit: int

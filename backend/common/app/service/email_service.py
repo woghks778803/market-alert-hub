@@ -12,7 +12,7 @@ class EmailService:
         client: Callable[[], EmailPort.EmailClient],
         renderer: Callable[[], EmailPort.EmailTemplateRenderer],
         secrets: CryptoPort.SecretCrypto,
-        config: CoreDTO.ConfigBag,
+        config: CoreDTO.ServiceConfigBag,
     ) -> None:
         self.client = client
         self.renderer = renderer

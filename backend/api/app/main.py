@@ -1,11 +1,10 @@
-# app/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 
 import logging
 from app.core.logging import setup_logging
-from app.runtime.settings import settings
+from app.api.deps import api_config
 from app.api.middleware import RequestIdMiddleware
 from app.api.exception_handlers import unified_exception_handler
 from app.api.router import api
@@ -19,6 +18,7 @@ TAGS_METADATA = [
 
 def _install_openapi_with_bearer(app: FastAPI) -> None:
     """Swagger에 JWT Bearer 인증 스키마(bearerAuth) 추가."""
+
     def custom_openapi():
         if app.openapi_schema:
             return app.openapi_schema
@@ -30,12 +30,19 @@ def _install_openapi_with_bearer(app: FastAPI) -> None:
         )
         # Swagger UI/Redoc에서 그룹 헤더처럼 보이게 하는 확장
         schema["x-tagGroups"] = [
-            {"name": "Public", "tags": [
-                "Public • Auth", "Public • Markets", "Public • Meta", "Public • Health"
-            ]},
-            {"name": "Admin", "tags": [
-                "Admin • Auth", "Admin • Alerts", "Admin • Health"
-            ]},
+            {
+                "name": "Public",
+                "tags": [
+                    "Public • Auth",
+                    "Public • Markets",
+                    "Public • Meta",
+                    "Public • Health",
+                ],
+            },
+            {
+                "name": "Admin",
+                "tags": ["Admin • Auth", "Admin • Alerts", "Admin • Health"],
+            },
         ]
         components = schema.setdefault("components", {})
         security_schemes = components.setdefault("securitySchemes", {})
@@ -53,7 +60,7 @@ def _install_openapi_with_bearer(app: FastAPI) -> None:
 
 
 def create_app() -> FastAPI:
-    if settings.DEPLOY_ENV == "prod":
+    if api_config.deploy_env == "prod":
         setup_logging(level=logging.INFO, service="api")
     else:
         setup_logging(level=logging.DEBUG, service="api")
@@ -77,7 +84,7 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestIdMiddleware)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],                 # TODO: 배포 시 도메인으로 제한
+        allow_origins=["*"],  # TODO: 배포 시 도메인으로 제한
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

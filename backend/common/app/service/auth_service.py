@@ -31,7 +31,7 @@ class AuthService:
         hmac: CryptoPort.TokenHasher,
         jwt: CryptoPort.TokenSigner,
         secrets: CryptoPort.SecretCrypto,
-        config: CoreDTO.ConfigBag,
+        config: CoreDTO.ServiceConfigBag,
     ) -> None:
         self._trace_id = trace_id
         self._redis_client = redis_client

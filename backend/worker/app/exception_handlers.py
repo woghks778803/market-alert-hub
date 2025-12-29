@@ -2,13 +2,13 @@ import logging
 from typing import Callable, Any
 from sqlalchemy.exc import IntegrityError
 
-from common.core.error.error_model import (
+from app.core.error.error_model import (
     ErrorSpec,
     from_exception_minimal,
     build_log_fields,
 )
 from app.domain.shared.errors import AppError  # 도메인에서 선언한 AppError 계열 가정
-from app.runtime.settings import settings  # worker도 DEPLOY_ENV, etc 쓸 수 있다고 가정
+from app.wiring import worker_config
 
 log = logging.getLogger(__name__)
 
@@ -80,7 +80,7 @@ def _spec_from_unhandled_for_worker(exc: Exception, job_id: str) -> ErrorSpec:
     return from_exception_minimal(
         exc,
         trace_id=job_id,
-        include_stack=(settings.DEPLOY_ENV != "prod"),
+        include_stack=(worker_config.deploy_env != "prod"),
     )
 
 
@@ -90,7 +90,7 @@ def _log_spec(spec: ErrorSpec, job_name: str):
     API랑 거의 같지만, worker 관점의 ctx를 넣는다.
     """
     # prod에선 민감한 db_msg 같은 거 빼자
-    redact_keys = {"db_msg", "params"} if settings.DEPLOY_ENV == "prod" else None
+    redact_keys = {"db_msg", "params"} if worker_config.deploy_env == "prod" else None
 
     log_fields = build_log_fields(
         spec,
@@ -108,7 +108,7 @@ def _log_spec(spec: ErrorSpec, job_name: str):
         level,
         "worker_job_error",
         extra={"job_id": spec.trace_id, **log_fields},
-        exc_info=(None if settings.DEPLOY_ENV == "prod" else True),
+        exc_info=(None if worker_config.deploy_env == "prod" else True),
     )
 
 

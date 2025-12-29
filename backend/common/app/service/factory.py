@@ -27,7 +27,7 @@ class ServiceFactory:
         hmac_hasher: Callable[[], CryptoPort.TokenHasher],
         jwt_signer: Callable[[], CryptoPort.TokenSigner],
         secret_crypto: Callable[[], CryptoPort.SecretCrypto],
-        config: CoreDTO.ConfigBag,
+        config: CoreDTO.ServiceConfigBag,
     ) -> None:
         self._trace_id: str | None = None
         self._uow = uow

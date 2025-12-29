@@ -1,7 +1,16 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from app.runtime.settings import settings
+from sqlalchemy import Engine, create_engine
+from sqlalchemy.orm import sessionmaker, Session
 
-engine = create_engine(settings.SQLALCHEMY_URL, pool_pre_ping=True, future=True)
-SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, future=True)
 
+def create_sqlalchemy_engine(sqlalchemy_url: str) -> Engine:
+    # 여기서 settings import 금지. url은 외부(bootstrap)에서 주입
+    return create_engine(sqlalchemy_url, pool_pre_ping=True, future=True)
+
+
+def create_sessionmaker(engine: Engine) -> sessionmaker[Session]:
+    return sessionmaker(
+        bind=engine,
+        autocommit=False,
+        autoflush=False,
+        future=True,
+    )
