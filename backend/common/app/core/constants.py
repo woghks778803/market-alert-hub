@@ -1,9 +1,18 @@
 import enum
-    
+
+
+class DeploymentEnvironment(str, enum.Enum):
+    LOCAL = "local"
+    DEV = "dev"
+    STAGE = "stage"
+    PROD = "prod"
+
+
 class CandleBaseInterval(str, enum.Enum):
     MIN_1 = "1m"
     HOUR_1 = "1h"
     DAY_1 = "1d"
+
 
 class CandleOutputInterval(str, enum.Enum):
     MIN_1 = "1m"
@@ -14,18 +23,20 @@ class CandleOutputInterval(str, enum.Enum):
     DAY_1 = "1d"
     WEEK_1 = "1w"
     MONTH_1 = "1M"
-    
+
     @property
     def calc_mapping(self):
         return {
-            "1m": {"1m","5m","15m"},
-            "1h": {"1h","4h"},
-            "1d": {"1d","1w","1M"},
+            "1m": {"1m", "5m", "15m"},
+            "1h": {"1h", "4h"},
+            "1d": {"1d", "1w", "1M"},
         }[self.value]
 
+
 class UserRole(str, enum.Enum):
-    USER  = "user"
+    USER = "user"
     ADMIN = "admin"
+
 
 class OutboxStatus(str, enum.Enum):
     PENDING = "pending"
@@ -33,29 +44,39 @@ class OutboxStatus(str, enum.Enum):
     SENT = "sent"
     FAILED = "failed"
 
+
 class EmailVerificationStatus(str, enum.Enum):
     PENDING = "pending"
     SENT = "sent"
     CONSUMED = "consumed"
     CANCELLED = "cancelled"
 
+
 class UserStatus(str, enum.Enum):
-    ACTIVE    = "active"
+    ACTIVE = "active"
     SUSPENDED = "suspended"
-    DELETED   = "deleted"
+    DELETED = "deleted"
+
 
 class AlertStatus(str, enum.Enum):
-    ACTIVE   = "active"
-    PAUSED   = "paused"
+    ACTIVE = "active"
+    PAUSED = "paused"
     ARCHIVED = "archived"
+
 
 class DeliveryStatus(str, enum.Enum):
     QUEUED = "queued"
-    SENT   = "sent"
+    SENT = "sent"
     FAILED = "failed"
 
+
 class AssetType(str, enum.Enum):
-    CRYPTO = "crypto"; FIAT = "fiat"; FX = "fx"; STOCK = "stock"; FUTURE = "future"
+    CRYPTO = "crypto"
+    FIAT = "fiat"
+    FX = "fx"
+    STOCK = "stock"
+    FUTURE = "future"
+
 
 class AlertType(str, enum.Enum):
     PRICE_ABOVE = "price_above"
@@ -65,9 +86,11 @@ class AlertType(str, enum.Enum):
     VOLUME_ABOVE = "volume_above"
     MOVING_AVG_CROSS = "moving_avg_cross"
 
+
 class AlertScope(str, enum.Enum):
     SINGLE = "single"
-    CROSS  = "cross"
+    CROSS = "cross"
+
 
 # 에러 코드 / 메시지
 ERROR_INVALID_TOKEN: str = "Invalid token"

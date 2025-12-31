@@ -11,9 +11,7 @@ from app.internal.state.checkpoint_store import (
 from app.runtime.bootstrap import get_core_collector_config_bag
 
 collector_config = get_core_collector_config_bag()
-
 logger = logging.getLogger(__name__)
-
 TaskFactory = Callable[[], Any]  # () -> Awaitable[None]  (타이핑은 느슨하게 유지)
 
 
@@ -108,53 +106,28 @@ def _build_jobs(runtime: CollectorRuntime) -> list[tuple[str, TaskFactory]]:
 
     각 task_factory는 '코루틴'을 반환해야 한다.
     """
-    from app.jobs.sync_instruments import run_sync_instruments_loop
-
-    # from app.jobs.stream_marketdata import run_stream_marketdata_loop
+    from app.jobs.stream_marketdata import run_stream_marketdata_loop
 
     enable_catalog = collector_config.enable_catalog_sync
-    enable_stream = collector_config.enable_stream
-
     catalog_interval = collector_config.catalog_sync_interval_sec
+
+    enable_stream = collector_config.enable_stream
     stream_reconnect_backoff = collector_config.stream_reconnect_backoff_sec
     jobs: list[tuple[str, TaskFactory]] = []
 
-    if enable_catalog:
+    if enable_stream:
 
-        def catalog_factory() -> Any:
+        def stream_factory() -> Any:
             if runtime.stop_event is None:
                 raise RuntimeError(
                     "runtime.stop_event is not bound (run.py should set it before starting tasks)"
                 )
-
-            async def _sync_once() -> None:
-                # TODO: 여기서 거래소 REST 호출 + DB upsert 서비스 호출로 교체
-                raise RuntimeError("sync_once is not wired yet")
-
-            return run_sync_instruments_loop(
+            return run_stream_marketdata_loop(
                 stop_event=runtime.stop_event,
                 checkpoint_store=runtime.checkpoint_store,
-                interval_sec=catalog_interval,
-                sync_once=_sync_once,
-                # 실제 거래소/DB 의존성은 이후 단계에서 주입
+                reconnect_backoff_sec=stream_reconnect_backoff,
             )
 
-        jobs.append(("catalog_sync", catalog_factory))
-
-    # if enable_stream:
-
-    #     def stream_factory() -> Any:
-    #         if runtime.stop_event is None:
-    #             raise RuntimeError(
-    #                 "runtime.stop_event is not bound (run.py should set it before starting tasks)"
-    #             )
-    #         return run_stream_marketdata_loop(
-    #             stop_event=runtime.stop_event,
-    #             checkpoint_store=runtime.checkpoint_store,
-    #             reconnect_backoff_sec=stream_reconnect_backoff,
-    #             # 실제 거래소/DB 의존성은 이후 단계에서 주입
-    #         )
-
-    #     jobs.append(("market_stream", stream_factory))
+        jobs.append(("market_stream", stream_factory))
 
     return jobs

@@ -3,7 +3,7 @@ import signal
 import time
 
 from app.core.logging import setup_logging
-from .wiring import build_dispatcher_runtime, dispatcher_config
+from .wiring import build_dispatcher_runtime
 
 log = logging.getLogger("dispatcher")
 
@@ -21,8 +21,8 @@ def run() -> None:
     signal.signal(signal.SIGTERM, _handle_stop)
     signal.signal(signal.SIGINT, _handle_stop)
 
-    poll_limit = dispatcher_config.outbox_poll_limit
-    idle_sleep = dispatcher_config.outbox_idle_sleep
+    poll_limit = rt.config.outbox_poll_limit
+    idle_sleep = rt.config.outbox_idle_sleep
 
     log.info("dispatcher started (poll_limit=%s idle_sleep=%s)", poll_limit, idle_sleep)
 

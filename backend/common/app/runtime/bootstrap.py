@@ -1,7 +1,12 @@
 from .settings import settings
 from app.core import dto as CoreDTO
 from app.service.factory import ServiceFactory
-from app.runtime.app_context import AppContext
+from app.runtime.app_context import (
+    WorkerContext,
+    ApiContext,
+    DispatcherContext,
+    CollectorContext,
+)
 
 # from app.infra.external.rq.queue_factory import RqQueueFactory, RqQueueConfig
 # from app.infra.external.rq.worker_factory import RqWorkerFactory, RqWorkerConfig
@@ -160,13 +165,13 @@ class Providers:
 providers = Providers()
 
 
-def build_config_api_bag() -> CoreDTO.ApiConfigBag:
+def build_api_config_bag() -> CoreDTO.ApiConfigBag:
     return CoreDTO.ApiConfigBag(
         deploy_env=settings.DEPLOY_ENV,
     )
 
 
-def build_config_service_bag() -> CoreDTO.ServiceConfigBag:
+def build_service_config_bag() -> CoreDTO.ServiceConfigBag:
     return CoreDTO.ServiceConfigBag(
         email_verify_resend_cooldown_sec=settings.EMAIL_VERIFY_RESEND_COOLDOWN_SEC,
         access_token_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
@@ -230,24 +235,8 @@ def create_service_factory(uow_provider: Callable[[], UnitOfWork]) -> ServiceFac
         hmac_hasher=providers.hmac_hasher_provider(),
         jwt_signer=providers.jwt_signer_provider(),
         secret_crypto=providers.secret_crypto_provider(),
-        config=build_config_service_bag(),
+        config=build_service_config_bag(),
     )
-
-
-def get_core_api_config_bag() -> CoreDTO.ApiConfigBag:
-    return build_config_api_bag()
-
-
-def get_core_worker_config_bag() -> CoreDTO.WorkerConfigBag:
-    return build_worker_config_bag()
-
-
-def get_core_dispatcher_config_bag() -> CoreDTO.DispatcherConfigBag:
-    return build_dispatcher_config_bag()
-
-
-def get_core_collector_config_bag() -> CoreDTO.CollectorConfigBag:
-    return build_collector_config_bag()
 
 
 def get_core_services() -> ServiceFactory:
@@ -258,11 +247,51 @@ def get_core_services() -> ServiceFactory:
 
 
 @lru_cache
-def create_app_context() -> AppContext:
+def create_api_context() -> ApiContext:
+    svcs = get_core_services()
+    return ApiContext(config=build_api_config_bag(), svcs=svcs)
+
+
+@lru_cache
+def create_worker_context() -> WorkerContext:
     svcs = get_core_services()
     redis = get_redis_client(settings.REDIS_URL)
-    return AppContext(svcs=svcs, redis_client=redis)
+    return WorkerContext(
+        config=build_worker_config_bag(), svcs=svcs, redis_client=redis
+    )
 
+
+@lru_cache
+def create_dispatcher_context() -> DispatcherContext:
+    svcs = get_core_services()
+    redis = get_redis_client(settings.REDIS_URL)
+    return DispatcherContext(
+        config=build_dispatcher_config_bag(), svcs=svcs, redis_client=redis
+    )
+
+
+@lru_cache
+def create_collector_context() -> CollectorContext:
+    async_redis = get_async_redis_client(settings.REDIS_URL)
+    return CollectorContext(
+        config=build_collector_config_bag(), async_redis_client=async_redis
+    )
+
+
+# def get_core_api_config_bag() -> CoreDTO.ApiConfigBag:
+#     return build_api_config_bag()
+
+
+# def get_core_worker_config_bag() -> CoreDTO.WorkerConfigBag:
+#     return build_worker_config_bag()
+
+
+# def get_core_dispatcher_config_bag() -> CoreDTO.DispatcherConfigBag:
+#     return build_dispatcher_config_bag()
+
+
+# def get_core_collector_config_bag() -> CoreDTO.CollectorConfigBag:
+#     return build_collector_config_bag()
 
 # @lru_cache(maxsize=1)
 # def get_rq_queue_factory() -> RqQueueFactory:

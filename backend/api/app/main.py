@@ -3,12 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 
 import logging
+from app.core.constants import DeploymentEnvironment
 from app.core.logging import setup_logging
-from app.api.deps import api_config
+from app.api.deps import get_app_context
 from app.api.middleware import RequestIdMiddleware
 from app.api.exception_handlers import unified_exception_handler
 from app.api.router import api
 
+ctx = get_app_context()
 
 TAGS_METADATA = [
     {"name": "health", "description": "헬스체크/진단"},
@@ -60,7 +62,7 @@ def _install_openapi_with_bearer(app: FastAPI) -> None:
 
 
 def create_app() -> FastAPI:
-    if api_config.deploy_env == "prod":
+    if ctx.config.deploy_env == DeploymentEnvironment.PROD:
         setup_logging(level=logging.INFO, service="api")
     else:
         setup_logging(level=logging.DEBUG, service="api")

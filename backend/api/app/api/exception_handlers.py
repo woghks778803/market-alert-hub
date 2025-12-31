@@ -4,15 +4,17 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlalchemy.exc import IntegrityError
 
+from app.core.constants import DeploymentEnvironment
 from app.core.error.error_model import (
     ErrorSpec,
     from_exception_minimal,
     build_log_fields,
 )
 from app.domain.shared.errors import AppError
-from app.api.deps import api_config
+from app.api.deps import get_app_context
 from app.api.common.envelope import fail, ErrorBody
 
+ctx = get_app_context()
 log = logging.getLogger(__name__)
 
 
@@ -83,7 +85,11 @@ def _spec_from_integrity_error(exc: IntegrityError, req_id: str) -> ErrorSpec:
         trace_id=req_id,
         exc_type=exc.__class__.__name__,
         # IntegrityError는 운영 이슈일 수도 있어서 비프로덕션에선 stack 기록해두자
-        stack=None if api_config.deploy_env == "prod" else "IntegrityError",
+        stack=(
+            None
+            if ctx.config.deploy_env == DeploymentEnvironment.PROD
+            else "IntegrityError"
+        ),
         severity="ERROR",
     )
 
@@ -131,12 +137,16 @@ async def unified_exception_handler(request: Request, exc: Exception):
         spec = from_exception_minimal(
             exc,
             trace_id=req_id,
-            include_stack=(api_config.deploy_env != "prod"),
+            include_stack=(ctx.config.deploy_env != DeploymentEnvironment.PROD),
         )
 
     # 2) 로그 남기기
     # 민감 키 마스킹: prod에서는 db_msg, params 같은 내부 구현 세부는 버린다.
-    redact_keys = {"db_msg", "params"} if api_config.deploy_env == "prod" else None
+    redact_keys = (
+        {"db_msg", "params"}
+        if ctx.config.deploy_env == DeploymentEnvironment.PROD
+        else None
+    )
 
     log_fields = build_log_fields(
         spec,
@@ -158,11 +168,15 @@ async def unified_exception_handler(request: Request, exc: Exception):
         log_level,
         "request_error",
         extra={"request_id": req_id, **log_fields},
-        exc_info=(None if api_config.deploy_env == "prod" else True),
+        exc_info=(
+            None if ctx.config.deploy_env == DeploymentEnvironment.PROD else True
+        ),
     )
 
     # 3) 외부로 노출할 형태로 마스킹
-    public_spec = spec.mask_internal(should_mask=(api_config.deploy_env == "prod"))
+    public_spec = spec.mask_internal(
+        should_mask=(ctx.config.deploy_env == DeploymentEnvironment.PROD)
+    )
     # 4) Envelope.fail() 조립해서 FastAPI Response 리턴
     return fail(
         _to_public_error_body(public_spec),

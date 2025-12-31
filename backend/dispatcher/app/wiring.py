@@ -6,11 +6,8 @@ from rq import Queue
 
 from app.core import dto as CoreDTO
 from app.service.factory import ServiceFactory
-from app.runtime.app_context import AppContext
-from app.runtime.bootstrap import create_app_context, get_core_dispatcher_config_bag
-
-
-dispatcher_config = get_core_dispatcher_config_bag()
+from app.runtime.app_context import DispatcherContext
+from app.runtime.bootstrap import create_dispatcher_context
 
 
 @dataclass(frozen=True)
@@ -22,8 +19,8 @@ class DispatcherRuntime:
 
 
 @lru_cache(maxsize=1)
-def get_app_context() -> AppContext:
-    return create_app_context()
+def get_app_context() -> DispatcherContext:
+    return create_dispatcher_context()
 
 
 def build_dispatcher_runtime() -> DispatcherRuntime:
@@ -34,7 +31,7 @@ def build_dispatcher_runtime() -> DispatcherRuntime:
 
     return DispatcherRuntime(
         svcs=ctx.svcs,
-        config=dispatcher_config,
+        config=ctx.config,
         redis_conn=redis_conn,
         q_outbox=q_outbox,
     )

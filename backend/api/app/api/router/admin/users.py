@@ -43,7 +43,7 @@ def get_user(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    result = svcs.users.get_by_user_id(user_id=user_id)
+    result = svcs.users.get_user_admin_info(user_id=user_id)
     return ok(result, request_id=meta.request_id)
 
 @router.patch(
@@ -60,7 +60,7 @@ def update_user(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    result = svcs.users.update_user(user_id=user_id, role=payload.role, status=payload.status)
+    result = svcs.users.ensure_user(user_id=user_id, role=payload.role, status=payload.status)
     return ok(result, request_id=meta.request_id)
 
 @router.delete(

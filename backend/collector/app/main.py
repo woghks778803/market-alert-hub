@@ -4,11 +4,11 @@ import sys
 
 from app.core.logging import setup_logging
 from app.run import run
-from app.wiring import build_runtime, collector_config
+from app.wiring import build_runtime
 
 
 def main() -> int:
-    setup_logging(level=collector_config.log_level, service="collector")
+    setup_logging(service="collector")
     logger = logging.getLogger(__name__)
     logger.info("collector.boot")
 

@@ -1,22 +1,47 @@
-from fastapi import Depends, Request
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jwt import ExpiredSignatureError, InvalidTokenError
 from datetime import datetime, timezone
+from functools import lru_cache
+from dataclasses import dataclass
+from fastapi import Depends, Request
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
+from app.core import dto as CoreDTO
 from app.core.constants import UserRole
 from app.domain.shared.errors import AuthError, PermissionError
-from app.runtime.bootstrap import get_core_services, get_core_api_config_bag
 from app.service.factory import ServiceFactory
-from dataclasses import dataclass
+from app.runtime.app_context import ApiContext
+from app.runtime.bootstrap import (
+    create_api_context,
+)
 
 _bearer = HTTPBearer(auto_error=False)
-api_config = get_core_api_config_bag()
+# api_config = get_core_api_config_bag()
 
 
 @dataclass(frozen=True)
 class RequestMeta:
     request_id: str
     timestamp: datetime
+
+
+@dataclass(frozen=True)
+class ApiRuntime:
+    svcs: ServiceFactory
+    config: CoreDTO.ApiConfigBag
+
+
+@lru_cache(maxsize=1)
+def get_app_context() -> ApiContext:
+    return create_api_context()
+
+
+def build_api_runtime() -> ApiRuntime:
+    ctx = get_app_context()
+
+    return ApiRuntime(
+        svcs=ctx.svcs,
+        config=ctx.config,
+    )
 
 
 def get_request_meta(request: Request) -> RequestMeta:
@@ -26,11 +51,11 @@ def get_request_meta(request: Request) -> RequestMeta:
 
 def get_services(
     meta: RequestMeta = Depends(get_request_meta),
-    svcs: ServiceFactory = Depends(get_core_services),
+    ctx: ApiContext = Depends(get_app_context),
 ):
 
-    svcs._trace_id = meta.request_id
-    return svcs
+    ctx.svcs._trace_id = meta.request_id
+    return ctx.svcs
 
 
 def get_current_token(
