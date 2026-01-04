@@ -80,3 +80,10 @@ logs/
 .DS_Store
 Thumbs.db
 .envrc
+
+# ======================
+# Deploy hold
+# ======================
+backend/api/app/api/realtime/
+backend/common/app/infra/external/websocket/
+backend/common/app/infra/external/exchange/

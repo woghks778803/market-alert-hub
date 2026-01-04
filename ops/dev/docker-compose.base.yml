@@ -20,12 +20,14 @@ services:
 
   # dashboard:
   #   image: eoranged/rq-dashboard:latest
+  #   container_name: mah_dashboard
   #   ports:
   #     - "9181:9181"
   #   environment:
   #     - RQ_DASHBOARD_REDIS_URL=redis://redis:6379/0
   #   depends_on:
   #     - redis
+  #   networks: [ mahnet ]
 
   api:
     build: ../../backend/api
@@ -35,7 +37,7 @@ services:
       - ../../backend/api:/app:cached
       - ../../backend/common:/app/common:cached
     command: [ "/app/entrypoint.sh" ]
-    expose: [ "8000" ]
+    expose: [ "8000" ] # 내부 통신용
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -85,6 +87,30 @@ services:
     env_file:
       - ./env/common.env
       - ./env/dispatcher.env
+    restart: unless-stopped
+    tty: true # IDE attach 안정
+    stdin_open: true
+    networks: [ mahnet ]
+    cpus: 0.80
+    mem_limit: 768m
+    # cpus: 0.50
+    # mem_limit: 512m
+
+  scheduler:
+    build: ../../backend/scheduler
+    container_name: mah_scheduler
+    working_dir: /app
+    volumes:
+      - ../../backend/scheduler:/app:cached
+      - ../../backend/common:/app/common:cached
+    entrypoint: [ "sh", "/app/entrypoint.sh" ]
+    # CMD는 Dockerfile의 ["python","main.py"] 사용
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    env_file:
+      - ./env/common.env
+      - ./env/scheduler.env
     restart: unless-stopped
     tty: true # IDE attach 안정
     stdin_open: true

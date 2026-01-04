@@ -5,6 +5,7 @@ from app.runtime.app_context import (
     WorkerContext,
     ApiContext,
     DispatcherContext,
+    SchedulerContext,
     CollectorContext,
 )
 
@@ -67,7 +68,7 @@ class Providers:
         return lambda: get_redis_client(settings.REDIS_URL)
 
     @staticmethod
-    def create_uow_provider(sqlalchemy_url: str) -> Callable[[], UnitOfWork]:
+    def uow_provider(sqlalchemy_url: str) -> Callable[[], UnitOfWork]:
         engine = create_sqlalchemy_engine(sqlalchemy_url)
         SessionLocal = create_sessionmaker(engine)
 
@@ -111,10 +112,6 @@ class Providers:
     @staticmethod
     def email_renderer_provider() -> Callable[[], JinjaEmailRenderer]:
         return lambda: JinjaEmailRenderer()
-
-    # @staticmethod
-    # def create_uow_from_session(db_session) -> Callable[[], UnitOfWork]:
-    #     return lambda: UnitOfWork(db_session, owns_session=True)
 
     @staticmethod
     def password_hasher_provider() -> Callable[[], PasslibPasswordHasher]:
@@ -168,6 +165,7 @@ providers = Providers()
 def build_api_config_bag() -> CoreDTO.ApiConfigBag:
     return CoreDTO.ApiConfigBag(
         deploy_env=settings.DEPLOY_ENV,
+        log_level=settings.LOG_LEVEL,
     )
 
 
@@ -183,8 +181,8 @@ def build_service_config_bag() -> CoreDTO.ServiceConfigBag:
 def build_worker_config_bag() -> CoreDTO.WorkerConfigBag:
     return CoreDTO.WorkerConfigBag(
         deploy_env=settings.DEPLOY_ENV,
+        log_level=settings.WORKER_LOG_LEVEL or settings.LOG_LEVEL,
         redis_url=settings.REDIS_URL,
-        log_level=settings.WORKER_LOG_LEVEL,
         outbox_poll_limit=settings.OUTBOX_POLL_LIMIT,
         outbox_idle_sleep=settings.OUTBOX_IDLE_SLEEP,
         outbox_retry_delay_sec=settings.OUTBOX_RETRY_DELAY_SEC,
@@ -197,20 +195,34 @@ def build_worker_config_bag() -> CoreDTO.WorkerConfigBag:
 
 def build_dispatcher_config_bag() -> CoreDTO.DispatcherConfigBag:
     return CoreDTO.DispatcherConfigBag(
+        deploy_env=settings.DEPLOY_ENV,
+        log_level=settings.DISPATCHER_LOG_LEVEL or settings.LOG_LEVEL,
         redis_url=settings.REDIS_URL,
-        log_level=settings.DISPATCHER_LOG_LEVEL,
         outbox_poll_limit=settings.OUTBOX_POLL_LIMIT,
         outbox_idle_sleep=settings.OUTBOX_IDLE_SLEEP,
     )
 
 
+def build_scheduler_config_bag() -> CoreDTO.SchedulerConfigBag:
+    return CoreDTO.SchedulerConfigBag(
+        deploy_env=settings.DEPLOY_ENV,
+        log_level=settings.SCHEDULER_LOG_LEVEL or settings.LOG_LEVEL,
+        redis_url=settings.REDIS_URL,
+        exchange=settings.SCHEDULER_EXCHANGE,
+        restart_base_backoff_sec=settings.SCHEDULER_RESTART_BASE_BACKOFF_SEC,
+        restart_max_backoff_sec=settings.SCHEDULER_RESTART_MAX_BACKOFF_SEC,
+        restart_jitter_ratio=settings.SCHEDULER_RESTART_JITTER_RATIO,
+    )
+
+
 def build_collector_config_bag() -> CoreDTO.CollectorConfigBag:
     return CoreDTO.CollectorConfigBag(
-        log_level=settings.COLLECTOR_LOG_LEVEL,
+        deploy_env=settings.DEPLOY_ENV,
+        log_level=settings.COLLECTOR_LOG_LEVEL or settings.LOG_LEVEL,
         redis_url=settings.REDIS_URL,
         exchange=settings.COLLECTOR_EXCHANGE,
-        enable_catalog_sync=settings.COLLECTOR_ENABLE_CATALOG_SYNC,
-        catalog_sync_interval_sec=settings.COLLECTOR_CATALOG_SYNC_INTERVAL_SEC,
+        # enable_catalog_sync=settings.COLLECTOR_ENABLE_CATALOG_SYNC,
+        # catalog_sync_interval_sec=settings.COLLECTOR_CATALOG_SYNC_INTERVAL_SEC,
         enable_stream=settings.COLLECTOR_ENABLE_STREAM,
         stream_reconnect_backoff_sec=settings.COLLECTOR_STREAM_RECONNECT_BACKOFF_SEC,
         restart_base_backoff_sec=settings.COLLECTOR_RESTART_BASE_BACKOFF_SEC,
@@ -224,10 +236,10 @@ def build_collector_config_bag() -> CoreDTO.CollectorConfigBag:
     )
 
 
-def create_service_factory(uow_provider: Callable[[], UnitOfWork]) -> ServiceFactory:
+def create_service_factory() -> ServiceFactory:
 
     return ServiceFactory(
-        uow=uow_provider,
+        uow=providers.uow_provider(settings.SQLALCHEMY_URL),
         redis_client=providers.redis_provider(),
         email_client=providers.email_client_provider(),
         email_renderer=providers.email_renderer_provider(),
@@ -240,10 +252,7 @@ def create_service_factory(uow_provider: Callable[[], UnitOfWork]) -> ServiceFac
 
 
 def get_core_services() -> ServiceFactory:
-    engine = create_sqlalchemy_engine(settings.SQLALCHEMY_URL)
-    SessionLocal = create_sessionmaker(engine)
-    uow_provider = lambda: UnitOfWork(SessionLocal, owns_session=True)
-    return create_service_factory(uow_provider)
+    return create_service_factory()
 
 
 @lru_cache
@@ -271,27 +280,21 @@ def create_dispatcher_context() -> DispatcherContext:
 
 
 @lru_cache
+def create_scheduler_context() -> SchedulerContext:
+    svcs = get_core_services()
+    redis = get_redis_client(settings.REDIS_URL)
+    return SchedulerContext(
+        config=build_scheduler_config_bag(), svcs=svcs, redis_client=redis
+    )
+
+
+@lru_cache
 def create_collector_context() -> CollectorContext:
     async_redis = get_async_redis_client(settings.REDIS_URL)
     return CollectorContext(
         config=build_collector_config_bag(), async_redis_client=async_redis
     )
 
-
-# def get_core_api_config_bag() -> CoreDTO.ApiConfigBag:
-#     return build_api_config_bag()
-
-
-# def get_core_worker_config_bag() -> CoreDTO.WorkerConfigBag:
-#     return build_worker_config_bag()
-
-
-# def get_core_dispatcher_config_bag() -> CoreDTO.DispatcherConfigBag:
-#     return build_dispatcher_config_bag()
-
-
-# def get_core_collector_config_bag() -> CoreDTO.CollectorConfigBag:
-#     return build_collector_config_bag()
 
 # @lru_cache(maxsize=1)
 # def get_rq_queue_factory() -> RqQueueFactory:

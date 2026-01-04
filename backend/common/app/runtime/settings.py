@@ -1,3 +1,4 @@
+from re import L, S
 from urllib.parse import quote_plus
 from pydantic import computed_field, field_validator, Field, EmailStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -12,6 +13,7 @@ class Settings(BaseSettings):
 
     # deploy
     DEPLOY_ENV: str = "dev"
+    LOG_LEVEL: str = "INFO"
     PUBLIC_WEB_BASE_URL: str = "http://localhost:8000"
 
     # --- DB ---
@@ -87,8 +89,8 @@ class Settings(BaseSettings):
 
     COLLECTOR_EXCHANGE: str = "upbit"
 
-    COLLECTOR_ENABLE_CATALOG_SYNC: bool = True
-    COLLECTOR_CATALOG_SYNC_INTERVAL_SEC: int = 21600  # 6h
+    # COLLECTOR_ENABLE_CATALOG_SYNC: bool = True
+    # COLLECTOR_CATALOG_SYNC_INTERVAL_SEC: int = 21600  # 6h
 
     COLLECTOR_ENABLE_STREAM: bool = False
     COLLECTOR_STREAM_RECONNECT_BACKOFF_SEC: float = 3.0
@@ -103,6 +105,24 @@ class Settings(BaseSettings):
 
     COLLECTOR_ENABLE_BACKFILL: bool = False
     COLLECTOR_BACKFILL_LOOKBACK_MINUTES: int = 60
+
+    # --- Scheduler ---
+    SCHEDULER_LOG_LEVEL: str = Field(default="INFO")
+
+    SCHEDULER_EXCHANGE: str = "upbit"
+
+    SCHEDULER_RESTART_BASE_BACKOFF_SEC: float = 2.0
+    SCHEDULER_RESTART_MAX_BACKOFF_SEC: float = 30.0
+    SCHEDULER_RESTART_JITTER_RATIO: float = 0.2
+
+    # --- Exchange: Upbit endpoints (REST/WS) ---
+    UPBIT_REST_BASE_URL: str = "https://api.upbit.com"  # 업비트 REST API base url
+    UPBIT_WS_URL: str = "wss://api.upbit.com/websocket/v1"  # 업비트 WebSocket endpoint
+
+    # --- Exchange: Upbit network tuning (optional) ---
+    UPBIT_HTTP_TIMEOUT_SEC: float = 10.0  # REST 요청 전체 타임아웃
+    UPBIT_WS_PING_INTERVAL_SEC: float = 20.0  # WS ping 간격 (None이면 비활성)
+    UPBIT_WS_CLOSE_TIMEOUT_SEC: float = 5.0  # WS close 타임아웃
 
     # 로컬 개발 편의: .env 읽기 (컨테이너에선 ENV가 우선)
     model_config = SettingsConfigDict(

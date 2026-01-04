@@ -1,16 +1,18 @@
 import logging
+import asyncio
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Any, Callable
-
-from app.internal.runtime.supervisor import RestartPolicy
-from app.internal.state.checkpoint_store import (
+from app.runtime.aio.lifecycle.signals import install_signal_handlers
+from app.runtime.aio.supervision.supervisor import RestartPolicy, build_supervised_tasks
+from app.runtime.aio.state.checkpoint_store import (
     CheckpointStore,
     FileCheckpointStore,
     MemoryCheckpointStore,
 )
-from app.runtime.bootstrap import get_core_collector_config_bag
+from app.runtime.bootstrap import create_collector_context
+from app.runtime.app_context import CollectorContext
 
-collector_config = get_core_collector_config_bag()
 logger = logging.getLogger(__name__)
 TaskFactory = Callable[[], Any]  # () -> Awaitable[None]  (타이핑은 느슨하게 유지)
 
@@ -24,6 +26,7 @@ class CollectorRuntime:
     run.py에서 runtime.stop_event = stop_event 로 바인딩해서 jobs가 공유하도록 한다.
     """
 
+    ctx: CollectorContext
     jobs: list[tuple[str, TaskFactory]]
     checkpoint_store: CheckpointStore
     restart_policy: RestartPolicy
@@ -35,6 +38,11 @@ class CollectorRuntime:
         return
 
 
+@lru_cache(maxsize=1)
+def get_app_context() -> CollectorContext:
+    return create_collector_context()
+
+
 def build_runtime() -> CollectorRuntime:
     """
     collector 컨테이너 부팅 시 호출되는 wiring.
@@ -44,11 +52,13 @@ def build_runtime() -> CollectorRuntime:
     실제 비즈니스 의존성(거래소 클라이언트, repo/uow 등)은
     추후 jobs 구현 단계에서 여기로 주입해 확장하면 된다.
     """
-    checkpoint_store = _build_checkpoint_store()
-    restart_policy = _build_restart_policy()
+    ctx = get_app_context()
+    checkpoint_store = _build_checkpoint_store(ctx)
+    restart_policy = _build_restart_policy(ctx)
     on_task_error = _build_on_task_error()
 
     runtime = CollectorRuntime(
+        ctx=ctx,
         jobs=[],
         checkpoint_store=checkpoint_store,
         restart_policy=restart_policy,
@@ -61,7 +71,7 @@ def build_runtime() -> CollectorRuntime:
     return runtime
 
 
-def _build_checkpoint_store() -> CheckpointStore:
+def _build_checkpoint_store(ctx: CollectorContext) -> CheckpointStore:
     """
     기본은 운영 안정성/확장성을 위해 redis가 좋지만,
     현재 settings에 collector 전용 값이 없을 수 있으니 안전하게 기본값을 둔다.
@@ -72,17 +82,17 @@ def _build_checkpoint_store() -> CheckpointStore:
     #     key_prefix = collector_config.checkpoint_key_prefix
     #     return RedisCheckpointStore(redis_url=redis_url, key_prefix=key_prefix)
 
-    if collector_config.checkpoint_backend == "file":
-        return FileCheckpointStore(path=collector_config.checkpoint_file_path)
+    if ctx.config.checkpoint_backend == "file":
+        return FileCheckpointStore(path=ctx.config.checkpoint_file_path)
 
     # default: memory
     return MemoryCheckpointStore()
 
 
-def _build_restart_policy() -> RestartPolicy:
-    base = collector_config.restart_base_backoff_sec
-    max_ = collector_config.restart_max_backoff_sec
-    jitter = collector_config.restart_jitter_ratio
+def _build_restart_policy(ctx: CollectorContext) -> RestartPolicy:
+    base = ctx.config.restart_base_backoff_sec
+    max_ = ctx.config.restart_max_backoff_sec
+    jitter = ctx.config.restart_jitter_ratio
     return RestartPolicy(
         base_backoff_sec=base, max_backoff_sec=max_, jitter_ratio=jitter
     )
@@ -108,11 +118,11 @@ def _build_jobs(runtime: CollectorRuntime) -> list[tuple[str, TaskFactory]]:
     """
     from app.jobs.stream_marketdata import run_stream_marketdata_loop
 
-    enable_catalog = collector_config.enable_catalog_sync
-    catalog_interval = collector_config.catalog_sync_interval_sec
+    # enable_catalog = runtime.ctx.config.enable_catalog_sync
+    # catalog_interval = runtime.ctx.config.catalog_sync_interval_sec
 
-    enable_stream = collector_config.enable_stream
-    stream_reconnect_backoff = collector_config.stream_reconnect_backoff_sec
+    enable_stream = runtime.ctx.config.enable_stream
+    stream_reconnect_backoff = runtime.ctx.config.stream_reconnect_backoff_sec
     jobs: list[tuple[str, TaskFactory]] = []
 
     if enable_stream:
@@ -131,3 +141,31 @@ def _build_jobs(runtime: CollectorRuntime) -> list[tuple[str, TaskFactory]]:
         jobs.append(("market_stream", stream_factory))
 
     return jobs
+
+
+def create_tasks(
+    runtime: Any, stop_event: asyncio.Event
+) -> list[asyncio.Task[None]] | None:
+    """
+    runtime에서 jobs/policy/on_task_error를 꺼내 supervised task들을 조립한다.
+    """
+    # jobs 쪽에서 stop_event를 참조할 수 있게 바인딩
+    install_signal_handlers(stop_event)
+    setattr(runtime, "stop_event", stop_event)
+
+    jobs = getattr(runtime, "jobs", None)
+    if not jobs:
+        return None
+
+    restart_policy = getattr(runtime, "restart_policy", None)
+    if not isinstance(restart_policy, RestartPolicy):
+        restart_policy = RestartPolicy()
+
+    on_task_error = getattr(runtime, "on_task_error", None)
+
+    return build_supervised_tasks(
+        stop_event=stop_event,
+        specs=jobs,
+        policy=restart_policy,
+        on_error=on_task_error,
+    )

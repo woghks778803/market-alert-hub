@@ -1,17 +1,15 @@
 import asyncio
 import logging
 from typing import Any
+from app.wiring import create_tasks
 
-from app.internal.runtime.signals import install_signal_handlers
-from app.internal.runtime.supervisor import RestartPolicy, build_supervised_tasks
 
 logger = logging.getLogger(__name__)
 
 
 async def _maybe_await_close(obj: Any) -> None:
     """
-    runtime/checkpoint_store/redis client 등이 close() 또는 aclose()를 제공할 수 있어서
-    best-effort로 정리한다.
+    비동기 컨테이너용 best-effort close
     """
     for name in ("aclose", "close"):
         fn = getattr(obj, name, None)
@@ -42,25 +40,10 @@ async def run(runtime: Any) -> None:
     각 job은 stop_event를 직접 받는 방식으로 wiring에서 closure로 캡쳐시키는 걸 권장.
     """
     stop_event = asyncio.Event()
-    install_signal_handlers(stop_event)
-
-    jobs = getattr(runtime, "jobs", None)
-    if not jobs:
+    tasks = create_tasks(runtime, stop_event)
+    if not tasks:
         logger.warning("collector.no_jobs")
         return
-
-    restart_policy = getattr(runtime, "restart_policy", None)
-    if not isinstance(restart_policy, RestartPolicy):
-        restart_policy = RestartPolicy()
-
-    on_task_error = getattr(runtime, "on_task_error", None)
-
-    tasks = build_supervised_tasks(
-        stop_event=stop_event,
-        specs=jobs,
-        policy=restart_policy,
-        on_error=on_task_error,
-    )
 
     logger.info("collector.run tasks=%d", len(tasks))
 

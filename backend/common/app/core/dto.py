@@ -29,13 +29,14 @@ class ServiceConfigBag:
 @dataclass(frozen=True)
 class ApiConfigBag:
     deploy_env: str
+    log_level: str
 
 
 @dataclass(frozen=True)
 class WorkerConfigBag:
     deploy_env: str
-    redis_url: str
     log_level: str
+    redis_url: str
     outbox_poll_limit: int
     outbox_idle_sleep: float
     outbox_retry_delay_sec: int
@@ -47,15 +48,32 @@ class WorkerConfigBag:
 
 @dataclass(frozen=True)
 class DispatcherConfigBag:
-    redis_url: str
+    deploy_env: str
     log_level: str
+    redis_url: str
     outbox_poll_limit: int
     outbox_idle_sleep: float
 
 
 @dataclass(frozen=True)
+class SchedulerConfigBag:
+    deploy_env: str
+    log_level: str
+    redis_url: str
+
+    # exchange
+    exchange: str
+
+    # restart policy (supervisor)
+    restart_base_backoff_sec: float
+    restart_max_backoff_sec: float
+    restart_jitter_ratio: float
+
+
+@dataclass(frozen=True)
 class CollectorConfigBag:
     # 공통
+    deploy_env: str
     log_level: str
     redis_url: str
 
@@ -63,8 +81,8 @@ class CollectorConfigBag:
     exchange: str
 
     # 1) catalog sync
-    enable_catalog_sync: bool
-    catalog_sync_interval_sec: int
+    # enable_catalog_sync: bool
+    # catalog_sync_interval_sec: int
 
     # 2) market stream
     enable_stream: bool
