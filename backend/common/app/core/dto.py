@@ -62,7 +62,11 @@ class SchedulerConfigBag:
     redis_url: str
 
     # exchange
-    exchange: str
+    # exchange: str
+    
+    sync_interval_sec: int
+    trig_interval_sec: int
+    snapshot_interval_sec: int
 
     # restart policy (supervisor)
     restart_base_backoff_sec: float
@@ -78,7 +82,7 @@ class CollectorConfigBag:
     redis_url: str
 
     # exchange
-    exchange: str
+    # exchange: str
 
     # 1) catalog sync
     # enable_catalog_sync: bool

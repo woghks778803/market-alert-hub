@@ -2,8 +2,7 @@ import logging
 import uuid
 from typing import Any, Callable, Mapping, Protocol, runtime_checkable
 
-from app.core.dto import WorkerConfigBag
-from app.core.constants import EmailVerificationStatus
+from app.core.constants import EmailVerificationStatus, OutboxEventType
 from app.core.util.datetime import utcnow, ensure_utc
 from app.domain.shared.errors import ValidationAppError
 
@@ -122,8 +121,8 @@ def _handle_email_auth_code(
         _release_lock(ctx.redis_client, lock_key, token)
 
 
-_HANDLERS: dict[str, Handler] = {
-    "EMAIL_AUTH_CODE": _handle_email_auth_code,
+_HANDLERS: dict[OutboxEventType, Handler] = {
+    OutboxEventType.EMAIL_AUTH_CODE: _handle_email_auth_code,
 }
 
 
@@ -135,7 +134,7 @@ def _dispatch(
 ) -> Any:
     logger.info("dispatch event_type=%s keys=%s", event_type, list(payload.keys()))
 
-    handler = _HANDLERS.get(event_type)
+    handler = _HANDLERS.get(OutboxEventType(event_type))
     if handler is None:
         raise ValidationAppError(
             f"unsupported event_type={event_type}", target="event_type"

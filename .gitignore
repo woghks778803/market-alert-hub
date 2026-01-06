@@ -87,3 +87,4 @@ Thumbs.db
 backend/api/app/api/realtime/
 backend/common/app/infra/external/websocket/
 backend/common/app/infra/external/exchange/
+backend/common/app/script

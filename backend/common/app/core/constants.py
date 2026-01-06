@@ -1,6 +1,13 @@
 import enum
 
 
+class OutboxEventType(str, enum.Enum):
+    EMAIL_AUTH_CODE = "EMAIL_AUTH_CODE"
+    SYNC_EXCHANGE_INSTRUMENTS = "SYNC_EXCHANGE_INSTRUMENTS"
+    TRIGGER_ALERTS = "TRIGGER_ALERTS"
+    PERSIST_SNAPSHOTS = "PERSIST_SNAPSHOTS"
+
+
 class DeploymentEnvironment(str, enum.Enum):
     LOCAL = "local"
     DEV = "dev"

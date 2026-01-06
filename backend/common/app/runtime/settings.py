@@ -87,7 +87,7 @@ class Settings(BaseSettings):
     # --- Collector ---
     COLLECTOR_LOG_LEVEL: str = Field(default="INFO")
 
-    COLLECTOR_EXCHANGE: str = "upbit"
+    # COLLECTOR_EXCHANGE: str = "upbit"
 
     # COLLECTOR_ENABLE_CATALOG_SYNC: bool = True
     # COLLECTOR_CATALOG_SYNC_INTERVAL_SEC: int = 21600  # 6h
@@ -109,11 +109,16 @@ class Settings(BaseSettings):
     # --- Scheduler ---
     SCHEDULER_LOG_LEVEL: str = Field(default="INFO")
 
-    SCHEDULER_EXCHANGE: str = "upbit"
+    # SCHEDULER_EXCHANGE: str = "upbit"
 
     SCHEDULER_RESTART_BASE_BACKOFF_SEC: float = 2.0
     SCHEDULER_RESTART_MAX_BACKOFF_SEC: float = 30.0
     SCHEDULER_RESTART_JITTER_RATIO: float = 0.2
+
+    # Schedule interval
+    SCHEDULER_SYNC_INTERVAL_SEC: int = 1800  # 30분
+    SCHEDULER_TRIG_INTERVAL_SEC: int = 5  # 1초
+    SCHEDULER_SNAPSHOT_INTERVAL_SEC: int = 60  # 1분
 
     # --- Exchange: Upbit endpoints (REST/WS) ---
     UPBIT_REST_BASE_URL: str = "https://api.upbit.com"  # 업비트 REST API base url

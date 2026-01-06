@@ -4,6 +4,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.infra.db.base import Base 
 from app.core.util.datetime import utcnow
 from app.core.constants import OutboxStatus
+from app.domain import OutboxDTO
 
 class Outbox(Base):
     __tablename__ = "outboxs"
@@ -11,7 +12,7 @@ class Outbox(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     trace_id: Mapped[str] = mapped_column(String(36), nullable=False)  # ix_outbox_trace
     event_type: Mapped[str] = mapped_column(String(100), nullable=False)
-    aggregate_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    aggregate_type: Mapped[str] = mapped_column(String(50), nullable=False)
     aggregate_id: Mapped[int] = mapped_column(Integer, nullable=False)
     outbox_fingerprint: Mapped[bytes | None] = mapped_column(BINARY(32), nullable=True, unique=True)
     payload: Mapped[dict] = mapped_column(JSON, nullable=False) 
@@ -35,3 +36,42 @@ class Outbox(Base):
         Index("ix_outbox_status_next", "status", "next_run_at"),
         Index("ix_outbox_agg", "aggregate_type", "aggregate_id"),
     )
+    
+
+    def to_dto(self) -> OutboxDTO.Outbox:
+        """
+        ORM Model -> domain DTO (조회/반환용)
+        """
+        return OutboxDTO.Outbox(
+            id=self.id,
+            trace_id=self.trace_id,
+            event_type=self.event_type,
+            aggregate_type=self.aggregate_type,
+            aggregate_id=self.aggregate_id,
+            outbox_fingerprint=self.outbox_fingerprint,
+            payload=self.payload,
+            status=self.status,
+            attempts=self.attempts,
+            next_run_at=self.next_run_at,
+            last_attempted_at=self.last_attempted_at,
+            sent_at=self.sent_at,
+            final_failed_at=self.final_failed_at,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
+        )
+
+    @classmethod
+    def from_create_dto(cls, dto: OutboxDTO.OutboxCreate) -> "Outbox":
+        """
+        domain DTO -> ORM Model
+        """
+        return cls(
+            trace_id=dto.trace_id,
+            event_type=dto.event_type,
+            aggregate_type=dto.aggregate_type,
+            aggregate_id=dto.aggregate_id,
+            outbox_fingerprint=dto.outbox_fingerprint,
+            payload=dto.payload,
+            status=dto.status,
+            attempts=dto.attempts,
+        )

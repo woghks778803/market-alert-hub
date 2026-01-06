@@ -1,19 +1,19 @@
+from curses import meta
 from datetime import datetime
 from fastapi import Response, APIRouter, Depends, Query, Path, Body, status
 from app.core.constants import CandleBaseInterval, CandleOutputInterval
 from app.service.factory import ServiceFactory
-from app.api.common.envelope import Envelope, ok, created
+from app.api.common.envelope import Envelope, ok, no_content
 from app.api.deps import get_services, get_request_meta, RequestMeta
 from app.api.schema import MarketSchema
 import app.api.openapi as OpenApi
-from app.domain import MarketDTO
 
-router = APIRouter()
+router = APIRouter(prefix="/markets")
 
 
 # Meta
 @router.get(
-    "/meta/exchanges",
+    "/exchanges",
     response_model=Envelope[list[MarketSchema.ExchangeRead]],
     summary="거래소 목록",
     responses=OpenApi.combine(
@@ -35,9 +35,9 @@ def list_exchanges(
 
 
 @router.get(
-    "/markets/instruments",
+    "/instruments",
     response_model=Envelope[list[MarketSchema.MarketInstrumentItem]],
-    summary="거래소 종목 목록",
+    summary="종목 목록",
     responses=OpenApi.combine(
         OpenApi.OK(
             Envelope[list[MarketSchema.MarketInstrumentItem]],
@@ -61,7 +61,7 @@ def list_exchange_instruments(
 
 
 @router.get(
-    "/markets/mappings",
+    "/mappings",
     response_model=Envelope[list[MarketSchema.MappingItem]],
     summary="거래소-종목 매핑(선택)",
     responses=OpenApi.combine(
@@ -83,7 +83,7 @@ def list_mappings(
 
 # Prices
 @router.get(
-    "/prices/candles",
+    "/candles",
     response_model=Envelope[list[MarketSchema.CandleBase]],
     summary="캔들 조회",
     description="cursor > start, end 우선 (같이 값이 들어갈 경우 start, end는 무시됩니다)",
@@ -118,37 +118,57 @@ def list_candles(
     return ok(rows, request_id=meta.request_id)
 
 
-@router.post(
-    "/candles/{base}",
-    status_code=status.HTTP_201_CREATED,
-    response_model=Envelope[MarketSchema.CandleIngestResult],
-    summary="캔들 스냅샷 저장",
-    description="내부 프로세스가 base 단위로 최신 캔들을 저장합니다. 항상 UPSERT로 동작합니다.",
+@router.get(
+    "/stream/candles",
+    response_model=Envelope[list[MarketSchema.CandleBase]],
+    summary="실시간 캔들 조회",
+    description="cursor > start, end 우선 (같이 값이 들어갈 경우 start, end는 무시됩니다)",
     responses=OpenApi.combine(
-        OpenApi.CREATED(
-            Envelope[MarketSchema.CandleIngestResult],
-            description="저장 성공",
+        OpenApi.OK(
+            Envelope[list[MarketSchema.CandleBase]],
+            description="리스트 조회 성공",
         ),
+        OpenApi.ERR_409,
     ),
 )
-def post_candles(
-    response: Response,
-    base: CandleBaseInterval = Path(..., description="기준 간격: 1m / 1h / 1d"),
-    payload: MarketSchema.CandleBase = Body(
-        ...,
-        example={
-            "exchange_instrument_id": 101,
-            "ts_open": "2025-03-15T12:34:00Z",
-            "open": 64123.12,
-            "high": 64200.0,
-            "low": 64010.5,
-            "close": 64180.7,
-            "volume": 12.3456,
-        },
-    ),
+def stream_candles(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    item = MarketDTO.CandleBase(**payload.model_dump())
-    result = svcs.markets.ingest_snapshot(base=base, item=item)
-    return created(result, response=response, request_id=meta.request_id)
+    return ok({}, request_id=meta.request_id)
+
+
+# @router.post(
+#     "/candles/{base}",
+#     status_code=status.HTTP_201_CREATED,
+#     response_model=Envelope[MarketSchema.CandleIngestResult],
+#     summary="캔들 스냅샷 저장",
+#     description="내부 프로세스가 base 단위로 최신 캔들을 저장합니다. 항상 UPSERT로 동작합니다.",
+#     responses=OpenApi.combine(
+#         OpenApi.CREATED(
+#             Envelope[MarketSchema.CandleIngestResult],
+#             description="저장 성공",
+#         ),
+#     ),
+# )
+# def post_candles(
+#     response: Response,
+#     base: CandleBaseInterval = Path(..., description="기준 간격: 1m / 1h / 1d"),
+#     payload: MarketSchema.CandleBase = Body(
+#         ...,
+#         example={
+#             "exchange_instrument_id": 101,
+#             "ts_open": "2025-03-15T12:34:00Z",
+#             "open": 64123.12,
+#             "high": 64200.0,
+#             "low": 64010.5,
+#             "close": 64180.7,
+#             "volume": 12.3456,
+#         },
+#     ),
+#     svcs: ServiceFactory = Depends(get_services),
+#     meta: RequestMeta = Depends(get_request_meta),
+# ):
+#     item = MarketDTO.CandleBase(**payload.model_dump())
+#     result = svcs.markets.ingest_snapshot(base=base, item=item)
+#     return created(result, response=response, request_id=meta.request_id)

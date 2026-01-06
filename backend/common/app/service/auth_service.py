@@ -1,7 +1,16 @@
 from typing import Callable, Dict, Any
 from datetime import datetime, timedelta, timezone
 
-from app.infra.db.model import UserModel, OutboxModel, EmailVerificationModel
+from app.core.constants import (
+    UserRole,
+    UserStatus,
+    OutboxStatus,
+    EmailVerificationStatus,
+    OutboxEventType,
+)
+from app.core import dto as CoreDTO
+from app.core.util.datetime import utcnow, ensure_utc
+from app.core.util.serialization import to_canonical_json
 from app.domain.shared.uow import UnitOfWork
 from app.domain.shared.errors import ValidationAppError, PermissionError, AuthError
 from app.domain import (
@@ -9,15 +18,7 @@ from app.domain import (
     EmailDTO,
     CryptoPort,
 )
-from app.core.constants import (
-    UserRole,
-    UserStatus,
-    OutboxStatus,
-    EmailVerificationStatus,
-)
-from app.core import dto as CoreDTO
-from app.core.util.datetime import utcnow, ensure_utc
-from app.core.util.serialization import to_canonical_json
+from app.infra.db.model import UserModel, OutboxModel, EmailVerificationModel
 
 
 class AuthService:
@@ -93,7 +94,7 @@ class AuthService:
             uow.users.add_email_verification(email_verification)
 
             outbox_fingerprint_dict = {
-                "event_type": "EMAIL_AUTH_CODE",
+                "event_type": OutboxEventType.EMAIL_AUTH_CODE,
                 "aggregate_type": "user",
                 "aggregate_id": user.id,
                 "email_verification_id": email_verification.id,
@@ -105,7 +106,7 @@ class AuthService:
             uow.outboxs.add_outbox(
                 OutboxModel(
                     trace_id=self._trace_id,
-                    event_type="EMAIL_AUTH_CODE",
+                    event_type=OutboxEventType.EMAIL_AUTH_CODE,
                     aggregate_type="user",
                     aggregate_id=user.id,
                     outbox_fingerprint=outbox_fingerprint,
@@ -248,7 +249,7 @@ class AuthService:
             uow.users.add_email_verification(email_verification)
 
             outbox_fingerprint_dict = {
-                "event_type": "EMAIL_AUTH_CODE",
+                "event_type": OutboxEventType.EMAIL_AUTH_CODE,
                 "aggregate_type": "user",
                 "aggregate_id": user.id,
                 "email_verification_id": email_verification.id,
@@ -260,7 +261,7 @@ class AuthService:
             uow.outboxs.add_outbox(
                 OutboxModel(
                     trace_id=self._trace_id,
-                    event_type="EMAIL_AUTH_CODE",
+                    event_type=OutboxEventType.EMAIL_AUTH_CODE,
                     aggregate_type="user",
                     aggregate_id=user.id,
                     outbox_fingerprint=outbox_fingerprint,
@@ -356,7 +357,7 @@ class AuthService:
             uow.users.add_email_verification(email_verification)
 
             outbox_fingerprint_dict = {
-                "event_type": "EMAIL_AUTH_CODE",
+                "event_type": OutboxEventType.EMAIL_AUTH_CODE,
                 "aggregate_type": "user",
                 "aggregate_id": user.id,
                 "email_verification_id": email_verification.id,
@@ -368,7 +369,7 @@ class AuthService:
             uow.outboxs.add_outbox(
                 OutboxModel(
                     trace_id=self._trace_id,
-                    event_type="EMAIL_AUTH_CODE",
+                    event_type=OutboxEventType.EMAIL_AUTH_CODE,
                     aggregate_type="user",
                     aggregate_id=user.id,
                     outbox_fingerprint=outbox_fingerprint,

@@ -114,4 +114,5 @@ class ServiceFactory:
         return OutboxService(
             trace_id=self._trace_id,
             uow_factory=self._uow,
+            hmac=self.hmac,
         )

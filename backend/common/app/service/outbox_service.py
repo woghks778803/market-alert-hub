@@ -3,22 +3,57 @@ import logging
 from datetime import datetime
 
 # from tenacity import retry, stop_after_attempt, wait_exponential
-from app.domain.shared.uow import UnitOfWork
-from app.domain.shared.errors import InternalServerError
-from app.domain import OutboxDTO, OutboxRule
+
 from app.core.constants import OutboxStatus
 from app.core.util.datetime import utcnow
-from app.infra.db.model import OutboxAttemptModel
+from app.core.util.serialization import to_canonical_json
+from app.domain.shared.uow import UnitOfWork
+from app.domain.shared.errors import InternalServerError
+from app.domain import OutboxDTO, OutboxRule, CryptoPort
 
 logger = logging.getLogger(__name__)
 
 
 class OutboxService:
     def __init__(
-        self, trace_id: str | None, uow_factory: Callable[[], UnitOfWork]
+        self,
+        trace_id: str | None,
+        uow_factory: Callable[[], UnitOfWork],
+        hmac: CryptoPort.TokenHasher,
     ) -> None:
         self._trace_id = trace_id
         self._uow_factory = uow_factory
+        self._hmac = hmac
+
+    def create_outbox(
+        self,
+        trace_id: str,
+        outbox_fingerprint_dict: dict | None,
+        event_type: str,
+        aggregate_type: str,
+        aggregate_id: int,
+        payload: dict[str, Any],
+    ) -> OutboxDTO.Outbox:
+        with self._uow_factory() as uow:
+            outbox_fingerprint = to_canonical_json(outbox_fingerprint_dict)
+            if outbox_fingerprint is not None:
+                outbox_fingerprint = self._hmac.fp_hash(outbox_fingerprint)
+
+            row = uow.outboxs.add_outbox(
+                OutboxDTO.OutboxCreate(
+                    trace_id=trace_id,
+                    event_type=event_type,
+                    aggregate_type=aggregate_type,
+                    aggregate_id=aggregate_id,
+                    outbox_fingerprint=outbox_fingerprint,
+                    payload=payload,
+                    status=OutboxStatus.PENDING,
+                    attempts=0,
+                )
+            )
+
+            uow.commit()
+            return row
 
     def enqueue_outbox_pending(self, limit: int, q_outbox):
         with self._uow_factory() as uow:
@@ -151,7 +186,7 @@ class OutboxService:
         finally:
             with self._uow_factory() as uow:
                 uow.outboxs.add_outbox_attempt(
-                    OutboxAttemptModel(
+                    OutboxDTO.OutboxAttemptCreate(
                         outbox_id=outbox_id,
                         attempt_no=attempts,
                         success=1 if success else 0,

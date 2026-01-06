@@ -1,5 +1,6 @@
 from sqlalchemy import select, update, func
 from sqlalchemy.orm import Session as DbSession
+
 from app.domain import OutboxDTO
 from app.domain.shared.errors import ValidationAppError
 from app.infra.db.model import OutboxModel, OutboxAttemptModel
@@ -10,11 +11,19 @@ class SqlOutboxRepo(OutboxRepo):
     def __init__(self, db: DbSession):
         self._db = db
 
-    def add_outbox(self, row: OutboxModel) -> None:
-        self._db.add(row)
+    def add_outbox(self, row: OutboxDTO.OutboxCreate) -> OutboxDTO.Outbox:
+        outbox = OutboxModel.from_create_dto(row)
+        self._db.add(outbox)
+        self._db.flush()
+        return outbox.to_dto()
 
-    def add_outbox_attempt(self, row: OutboxAttemptModel) -> None:
-        self._db.add(row)
+    def add_outbox_attempt(
+        self, row: OutboxDTO.OutboxAttemptCreate
+    ) -> OutboxDTO.OutboxAttempt:
+        outbox_attempt = OutboxAttemptModel.from_create_dto(row)
+        self._db.add(outbox_attempt)
+        self._db.flush()
+        return outbox_attempt.to_dto()
 
     def get_by_outbox_id(self, id: int) -> OutboxModel | None:
         return self._db.execute(
