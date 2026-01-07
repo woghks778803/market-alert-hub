@@ -26,7 +26,7 @@ class MarketService:
 
     def list_exchange_instruments_by_filter(
         self, *, exchange_id: int | None, limit: int, offset: int
-    ) -> list[MarketDTO.MarketInstrumentItem]:
+    ) -> list[MarketDTO.ExchangeInstrument]:
         with self._uow_factory() as uow:
             rows = uow.markets.list_exchange_instruments_by_filter(
                 exchange_id=exchange_id, limit=limit, offset=offset

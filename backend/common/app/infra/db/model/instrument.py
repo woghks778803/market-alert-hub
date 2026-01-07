@@ -4,6 +4,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infra.db.base import Base
 from app.core.constants import AssetType
 from app.core.util.datetime import utcnow
+from app.domain import MarketDTO
 
 class Instrument(Base):
     __tablename__ = "instruments"
@@ -35,3 +36,14 @@ class Instrument(Base):
         foreign_keys="ExchangeInstrument.quote_asset_id",
         back_populates="quote_asset",
     )
+
+    def to_dto(self) -> MarketDTO.Instrument:
+        return MarketDTO.Instrument(
+            id=self.id,
+            symbol=self.symbol,
+            asset_type=self.asset_type,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
+            is_deleted=self.is_deleted,
+            is_active=self.is_active,
+        )

@@ -3,6 +3,7 @@ from sqlalchemy import Integer, Boolean, String, Integer, DateTime, ForeignKey, 
 from sqlalchemy.orm import Mapped, mapped_column
 from app.infra.db.base import Base
 from app.core.util.datetime import utcnow
+from app.domain import WatchlistDTO
 
 class WatchlistItem(Base):
     __tablename__ = "watchlist_items"
@@ -33,3 +34,15 @@ class WatchlistItem(Base):
         # 유저 목록 정렬/조회 최적화
         Index("ix_wi_user_sort", "user_id", "sort_order"),
     )
+
+    def to_dto(self) -> WatchlistDTO.WatchlistItem:
+        return WatchlistDTO.WatchlistItem(
+            id=self.id,
+            user_id=self.user_id,
+            exchange_instrument_id=self.exchange_instrument_id,
+            note=self.note,
+            sort_order=self.sort_order,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
+            is_deleted=self.is_deleted,
+        )

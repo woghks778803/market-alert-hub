@@ -4,6 +4,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.infra.db.base import Base
 from app.core.constants import UserRole, UserStatus
 from app.core.util.datetime import utcnow
+from app.domain import UserDTO
 
 class User(Base):
     __tablename__ = "users"
@@ -48,3 +49,22 @@ class User(Base):
             name="ck_users_email_crypto_all_or_none"
         ),
     )
+
+
+    def to_dto(self) -> UserDTO.User:
+        return UserDTO.User(
+            id=self.id,
+            email_ciphertext=self.email_ciphertext,
+            email_fingerprint=self.email_fingerprint,
+            email_nonce=self.email_nonce,
+            email_key_version=self.email_key_version,
+            nickname=self.nickname,
+            password_hash=self.password_hash,
+            role=self.role,
+            status=self.status,
+            email_verified_at=self.email_verified_at,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
+            last_login_at=self.last_login_at,
+            is_deleted=self.is_deleted,
+        )

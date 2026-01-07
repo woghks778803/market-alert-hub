@@ -2,6 +2,7 @@ from datetime import datetime
 from sqlalchemy import Integer, String, DateTime, ForeignKey, UniqueConstraint, Index, BINARY, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from app.infra.db.base import Base
+from app.domain import UserDTO
 
 class UserOauthAccount(Base):
     __tablename__ = "user_oauth_accounts"
@@ -25,3 +26,13 @@ class UserOauthAccount(Base):
 
         Index("ix_oauth_user_id", "user_id"),
     )
+
+    def to_dto(self) -> UserDTO.UserOAuthAccount:
+        return UserDTO.UserOAuthAccount(
+            id=self.id,
+            user_id=self.user_id,
+            oauth_providers_id=self.oauth_providers_id,
+            provider_user_id=self.provider_user_id,
+            linked_at=self.linked_at,
+            unlinked_at=self.unlinked_at,
+        )

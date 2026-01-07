@@ -3,6 +3,7 @@ from sqlalchemy import Integer, String, Boolean, JSON, DateTime, ForeignKey, fun
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infra.db.base import Base
 from app.core.util.datetime import utcnow
+from app.domain import ChannelDTO
 
 class UserChannel(Base):
     __tablename__ = "user_channels"
@@ -33,3 +34,18 @@ class UserChannel(Base):
 
     targets: Mapped[list["AlertChannelTarget"]] = relationship(back_populates="user_channel", cascade="all, delete-orphan")
     channel_provider: Mapped["ChannelProvider"] = relationship("ChannelProvider", back_populates="channels")
+
+    def to_dto(self) -> ChannelDTO.UserChannel:
+        return ChannelDTO.UserChannel(
+            id=self.id,
+            user_id=self.user_id,
+            channel_provider_id=self.channel_provider_id,
+            address=self.address,
+            config=self.config,
+            config_fingerprint=self.config_fingerprint,
+            verified_at=self.verified_at,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
+            is_default=self.is_default,
+            is_deleted=self.is_deleted,
+        )

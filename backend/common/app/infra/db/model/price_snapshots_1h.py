@@ -4,6 +4,7 @@ from sqlalchemy import Integer, DECIMAL, DateTime, ForeignKey, UniqueConstraint,
 from sqlalchemy.orm import Mapped, mapped_column
 from app.infra.db.base import Base
 from app.core.util.datetime import utcnow
+from app.domain import MarketDTO
 
 class PriceSnapshot1h(Base):
     __tablename__ = "price_snapshots_1h"
@@ -31,3 +32,16 @@ class PriceSnapshot1h(Base):
         UniqueConstraint("exchange_instrument_id", "ts_open", name="uq_price_1h_exi_ts"),
         Index("ix_price_1h_exi_ts", "exchange_instrument_id", "ts_open"),
     )
+
+    def to_dto(self) -> MarketDTO.PriceSnapshot:
+        return MarketDTO.PriceSnapshot(
+            id=self.id,
+            exchange_instrument_id=self.exchange_instrument_id,
+            ts_open=self.ts_open,
+            open=self.open,
+            high=self.high,
+            low=self.low,
+            close=self.close,
+            volume=self.volume,
+            updated_at=self.updated_at,
+        )

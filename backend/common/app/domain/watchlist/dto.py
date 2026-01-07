@@ -15,3 +15,14 @@ class WatchlistItemRead:
     exchange_symbol: str
     sort_order: int
     created_at: datetime
+
+@dataclass(slots=True)
+class WatchlistItem:
+    id: int
+    user_id: int
+    exchange_instrument_id: int
+    note: str | None
+    sort_order: int
+    created_at: datetime
+    updated_at: datetime
+    is_deleted: bool

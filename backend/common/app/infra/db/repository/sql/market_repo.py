@@ -24,7 +24,7 @@ class SqlMarketRepo(MarketRepo):
         stmt = select(ExchangeModel).where(ExchangeModel.is_deleted.is_(False)).order_by(asc(ExchangeModel.id)).limit(limit).offset(offset)
         return self._db.execute(stmt).scalars().all()
 
-    def list_exchange_instruments_by_filter(self, *, exchange_id: int | None = None, limit: int = 200, offset: int = 0) -> list[MarketDTO.MarketInstrumentItem]:
+    def list_exchange_instruments_by_filter(self, *, exchange_id: int | None = None, limit: int = 200, offset: int = 0) -> list[MarketDTO.ExchangeInstrument]:
         ei = ExchangeInstrumentModel
         e = ExchangeModel
         b = aliased(InstrumentModel)  
@@ -51,7 +51,7 @@ class SqlMarketRepo(MarketRepo):
 
         rows = self._db.execute(stmt).mappings().all()
 
-        return [MarketDTO.MarketInstrumentItem(**row) for row in rows]
+        return [MarketDTO.ExchangeInstrument(**row) for row in rows]
 
     def list_mappings_exchange_id(self, *, exchange_id: int | None = None) -> list[ExchangeInstrumentModel]:
         ei = ExchangeInstrumentModel

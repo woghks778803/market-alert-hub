@@ -3,6 +3,7 @@ from sqlalchemy import Boolean, Integer, String, DateTime, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infra.db.base import Base
 from app.core.util.datetime import utcnow
+from app.domain import MarketDTO
 
 class Exchange(Base):
     __tablename__ = "exchanges"
@@ -26,3 +27,17 @@ class Exchange(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("0"))  
 
     instruments: Mapped[list["ExchangeInstrument"]] = relationship(back_populates="exchange")
+
+    def to_dto(self) -> MarketDTO.Exchange:
+        return MarketDTO.Exchange(
+            id=self.id,
+            code=self.code,
+            name=self.name,
+            country=self.country,
+            timezone=self.timezone,
+            base_url=self.base_url,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
+            is_deleted=self.is_deleted,
+            is_active=self.is_active,
+        )

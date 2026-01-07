@@ -17,7 +17,7 @@ class Outbox:
     next_run_at: datetime
     created_at: datetime
     updated_at: datetime
-    outbox_fingerprint: str | None
+    outbox_fingerprint: bytes | None
     last_attempted_at: datetime | None
     sent_at: datetime | None
     final_failed_at: datetime | None

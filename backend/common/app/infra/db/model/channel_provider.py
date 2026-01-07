@@ -2,6 +2,7 @@ from datetime import datetime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import Integer, String, Boolean, DateTime, JSON, Index, text
 from app.infra.db.base import Base
+from app.domain import ChannelDTO
 
 class ChannelProvider(Base):
     __tablename__ = "channel_providers"
@@ -24,3 +25,18 @@ class ChannelProvider(Base):
 
     __table_args__ = (Index("ix_channel_providers_active", "is_active"),)
 
+
+    def to_dto(self) -> ChannelDTO.ChannelProvider:
+        return ChannelDTO.ChannelProvider(
+            id=self.id,
+            code=self.code,
+            name=self.name,
+            description=self.description,
+            user_schema=self.user_schema,
+            admin_schema=self.admin_schema,
+            rate_limit_policy=self.rate_limit_policy,
+            retry_policy=self.retry_policy,
+            is_active=self.is_active,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
+        )

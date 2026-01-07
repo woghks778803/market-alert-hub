@@ -28,3 +28,50 @@ class UserEmailInfo:
     email_nonce: bytes | None
     email_key_version: int | None
     email_verified_at: datetime | None
+
+@dataclass(slots=True)
+class UserOAuthAccount:
+    id: int
+    user_id: int
+    oauth_providers_id: int
+    provider_user_id: str
+    linked_at: datetime
+    unlinked_at: datetime | None
+    
+@dataclass(slots=True)
+class User:
+    id: int
+    email_ciphertext: bytes | None
+    email_fingerprint: bytes | None
+    email_nonce: bytes | None
+    email_key_version: int | None
+    nickname: str
+    password_hash: str
+    role: "UserRole"
+    status: "UserStatus"
+    email_verified_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+    last_login_at: datetime | None
+    is_deleted: bool
+
+@dataclass(slots=True)
+class EmailVerification:
+    id: int
+    user_id: int
+
+    email_ciphertext: bytes
+    email_fingerprint: bytes
+    email_nonce: bytes
+    email_key_version: int
+
+    token_hash: bytes
+    status: "EmailVerificationStatus"
+
+    expires_at: datetime
+    sent_at: datetime | None
+    consumed_at: datetime | None
+    fail_count: int
+
+    created_at: datetime
+    updated_at: datetime

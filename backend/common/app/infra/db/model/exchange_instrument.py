@@ -4,6 +4,7 @@ from sqlalchemy import DateTime, Boolean, Integer, String, DECIMAL, ForeignKey, 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infra.db.base import Base
 from app.core.util.datetime import utcnow
+from app.domain import MarketDTO
 
 class ExchangeInstrument(Base):
     __tablename__ = "exchange_instruments"
@@ -44,3 +45,25 @@ class ExchangeInstrument(Base):
         UniqueConstraint("exchange_id", "base_asset_id", "quote_asset_id", name="uq_market"),
         Index("ix_market_lookup", "exchange_id", "base_asset_id", "quote_asset_id"),
     )
+
+    def to_dto(self) -> MarketDTO.ExchangeInstrument:
+        return MarketDTO.ExchangeInstrument(
+            id=self.id
+            exchange_id=self.exchange_id
+            base_asset_id=self.base_asset_id
+            quote_asset_id=self.quote_asset_id
+            exchange_symbol=self.exchange_symbol
+            price_precision=self.price_precision
+            qty_precision=self.qty_precision
+            min_notional=self.min_notional
+            created_at=self.created_at
+            updated_at=self.updated_at
+        )
+        
+
+    # @classmethod
+    # def from_create_dto(cls, dto: MarketDTO.ExchangeInstrumentCreate) -> "ExchangeInstrument":
+    #     return cls(
+
+    #     )
+
