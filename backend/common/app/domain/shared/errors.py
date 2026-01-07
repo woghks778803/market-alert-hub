@@ -52,5 +52,5 @@ class TemplateRenderError(AppError):
     code = "template_render_error"
 
 class EmailSendError(AppError):
-    code = "email_send_error"
     status_code = HS.BAD_GATEWAY  # (외부 서비스 오류)
+    code = "email_send_error"

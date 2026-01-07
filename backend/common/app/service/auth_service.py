@@ -117,7 +117,7 @@ class AuthService:
                     },
                     status=OutboxStatus.PENDING,
                     attempts=0,
-                )
+                ),True
             )
 
             uow.commit()
@@ -272,7 +272,7 @@ class AuthService:
                     },
                     status=OutboxStatus.PENDING,
                     attempts=0,
-                )
+                ),True
             )
 
             uow.commit()
@@ -380,7 +380,7 @@ class AuthService:
                     },
                     status=OutboxStatus.PENDING,
                     attempts=0,
-                )
+                ),True
             )
 
             user.email_fingerprint = new_email_fingerprint

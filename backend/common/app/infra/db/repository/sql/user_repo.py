@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session as DbSession
 from app.domain import EmailDTO
 from app.domain.shared.errors import ValidationAppError
 from app.infra.db.model import UserModel, EmailVerificationModel
-from ._utils import to_db_value
+from app.infra.db.utils import to_db_value
 from ..protocol.user_repo import UserRepo
 
 
