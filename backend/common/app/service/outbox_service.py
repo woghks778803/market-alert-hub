@@ -14,6 +14,7 @@ from app.domain import OutboxDTO, OutboxRule, CryptoPort
 logger = logging.getLogger(__name__)
 
 
+
 class OutboxService:
     def __init__(
         self,
@@ -49,11 +50,12 @@ class OutboxService:
                     payload=payload,
                     status=OutboxStatus.PENDING,
                     attempts=0,
-                )
+                ),False
             )
 
-            uow.commit()
+            uow.commit_outbox_idempotent()
             return row
+
 
     def enqueue_outbox_pending(self, limit: int, q_outbox):
         with self._uow_factory() as uow:
@@ -74,7 +76,7 @@ class OutboxService:
             # 각 이벤트를 RQ 큐에 등록
             for oid in ids:
                 q_outbox.enqueue(
-                    "app.jobs.process_outbox.deliver_outbox_event",
+                    "app.job.registry.deliver_outbox_event",
                     oid,
                     job_id=f"outbox-{oid}",  # 중복 outbox enqueue 방지
                     retry=None,
@@ -110,7 +112,7 @@ class OutboxService:
         next_run_at: datetime | None = None
         result_code: str | None = None
         result_message: str | None = None
-        result_payload: dict[str, Any] | None = None
+        result_payload: dict[str, Any]
 
         try:
             send_result = dispatch_fn(event_type=row.event_type, payload=payload)
@@ -196,7 +198,7 @@ class OutboxService:
                         result_payload=result_payload,
                         started_at=attempt_started_at,
                         finished_at=utcnow(),
-                    )
+                    ),False
                 )
 
                 outbox_update = OutboxDTO.OutboxUpdate(

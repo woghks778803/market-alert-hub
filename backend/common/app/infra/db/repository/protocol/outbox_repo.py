@@ -1,13 +1,12 @@
-from typing import Protocol, Sequence
-from datetime import datetime
+from typing import Protocol
 from app.domain import OutboxDTO
-from app.infra.db.model import OutboxModel, OutboxAttemptModel
+from app.infra.db.model import OutboxModel
 
 
 class OutboxRepo(Protocol):
-    def add_outbox(self, row: OutboxDTO.OutboxCreate) -> OutboxDTO.Outbox: ...
+    def add_outbox(self, row: OutboxDTO.OutboxCreate, is_flush: bool) -> OutboxDTO.Outbox: ...
     def add_outbox_attempt(
-        self, row: OutboxDTO.OutboxAttemptCreate
+        self, row: OutboxDTO.OutboxAttemptCreate, is_flush: bool
     ) -> OutboxDTO.OutboxAttempt: ...
     def get_by_outbox_id(self, id: int) -> OutboxModel | None: ...
     def update_outbox_by_filter(

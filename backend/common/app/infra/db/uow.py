@@ -1,7 +1,8 @@
 from typing import Union
 from sqlalchemy.orm import Session as DbSession, sessionmaker
+from sqlalchemy.exc import IntegrityError
 from app.domain.shared.uow import UnitOfWork as UnitOfWorkPort
-
+from app.infra.db.utils import is_mysql_duplicate_key
 from app.infra.db.repository.protocol.user_repo import UserRepo
 from app.infra.db.repository.protocol.session_repo import SessionRepo
 from app.infra.db.repository.protocol.alert_repo import AlertRepo
@@ -53,6 +54,22 @@ class UnitOfWork(UnitOfWorkPort):
         if not self._done:
             self.db.commit()
             self._done = True
+    
+    def commit_outbox_idempotent(self) -> None:
+        if self._done:
+            return
+
+        try:
+            self.db.commit()
+            self._done = True
+        except IntegrityError as e:
+
+            if is_mysql_duplicate_key(e):
+                # 이미 같은 fingerprint가 존재 → 정상 처리
+                self.db.rollback()
+                self._done = True
+                return
+            raise
 
     def rollback(self) -> None:
         if not self._done:

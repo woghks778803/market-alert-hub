@@ -6,23 +6,22 @@ from app.domain.shared.errors import ValidationAppError
 from app.infra.db.model import OutboxModel, OutboxAttemptModel
 from ..protocol.outbox_repo import OutboxRepo
 
-
 class SqlOutboxRepo(OutboxRepo):
     def __init__(self, db: DbSession):
         self._db = db
-
-    def add_outbox(self, row: OutboxDTO.OutboxCreate) -> OutboxDTO.Outbox:
+    
+    def add_outbox(self, row: OutboxDTO.OutboxCreate, is_flush: bool) -> OutboxDTO.Outbox:
         outbox = OutboxModel.from_create_dto(row)
         self._db.add(outbox)
-        self._db.flush()
+        if is_flush: self._db.flush()
         return outbox.to_dto()
 
     def add_outbox_attempt(
-        self, row: OutboxDTO.OutboxAttemptCreate
+        self, row: OutboxDTO.OutboxAttemptCreate, is_flush: bool
     ) -> OutboxDTO.OutboxAttempt:
         outbox_attempt = OutboxAttemptModel.from_create_dto(row)
         self._db.add(outbox_attempt)
-        self._db.flush()
+        if is_flush: self._db.flush()
         return outbox_attempt.to_dto()
 
     def get_by_outbox_id(self, id: int) -> OutboxModel | None:
