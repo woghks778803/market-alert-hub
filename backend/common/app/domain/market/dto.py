@@ -1,6 +1,9 @@
 from typing import NamedTuple
 from datetime import datetime
 from dataclasses import dataclass
+from decimal import Decimal
+from app.core.constants import AssetType
+
 
 @dataclass(slots=True, frozen=True)
 class CandleBase:
@@ -11,6 +14,7 @@ class CandleBase:
     low: float
     close: float
     volume: float
+
 
 class MappingItem(NamedTuple):
     exchange_id: int
@@ -38,12 +42,13 @@ class ExchangeInstrument:
     updated_at: datetime
     is_deleted: bool
     is_active: bool
-    
+
 
 @dataclass(slots=True)
 class ExchangeInstrumentCreate:
     id: int
-    
+
+
 @dataclass(slots=True)
 class Exchange:
     id: int
@@ -57,15 +62,17 @@ class Exchange:
     is_deleted: bool
     is_active: bool
 
+
 @dataclass(slots=True)
 class Instrument:
     id: int
     symbol: str
-    asset_type: "AssetType"
+    asset_type: AssetType
     created_at: datetime
     updated_at: datetime
     is_deleted: bool
     is_active: bool
+
 
 @dataclass(slots=True)
 class PriceSnapshot:
@@ -78,4 +85,3 @@ class PriceSnapshot:
     close: Decimal
     volume: Decimal
     updated_at: datetime
-    

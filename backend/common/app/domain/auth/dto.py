@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from app.core.constants import UserRole
 
 
@@ -13,6 +14,7 @@ class AuthUser:
     id: int
     role: UserRole = UserRole.USER  #  단일 권한
 
+
 @dataclass(slots=True)
 class Session:
     id: int
@@ -23,5 +25,3 @@ class Session:
     created_at: datetime
     expires_at: datetime
     revoked_at: datetime | None
-
-    
