@@ -8,15 +8,19 @@ from app.wiring import get_app_context
 from .auth_email import handle_auth_email
 from .sync_exchange import handle_sync_exchanges
 from .sync_symbol import handle_sync_symbols
+from .persist_snapshot import handle_persist_snapshots
+
 
 logger = logging.getLogger(__name__)
 Handler = Callable[[WorkerContext, Mapping[str, Any]], Any]
 
 HANDLERS: dict[OutboxEventType, Handler] = {
     OutboxEventType.EMAIL_AUTH_CODE: handle_auth_email,
+    OutboxEventType.PERSIST_SNAPSHOTS: handle_persist_snapshots,
     OutboxEventType.SYNC_EXCHANGES: handle_sync_exchanges,
     OutboxEventType.SYNC_SYMBOLS: handle_sync_symbols,
 }
+
 
 def _dispatch(
     ctx: WorkerContext,
@@ -51,4 +55,3 @@ def deliver_outbox_event(outbox_id: int) -> None:
             payload=payload,
         ),
     )
-

@@ -27,7 +27,7 @@ class CollectorRuntime:
     """
 
     ctx: CollectorContext
-    jobs: list[tuple[str, TaskFactory]]
+    specs: list[tuple[str, TaskFactory]]
     checkpoint_store: CheckpointStore
     restart_policy: RestartPolicy
     on_task_error: Callable[[str, BaseException], None]
@@ -59,14 +59,14 @@ def build_runtime() -> CollectorRuntime:
 
     runtime = CollectorRuntime(
         ctx=ctx,
-        jobs=[],
+        specs=[],
         checkpoint_store=checkpoint_store,
         restart_policy=restart_policy,
         on_task_error=on_task_error,
     )
 
     # jobs는 runtime.stop_event를 참조할 수 있게 "runtime 캡쳐" 형태로 만든다.
-    runtime.jobs = _build_jobs(runtime)
+    runtime.specs = _build_specs(runtime)
 
     return runtime
 
@@ -109,21 +109,21 @@ def _build_on_task_error() -> Callable[[str, BaseException], None]:
     return _hook
 
 
-def _build_jobs(runtime: CollectorRuntime) -> list[tuple[str, TaskFactory]]:
+def _build_specs(runtime: CollectorRuntime) -> list[tuple[str, TaskFactory]]:
     """
     run.py가 stop_event를 만든 뒤 runtime.stop_event에 바인딩하면,
     여기서 만든 task_factory들이 그 stop_event를 공유하게 된다.
 
     각 task_factory는 '코루틴'을 반환해야 한다.
     """
-    from app.jobs.stream_marketdata import run_stream_marketdata_loop
+    from app.handler.stream_marketdata import run_stream_marketdata_loop
 
     # enable_catalog = runtime.ctx.config.enable_catalog_sync
     # catalog_interval = runtime.ctx.config.catalog_sync_interval_sec
 
     enable_stream = runtime.ctx.config.enable_stream
     stream_reconnect_backoff = runtime.ctx.config.stream_reconnect_backoff_sec
-    jobs: list[tuple[str, TaskFactory]] = []
+    specs: list[tuple[str, TaskFactory]] = []
 
     if enable_stream:
 
@@ -138,23 +138,23 @@ def _build_jobs(runtime: CollectorRuntime) -> list[tuple[str, TaskFactory]]:
                 reconnect_backoff_sec=stream_reconnect_backoff,
             )
 
-        jobs.append(("market_stream", stream_factory))
+        specs.append(("market_stream", stream_factory))
 
-    return jobs
+    return specs
 
 
 def create_tasks(
     runtime: Any, stop_event: asyncio.Event
 ) -> list[asyncio.Task[None]] | None:
     """
-    runtime에서 jobs/policy/on_task_error를 꺼내 supervised task들을 조립한다.
+    runtime에서 specs/policy/on_task_error를 꺼내 supervised task들을 조립한다.
     """
-    # jobs 쪽에서 stop_event를 참조할 수 있게 바인딩
+    # specs 쪽에서 stop_event를 참조할 수 있게 바인딩
     install_signal_handlers(stop_event)
     setattr(runtime, "stop_event", stop_event)
 
-    jobs = getattr(runtime, "jobs", None)
-    if not jobs:
+    specs = getattr(runtime, "specs", None)
+    if not specs:
         return None
 
     restart_policy = getattr(runtime, "restart_policy", None)
@@ -165,7 +165,7 @@ def create_tasks(
 
     return build_supervised_tasks(
         stop_event=stop_event,
-        specs=jobs,
+        specs=specs,
         policy=restart_policy,
         on_error=on_task_error,
     )

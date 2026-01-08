@@ -1,6 +1,5 @@
 from typing import Protocol, Sequence, Tuple
 from datetime import datetime
-from app.infra.db.model import ExchangeModel, ExchangeInstrumentModel
 from app.domain import MarketDTO
 
 
@@ -8,16 +7,26 @@ class MarketRepo(Protocol):
 
     def get_by_exchange_instrument_id(
         self, *, exchange_instrumen_id: int
-    ) -> ExchangeInstrumentModel: ...
+    ) -> MarketDTO.ExchangeInstrument: ...
     def list_exchanges_by_filter(
-        self, *, limit: int = 100, offset: int = 0
-    ) -> Sequence[ExchangeModel]: ...
+        self,
+        *,
+        is_active: bool = True,
+        is_deleted: bool = False,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> Sequence[MarketDTO.Exchange]: ...
     def list_exchange_instruments_by_filter(
-        self, *, exchange_id: int | None = None, limit: int = 200, offset: int = 0
-    ) -> list[MarketDTO.ExchangeInstrument]: ...
+        self,
+        *,
+        exchange_id: int | None = None,
+        is_deleted: bool = False,
+        limit: int = 200,
+        offset: int = 0,
+    ) -> list[MarketDTO.MappingItem]: ...
     def list_mappings_exchange_id(
         self, *, exchange_id: int | None = None
-    ) -> list[ExchangeInstrumentModel]: ...
+    ) -> list[MarketDTO.MappingItem]: ...
     def _list_candles_by_filter(
         self,
         model,
@@ -66,4 +75,4 @@ class MarketRepo(Protocol):
 
     def seed_snapshots(self, *, interval: str, chunk: list): ...
 
-    def get_symbols(self, exchange_instrument_id: int) -> MarketDTO.MappingSymbol: ...
+    def get_symbols(self, exchange_instrument_id: int) -> MarketDTO.MappingItem: ...

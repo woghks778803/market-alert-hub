@@ -17,16 +17,22 @@ class WatchlistService:
             )
             result: List[WatchlistDTO.WatchlistItemRead] = []
             for row in rows:
-                exchange_symbol, base_symbol, quote_symbol = uow.markets.get_symbols(
-                    row.exchange_instrument_id
-                )
+
+                symbols = uow.markets.get_symbols(row.exchange_instrument_id)
+                if (
+                    symbols.base_symbol is None
+                    or symbols.quote_symbol is None
+                    or symbols.exchange_symbol is None
+                ):
+                    raise ValidationAppError("Mapping not found", target="symbols")
+
                 result.append(
                     WatchlistDTO.WatchlistItemRead(
                         id=row.id,
                         exchange_instrument_id=row.exchange_instrument_id,
-                        base_symbol=base_symbol,
-                        quote_symbol=quote_symbol,
-                        exchange_symbol=exchange_symbol,
+                        base_symbol=symbols.base_symbol,
+                        quote_symbol=symbols.quote_symbol,
+                        exchange_symbol=symbols.exchange_symbol,
                         sort_order=row.sort_order,
                         created_at=row.created_at,
                     )
@@ -61,16 +67,15 @@ class WatchlistService:
                 exchange_instrument_id=dto.exchange_instrument_id,
                 sort_order=sort_order,
             )
-            exchange_symbol, base_symbol, quote_symbol = uow.markets.get_symbols(
-                row.exchange_instrument_id
-            )
+            symbols = uow.markets.get_symbols(row.exchange_instrument_id)
+
             uow.commit()
             return WatchlistDTO.WatchlistItemRead(
                 id=row.id,
                 exchange_instrument_id=row.exchange_instrument_id,
-                base_symbol=base_symbol,
-                quote_symbol=quote_symbol,
-                exchange_symbol=exchange_symbol,
+                base_symbol=symbols.base_symbol,
+                quote_symbol=symbols.quote_symbol,
+                exchange_symbol=symbols.exchange_symbol,
                 sort_order=row.sort_order,
                 created_at=row.created_at,
             )

@@ -16,16 +16,17 @@ class CandleBase:
     volume: float
 
 
-class MappingItem(NamedTuple):
-    exchange_id: int
-    base_asset_id: int
-    quote_asset_id: int
+@dataclass(slots=True)
+class MappingItem:
+    id: int | None = None
 
-
-class MappingSymbol(NamedTuple):
-    exchange_symbol: str
-    base_symbol: str
-    quote_symbol: str
+    exchange_id: int | None = None
+    exchange_name: str | None = None
+    exchange_symbol: str | None = None
+    base_asset_id: int | None = None
+    base_symbol: str | None = None
+    quote_asset_id: int | None = None
+    quote_symbol: str | None = None
 
 
 @dataclass(slots=True)

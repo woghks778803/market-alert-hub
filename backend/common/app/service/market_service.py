@@ -6,7 +6,6 @@ from app.core.util.datetime import utcnow
 from app.domain.shared.uow import UnitOfWork
 from app.domain.shared.errors import ValidationAppError, NotFoundError
 from app.domain import MarketDTO, MarketRule
-from app.infra.db.model import ExchangeModel, ExchangeInstrumentModel
 
 
 class MarketService:
@@ -20,22 +19,24 @@ class MarketService:
     # Meta
     def list_exchanges_by_filter(
         self, *, limit: int, offset: int
-    ) -> Sequence[ExchangeModel]:
+    ) -> Sequence[MarketDTO.Exchange]:
         with self._uow_factory() as uow:
-            return uow.markets.list_exchanges_by_filter(limit=limit, offset=offset)
+            return uow.markets.list_exchanges_by_filter(
+                is_active=True, is_deleted=False, limit=limit, offset=offset
+            )
 
     def list_exchange_instruments_by_filter(
         self, *, exchange_id: int | None, limit: int, offset: int
-    ) -> list[MarketDTO.ExchangeInstrument]:
+    ) -> list[MarketDTO.MappingItem]:
         with self._uow_factory() as uow:
             rows = uow.markets.list_exchange_instruments_by_filter(
-                exchange_id=exchange_id, limit=limit, offset=offset
+                exchange_id=exchange_id, is_deleted=False, limit=limit, offset=offset
             )
             return rows
 
     def list_mappings_exchange_id(
         self, *, exchange_id: int | None
-    ) -> list[ExchangeInstrumentModel]:
+    ) -> list[MarketDTO.MappingItem]:
         with self._uow_factory() as uow:
             return uow.markets.list_mappings_exchange_id(exchange_id=exchange_id)
 
@@ -131,7 +132,7 @@ class MarketService:
 
             for ex in exchanges:
                 markets = uow.markets.list_exchange_instruments_by_filter(
-                    exchange_id=ex.id
+                    exchange_id=ex.id, is_deleted=False
                 )
 
                 for m in markets:

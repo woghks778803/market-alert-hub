@@ -44,6 +44,7 @@ class WorkerConfigBag:
     outbox_concurrency: int
     redis_stream_alerts: str
     redis_stream_deliveries: str
+    worker_jobs: dict[str, dict[str, object]]
 
 
 @dataclass(frozen=True)
@@ -63,7 +64,7 @@ class SchedulerConfigBag:
 
     # exchange
     # exchange: str
-    
+
     sync_interval_sec: int
     trig_interval_sec: int
     snapshot_interval_sec: int

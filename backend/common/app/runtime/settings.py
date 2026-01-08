@@ -1,8 +1,10 @@
 from re import L, S
+from unittest.util import strclass
 from urllib.parse import quote_plus
 from pydantic import computed_field, field_validator, Field, EmailStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Any
+from app.core.constants import OutboxEventType
 
 
 class Settings(BaseSettings):
@@ -84,6 +86,16 @@ class Settings(BaseSettings):
     REDIS_STREAM_ALERTS: str = Field(default="alerts")
     REDIS_STREAM_DELIVERIES: str = Field(default="deliveries")
 
+    # exchanges
+    SYNC_EXCHANGES_REDIS_KEY: str = "mah:meta:exchanges:v1"
+    SYNC_EXCHANGES_BATCH_SIZE: int = 500
+    SYNC_EXCHANGES_TTL_SEC: int = 0
+
+    # symbols
+    SYNC_SYMBOLS_REDIS_KEY: str = "mah:meta:symbols:v1"
+    SYNC_SYMBOLS_BATCH_SIZE: int = 500
+    SYNC_SYMBOLS_TTL_SEC: int = 0
+
     # --- Collector ---
     COLLECTOR_LOG_LEVEL: str = Field(default="INFO")
 
@@ -108,8 +120,6 @@ class Settings(BaseSettings):
 
     # --- Scheduler ---
     SCHEDULER_LOG_LEVEL: str = Field(default="INFO")
-
-    # SCHEDULER_EXCHANGE: str = "upbit"
 
     SCHEDULER_RESTART_BASE_BACKOFF_SEC: float = 2.0
     SCHEDULER_RESTART_MAX_BACKOFF_SEC: float = 30.0
@@ -137,6 +147,24 @@ class Settings(BaseSettings):
         case_sensitive=False,  # MYSQL_HOST / mysql_host 둘 다 허용
         extra="ignore",
     )
+
+    @property
+    def WORKER_JOBS(self) -> dict[str, dict[str, object]]:
+        """
+        event_type dict로 묶음
+        """
+        return {
+            OutboxEventType.SYNC_EXCHANGES.value: {
+                "redis_key": self.SYNC_EXCHANGES_REDIS_KEY,
+                "batch_size": self.SYNC_EXCHANGES_BATCH_SIZE,
+                "ttl_sec": self.SYNC_EXCHANGES_TTL_SEC,
+            },
+            OutboxEventType.SYNC_SYMBOLS.value: {
+                "redis_key": self.SYNC_SYMBOLS_REDIS_KEY,
+                "batch_size": self.SYNC_SYMBOLS_BATCH_SIZE,
+                "ttl_sec": self.SYNC_SYMBOLS_TTL_SEC,
+            },
+        }
 
     @computed_field  # pydantic v2
     @property

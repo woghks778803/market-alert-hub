@@ -190,6 +190,7 @@ def build_worker_config_bag() -> CoreDTO.WorkerConfigBag:
         outbox_concurrency=settings.OUTBOX_CONCURRENCY,
         redis_stream_alerts=settings.REDIS_STREAM_ALERTS,
         redis_stream_deliveries=settings.REDIS_STREAM_DELIVERIES,
+        worker_jobs=settings.WORKER_JOBS,
     )
 
 
