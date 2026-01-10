@@ -2,7 +2,9 @@ from typing import Any, Mapping
 from app.core.constants import EmailVerificationStatus
 from app.core.util.datetime import utcnow, ensure_utc
 from app.runtime.app_context import WorkerContext
-from app.util.utils import require, try_acquire_lock, release_lock, skip
+from app.util.utils import require, try_acquire_lock, release_lock
+from app.exception_handlers import SkipHandler, RetryHandler, FatalHandler
+
 
 def handle_auth_email(
     ctx: WorkerContext,
@@ -23,18 +25,18 @@ def handle_auth_email(
 
     now = utcnow()
     if email_verification.status != EmailVerificationStatus.PENDING:
-        return skip(f"status={email_verification.status}")
+        raise SkipHandler(f"status={email_verification.status}")
 
     expires_at = ensure_utc(email_verification.expires_at)
     if expires_at <= now:
-        return skip("expired")
+        raise SkipHandler("expired")
 
     lock_key = f"lock:email_verify_send:{email_verification_id}"
     token = try_acquire_lock(
         ctx.redis_client, lock_key, ttl_sec=ctx.config.outbox_send_lock_ttl_sec
     )
     if not token:
-        return skip("locked")
+        raise SkipHandler("locked")
 
     try:
         ses_result = ctx.svcs.emails.send_verify(
@@ -45,5 +47,17 @@ def handle_auth_email(
             email_verification_id=email_verification_id
         )
         return ses_result
+
+    except (TimeoutError, ConnectionError) as e:
+        raise RetryHandler(
+            "email_send_failed",
+            meta={"provider": "ses", "error": str(e)},
+        ) from e
+
+    except Exception as e:
+        raise FatalHandler(
+            "email_send_fatal",
+            meta={"provider": "ses", "error": str(e)},
+        ) from e
     finally:
         release_lock(ctx.redis_client, lock_key, token)

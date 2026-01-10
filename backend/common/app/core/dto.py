@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field, asdict
 from typing import Any, Generic, Iterable, Mapping, Optional, Sequence, TypeVar
+from app.core.error.error_model import ErrorSpec
 
 # 공용 유틸 --------------------------------------------------------------------
 
@@ -124,3 +125,14 @@ class Page(Base, Generic[T]):
     page: int
     size: int
     sort: Optional[Sort] = None
+
+
+# ---------------------------------------------------
+@dataclass
+class HandlerResult:
+    success: bool
+    retryable: bool
+    result_code: str
+    result_message: str | None
+    result_payload: dict
+    spec: ErrorSpec | None = None

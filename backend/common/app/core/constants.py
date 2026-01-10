@@ -98,8 +98,3 @@ class AlertType(str, enum.Enum):
 class AlertScope(str, enum.Enum):
     SINGLE = "single"
     CROSS = "cross"
-
-
-# 에러 코드 / 메시지
-ERROR_INVALID_TOKEN: str = "Invalid token"
-ERROR_PERMISSION_DENIED: str = "Permission denied"

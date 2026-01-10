@@ -4,12 +4,14 @@ import time
 from typing import Any, Mapping
 
 from app.runtime.app_context import WorkerContext
-from app.util.utils import require, try_acquire_lock, release_lock, skip
+from app.util.utils import require, try_acquire_lock, release_lock
 
 log = logging.getLogger(__name__)
 
 
-def handle_sync_exchanges(ctx: WorkerContext, payload: Mapping[str, Any]) -> dict[str, Any]:
+def handle_sync_exchanges(
+    ctx: WorkerContext, payload: Mapping[str, Any]
+) -> dict[str, Any]:
     batch_size = require(payload, "batch_size", target="payload.batch_size")
     ttl_sec = require(payload, "ttl_sec", target="payload.ttl_sec")
     redis_key = require(payload, "redis_key", target="payload.redis_key")
@@ -28,12 +30,19 @@ def handle_sync_exchanges(ctx: WorkerContext, payload: Mapping[str, Any]) -> dic
     pipe.delete(tmp_key)
 
     while True:
-        exchanges = ctx.svcs.markets.list_exchanges_by_filter(limit=batch_size, offset=offset)
+        exchanges = ctx.svcs.markets.list_exchanges_by_filter(
+            limit=batch_size, offset=offset
+        )
         if not exchanges:
             break
 
         for ex in exchanges:
-            pipe.rpush(tmp_key, json.dumps(_exchange_to_payload(ex), ensure_ascii=False, separators=(",", ":")))
+            pipe.rpush(
+                tmp_key,
+                json.dumps(
+                    _exchange_to_payload(ex), ensure_ascii=False, separators=(",", ":")
+                ),
+            )
         total += len(exchanges)
         offset += len(exchanges)
 

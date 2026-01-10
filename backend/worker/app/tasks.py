@@ -2,13 +2,14 @@ import logging
 from typing import Any, Callable, Mapping
 
 from app.core.constants import OutboxEventType
-from app.domain.shared.errors import ValidationAppError
 from app.runtime.app_context import WorkerContext
+from app.core import dto as CoreDTO
 from app.wiring import get_app_context
-from .auth_email import handle_auth_email
-from .sync_exchange import handle_sync_exchanges
-from .sync_symbol import handle_sync_symbols
-from .persist_snapshot import handle_persist_snapshots
+from app.exception_handlers import run_task
+from .handler.auth_email import handle_auth_email
+from .handler.sync_exchange import handle_sync_exchanges
+from .handler.sync_symbol import handle_sync_symbols
+from .handler.persist_snapshot import handle_persist_snapshots
 
 
 logger = logging.getLogger(__name__)
@@ -32,11 +33,15 @@ def _dispatch(
 
     handler = HANDLERS.get(OutboxEventType(event_type))
     if handler is None:
-        raise ValidationAppError(
-            f"unsupported event_type={event_type}", target="event_type"
+        return CoreDTO.HandlerResult(
+            success=False,
+            retryable=False,
+            result_code="unsupported",
+            result_message=f"unsupported event_type={event_type}",
+            result_payload={},
         )
 
-    return handler(ctx, payload)
+    return run_task(deploy_env=ctx.config.deploy_env, fn=lambda: handler(ctx, payload))
 
 
 def deliver_outbox_event(outbox_id: int) -> None:

@@ -1,7 +1,7 @@
 import uuid
 from typing import Any, Mapping, Protocol, runtime_checkable
 
-from app.domain.shared.errors import ValidationAppError
+from app.exception_handlers import ValidationHandler
 
 
 @runtime_checkable
@@ -24,10 +24,11 @@ class RedisClientLike(Protocol):
     def delete(self, key: str) -> int: ...
     def conn(self) -> Any: ...
 
+
 def require(payload: Mapping[str, Any], key: str, *, target: str) -> Any:
     v = payload.get(key)
     if v is None or v == "":
-        raise ValidationAppError(f"payload '{key}' is required", target=target)
+        raise ValidationHandler(f"payload '{key}' is required", target=target)
     return v
 
 
@@ -54,6 +55,5 @@ def release_lock(redis_client: RedisClientLike, key: str, token: str) -> None:
         redis_client.delete(key)
 
 
-def skip(reason: str) -> dict:
-    return {"ok": True, "skipped": True, "reason": reason}
-
+# def skip(reason: str) -> dict:
+#     return {"ok": True, "skipped": True, "reason": reason}

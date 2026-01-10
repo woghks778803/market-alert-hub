@@ -3,12 +3,12 @@ import logging
 from datetime import datetime
 
 # from tenacity import retry, stop_after_attempt, wait_exponential
-
-from app.core.constants import OutboxStatus
+from app.core import dto as CoreDTO
+from app.core.constants import OutboxStatus, OutboxEventType
 from app.core.util.datetime import utcnow
 from app.core.util.serialization import to_canonical_json
 from app.domain.shared.uow import UnitOfWork
-from app.domain.shared.errors import InternalServerError
+from app.domain.shared.errors import InternalServerError, ValidationAppError
 from app.domain import OutboxDTO, OutboxRule, CryptoPort
 
 logger = logging.getLogger(__name__)
@@ -75,7 +75,7 @@ class OutboxService:
             # 각 이벤트를 RQ 큐에 등록
             for oid in ids:
                 q_outbox.enqueue(
-                    "app.handler.registry.deliver_outbox_event",
+                    "app.tasks.deliver_outbox_event",
                     oid,
                     job_id=f"outbox-{oid}",  # 중복 outbox enqueue 방지
                     retry=None,
@@ -85,126 +85,136 @@ class OutboxService:
             uow.commit()  #  enqueue까지 성공하면 commit
             return len(ids)
 
+    def _decide_retry(
+        self,
+        result: CoreDTO.HandlerResult,
+        outbox_attempt: OutboxDTO.OutboxAttemptCreate,
+        outbox_update: OutboxDTO.OutboxUpdate,
+        event_type,
+    ):
+        with self._uow_factory() as uow:
+
+            if result.retryable:
+                if OutboxEventType.EMAIL_AUTH_CODE == event_type:
+                    provider = uow.channels.get_channel_by_code("EMAIL")
+                    policy = provider.retry_policy  # JSON → dict 파싱
+                    if policy is None:
+                        raise InternalServerError(
+                            "retry policy not configured",
+                            target="channel_provider.retry_policy",
+                        )
+                    if outbox_update.attempts is None:
+                        raise ValidationAppError(
+                            "attempts not found",
+                            target="attempts",
+                        )
+
+                    max_attempts = policy["max_attempts"]
+                    base_delay = policy["base_delay_sec"]
+                    max_delay = policy["max_delay_sec"]
+
+                    if outbox_update.attempts < max_attempts:
+                        outbox_attempt.retryable = True
+                        outbox_update.status = OutboxStatus.PENDING
+                        delay = OutboxRule.compute_backoff(
+                            outbox_update.attempts,
+                            base_delay_sec=base_delay,
+                            max_delay_sec=max_delay,
+                        )
+                        outbox_update.next_run_at = utcnow() + delay
+
+                        logger.info(
+                            f"max_attempts={max_attempts}, base_delay={base_delay}, max_delay={max_delay}, attempts={outbox_update.attempts},  next_at={outbox_update.next_run_at}"
+                        )
+
+                    else:
+                        outbox_attempt.retryable = False
+                        outbox_update.status = OutboxStatus.FAILED
+            else:
+                outbox_attempt.success = result.success
+                outbox_attempt.retryable = result.retryable
+                outbox_attempt.result_message = "Done"
+                if result.success:
+                    outbox_update.status = OutboxStatus.SENT
+                else:
+                    outbox_update.status = OutboxStatus.FAILED
+
+            return outbox_attempt, outbox_update
+
     # @retry(
     #     stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10)
     # )
     def deliver_outbox(self, outbox_id: int, dispatch_fn) -> None:
         attempt_started_at = utcnow()
+        event_type = None
 
-        with self._uow_factory() as uow:
-            row = uow.outboxs.get_by_outbox_id(outbox_id)
-            if row is None:
-                logger.warning("outboxs not found id=%s", outbox_id)
-                return
-            if row.status != OutboxStatus.SENDING:
-                logger.info("skip id=%s status=%s", outbox_id, row.status)
-                return
-
-            payload = OutboxRule.parse_payload(getattr(row, "payload", None))
-            attempts = row.attempts + 1
-            outbox_filter = OutboxDTO.OutboxFilter(id=row.id)
-
-        # 2) 공통으로 쓸 상태 변수들 미리 선언
-        success: bool = False
-        retryable: bool = False
-        status: OutboxStatus = OutboxStatus.SENDING  # 임시값
-        next_run_at: datetime | None = None
-        result_code: str | None = None
-        result_message: str | None = None
-        result_payload: dict[str, Any]
+        outbox_attempt = OutboxDTO.OutboxAttemptCreate(
+            outbox_id=outbox_id,
+            attempt_no=0,
+            success=0,
+            retryable=0,
+            result_code=None,
+            result_message=None,
+            result_payload={},
+            started_at=attempt_started_at,
+            finished_at=None,
+        )
+        outbox_update = OutboxDTO.OutboxUpdate(
+            attempts=0,
+            status=OutboxStatus.SENDING,
+            next_run_at=None,
+        )
 
         try:
-            send_result = dispatch_fn(event_type=row.event_type, payload=payload)
-            if isinstance(send_result, dict):
-                # SES raw dict 이면 그대로/부분만 저장
-                result_payload = {
-                    "provider": "ses",
-                    "message_id": send_result.get("MessageId"),
-                    "request_id": send_result.get("ResponseMetadata", {}).get(
-                        "RequestId"
-                    ),
-                }
-            elif send_result is not None:
-                # 문자열(MessageId) 같은 단일 값이면 래핑
-                result_payload = {
-                    "provider": "ses",
-                    "message_id": str(send_result),
-                }
+            with self._uow_factory() as uow:
+                row = uow.outboxs.get_by_outbox_id(outbox_id)
+                if row is None:
+                    logger.warning("outboxs not found id=%s", outbox_id)
+                    return
+                if row.status != OutboxStatus.SENDING:
+                    logger.info("skip id=%s status=%s", outbox_id, row.status)
+                    return
 
-            # 성공 케이스
-            success = True
-            retryable = False
-            status = OutboxStatus.SENT
-            result_code = "OK"
-            result_message = "sent"
+                payload = OutboxRule.parse_payload(getattr(row, "payload", None))
+                outbox_attempt.attempt_no = outbox_update.attempts = row.attempts + 1
+                outbox_filter = OutboxDTO.OutboxFilter(id=row.id)
+                event_type = row.event_type
+
+            result: CoreDTO.HandlerResult = dispatch_fn(
+                event_type=event_type, payload=payload
+            )
+
+            outbox_attempt.result_code = result.result_code
+            outbox_attempt.result_message = result.result_message
+            outbox_attempt.result_payload = result.result_payload
+
+            outbox_attempt, outbox_update = self._decide_retry(
+                result, outbox_attempt, outbox_update, event_type
+            )
 
         except Exception as e:
-            with self._uow_factory() as uow:
-                provider = uow.channels.get_channel_by_code("EMAIL")
-                policy = provider.retry_policy  # JSON → dict 파싱
+            outbox_attempt.retryable = False
+            outbox_update.status = OutboxStatus.FAILED
+            response = getattr(e, "response", None)
+            error = response.get("Error", {}) if isinstance(response, dict) else {}
+            outbox_attempt.result_code = error.get("Code") or e.__class__.__name__
+            outbox_attempt.result_message = error.get("Message") or str(e)
+            outbox_attempt.result_payload = {
+                "error_code": outbox_attempt.result_code,
+                "error_message": outbox_attempt.result_message,
+            }
 
-                if policy is None:
-                    raise InternalServerError(
-                        "retry policy not configured",
-                        target="channel_provider.retry_policy",
-                    )
-                max_attempts = policy["max_attempts"]
-                base_delay = policy["base_delay_sec"]
-                max_delay = policy["max_delay_sec"]
-
-                if attempts < max_attempts:
-                    retryable = True
-                    status = OutboxStatus.PENDING
-                    delay = OutboxRule.compute_backoff(
-                        attempts,
-                        base_delay_sec=base_delay,
-                        max_delay_sec=max_delay,
-                    )
-                    next_run_at = utcnow() + delay
-
-                    print(
-                        f"max_attempts={max_attempts}, base_delay={base_delay}, max_delay={max_delay}, attempts={attempts},  next_at={next_run_at}"
-                    )
-
-                else:
-                    retryable = False
-                    status = OutboxStatus.FAILED
-
-                response = getattr(e, "response", None)
-                error = response.get("Error", {}) if isinstance(response, dict) else {}
-                result_code = error.get("Code") or e.__class__.__name__
-                result_message = error.get("Message") or str(e)
-                result_payload = {
-                    "provider": "ses",
-                    "error_code": result_code,
-                    "error_message": result_message,
-                }
-
-                logger.exception(
-                    "process failed outbox id=%s attempts=%s", row.id, attempts
-                )
-                uow.commit()
+            logger.exception(
+                "process failed outbox id=%s attempts=%s",
+                outbox_id,
+                outbox_update.attempts,
+            )
         finally:
             with self._uow_factory() as uow:
+                outbox_attempt.finished_at = utcnow()
                 uow.outboxs.add_outbox_attempt(
-                    OutboxDTO.OutboxAttemptCreate(
-                        outbox_id=outbox_id,
-                        attempt_no=attempts,
-                        success=1 if success else 0,
-                        retryable=1 if retryable else 0,
-                        result_code=result_code,
-                        result_message=result_message,
-                        result_payload=result_payload,
-                        started_at=attempt_started_at,
-                        finished_at=utcnow(),
-                    ),
+                    outbox_attempt,
                     False,
-                )
-
-                outbox_update = OutboxDTO.OutboxUpdate(
-                    attempts=attempts,
-                    status=status,
-                    next_run_at=next_run_at,
                 )
                 uow.outboxs.update_outbox_by_filter(
                     filters=outbox_filter,
