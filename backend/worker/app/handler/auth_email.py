@@ -1,3 +1,4 @@
+import uuid
 from typing import Any, Mapping
 from app.core.constants import EmailVerificationStatus
 from app.core.util.datetime import utcnow, ensure_utc
@@ -10,6 +11,9 @@ def handle_auth_email(
     ctx: WorkerContext,
     payload: Mapping[str, Any],
 ) -> Any:
+    app_name = ctx.config.app_name
+    deploy_env = ctx.config.deploy_env
+
     user_id = require(payload, "user_id", target="payload.user_id")
     email_verification_id = require(
         payload, "email_verification_id", target="payload.email_verification_id"
@@ -31,7 +35,7 @@ def handle_auth_email(
     if expires_at <= now:
         raise SkipHandler("expired")
 
-    lock_key = f"lock:email_verify_send:{email_verification_id}"
+    lock_key = f"{app_name}:{deploy_env}:lock:email_verify_send:{email_verification_id}"
     token = try_acquire_lock(
         ctx.redis_client, lock_key, ttl_sec=ctx.config.outbox_send_lock_ttl_sec
     )
@@ -51,13 +55,13 @@ def handle_auth_email(
     except (TimeoutError, ConnectionError) as e:
         raise RetryHandler(
             "email_send_failed",
-            meta={"provider": "ses", "error": str(e)},
+            meta={"provider": "EMAIL", "error": str(e)},
         ) from e
 
     except Exception as e:
         raise FatalHandler(
             "email_send_fatal",
-            meta={"provider": "ses", "error": str(e)},
+            meta={"provider": "EMAIL", "error": str(e)},
         ) from e
     finally:
         release_lock(ctx.redis_client, lock_key, token)

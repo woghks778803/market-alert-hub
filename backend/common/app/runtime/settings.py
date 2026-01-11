@@ -14,6 +14,7 @@ class Settings(BaseSettings):
         super().__init__(**data)
 
     # deploy
+    APP_NAME: str
     DEPLOY_ENV: str = "dev"
     LOG_LEVEL: str = "INFO"
     PUBLIC_WEB_BASE_URL: str = "http://localhost:8000"
@@ -87,14 +88,14 @@ class Settings(BaseSettings):
     REDIS_STREAM_DELIVERIES: str = Field(default="deliveries")
 
     # exchanges
-    SYNC_EXCHANGES_REDIS_KEY: str = "mah:meta:exchanges:v1"
+    SYNC_EXCHANGES_RUN_KEY: str = "exchanges:v1"
     SYNC_EXCHANGES_BATCH_SIZE: int = 500
-    SYNC_EXCHANGES_TTL_SEC: int = 0
+    SYNC_EXCHANGES_TTL_SEC: int = 600
 
     # symbols
-    SYNC_SYMBOLS_REDIS_KEY: str = "mah:meta:symbols:v1"
+    SYNC_SYMBOLS_RUN_KEY: str = "symbols:v1"
     SYNC_SYMBOLS_BATCH_SIZE: int = 500
-    SYNC_SYMBOLS_TTL_SEC: int = 0
+    SYNC_SYMBOLS_TTL_SEC: int = 600
 
     # --- Collector ---
     COLLECTOR_LOG_LEVEL: str = Field(default="INFO")
@@ -125,6 +126,10 @@ class Settings(BaseSettings):
     SCHEDULER_RESTART_MAX_BACKOFF_SEC: float = 30.0
     SCHEDULER_RESTART_JITTER_RATIO: float = 0.2
 
+    SCHEDULER_CHECKPOINT_BACKEND: str = "redis"  # memory|file|redis
+    SCHEDULER_CHECKPOINT_KEY_PREFIX: str = "scheduler:checkpoint:"
+    SCHEDULER_CHECKPOINT_FILE_PATH: str = "/tmp/scheduler_checkpoint.json"
+
     # Schedule interval
     SCHEDULER_SYNC_INTERVAL_SEC: int = 1800  # 30분
     SCHEDULER_TRIG_INTERVAL_SEC: int = 5  # 1초
@@ -149,18 +154,18 @@ class Settings(BaseSettings):
     )
 
     @property
-    def WORKER_JOBS(self) -> dict[str, dict[str, object]]:
+    def WORKER_JOBS(self) -> dict[str, dict[str, Any]]:
         """
         event_type dict로 묶음
         """
         return {
             OutboxEventType.SYNC_EXCHANGES.value: {
-                "redis_key": self.SYNC_EXCHANGES_REDIS_KEY,
+                "run_key": self.SYNC_EXCHANGES_RUN_KEY,
                 "batch_size": self.SYNC_EXCHANGES_BATCH_SIZE,
                 "ttl_sec": self.SYNC_EXCHANGES_TTL_SEC,
             },
             OutboxEventType.SYNC_SYMBOLS.value: {
-                "redis_key": self.SYNC_SYMBOLS_REDIS_KEY,
+                "run_key": self.SYNC_SYMBOLS_RUN_KEY,
                 "batch_size": self.SYNC_SYMBOLS_BATCH_SIZE,
                 "ttl_sec": self.SYNC_SYMBOLS_TTL_SEC,
             },

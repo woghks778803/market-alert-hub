@@ -105,7 +105,7 @@ def run_with_restart(
             sleep_or_stop(stop_event, delay)
 
 
-def build_supervised_workers(
+def build_supervised_tasks(
     *,
     stop_event: threading.Event,
     specs: Iterable[tuple[str, TaskFactory]],

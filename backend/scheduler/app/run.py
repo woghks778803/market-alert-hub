@@ -2,7 +2,7 @@ import logging
 import threading
 import time
 from typing import Any
-from app.wiring import create_workers
+from app.wiring import create_tasks
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ def run(runtime: Any) -> None:
     """
     stop_event = threading.Event()
 
-    workers = create_workers(runtime, stop_event)
+    workers = create_tasks(runtime, stop_event)
     if not workers:
         logger.warning("scheduler.no_jobs")
         return

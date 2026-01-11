@@ -36,8 +36,10 @@ class OutboxService:
     ) -> OutboxDTO.Outbox:
         with self._uow_factory() as uow:
             outbox_fingerprint = to_canonical_json(outbox_fingerprint_dict)
-            if outbox_fingerprint is not None:
+            if outbox_fingerprint:
                 outbox_fingerprint = self._hmac.fp_hash(outbox_fingerprint)
+            else:
+                outbox_fingerprint = None
 
             row = uow.outboxs.add_outbox(
                 OutboxDTO.OutboxCreate(
@@ -98,7 +100,7 @@ class OutboxService:
                 if OutboxEventType.EMAIL_AUTH_CODE == event_type:
                     provider = uow.channels.get_channel_by_code("EMAIL")
                     policy = provider.retry_policy  # JSON → dict 파싱
-                    if policy is None:
+                    if not policy:
                         raise InternalServerError(
                             "retry policy not configured",
                             target="channel_provider.retry_policy",
@@ -145,7 +147,6 @@ class OutboxService:
     #     stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10)
     # )
     def deliver_outbox(self, outbox_id: int, dispatch_fn) -> None:
-        attempt_started_at = utcnow()
         event_type = None
 
         outbox_attempt = OutboxDTO.OutboxAttemptCreate(
@@ -156,19 +157,19 @@ class OutboxService:
             result_code=None,
             result_message=None,
             result_payload={},
-            started_at=attempt_started_at,
+            started_at=utcnow(),
             finished_at=None,
         )
         outbox_update = OutboxDTO.OutboxUpdate(
             attempts=0,
             status=OutboxStatus.SENDING,
-            next_run_at=None,
+            next_run_at=utcnow(),
         )
 
         try:
             with self._uow_factory() as uow:
                 row = uow.outboxs.get_by_outbox_id(outbox_id)
-                if row is None:
+                if not row:
                     logger.warning("outboxs not found id=%s", outbox_id)
                     return
                 if row.status != OutboxStatus.SENDING:

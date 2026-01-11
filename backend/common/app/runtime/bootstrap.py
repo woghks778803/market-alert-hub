@@ -162,13 +162,6 @@ class Providers:
 providers = Providers()
 
 
-def build_api_config_bag() -> CoreDTO.ApiConfigBag:
-    return CoreDTO.ApiConfigBag(
-        deploy_env=settings.DEPLOY_ENV,
-        log_level=settings.LOG_LEVEL,
-    )
-
-
 def build_service_config_bag() -> CoreDTO.ServiceConfigBag:
     return CoreDTO.ServiceConfigBag(
         email_verify_resend_cooldown_sec=settings.EMAIL_VERIFY_RESEND_COOLDOWN_SEC,
@@ -178,8 +171,17 @@ def build_service_config_bag() -> CoreDTO.ServiceConfigBag:
     )
 
 
+def build_api_config_bag() -> CoreDTO.ApiConfigBag:
+    return CoreDTO.ApiConfigBag(
+        app_name=settings.APP_NAME,
+        deploy_env=settings.DEPLOY_ENV,
+        log_level=settings.LOG_LEVEL,
+    )
+
+
 def build_worker_config_bag() -> CoreDTO.WorkerConfigBag:
     return CoreDTO.WorkerConfigBag(
+        app_name=settings.APP_NAME,
         deploy_env=settings.DEPLOY_ENV,
         log_level=settings.WORKER_LOG_LEVEL or settings.LOG_LEVEL,
         redis_url=settings.REDIS_URL,
@@ -196,6 +198,7 @@ def build_worker_config_bag() -> CoreDTO.WorkerConfigBag:
 
 def build_dispatcher_config_bag() -> CoreDTO.DispatcherConfigBag:
     return CoreDTO.DispatcherConfigBag(
+        app_name=settings.APP_NAME,
         deploy_env=settings.DEPLOY_ENV,
         log_level=settings.DISPATCHER_LOG_LEVEL or settings.LOG_LEVEL,
         redis_url=settings.REDIS_URL,
@@ -206,6 +209,7 @@ def build_dispatcher_config_bag() -> CoreDTO.DispatcherConfigBag:
 
 def build_scheduler_config_bag() -> CoreDTO.SchedulerConfigBag:
     return CoreDTO.SchedulerConfigBag(
+        app_name=settings.APP_NAME,
         deploy_env=settings.DEPLOY_ENV,
         log_level=settings.SCHEDULER_LOG_LEVEL or settings.LOG_LEVEL,
         redis_url=settings.REDIS_URL,
@@ -216,11 +220,15 @@ def build_scheduler_config_bag() -> CoreDTO.SchedulerConfigBag:
         restart_base_backoff_sec=settings.SCHEDULER_RESTART_BASE_BACKOFF_SEC,
         restart_max_backoff_sec=settings.SCHEDULER_RESTART_MAX_BACKOFF_SEC,
         restart_jitter_ratio=settings.SCHEDULER_RESTART_JITTER_RATIO,
+        checkpoint_backend=settings.SCHEDULER_CHECKPOINT_BACKEND,
+        checkpoint_key_prefix=settings.SCHEDULER_CHECKPOINT_KEY_PREFIX,
+        checkpoint_file_path=settings.SCHEDULER_CHECKPOINT_FILE_PATH,
     )
 
 
 def build_collector_config_bag() -> CoreDTO.CollectorConfigBag:
     return CoreDTO.CollectorConfigBag(
+        app_name=settings.APP_NAME,
         deploy_env=settings.DEPLOY_ENV,
         log_level=settings.COLLECTOR_LOG_LEVEL or settings.LOG_LEVEL,
         redis_url=settings.REDIS_URL,

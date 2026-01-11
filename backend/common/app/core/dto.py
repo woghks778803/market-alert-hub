@@ -29,12 +29,14 @@ class ServiceConfigBag:
 
 @dataclass(frozen=True)
 class ApiConfigBag:
+    app_name: str
     deploy_env: str
     log_level: str
 
 
 @dataclass(frozen=True)
 class WorkerConfigBag:
+    app_name: str
     deploy_env: str
     log_level: str
     redis_url: str
@@ -50,6 +52,7 @@ class WorkerConfigBag:
 
 @dataclass(frozen=True)
 class DispatcherConfigBag:
+    app_name: str
     deploy_env: str
     log_level: str
     redis_url: str
@@ -59,6 +62,7 @@ class DispatcherConfigBag:
 
 @dataclass(frozen=True)
 class SchedulerConfigBag:
+    app_name: str
     deploy_env: str
     log_level: str
     redis_url: str
@@ -75,10 +79,16 @@ class SchedulerConfigBag:
     restart_max_backoff_sec: float
     restart_jitter_ratio: float
 
+    # checkpoint(state)
+    checkpoint_backend: str  # memory | file | redis
+    checkpoint_key_prefix: str
+    checkpoint_file_path: str
+
 
 @dataclass(frozen=True)
 class CollectorConfigBag:
     # 공통
+    app_name: str
     deploy_env: str
     log_level: str
     redis_url: str

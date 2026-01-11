@@ -6,7 +6,7 @@ from typing import Any, Callable
 from app.runtime.sync.lifecycle.signals import install_signal_handlers
 from app.runtime.sync.supervision.supervisor import (
     RestartPolicy,
-    build_supervised_workers,
+    build_supervised_tasks,
 )
 from app.runtime.sync.state.checkpoint_store import (
     CheckpointStore,
@@ -15,7 +15,8 @@ from app.runtime.sync.state.checkpoint_store import (
 )
 from app.runtime.bootstrap import create_scheduler_context
 from app.runtime.app_context import SchedulerContext
-
+from app.scheduler_loop import run_scheduler_loop
+from app.tasks import build_default_tasks
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ class SchedulerRuntime:
     """
 
     ctx: SchedulerContext
-    jobs: list[tuple[str, TaskFactory]]
+    specs: list[tuple[str, TaskFactory]]
     checkpoint_store: CheckpointStore
     restart_policy: RestartPolicy
     on_task_error: Callable[[str, BaseException], None]
@@ -58,13 +59,13 @@ def build_runtime() -> SchedulerRuntime:
 
     runtime = SchedulerRuntime(
         ctx=ctx,
-        jobs=[],
+        specs=[],
         checkpoint_store=checkpoint_store,
         restart_policy=restart_policy,
         on_task_error=on_task_error,
     )
 
-    runtime.jobs = _build_jobs(runtime)
+    runtime.specs = _build_specs(runtime)
     return runtime
 
 
@@ -73,16 +74,14 @@ def _build_checkpoint_store(ctx: SchedulerContext) -> CheckpointStore:
     운영 안정성/재시작 복구를 위해 redis 권장.
     설정이 애매하면 file/memory로 안전하게 기본값 처리.
     """
-    # backend = getattr(ctx.config, "checkpoint_backend", None)
 
     # if backend == "redis":
     #     redis_url = getattr(ctx.config, "checkpoint_redis_url", None)
     #     key_prefix = getattr(ctx.config, "checkpoint_key_prefix", "scheduler:ckpt:")
     #     return RedisCheckpointStore(redis_url=redis_url, key_prefix=key_prefix)
 
-    # if backend == "file":
-    #     path = getattr(ctx.config, "checkpoint_file_path", None)
-    #     return FileCheckpointStore(path=path)
+    if ctx.config.checkpoint_backend == "file":
+        return FileCheckpointStore(path=ctx.config.checkpoint_file_path)
 
     return MemoryCheckpointStore()
 
@@ -106,7 +105,7 @@ def _build_on_task_error() -> Callable[[str, BaseException], None]:
     return _hook
 
 
-def create_workers(
+def create_tasks(
     runtime: SchedulerRuntime, stop_event: threading.Event
 ) -> list[threading.Thread] | None:
 
@@ -115,8 +114,8 @@ def create_workers(
     # jobs 쪽에서 stop_event를 참조할 수 있게 바인딩
     setattr(runtime, "stop_event", stop_event)
 
-    jobs = getattr(runtime, "jobs", None)
-    if not jobs:
+    specs = getattr(runtime, "specs", None)
+    if not specs:
         return None
 
     restart_policy = getattr(runtime, "restart_policy", None)
@@ -125,9 +124,9 @@ def create_workers(
 
     on_task_error = getattr(runtime, "on_task_error", None)
 
-    workers = build_supervised_workers(
+    workers = build_supervised_tasks(
         stop_event=stop_event,
-        specs=jobs,
+        specs=specs,
         policy=restart_policy,
         on_error=on_task_error,
     )
@@ -135,99 +134,11 @@ def create_workers(
     return workers
 
 
-# def _build_jobs(runtime: SchedulerRuntime) -> list[tuple[str, TaskFactory]]:
-#     """
-#     각 TaskFactory는 run.py에서 runtime.stop_event 바인딩 이후에 호출된다.
-#     여기서는 stop_event를 직접 쓰지 말고, factory 내부에서 runtime.stop_event를 참조한다.
-#     """
-#     jobs: list[tuple[str, TaskFactory]] = []
-
-#     # TODO: 여기에 Job A 등 task_factory 등록
-#     # 예)
-#     # from app.jobs.sync_exchange_instruments import run_sync_exchange_instruments_loop
-#     #
-#     # def job_a_factory() -> Any:
-#     #     if runtime.stop_event is None:
-#     #         raise RuntimeError("runtime.stop_event is not bound (run.py should set it before starting workers)")
-#     #     return run_sync_exchange_instruments_loop(
-#     #         stop_event=runtime.stop_event,
-#     #         ctx=runtime.ctx,
-#     #         checkpoint_store=runtime.checkpoint_store,
-#     #     )
-#     #
-#     # jobs.append(("sync_exchange_instruments", job_a_factory))
-
-#     return jobs
-
-# from app.schedule_queue import TaskSpec, run_schedule_queue
-# from app.tasks.outbox_tasks import (
-#     produce_sync_exchange_instruments,
-#     produce_evaluate_alerts,
-#     produce_persist_snapshots,
-# )
-
-# def _build_jobs(runtime):
-#     """
-#     핵심:
-#     - "잡 A/B/C 각각 스레드"가 아니라
-#     - "runner 스레드(잡) 2개"만 띄워서 내부 스케줄 큐로 A/B/C를 굴린다.
-#       - fast: 짧은 주기(예: 3초)
-#       - slow: 긴 주기(예: 60초, 30분, 기타)
-#     """
-
-#     def fast_runner():
-#         specs = [
-#             TaskSpec(
-#                 name="evaluate_alerts",
-#                 interval_sec=int(
-#                     getattr(runtime.ctx.settings, "SCHED_EVAL_INTERVAL_SEC", 3)
-#                 ),
-#                 handler=produce_evaluate_alerts,
-#                 initial_delay_sec=0,
-#                 jitter_sec=0,
-#             ),
-#         ]
-#         run_schedule_queue(runtime.stop_event, runtime.ctx, specs)
-
-#     def slow_runner():
-#         specs = [
-#             TaskSpec(
-#                 name="persist_snapshots",
-#                 interval_sec=int(
-#                     getattr(runtime.ctx.settings, "SCHED_SNAPSHOT_INTERVAL_SEC", 60)
-#                 ),
-#                 handler=produce_persist_snapshots,
-#                 initial_delay_sec=5,  # 정각 동시 실행 피하려면 오프셋
-#                 jitter_sec=0,
-#             ),
-#             TaskSpec(
-#                 name="sync_exchange_instruments",
-#                 interval_sec=int(
-#                     getattr(
-#                         runtime.ctx.settings, "SCHED_SYMBOL_SYNC_INTERVAL_SEC", 1800
-#                     )
-#                 ),
-#                 handler=produce_sync_exchange_instruments,
-#                 initial_delay_sec=0,
-#                 jitter_sec=0,
-#             ),
-#         ]
-#         run_schedule_queue(runtime.stop_event, runtime.ctx, specs)
-
-#     return [
-#         ("runner_fast", lambda: fast_runner()),
-#         ("runner_slow", lambda: slow_runner()),
-#     ]
-
-from app.scheduler_loop import run_scheduler_loop
-from app.tasks import build_default_tasks
-
-
-def _build_jobs(runtime):
+def _build_specs(runtime):
     """
-    scheduler 컨테이너 작업 목록을 만든다.
+    scheduler 컨테이너 작업 목록
 
-    - 스레드는 1개만 사용한다. (1초 tick 내부에서 A/B/C 모두 처리)
+    - 스레드는 1개만 사용 (1초 tick 내부에서 A/B/C 모두 처리)
     - stop_event/ctx는 runtime에 이미 바인딩되어 있어야 한다.
     """
 

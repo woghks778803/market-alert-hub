@@ -48,9 +48,9 @@ def build_default_tasks(config):
         #     config.trig_interval_sec,
         #     handle_trigger_alerts,
         # ),
-        IntervalTask(
-            OutboxEventType.PERSIST_SNAPSHOTS,
-            config.snapshot_interval_sec,
-            handle_persist_snapshots,
-        ),
+        # IntervalTask(
+        #     OutboxEventType.PERSIST_SNAPSHOTS,
+        #     config.snapshot_interval_sec,
+        #     handle_persist_snapshots,
+        # ),
     ]
