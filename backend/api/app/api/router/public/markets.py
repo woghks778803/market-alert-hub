@@ -170,5 +170,5 @@ def stream_candles(
 #     meta: RequestMeta = Depends(get_request_meta),
 # ):
 #     item = MarketDTO.CandleBase(**payload.model_dump())
-#     result = svcs.markets.ingest_snapshot(base=base, item=item)
+#     result = svcs.markets.ensure_snapshot(base=base, item=item)
 #     return created(result, response=response, request_id=meta.request_id)

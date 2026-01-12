@@ -15,6 +15,17 @@ from app.infra.external.redis.async_redis_client import (
     AsyncRedisClient,
     get_async_redis_client,
 )
+from app.infra.external.exchange.upbit.symbol_provider import UpbitSymbolProvider
+from app.infra.external.exchange.upbit.rest_client import (
+    UpbitRestClient,
+    UpbitRestClientConfig,
+    get_rest_client,
+)
+from app.infra.external.exchange.upbit.ws_client import (
+    UpbitWsClient,
+    UpbitWsClientConfig,
+    get_ws_client,
+)
 from app.infra.external.redis.redis_client import RedisClient, get_redis_client
 from app.infra.external.email.ses_client import SesEmailClient
 from app.infra.external.email.jinja_renderer import JinjaEmailRenderer
@@ -64,6 +75,21 @@ def _resolve_master_key() -> str:
 
 class Providers:
     @staticmethod
+    def upbit_symbol_provider() -> Callable[[], UpbitSymbolProvider]:
+        config = UpbitRestClientConfig()
+        return lambda: UpbitSymbolProvider(rest_client=get_rest_client(config))
+
+    # @staticmethod
+    # def upbit_rest_provider() -> Callable[[], UpbitRestClient]:
+    #     config = UpbitRestClientConfig()
+    #     return lambda: get_rest_client(config)
+
+    # @staticmethod
+    # def upbit_ws_provider() -> Callable[[], UpbitWsClient]:
+    #     config = UpbitWsClientConfig()
+    #     return lambda: get_ws_client(config)
+
+    @staticmethod
     def redis_provider() -> Callable[[], RedisClient]:
         return lambda: get_redis_client(settings.REDIS_URL)
 
@@ -78,26 +104,6 @@ class Providers:
             return UnitOfWork(db_session, owns_session=True)
 
         return _provide
-
-    # @staticmethod
-    # def rq_queue_factory_provider() -> Callable[[], RqQueueFactory]:
-    #     def _build() -> RqQueueFactory:
-    #         redis_client = get_redis_client(settings.REDIS_URL)
-    #         redis_conn_provider = redis_client.conn  # callable
-    #         cfg = RqQueueConfig()
-    #         return RqQueueFactory(redis_conn_provider, cfg=cfg)
-
-    #     return _build
-
-    # @staticmethod
-    # def rq_worker_factory_provider() -> Callable[[], RqWorkerFactory]:
-    #     def _build() -> RqWorkerFactory:
-    #         redis_client = get_redis_client(settings.REDIS_URL)
-    #         redis_conn_provider = redis_client.conn  # callable
-    #         cfg = RqWorkerConfig()
-    #         return RqWorkerFactory(redis_conn_provider, cfg=cfg)
-
-    #     return _build
 
     @staticmethod
     def email_client_provider() -> Callable[[], SesEmailClient]:
@@ -157,6 +163,26 @@ class Providers:
             return LocalAesGcmFromSecrets(inner)  # 래퍼로 감싸 동일 인터페이스 제공
 
         return _build
+
+    # @staticmethod
+    # def rq_queue_factory_provider() -> Callable[[], RqQueueFactory]:
+    #     def _build() -> RqQueueFactory:
+    #         redis_client = get_redis_client(settings.REDIS_URL)
+    #         redis_conn_provider = redis_client.conn  # callable
+    #         cfg = RqQueueConfig()
+    #         return RqQueueFactory(redis_conn_provider, cfg=cfg)
+
+    #     return _build
+
+    # @staticmethod
+    # def rq_worker_factory_provider() -> Callable[[], RqWorkerFactory]:
+    #     def _build() -> RqWorkerFactory:
+    #         redis_client = get_redis_client(settings.REDIS_URL)
+    #         redis_conn_provider = redis_client.conn  # callable
+    #         cfg = RqWorkerConfig()
+    #         return RqWorkerFactory(redis_conn_provider, cfg=cfg)
+
+    #     return _build
 
 
 providers = Providers()
@@ -259,6 +285,7 @@ def create_service_factory() -> ServiceFactory:
         hmac_hasher=providers.hmac_hasher_provider(),
         jwt_signer=providers.jwt_signer_provider(),
         secret_crypto=providers.secret_crypto_provider(),
+        upbit_symbol=providers.upbit_symbol_provider(),
         config=build_service_config_bag(),
     )
 

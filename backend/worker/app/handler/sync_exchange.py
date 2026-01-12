@@ -6,7 +6,7 @@ from app.core.util.datetime import utcnow, to_epoch_ms
 from app.core.constants import OutboxEventType
 from app.runtime.app_context import WorkerContext
 from app.util.utils import require, try_acquire_lock, release_lock
-from app.exception_handlers import SkipHandler, RetryHandler, FatalHandler
+from app.exception_handlers import SkipHandler, FatalHandler
 
 logger = logging.getLogger(__name__)
 

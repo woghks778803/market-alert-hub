@@ -31,8 +31,9 @@ botocore>=1.34,<2.0  # (boto3 설치 시 함께 설치됨)
 # --- fro email ---
 jinja2>=3.1         # (옵션) HTML 템플릿 렌더링용
 
-# --- Exchange WS/REST (collector external) ---
+# --- Exchange WS/REST ---
 aiohttp>=3.9
 websockets>=12
+httpx[http2]==0.28.1
 
 #--------- scheduler ----------------

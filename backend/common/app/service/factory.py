@@ -3,7 +3,7 @@ from functools import cached_property
 
 from app.core import dto as CoreDTO
 from app.domain.shared.uow import UnitOfWork
-from app.domain import EmailPort, CryptoPort
+from app.domain import EmailPort, CryptoPort, MarketPort
 
 from .auth_service import AuthService
 from .user_service import UserService
@@ -27,6 +27,7 @@ class ServiceFactory:
         hmac_hasher: Callable[[], CryptoPort.TokenHasher],
         jwt_signer: Callable[[], CryptoPort.TokenSigner],
         secret_crypto: Callable[[], CryptoPort.SecretCrypto],
+        upbit_symbol: Callable[[], MarketPort.UpbitSymbolProvider],
         config: CoreDTO.ServiceConfigBag,
     ) -> None:
         self._trace_id: str | None = None
@@ -38,11 +39,16 @@ class ServiceFactory:
         self._hmac_hasher = hmac_hasher
         self._jwt_signer = jwt_signer
         self._secret_crypto = secret_crypto
+        self._upbit_symbol = upbit_symbol
         self._config = config
 
     @cached_property
     def redis(self):
         return self._redis_client()
+
+    @cached_property
+    def upbit_symbol(self):
+        return self._upbit_symbol()
 
     @cached_property
     def password(self):
@@ -79,6 +85,7 @@ class ServiceFactory:
     def markets(self) -> MarketService:
         return MarketService(
             uow_factory=self._uow,
+            upbit_symbol=self.upbit_symbol,
         )
 
     @cached_property

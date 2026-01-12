@@ -9,6 +9,17 @@ import app.domain.market.dto as MarketDTO
 Interval = Literal["1m", "5m", "15m", "1h", "4h", "1d", "1w", "1M"]
 
 
+def parse_market_symbol(symbol: str) -> MarketDTO.ParsedMarketSymbol | None:
+    # "KRW-BTC" 형태 파싱 (업비트 스펙 기반)
+    try:
+        quote, base = symbol.split("-", 1)
+    except ValueError:
+        return None
+    if not quote or not base:
+        return None
+    return MarketDTO.ParsedMarketSymbol(quote=quote, base=base)
+
+
 def choose_source_base(output):
     if output in CandleOutputInterval.MIN_1.calc_mapping:
         return CandleBaseInterval.MIN_1

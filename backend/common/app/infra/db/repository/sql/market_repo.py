@@ -19,14 +19,53 @@ class SqlMarketRepo(MarketRepo):
     def __init__(self, db: DbSession):
         self._db = db
 
-    def get_by_exchange_instrument_id(
-        self, *, exchange_instrumen_id: int
-    ) -> MarketDTO.ExchangeInstrument:
+    def add_exchange_instruments(self):
+        return
+
+    def get_exchange_by_filter(
+        self,
+        id: int | None = None,
+        code: str | None = None,
+        is_active: bool = True,
+        is_delete: bool = False,
+    ) -> MarketDTO.Exchange | None:
+        e = ExchangeModel
+        stmt = select(e).where(
+            and_(
+                e.is_active.is_(is_active),
+                e.is_deleted.is_(is_delete),
+            )
+        )
+
+        if id is not None:
+            stmt = stmt.where(e.id == id)
+        if code is not None:
+            stmt = stmt.where(e.code == code)
+
+        exchange = self._db.execute(stmt).scalars().one_or_none()
+        if exchange is None:
+            return None
+        return exchange.to_dto()
+
+    def get_by_exchange_instrument_filter(
+        self,
+        *,
+        exchange_instrument_id: int,
+        is_active: bool = True,
+        is_delete: bool = False,
+    ) -> MarketDTO.ExchangeInstrument | None:
         ei = ExchangeInstrumentModel
         stmt = select(ei).where(
-            and_(ei.is_deleted.is_(False), ei.id == exchange_instrumen_id)
+            and_(
+                ei.is_deleted.is_(is_delete),
+                ei.is_active.is_(is_active),
+                ei.id == exchange_instrument_id,
+            )
         )
-        return self._db.execute(stmt).scalar_one_or_none()
+        exchange_instrument = self._db.execute(stmt).scalars().one_or_none()
+        if exchange_instrument is None:
+            return None
+        return exchange_instrument.to_dto()
 
     # Meta
     def list_exchanges_by_filter(
@@ -46,6 +85,30 @@ class SqlMarketRepo(MarketRepo):
                 )
             )
             .order_by(asc(ExchangeModel.id))
+            .limit(limit)
+            .offset(offset)
+        )
+        rows = self._db.execute(stmt).scalars().all()
+
+        return [row.to_dto() for row in rows]
+
+    def list_instruments_by_filter(
+        self,
+        *,
+        is_active: bool = True,
+        is_deleted: bool = False,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> Sequence[MarketDTO.Instrument]:
+        stmt = (
+            select(InstrumentModel)
+            .where(
+                and_(
+                    InstrumentModel.is_deleted.is_(is_deleted),
+                    InstrumentModel.is_active.is_(is_active),
+                )
+            )
+            .order_by(asc(InstrumentModel.id))
             .limit(limit)
             .offset(offset)
         )

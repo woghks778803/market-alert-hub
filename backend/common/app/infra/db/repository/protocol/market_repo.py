@@ -4,10 +4,20 @@ from app.domain import MarketDTO
 
 
 class MarketRepo(Protocol):
-
-    def get_by_exchange_instrument_id(
-        self, *, exchange_instrumen_id: int
-    ) -> MarketDTO.ExchangeInstrument: ...
+    def get_exchange_by_filter(
+        self,
+        id: int | None = None,
+        code: str | None = None,
+        is_active: bool = True,
+        is_delete: bool = False,
+    ) -> MarketDTO.Exchange | None: ...
+    def get_by_exchange_instrument_filter(
+        self,
+        *,
+        exchange_instrument_id: int,
+        is_active: bool = True,
+        is_delete: bool = False,
+    ) -> MarketDTO.ExchangeInstrument | None: ...
     def list_exchanges_by_filter(
         self,
         *,
@@ -16,6 +26,14 @@ class MarketRepo(Protocol):
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[MarketDTO.Exchange]: ...
+    def list_instruments_by_filter(
+        self,
+        *,
+        is_active: bool = True,
+        is_deleted: bool = False,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> Sequence[MarketDTO.Instrument]: ...
     def list_exchange_instruments_by_filter(
         self,
         *,

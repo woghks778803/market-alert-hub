@@ -36,13 +36,13 @@ class ExchangeInstrument:
     base_asset_id: int
     quote_asset_id: int
     exchange_symbol: str
-    price_precision: int
-    qty_precision: int
-    min_notional: Decimal | None
     created_at: datetime
     updated_at: datetime
     is_deleted: bool
     is_active: bool
+    price_precision: int | None
+    qty_precision: int | None
+    min_notional: Decimal | None
 
 
 @dataclass(slots=True)
@@ -55,13 +55,13 @@ class Exchange:
     id: int
     code: str
     name: str
-    country: str | None
     timezone: str
-    base_url: str | None
     created_at: datetime
     updated_at: datetime
     is_deleted: bool
     is_active: bool
+    country: str | None
+    base_url: str | None
 
 
 @dataclass(slots=True)
@@ -86,3 +86,16 @@ class PriceSnapshot:
     close: Decimal
     volume: Decimal
     updated_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class ParsedMarketSymbol:
+    quote: str
+    base: str
+
+
+@dataclass(frozen=True)
+class SymbolInfo:
+    symbol: str  # 예: "KRW-BTC"
+    name_kr: str
+    name_en: str

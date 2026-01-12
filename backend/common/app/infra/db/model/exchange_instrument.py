@@ -31,8 +31,8 @@ class ExchangeInstrument(Base):
     )
 
     exchange_symbol: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
-    price_precision: Mapped[int] = mapped_column(Integer, nullable=False)
-    qty_precision: Mapped[int] = mapped_column(Integer, nullable=False)
+    price_precision: Mapped[int | None] = mapped_column(Integer)
+    qty_precision: Mapped[int | None] = mapped_column(Integer)
     min_notional: Mapped[Decimal | None] = mapped_column(DECIMAL(20, 10))
 
     created_at: Mapped[datetime] = mapped_column(

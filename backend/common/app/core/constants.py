@@ -1,6 +1,16 @@
 import enum
 
 
+class UseType(str, enum.Enum):
+    YES = True
+    No = False
+
+
+class ExchangeCode(str, enum.Enum):
+    UPBIT = "UPBIT"
+    BINANCE = "BINANCE"
+
+
 class OutboxEventType(str, enum.Enum):
     EMAIL_AUTH_CODE = "EMAIL_AUTH_CODE"
     SYNC_EXCHANGES = "SYNC_EXCHANGES"
