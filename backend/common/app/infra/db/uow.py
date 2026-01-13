@@ -21,8 +21,11 @@ from app.infra.db.repository.sql.channel_repo import SqlChannelRepo
 from app.infra.db.repository.sql.provider_repo import SqlProviderRepo
 from app.infra.db.repository.sql.outbox_repo import SqlOutboxRepo
 
+
 class UnitOfWork(UnitOfWorkPort):
-    def __init__(self, db: Union[DbSession, sessionmaker[DbSession]], owns_session: bool = True) -> None:
+    def __init__(
+        self, db: Union[DbSession, sessionmaker[DbSession]], owns_session: bool = True
+    ) -> None:
         self.db: DbSession = db() if callable(db) else db
         self._users = None
         self._sessions = None
@@ -54,7 +57,7 @@ class UnitOfWork(UnitOfWorkPort):
         if not self._done:
             self.db.commit()
             self._done = True
-    
+
     def commit_outbox_idempotent(self) -> None:
         if self._done:
             return
@@ -75,6 +78,11 @@ class UnitOfWork(UnitOfWorkPort):
         if not self._done:
             self.db.rollback()
             self._done = True
+
+    def flush(self) -> None:
+        if self._done:
+            return
+        self.db.flush()
 
     # ---- lazy repositories (서비스 시그니처는 그대로: uow.users ...) ----
     @property
@@ -118,7 +126,7 @@ class UnitOfWork(UnitOfWorkPort):
         if self._providers is None:
             self._providers = SqlProviderRepo(self.db)
         return self._providers
-    
+
     @property
     def outboxs(self) -> OutboxRepo:
         if self._outboxs is None:

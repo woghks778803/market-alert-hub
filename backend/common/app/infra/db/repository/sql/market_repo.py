@@ -1,5 +1,6 @@
+from cProfile import label
 from typing import Iterable, Sequence, Tuple
-from sqlalchemy import insert, select, and_, asc, desc, func
+from sqlalchemy import update, insert, select, and_, asc, desc, func, tuple_
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.orm import aliased, Session as DbSession
 from app.infra.db.model import (
@@ -18,9 +19,6 @@ from ..protocol.market_repo import MarketRepo
 class SqlMarketRepo(MarketRepo):
     def __init__(self, db: DbSession):
         self._db = db
-
-    def add_exchange_instruments(self):
-        return
 
     def get_exchange_by_filter(
         self,
@@ -68,7 +66,7 @@ class SqlMarketRepo(MarketRepo):
         return exchange_instrument.to_dto()
 
     # Meta
-    def list_exchanges_by_filter(
+    def list_exchange_by_filter(
         self,
         *,
         is_active: bool = True,
@@ -92,10 +90,10 @@ class SqlMarketRepo(MarketRepo):
 
         return [row.to_dto() for row in rows]
 
-    def list_instruments_by_filter(
+    def list_instrument_by_filter(
         self,
         *,
-        is_active: bool = True,
+        is_active: bool | None = None,
         is_deleted: bool = False,
         limit: int = 100,
         offset: int = 0,
@@ -103,23 +101,25 @@ class SqlMarketRepo(MarketRepo):
         stmt = (
             select(InstrumentModel)
             .where(
-                and_(
-                    InstrumentModel.is_deleted.is_(is_deleted),
-                    InstrumentModel.is_active.is_(is_active),
-                )
+                InstrumentModel.is_deleted.is_(is_deleted),
             )
             .order_by(asc(InstrumentModel.id))
             .limit(limit)
             .offset(offset)
         )
+        
+        if is_active is not None:
+            stmt.where(InstrumentModel.is_active == is_active)
+
         rows = self._db.execute(stmt).scalars().all()
 
         return [row.to_dto() for row in rows]
 
-    def list_exchange_instruments_by_filter(
+    def list_exchange_instrument_by_filter(
         self,
         *,
         exchange_id: int | None = None,
+        is_active: bool | None = None,
         is_deleted: bool = False,
         limit: int = 200,
         offset: int = 0,
@@ -133,8 +133,11 @@ class SqlMarketRepo(MarketRepo):
             select(
                 ei.id.label("id"),
                 ei.exchange_symbol.label("exchange_symbol"),
+                ei.base_asset_id,
+                ei.quote_asset_id,
                 b.symbol.label("base_symbol"),
                 q.symbol.label("quote_symbol"),
+                e.id.label("exchange_id"),
                 e.name.label("exchange_name"),
             )
             .select_from(ExchangeInstrumentModel)
@@ -152,6 +155,8 @@ class SqlMarketRepo(MarketRepo):
             .limit(limit)
             .offset(offset)
         )
+        if is_active is not None:
+            stmt = stmt.where(ei.is_active == is_active)
         if exchange_id is not None:
             stmt = stmt.where(ei.exchange_id == exchange_id)
 
@@ -164,7 +169,9 @@ class SqlMarketRepo(MarketRepo):
     ) -> list[MarketDTO.MappingItem]:
         ei = ExchangeInstrumentModel
 
-        stmt = select(ei.exchange_id, ei.base_asset_id, ei.quote_asset_id)
+        stmt = select(
+            ei.id.label("id"), ei.exchange_id, ei.base_asset_id, ei.quote_asset_id
+        )
         if exchange_id is not None:
             stmt = stmt.where(ei.exchange_id == exchange_id)
 
@@ -173,7 +180,7 @@ class SqlMarketRepo(MarketRepo):
         return [MarketDTO.MappingItem(**row) for row in rows]
 
     # 공통 빌더
-    def _list_candles_by_filter(
+    def _list_candle_by_filter(
         self,
         model,
         *,
@@ -225,7 +232,7 @@ class SqlMarketRepo(MarketRepo):
         limit: int,
         asc_order: bool,
     ) -> list[MarketDTO.CandleBase]:
-        return self._list_candles_by_filter(
+        return self._list_candle_by_filter(
             PriceSnapshot1mModel,
             exchange_instrument_id=exchange_instrument_id,
             cursor=cursor,
@@ -245,7 +252,7 @@ class SqlMarketRepo(MarketRepo):
         limit: int,
         asc_order: bool,
     ) -> list[MarketDTO.CandleBase]:
-        return self._list_candles_by_filter(
+        return self._list_candle_by_filter(
             PriceSnapshot1hModel,
             exchange_instrument_id=exchange_instrument_id,
             cursor=cursor,
@@ -265,7 +272,7 @@ class SqlMarketRepo(MarketRepo):
         limit: int,
         asc_order: bool,
     ) -> list[MarketDTO.CandleBase]:
-        return self._list_candles_by_filter(
+        return self._list_candle_by_filter(
             PriceSnapshot1dModel,
             exchange_instrument_id=exchange_instrument_id,
             cursor=cursor,
@@ -276,6 +283,70 @@ class SqlMarketRepo(MarketRepo):
         )
 
     # ---------------------------- add ----------------------------------------------
+
+    def add_exchange_instruments(
+        self, exchange_instruments: list[MarketDTO.ExchangeInstrumentCreate]
+    ) -> None:
+        if not exchange_instruments:
+            return
+
+        rows = [
+            ExchangeInstrumentModel(
+                exchange_id=ei.exchange_id,
+                exchange_symbol=ei.exchange_symbol,
+                base_asset_id=ei.base_asset_id,
+                quote_asset_id=ei.quote_asset_id,
+                price_precision=ei.price_precision,
+                qty_precision=ei.qty_precision,
+                min_notional=ei.min_notional,
+                updated_at=ei.updated_at,
+                is_active=ei.is_active,
+                is_deleted=ei.is_deleted,
+            )
+            for ei in exchange_instruments
+        ]
+        self._db.add_all(rows)
+
+    def upsert_exchange_instruments_by_pairs(
+        self,
+        exchange_id: int,
+        pairs: list[tuple[int, int]],
+        is_active: bool,
+        updated_at: datetime,
+    ) -> int:
+        if not pairs:
+            return 0
+        total = 0
+        ei = ExchangeInstrumentModel
+        # MySQL 튜플 IN은 너무 길면 부담이라 배치로 끊는 게 안전
+        CHUNK = 1000
+
+        for i in range(0, len(pairs), CHUNK):
+            chunk = pairs[i : i + CHUNK]
+
+            stmt = (
+                update(ei)
+                .where(
+                    ei.exchange_id == exchange_id,
+                    ei.is_deleted.is_(False),
+                    tuple_(
+                        ei.base_asset_id,
+                        ei.quote_asset_id,
+                    ).in_(chunk),
+                )
+                .values(
+                    is_active=is_active,
+                    updated_at=updated_at,
+                )
+            )
+
+            result = self._db.execute(stmt)
+            # rowcount는 DB/드라이버에 따라 -1일 수 있음. 그래도 참고값으로 누적.
+            if result.rowcount and result.rowcount > 0:
+                total += result.rowcount
+
+        return total
+
     def upsert_1m(self, row: dict) -> Tuple[int, bool]:
         return self._upsert_one_mysql(PriceSnapshot1mModel, row)
 
@@ -315,7 +386,7 @@ class SqlMarketRepo(MarketRepo):
         stmt = insert(Model)
         self._db.execute(stmt, chunk)
 
-    def get_symbols(self, exchange_instrument_id: int) -> MarketDTO.MappingItem:
+    def get_symbol(self, exchange_instrument_id: int) -> MarketDTO.MappingItem:
         ei = ExchangeInstrumentModel
         b = aliased(InstrumentModel)
         q = aliased(InstrumentModel)
@@ -323,6 +394,8 @@ class SqlMarketRepo(MarketRepo):
         stmt = (
             select(
                 ei.id.label("id"),
+                ei.base_asset_id,
+                ei.quote_asset_id,
                 ei.exchange_symbol.label("exchange_symbol"),
                 b.symbol.label("base_symbol"),
                 q.symbol.label("quote_symbol"),

@@ -19,20 +19,29 @@ class MarketService:
         self._upbit_symbol = upbit_symbol
 
     # Meta
-    def list_exchanges_by_filter(
+    def list_exchange_by_filter(
         self, *, limit: int, offset: int
     ) -> Sequence[MarketDTO.Exchange]:
         with self._uow_factory() as uow:
-            return uow.markets.list_exchanges_by_filter(
+            return uow.markets.list_exchange_by_filter(
                 is_active=True, is_deleted=False, limit=limit, offset=offset
             )
 
-    def list_exchange_instruments_by_filter(
-        self, *, exchange_id: int | None, limit: int, offset: int
+    def list_exchange_instrument_by_filter(
+        self,
+        *,
+        exchange_id: int | None,
+        is_active: bool | None = None,
+        limit: int,
+        offset: int,
     ) -> list[MarketDTO.MappingItem]:
         with self._uow_factory() as uow:
-            rows = uow.markets.list_exchange_instruments_by_filter(
-                exchange_id=exchange_id, is_deleted=False, limit=limit, offset=offset
+            rows = uow.markets.list_exchange_instrument_by_filter(
+                exchange_id=exchange_id,
+                is_deleted=False,
+                is_active=is_active,
+                limit=limit,
+                offset=offset,
             )
             return rows
 
@@ -153,16 +162,16 @@ class MarketService:
         if not exchange:
             raise NotFoundError("Not found exchange", target="exchange")
 
-        # 3) 마스터 instruments에서 활성 종목 조회 -> symbol -> instrument_id 맵
+        # instruments에서 활성 종목 조회
         #    (quote/base 모두 여기서 resolve)
         active_instruments = (
-            repo.list_instruments_by_filter()
-        )  # list[MarketDTO.Instrument] 같은 형태면 충분
+            repo.list_instrument_by_filter(is_active=True)
+        )  
         instrument_id_by_symbol = {i.symbol: i.id for i in active_instruments}
 
-        # 4) desired 집합 생성
-        #    key는 (exchange_symbol, base_id, quote_id) 또는 네 uq 제약에 맞춰 (exchange_id, base_id, quote_id) 등으로 조정
+        # 집합 생성
         desired = set()
+        symbol_by_key = {}
 
         for s in symbols:
             parsed = MarketRule.parse_market_symbol(
@@ -181,66 +190,77 @@ class MarketService:
             if not quote_id:
                 continue
 
-            desired.add((s.symbol, base_id, quote_id))
+            key = (base_id, quote_id)
+            desired.add(key)
+            symbol_by_key[key] = s.symbol
 
-        # 5) 기존 매핑 조회 (active+inactive 전부)
-        existing = repo.list_exchange_instruments_by_filter(exchange_id=exchange.id)
+        
 
-        # exchange_symbol 기준으로 인덱싱 (원하면 composite 키로)
-        # existing_by_symbol = {m.exchange_symbol: m for m in existing}
-
-        # existing을 동일한 key 형태로도 만들어두면 diff가 단순해짐
-        existing_keys = set(
-            (m.exchange_symbol, m.base_asset_id, m.quote_asset_id) for m in existing
+        # 기존 매핑 조회
+        blocked = repo.list_exchange_instrument_by_filter(
+            exchange_id=exchange.id, is_deleted=True
         )
+        existing = repo.list_exchange_instrument_by_filter(exchange_id=exchange.id)
+        blocked_keys = {(m.base_asset_id, m.quote_asset_id) for m in blocked}
+        existing_keys = {(m.base_asset_id, m.quote_asset_id) for m in existing}
+        
+        # print("symbol_info")
+        # print(symbol_by_key)
+        # print(desired)
+        # print(blocked_keys)
+        # print(existing_keys)
 
-        # 6) diff 적용
-        to_insert = desired - existing_keys
-        to_keep_or_activate = desired & existing_keys
+        # diff 필터
+        to_insert = desired - existing_keys - blocked_keys
+        to_activate = desired & existing_keys  # - blocked_keys
         to_deactivate = existing_keys - desired
+        updated_at = utcnow()
 
-        # 6-1) 추가
         if to_insert:
-            # bulk insert용으로 레포에서 받기 좋은 형태로 변환
-            # MarketDTO.ExchangeInstrumentCreate(
+            # bulk insert용
+            creates = [
+                MarketDTO.ExchangeInstrumentCreate(
+                    exchange_id=exchange.id,
+                    exchange_symbol=symbol_by_key[(base_id, quote_id)],
+                    base_asset_id=base_id,
+                    quote_asset_id=quote_id,
+                    updated_at=updated_at,
+                    is_active=True,
+                    is_deleted=False,
+                )
+                for (base_id, quote_id) in to_insert
+            ]
+            repo.add_exchange_instruments(creates)
 
-            # )
-            # creates = [
-            #     {
-            #         "exchange_id": exchange.id,
-            #         "exchange_symbol": sym,
-            #         "base_asset_id": base_id,
-            #         "quote_asset_id": quote_id,
-            #         "is_active": True,
-            #     }
-            #     for (sym, base_id, quote_id) in to_insert
-            # ]
-            # repo.add_exchange_instruments(creates)
+        # 활성화
+        if to_activate:
+            to_activate_pairs = [
+                (base_id, quote_id) for base_id, quote_id in to_activate
+            ]
+            repo.upsert_exchange_instruments_by_pairs(
+                exchange_id=exchange.id,
+                pairs=to_activate_pairs,
+                is_active=True,
+                updated_at=updated_at,
+            )
 
-        # # 6-2) 재활성(및 활성 보장)
-        # # 이미 active면 no-op이 되도록 repo에서 처리하거나, 여기서 inactive만 골라서 업데이트해도 됨.
-        # if to_keep_or_activate:
-        #     symbols_to_activate = [sym for (sym, _, _) in to_keep_or_activate]
-        #     repo.set_exchange_instruments_active_by_symbols(
-        #         exchange_id=exchange.id,
-        #         exchange_symbols=symbols_to_activate,
-        #         is_active=True,
-        #     )
+        # 비활성화
+        if to_deactivate:
+            to_deactivate_pairs = [
+                (base_id, quote_id) for base_id, quote_id in to_deactivate
+            ]
+            repo.upsert_exchange_instruments_by_pairs(
+                exchange_id=exchange.id,
+                pairs=to_deactivate_pairs,
+                is_active=False,
+                updated_at=updated_at,
+            )
 
-        # # 6-3) 비활성화 (soft delete X, is_active=False만)
-        # if to_deactivate:
-        #     symbols_to_deactivate = [sym for (sym, _, _) in to_deactivate]
-        #     repo.set_exchange_instruments_active_by_symbols(
-        #         exchange_id=exchange.id,
-        #         exchange_symbols=symbols_to_deactivate,
-        #         is_active=False,
-        #     )
-
-        # # 7) 최종 활성 목록 반환(= handler가 redis snapshot 만들기)
-        # return repo.list_active_exchange_instruments_for_snapshot(
-        #     exchange_id=exchange.id
-        # )
-        return None
+        uow.flush()
+        # 활성 목록 반환
+        return repo.list_exchange_instrument_by_filter(
+            exchange_id=exchange.id, is_active=True
+        )
 
     # ------------------------------------ seed snapshots data ------------------------------------------------------
 
@@ -271,10 +291,10 @@ class MarketService:
             times = [n - timedelta(days=i) for i in range(365 * 10, 0, -1)]  # 10년분
 
         with self._uow_factory() as uow:
-            exchanges = uow.markets.list_exchanges_by_filter()
+            exchanges = uow.markets.list_exchange_by_filter()
 
             for ex in exchanges:
-                markets = uow.markets.list_exchange_instruments_by_filter(
+                markets = uow.markets.list_exchange_instrument_by_filter(
                     exchange_id=ex.id, is_deleted=False
                 )
 

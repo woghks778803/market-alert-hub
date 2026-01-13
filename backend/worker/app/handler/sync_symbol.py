@@ -1,5 +1,6 @@
 import logging
 import uuid
+import json
 from typing import Any, Callable, Mapping
 from app.core.util.datetime import utcnow, to_epoch_ms
 from app.core.constants import OutboxEventType
@@ -23,13 +24,13 @@ def handle_sync_symbols(
     run_key = job_config["run_key"]
     redis_key = f"{app_name}:{deploy_env}:snap:{run_key}"
 
-    r = ctx.redis_client.conn()
-    run_id = uuid.uuid4().hex
-    tmp_key = f"{app_name}:{deploy_env}:tmp:{run_key}:{run_id}"
-
     total = 0
     offset = 0
 
+    r = ctx.redis_client.conn()
+    run_id = uuid.uuid4().hex
+    tmp_key = f"{app_name}:{deploy_env}:tmp:{run_key}:{run_id}"
+    meta_key = f"{app_name}:{deploy_env}:meta:{run_key}"
     lock_key = f"{app_name}:{deploy_env}:lock:{run_key}"
     token = try_acquire_lock(
         ctx.redis_client, lock_key, ttl_sec=ctx.config.outbox_send_lock_ttl_sec
@@ -38,13 +39,27 @@ def handle_sync_symbols(
         raise SkipHandler("locked")
 
     try:
+        exchange_instruments = ctx.svcs.markets.sync_exchange_instruments_from_upbit()
+
         pipe = r.pipeline(transaction=False)
         pipe.delete(tmp_key)
 
-        # ctx.svcs.markets.sync_exchange_instruments_from_upbit()
+        mapping: dict[str, str] = {}
+        total = 0
+        for row in exchange_instruments:
+            sym = getattr(row, "exchange_symbol", None)
+            if not sym:
+                continue
+            mapping[sym] = json.dumps(
+                _exchange_instrument_to_payload(row),
+                ensure_ascii=False,
+                separators=(",", ":"),
+            )
+            total += 1
 
-        meta_key = f"{app_name}:{deploy_env}:meta:{run_key}"
-        pipe = r.pipeline(transaction=False)
+        if mapping:
+            pipe.hset(tmp_key, mapping=mapping)
+
         pipe.hset(
             meta_key,
             mapping={"started_at": to_epoch_ms(started_at), "count": total},
@@ -59,7 +74,13 @@ def handle_sync_symbols(
 
         r.rename(tmp_key, redis_key)
 
-        return {"ok": True}
+        logger.info(
+            "sync_symbols: wrote %s exchange_instruments into redis_key=%s",
+            total,
+            redis_key,
+        )
+
+        return {"count": total, "redis_key": redis_key, "ttl_sec": ttl_sec}
     except Exception as e:
         raise FatalHandler(
             "sync_symbols_fatal",
@@ -67,3 +88,20 @@ def handle_sync_symbols(
         ) from e
     finally:
         release_lock(ctx.redis_client, lock_key, token)
+
+
+def _exchange_instrument_to_payload(row: Any) -> dict[str, Any]:
+    """
+    DTO/엔티티/ORM 어떤 형태든 duck-typing으로 Redis snapshot에 넣을 payload로 변환.
+    (MappingItem 기준 필드)
+    """
+    return {
+        "id": getattr(row, "id", None),
+        "exchange_id": getattr(row, "exchange_id", None),
+        "exchange_name": getattr(row, "exchange_name", None),
+        "exchange_symbol": getattr(row, "exchange_symbol", None),
+        "base_asset_id": getattr(row, "base_asset_id", None),
+        "base_symbol": getattr(row, "base_symbol", None),
+        "quote_asset_id": getattr(row, "quote_asset_id", None),
+        "quote_symbol": getattr(row, "quote_symbol", None),
+    }

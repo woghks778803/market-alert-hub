@@ -4,6 +4,9 @@ from app.domain import MarketDTO
 
 
 class MarketRepo(Protocol):
+    def add_exchange_instruments(
+        self, exchange_instruments: list[MarketDTO.ExchangeInstrumentCreate]
+    ) -> None: ...
     def get_exchange_by_filter(
         self,
         id: int | None = None,
@@ -18,7 +21,7 @@ class MarketRepo(Protocol):
         is_active: bool = True,
         is_delete: bool = False,
     ) -> MarketDTO.ExchangeInstrument | None: ...
-    def list_exchanges_by_filter(
+    def list_exchange_by_filter(
         self,
         *,
         is_active: bool = True,
@@ -26,18 +29,19 @@ class MarketRepo(Protocol):
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[MarketDTO.Exchange]: ...
-    def list_instruments_by_filter(
+    def list_instrument_by_filter(
         self,
         *,
-        is_active: bool = True,
+        is_active: bool | None = None,
         is_deleted: bool = False,
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[MarketDTO.Instrument]: ...
-    def list_exchange_instruments_by_filter(
+    def list_exchange_instrument_by_filter(
         self,
         *,
         exchange_id: int | None = None,
+        is_active: bool | None = None,
         is_deleted: bool = False,
         limit: int = 200,
         offset: int = 0,
@@ -45,7 +49,7 @@ class MarketRepo(Protocol):
     def list_mappings_exchange_id(
         self, *, exchange_id: int | None = None
     ) -> list[MarketDTO.MappingItem]: ...
-    def _list_candles_by_filter(
+    def _list_candle_by_filter(
         self,
         model,
         *,
@@ -85,7 +89,13 @@ class MarketRepo(Protocol):
         limit: int | None,
         asc_order: bool,
     ) -> list[MarketDTO.CandleBase]: ...
-
+    def upsert_exchange_instruments_by_pairs(
+        self,
+        exchange_id: int,
+        pairs: list[tuple[int, int]],
+        is_active: bool,
+        updated_at: datetime,
+    ) -> int: ...
     def upsert_1m(self, row: dict) -> Tuple[int, bool]: ...
     def upsert_1h(self, row: dict) -> Tuple[int, bool]: ...
     def upsert_1d(self, row: dict) -> Tuple[int, bool]: ...
@@ -93,4 +103,4 @@ class MarketRepo(Protocol):
 
     def seed_snapshots(self, *, interval: str, chunk: list): ...
 
-    def get_symbols(self, exchange_instrument_id: int) -> MarketDTO.MappingItem: ...
+    def get_symbol(self, exchange_instrument_id: int) -> MarketDTO.MappingItem: ...

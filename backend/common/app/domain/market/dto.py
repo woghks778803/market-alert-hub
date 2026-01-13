@@ -18,14 +18,14 @@ class CandleBase:
 
 @dataclass(slots=True)
 class MappingItem:
-    id: int | None = None
+    id: int
+    base_asset_id: int
+    quote_asset_id: int
 
     exchange_id: int | None = None
     exchange_name: str | None = None
     exchange_symbol: str | None = None
-    base_asset_id: int | None = None
     base_symbol: str | None = None
-    quote_asset_id: int | None = None
     quote_symbol: str | None = None
 
 
@@ -47,7 +47,16 @@ class ExchangeInstrument:
 
 @dataclass(slots=True)
 class ExchangeInstrumentCreate:
-    id: int
+    exchange_id: int
+    base_asset_id: int
+    quote_asset_id: int
+    exchange_symbol: str
+    updated_at: datetime
+    is_deleted: bool
+    is_active: bool
+    price_precision: int | None = None
+    qty_precision: int | None = None
+    min_notional: Decimal | None = None
 
 
 @dataclass(slots=True)

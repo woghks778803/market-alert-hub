@@ -42,7 +42,7 @@ def handle_sync_exchanges(
         pipe.delete(tmp_key)
 
         while True:
-            exchanges = ctx.svcs.markets.list_exchanges_by_filter(
+            exchanges = ctx.svcs.markets.list_exchange_by_filter(
                 limit=batch_size, offset=offset
             )
             if not exchanges:

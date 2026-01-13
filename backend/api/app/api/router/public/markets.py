@@ -30,7 +30,7 @@ def list_exchanges(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    rows = svcs.markets.list_exchanges_by_filter(limit=limit, offset=offset)
+    rows = svcs.markets.list_exchange_by_filter(limit=limit, offset=offset)
     return ok(rows, request_id=meta.request_id)
 
 
@@ -53,7 +53,7 @@ def list_exchange_instruments(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    rows = svcs.markets.list_exchange_instruments_by_filter(
+    rows = svcs.markets.list_exchange_instrument_by_filter(
         exchange_id=exchange_id, limit=limit, offset=offset
     )
 

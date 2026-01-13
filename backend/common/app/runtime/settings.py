@@ -132,6 +132,7 @@ class Settings(BaseSettings):
 
     # Schedule interval
     SCHEDULER_SYNC_INTERVAL_SEC: int = 1800  # 30분
+    # SCHEDULER_SYNC_INTERVAL_SEC: int = 300  # 30분
     SCHEDULER_TRIG_INTERVAL_SEC: int = 5  # 1초
     SCHEDULER_SNAPSHOT_INTERVAL_SEC: int = 60  # 1분
 

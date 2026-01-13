@@ -18,7 +18,7 @@ class WatchlistService:
             result: List[WatchlistDTO.WatchlistItemRead] = []
             for row in rows:
 
-                symbols = uow.markets.get_symbols(row.exchange_instrument_id)
+                symbols = uow.markets.get_symbol(row.exchange_instrument_id)
                 if (
                     symbols.base_symbol is None
                     or symbols.quote_symbol is None
@@ -67,7 +67,7 @@ class WatchlistService:
                 exchange_instrument_id=dto.exchange_instrument_id,
                 sort_order=sort_order,
             )
-            symbols = uow.markets.get_symbols(row.exchange_instrument_id)
+            symbols = uow.markets.get_symbol(row.exchange_instrument_id)
 
             uow.commit()
             return WatchlistDTO.WatchlistItemRead(
