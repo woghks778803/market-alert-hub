@@ -14,7 +14,7 @@ from app.runtime.bootstrap import create_collector_context
 from app.runtime.app_context import CollectorContext
 
 logger = logging.getLogger(__name__)
-TaskFactory = Callable[[], Any]  # () -> Awaitable[None]  (타이핑은 느슨하게 유지)
+TaskFactory = Callable[[], Any]
 
 
 @dataclass
@@ -72,14 +72,10 @@ def build_runtime() -> CollectorRuntime:
 
 
 def _build_checkpoint_store(ctx: CollectorContext) -> CheckpointStore:
-    """
-    기본은 운영 안정성/확장성을 위해 redis가 좋지만,
-    현재 settings에 collector 전용 값이 없을 수 있으니 안전하게 기본값을 둔다.
-    """
 
     # if collector_config.checkpoint_backend == "redis":
-    #     redis_url = collector_config.redis_url
-    #     key_prefix = collector_config.checkpoint_key_prefix
+    #     redis_url = ctx.config.redis_url
+    #     key_prefix = ctx.config.checkpoint_key_prefix
     #     return RedisCheckpointStore(redis_url=redis_url, key_prefix=key_prefix)
 
     if ctx.config.checkpoint_backend == "file":
@@ -116,7 +112,7 @@ def _build_specs(runtime: CollectorRuntime) -> list[tuple[str, TaskFactory]]:
 
     각 task_factory는 '코루틴'을 반환해야 한다.
     """
-    from app.handler.stream_marketdata import run_stream_marketdata_loop
+    from app.stream_marketdata import run_stream_marketdata_loop
 
     # enable_catalog = runtime.ctx.config.enable_catalog_sync
     # catalog_interval = runtime.ctx.config.catalog_sync_interval_sec
@@ -144,24 +140,24 @@ def _build_specs(runtime: CollectorRuntime) -> list[tuple[str, TaskFactory]]:
 
 
 def create_tasks(
-    runtime: Any, stop_event: asyncio.Event
+    runtime: CollectorRuntime, stop_event: asyncio.Event
 ) -> list[asyncio.Task[None]] | None:
     """
     runtime에서 specs/policy/on_task_error를 꺼내 supervised task들을 조립한다.
     """
     # specs 쪽에서 stop_event를 참조할 수 있게 바인딩
     install_signal_handlers(stop_event)
-    setattr(runtime, "stop_event", stop_event)
+    runtime.stop_event = stop_event
 
-    specs = getattr(runtime, "specs", None)
+    specs = runtime.specs
     if not specs:
         return None
 
-    restart_policy = getattr(runtime, "restart_policy", None)
+    restart_policy = runtime.restart_policy
     if not isinstance(restart_policy, RestartPolicy):
         restart_policy = RestartPolicy()
 
-    on_task_error = getattr(runtime, "on_task_error", None)
+    on_task_error = runtime.on_task_error
 
     return build_supervised_tasks(
         stop_event=stop_event,

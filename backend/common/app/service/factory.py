@@ -27,7 +27,7 @@ class ServiceFactory:
         hmac_hasher: Callable[[], CryptoPort.TokenHasher],
         jwt_signer: Callable[[], CryptoPort.TokenSigner],
         secret_crypto: Callable[[], CryptoPort.SecretCrypto],
-        upbit_symbol: Callable[[], MarketPort.UpbitSymbolProvider],
+        upbit_symbol: Callable[[], MarketPort.UpbitSymbol],
         config: CoreDTO.ServiceConfigBag,
     ) -> None:
         self._trace_id: str | None = None

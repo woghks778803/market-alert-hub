@@ -1,9 +1,14 @@
-import json
-import httpx
 from dataclasses import dataclass
+from typing import Any
 
 from .errors import UpbitHttpError, UpbitRateLimitError, UpbitDecodeError
 from .types import UpbitMarket
+
+from app.infra.external.transport.port.http import SyncHttpTransport
+from app.infra.external.transport.impl.httpx import (
+    HttpxSyncTransport,
+    HttpxTransportConfig,
+)
 
 
 @dataclass(frozen=True)
@@ -13,55 +18,53 @@ class UpbitRestClientConfig:
 
 
 class UpbitRestClient:
-    def __init__(self, config: UpbitRestClientConfig | None = None) -> None:
+    def __init__(
+        self,
+        config: UpbitRestClientConfig | None = None,
+        *,
+        transport: SyncHttpTransport | None = None,
+    ) -> None:
         self._config = config or UpbitRestClientConfig()
-        self._client: httpx.Client | None = None
+        self._transport = transport or HttpxSyncTransport(
+            HttpxTransportConfig(
+                base_url=self._config.base_url,
+                timeout_sec=self._config.timeout_sec,
+            )
+        )
 
     def __enter__(self) -> "UpbitRestClient":
-        self._ensure_client()
+        # transport가 context manager일 수도 있으니 가능하면 진입
+        enter = getattr(self._transport, "__enter__", None)
+        if callable(enter):
+            enter()
         return self
 
     def __exit__(self, exc_type, exc, tb) -> None:
         self.close()
 
-    def _ensure_client(self) -> None:
-        if self._client is not None:
-            return
-        self._client = httpx.Client(
-            base_url=self._config.base_url,
-            timeout=httpx.Timeout(self._config.timeout_sec),
-        )
-
     def close(self) -> None:
-        if self._client is None:
-            return
-        self._client.close()
-        self._client = None
+        self._transport.close()
 
-    def _get_json(self, path: str, *, params: dict | None = None) -> object:
-        self._ensure_client()
-        assert self._client is not None
-
-        resp = self._client.get(path, params=params)
-        text = resp.text
+    def _get_json(self, path: str, *, params: dict[str, Any] | None = None) -> Any:
+        resp = self._transport.get(path, params=params)
 
         if resp.status_code == 429:
-            raise UpbitRateLimitError(resp.status_code, "Upbit rate limited", body=text)
+            raise UpbitRateLimitError(
+                resp.status_code, "Upbit rate limited", body=resp.text
+            )
         if resp.status_code >= 400:
             raise UpbitHttpError(
-                resp.status_code, f"Upbit http error: {resp.status_code}", body=text
+                resp.status_code,
+                f"Upbit http error: {resp.status_code}",
+                body=resp.text,
             )
 
         try:
-            return json.loads(text)
+            return resp.json()
         except Exception as e:
             raise UpbitDecodeError(f"Failed to decode Upbit response: {e}") from e
 
     def list_markets(self) -> list[UpbitMarket]:
-        """
-        GET /v1/market/all
-        - 실제 params는 필요 시 추가(예: isDetails=true)
-        """
         data = self._get_json("/v1/market/all", params={"isDetails": "false"})
         if not isinstance(data, list):
             raise UpbitDecodeError("Unexpected markets payload shape")
@@ -79,5 +82,7 @@ class UpbitRestClient:
                 )
         return out
 
+
 def get_rest_client(config: UpbitRestClientConfig) -> UpbitRestClient:
+    # 기본 transport는 여기서 만든다(다른 거래소도 같은 transport 패턴으로 통일 가능)
     return UpbitRestClient(config)

@@ -3,7 +3,7 @@ from app.service.factory import ServiceFactory
 from app.core import dto as CoreDTO
 from app.infra.external.redis.redis_client import RedisClient
 from app.infra.external.redis.async_redis_client import AsyncRedisClient
-
+from app.infra.external.exchange.port.ws_client import WsClientRegistry
 
 # @dataclass(frozen=True)
 # class AppContext:
@@ -45,4 +45,5 @@ class WorkerContext:
 @dataclass(frozen=True)
 class CollectorContext:
     config: CoreDTO.CollectorConfigBag
+    ws_facs: WsClientRegistry
     async_redis_client: AsyncRedisClient

@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from typing import Any
-from app.wiring import create_tasks
+from app.wiring import CollectorRuntime, create_tasks
 
 
 logger = logging.getLogger(__name__)
@@ -25,24 +25,14 @@ async def _maybe_await_close(obj: Any) -> None:
         return
 
 
-async def run(runtime: Any) -> None:
+async def run(runtime: CollectorRuntime) -> None:
     """
     collector 런타임 실행 루프.
-
-    runtime에서 기대하는 최소 속성(duck-typing):
-    - runtime.jobs: list[tuple[str, callable]]
-        - 각 callable은 '코루틴을 반환하는 팩토리'여야 함 (task_factory: () -> awaitable)
-        - 예: [("catalog", make_catalog_task), ("stream", make_stream_task)]
-    - (optional) runtime.restart_policy: RestartPolicy
-    - (optional) runtime.on_task_error: callable(name: str, exc: BaseException) -> None
-
-    stop_event는 run()에서 생성하고 signals가 set()한다.
-    각 job은 stop_event를 직접 받는 방식으로 wiring에서 closure로 캡쳐시키는 걸 권장.
     """
     stop_event = asyncio.Event()
     tasks = create_tasks(runtime, stop_event)
     if not tasks:
-        logger.warning("collector.no_jobs")
+        logger.warning("collector.no_tasks")
         return
 
     logger.info("collector.run tasks=%d", len(tasks))
@@ -60,9 +50,8 @@ async def run(runtime: Any) -> None:
         await asyncio.gather(*tasks, return_exceptions=True)
 
         # runtime이 소유한 리소스 정리(best-effort)
-        checkpoint_store = getattr(runtime, "checkpoint_store", None)
-        if checkpoint_store is not None:
-            await _maybe_await_close(checkpoint_store)
+        if runtime.checkpoint_store is not None:
+            await _maybe_await_close(runtime.checkpoint_store)
 
         await _maybe_await_close(runtime)
 

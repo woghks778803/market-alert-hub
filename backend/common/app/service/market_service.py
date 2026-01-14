@@ -13,7 +13,7 @@ class MarketService:
         self,
         *,
         uow_factory: Callable[[], UnitOfWork],
-        upbit_symbol: MarketPort.UpbitSymbolProvider,
+        upbit_symbol: MarketPort.UpbitSymbol,
     ) -> None:
         self._uow_factory = uow_factory
         self._upbit_symbol = upbit_symbol
@@ -164,9 +164,7 @@ class MarketService:
 
         # instruments에서 활성 종목 조회
         #    (quote/base 모두 여기서 resolve)
-        active_instruments = (
-            repo.list_instrument_by_filter(is_active=True)
-        )  
+        active_instruments = repo.list_instrument_by_filter(is_active=True)
         instrument_id_by_symbol = {i.symbol: i.id for i in active_instruments}
 
         # 집합 생성
@@ -194,8 +192,6 @@ class MarketService:
             desired.add(key)
             symbol_by_key[key] = s.symbol
 
-        
-
         # 기존 매핑 조회
         blocked = repo.list_exchange_instrument_by_filter(
             exchange_id=exchange.id, is_deleted=True
@@ -203,7 +199,7 @@ class MarketService:
         existing = repo.list_exchange_instrument_by_filter(exchange_id=exchange.id)
         blocked_keys = {(m.base_asset_id, m.quote_asset_id) for m in blocked}
         existing_keys = {(m.base_asset_id, m.quote_asset_id) for m in existing}
-        
+
         # print("symbol_info")
         # print(symbol_by_key)
         # print(desired)

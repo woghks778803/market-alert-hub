@@ -71,9 +71,9 @@ def handle_sync_exchanges(
         )
 
         # TTL이 필요하면 tmp/meta 둘 다 TTL 적용
-        if ttl_sec > 0:
-            pipe.expire(tmp_key, ttl_sec)
-            pipe.expire(meta_key, ttl_sec)
+        # if ttl_sec > 0:
+        #     pipe.expire(tmp_key, ttl_sec)
+        #     pipe.expire(meta_key, ttl_sec)
 
         pipe.execute()
 

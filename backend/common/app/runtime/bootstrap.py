@@ -11,11 +11,12 @@ from app.runtime.app_context import (
 
 # from app.infra.external.rq.queue_factory import RqQueueFactory, RqQueueConfig
 # from app.infra.external.rq.worker_factory import RqWorkerFactory, RqWorkerConfig
+from app.infra.external.exchange.port.ws_client import WsClientRegistry, WsClientPort
 from app.infra.external.redis.async_redis_client import (
     AsyncRedisClient,
     get_async_redis_client,
 )
-from app.infra.external.exchange.upbit.symbol_provider import UpbitSymbolProvider
+from app.infra.external.exchange.upbit.provider.symbol import UpbitSymbol
 from app.infra.external.exchange.upbit.rest_client import (
     UpbitRestClient,
     UpbitRestClientConfig,
@@ -74,20 +75,39 @@ def _resolve_master_key() -> str:
 
 
 class Providers:
-    @staticmethod
-    def upbit_symbol_provider() -> Callable[[], UpbitSymbolProvider]:
-        config = UpbitRestClientConfig()
-        return lambda: UpbitSymbolProvider(rest_client=get_rest_client(config))
-
     # @staticmethod
-    # def upbit_rest_provider() -> Callable[[], UpbitRestClient]:
-    #     config = UpbitRestClientConfig()
-    #     return lambda: get_rest_client(config)
+    # def upbit_ws_provider() -> Callable[[], WsClientPort]:
+    #     """
+    #     Port를 '캐스팅'으로 우기지 말고,
+    #     factory 함수의 반환 타입을 WsClientPort로 명시해서 타입체커가 자연스럽게 믿게 만든다.
+    #     """
 
-    # @staticmethod
-    # def upbit_ws_provider() -> Callable[[], UpbitWsClient]:
     #     config = UpbitWsClientConfig()
-    #     return lambda: get_ws_client(config)
+
+    #     def factory() -> WsClientPort:
+    #         # transport 주입을 쓰는 구조라면 여기서 주입
+    #         # transport: AsyncWsTransport = WebsocketsTransport()
+    #         # return UpbitWsClient(config, transport=transport)
+
+    #         # transport 분리 전/기본 구조라면 그대로 생성
+    #         return UpbitWsClient(config)
+
+    # return factory
+
+    @staticmethod
+    def upbit_symbol_provider() -> Callable[[], UpbitSymbol]:
+        config = UpbitRestClientConfig()
+        return lambda: UpbitSymbol(rest_client=get_rest_client(config))
+
+    @staticmethod
+    def upbit_rest_provider() -> Callable[[], UpbitRestClient]:
+        config = UpbitRestClientConfig()
+        return lambda: get_rest_client(config)
+
+    @staticmethod
+    def upbit_ws_provider() -> Callable[[], WsClientPort]:
+        config = UpbitWsClientConfig()
+        return lambda: get_ws_client(config)
 
     @staticmethod
     def redis_provider() -> Callable[[], RedisClient]:
@@ -330,8 +350,14 @@ def create_scheduler_context() -> SchedulerContext:
 @lru_cache
 def create_collector_context() -> CollectorContext:
     async_redis = get_async_redis_client(settings.REDIS_URL)
+    ws_facs: WsClientRegistry = {
+        "upbit": providers.upbit_ws_provider(),
+    }
+
     return CollectorContext(
-        config=build_collector_config_bag(), async_redis_client=async_redis
+        config=build_collector_config_bag(),
+        ws_facs=ws_facs,
+        async_redis_client=async_redis,
     )
 
 

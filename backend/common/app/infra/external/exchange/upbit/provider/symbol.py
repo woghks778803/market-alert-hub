@@ -3,8 +3,9 @@ from dataclasses import dataclass
 from app.domain import MarketDTO, MarketPort
 from app.infra.external.exchange.upbit.rest_client import UpbitRestClient
 
+
 @dataclass
-class UpbitSymbolProvider(MarketPort.UpbitSymbolProvider):
+class UpbitSymbol(MarketPort.UpbitSymbol):
     rest_client: UpbitRestClient
 
     def list_symbols(self) -> list[MarketDTO.SymbolInfo]:

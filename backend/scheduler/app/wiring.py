@@ -19,8 +19,7 @@ from app.scheduler_loop import run_scheduler_loop
 from app.tasks import build_default_tasks
 
 logger = logging.getLogger(__name__)
-
-TaskFactory = Callable[[], Any]  # worker(Thread 등) 또는 runnable 반환(감독자가 해석)
+TaskFactory = Callable[[], Any]
 
 
 @dataclass
@@ -76,8 +75,8 @@ def _build_checkpoint_store(ctx: SchedulerContext) -> CheckpointStore:
     """
 
     # if backend == "redis":
-    #     redis_url = getattr(ctx.config, "checkpoint_redis_url", None)
-    #     key_prefix = getattr(ctx.config, "checkpoint_key_prefix", "scheduler:ckpt:")
+    #     redis_url = ctx.config.redis_url
+    #     key_prefix = ctx.config.checkpoint_key_prefix
     #     return RedisCheckpointStore(redis_url=redis_url, key_prefix=key_prefix)
 
     if ctx.config.checkpoint_backend == "file":
@@ -97,7 +96,6 @@ def _build_restart_policy(ctx: SchedulerContext) -> RestartPolicy:
 
 def _build_on_task_error() -> Callable[[str, BaseException], None]:
     def _hook(name: str, exc: BaseException) -> None:
-        # errorkit으로 바꾸고 싶으면 scheduler/app/exception_handlers.py 같은 곳에서 교체하면 됨
         logger.exception(
             "scheduler.task_error name=%s exc_type=%s", name, exc.__class__.__name__
         )
@@ -105,40 +103,10 @@ def _build_on_task_error() -> Callable[[str, BaseException], None]:
     return _hook
 
 
-def create_tasks(
-    runtime: SchedulerRuntime, stop_event: threading.Event
-) -> list[threading.Thread] | None:
-
-    install_signal_handlers(stop_event)
-
-    # jobs 쪽에서 stop_event를 참조할 수 있게 바인딩
-    setattr(runtime, "stop_event", stop_event)
-
-    specs = getattr(runtime, "specs", None)
-    if not specs:
-        return None
-
-    restart_policy = getattr(runtime, "restart_policy", None)
-    if not isinstance(restart_policy, RestartPolicy):
-        restart_policy = RestartPolicy()
-
-    on_task_error = getattr(runtime, "on_task_error", None)
-
-    workers = build_supervised_tasks(
-        stop_event=stop_event,
-        specs=specs,
-        policy=restart_policy,
-        on_error=on_task_error,
-    )
-
-    return workers
-
-
 def _build_specs(runtime):
     """
     scheduler 컨테이너 작업 목록
-
-    - 스레드는 1개만 사용 (1초 tick 내부에서 A/B/C 모두 처리)
+    - 스레드는 1개만 사용 (1초 tick 내부에서 모두 처리)
     - stop_event/ctx는 runtime에 이미 바인딩되어 있어야 한다.
     """
 
@@ -149,3 +117,30 @@ def _build_specs(runtime):
     return [
         ("scheduler", lambda: scheduler_main()),
     ]
+
+
+def create_tasks(
+    runtime: SchedulerRuntime, stop_event: threading.Event
+) -> list[threading.Thread] | None:
+
+    install_signal_handlers(stop_event)
+    runtime.stop_event = stop_event
+
+    specs = runtime.specs
+    if not specs:
+        return None
+
+    restart_policy = runtime.restart_policy
+    if not isinstance(restart_policy, RestartPolicy):
+        restart_policy = RestartPolicy()
+
+    on_task_error = runtime.on_task_error
+
+    workers = build_supervised_tasks(
+        stop_event=stop_event,
+        specs=specs,
+        policy=restart_policy,
+        on_error=on_task_error,
+    )
+
+    return workers

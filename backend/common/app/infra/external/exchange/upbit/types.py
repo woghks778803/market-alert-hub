@@ -37,14 +37,3 @@ class UpbitWsSubscribe:
                 "isOnlyRealtime": self.is_only_realtime,
             },
         ]
-
-
-@dataclass(frozen=True)
-class StreamItem:
-    """
-    collector 상위 레이어가 소비하기 좋은 형태(예: (cursor, payload)).
-    cursor는 '마지막 처리 위치'를 의미하는 문자열/정수/타임스탬프 등으로 확장 가능.
-    """
-
-    cursor: str
-    payload: dict[str, Any]
