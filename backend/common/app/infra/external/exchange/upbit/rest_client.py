@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import Any
 
-from .errors import UpbitHttpError, UpbitRateLimitError, UpbitDecodeError
-from .types import UpbitMarket
+from .shared.errors import UpbitHttpError, UpbitRateLimitError, UpbitDecodeError
+from .shared.types import UpbitMarket
 
 from app.infra.external.transport.port.http import SyncHttpTransport
 from app.infra.external.transport.impl.httpx import (

@@ -128,10 +128,13 @@ def _build_specs(runtime: CollectorRuntime) -> list[tuple[str, TaskFactory]]:
                 raise RuntimeError(
                     "runtime.stop_event is not bound (run.py should set it before starting tasks)"
                 )
+
+            # stream_once = _wire_stream_once(runtime)
             return run_stream_marketdata_loop(
                 stop_event=runtime.stop_event,
                 checkpoint_store=runtime.checkpoint_store,
                 reconnect_backoff_sec=stream_reconnect_backoff,
+                # stream_once=stream_once,
             )
 
         specs.append(("market_stream", stream_factory))

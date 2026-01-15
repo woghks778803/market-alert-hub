@@ -1,4 +1,5 @@
 from .settings import settings
+from app.core.constants import ExchangeCode
 from app.core import dto as CoreDTO
 from app.service.factory import ServiceFactory
 from app.runtime.app_context import (
@@ -11,10 +12,12 @@ from app.runtime.app_context import (
 
 # from app.infra.external.rq.queue_factory import RqQueueFactory, RqQueueConfig
 # from app.infra.external.rq.worker_factory import RqWorkerFactory, RqWorkerConfig
-from app.infra.external.exchange.port.ws_client import WsClientRegistry, WsClientPort
-from app.infra.external.redis.async_redis_client import (
-    AsyncRedisClient,
-    get_async_redis_client,
+from app.infra.external.exchange.upbit.shared.types import UpbitWsSubscribe
+from app.infra.external.exchange.port.ws_client import (
+    WsFactoryRegistry,
+    WsClient,
+    StreamFactory,
+    StreamFactoryRegistry,
 )
 from app.infra.external.exchange.upbit.provider.symbol import UpbitSymbol
 from app.infra.external.exchange.upbit.rest_client import (
@@ -26,6 +29,10 @@ from app.infra.external.exchange.upbit.ws_client import (
     UpbitWsClient,
     UpbitWsClientConfig,
     get_ws_client,
+)
+from app.infra.external.redis.async_redis_client import (
+    AsyncRedisClient,
+    get_async_redis_client,
 )
 from app.infra.external.redis.redis_client import RedisClient, get_redis_client
 from app.infra.external.email.ses_client import SesEmailClient
@@ -39,7 +46,7 @@ from app.infra.external.crypto.local_aesgcm import LocalAesGcmCrypto
 from app.infra.external.crypto.local_aesgcm_from_secrets import LocalAesGcmFromSecrets
 
 
-from typing import Callable
+from typing import Callable, Any
 from functools import lru_cache
 from passlib.context import CryptContext
 
@@ -75,25 +82,6 @@ def _resolve_master_key() -> str:
 
 
 class Providers:
-    # @staticmethod
-    # def upbit_ws_provider() -> Callable[[], WsClientPort]:
-    #     """
-    #     Port를 '캐스팅'으로 우기지 말고,
-    #     factory 함수의 반환 타입을 WsClientPort로 명시해서 타입체커가 자연스럽게 믿게 만든다.
-    #     """
-
-    #     config = UpbitWsClientConfig()
-
-    #     def factory() -> WsClientPort:
-    #         # transport 주입을 쓰는 구조라면 여기서 주입
-    #         # transport: AsyncWsTransport = WebsocketsTransport()
-    #         # return UpbitWsClient(config, transport=transport)
-
-    #         # transport 분리 전/기본 구조라면 그대로 생성
-    #         return UpbitWsClient(config)
-
-    # return factory
-
     @staticmethod
     def upbit_symbol_provider() -> Callable[[], UpbitSymbol]:
         config = UpbitRestClientConfig()
@@ -105,7 +93,7 @@ class Providers:
         return lambda: get_rest_client(config)
 
     @staticmethod
-    def upbit_ws_provider() -> Callable[[], WsClientPort]:
+    def upbit_ws_provider() -> Callable[[], WsClient]:
         config = UpbitWsClientConfig()
         return lambda: get_ws_client(config)
 
@@ -350,13 +338,35 @@ def create_scheduler_context() -> SchedulerContext:
 @lru_cache
 def create_collector_context() -> CollectorContext:
     async_redis = get_async_redis_client(settings.REDIS_URL)
-    ws_facs: WsClientRegistry = {
-        "upbit": providers.upbit_ws_provider(),
-    }
+    subscribe = UpbitWsSubscribe(
+        channel="ticker", codes=["KRW-BTC"], is_only_realtime=True
+    )
 
+    def _make_stream_factory(exchange_key: str) -> StreamFactory:
+        ws_factory = ws_facs_register[exchange_key]
+
+        # stop_event는 "그냥 전달"만 받는다(타입은 Any로 유지해서 asyncio import 회피)
+        async def stream_once(cursor: str | None, stop_event: Any):
+            ws = ws_factory()
+            async for item in ws.stream_once(
+                subscribe=subscribe,
+                cursor=cursor,
+                stop_event=stop_event,
+            ):
+                yield item
+
+        return stream_once
+
+    ws_facs_register: WsFactoryRegistry = {
+        ExchangeCode.UPBIT.value: providers.upbit_ws_provider(),
+    }
+    stream_facs_register: StreamFactoryRegistry = {
+        ExchangeCode.UPBIT.value: _make_stream_factory(ExchangeCode.UPBIT.value),
+    }
     return CollectorContext(
         config=build_collector_config_bag(),
-        ws_facs=ws_facs,
+        stream_facs_register=stream_facs_register,
+        ws_facs_register=ws_facs_register,
         async_redis_client=async_redis,
     )
 

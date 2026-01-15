@@ -1,15 +1,19 @@
-from __future__ import annotations
-
 import asyncio
 import json
 import uuid
 from dataclasses import dataclass
-from typing import Any, AsyncIterator
+from typing import Any, AsyncIterator, AsyncIterable
 
-from app.infra.external.exchange.upbit.errors import UpbitWsError, UpbitDecodeError
-from app.infra.external.exchange.upbit.types import UpbitWsSubscribe
+from .shared.errors import UpbitWsError, UpbitDecodeError
+from .shared.types import (
+    UpbitWsSubscribe,
+)
 
-from app.infra.external.exchange.port.ws_client import WsStreamItem, WsClientPort
+from app.infra.external.exchange.port.ws_client import (
+    WsStreamItem,
+    WsClient,
+    WsStream,
+)
 from app.infra.external.transport.port.ws import (
     AsyncWsTransport,
     WsConnectConfig,
@@ -24,7 +28,7 @@ class UpbitWsClientConfig:
     close_timeout_sec: float = 5.0
 
 
-class UpbitWsClient(WsClientPort):
+class UpbitWsClient(WsClient):
     """
     - transport(연결/송수신)은 AsyncWsTransport에게 위임
     - 여기서는 Upbit 구독 프레임 생성 + 메시지 decode만 담당
@@ -45,7 +49,7 @@ class UpbitWsClient(WsClientPort):
         subscribe: UpbitWsSubscribe,
         cursor: str | None,
         stop_event: asyncio.Event,
-    ) -> AsyncIterator[WsStreamItem]:
+    ) -> WsStream:
         frames = [{"ticket": str(uuid.uuid4())}] + subscribe.to_frames()
         payload_bytes = json.dumps(frames).encode("utf-8")
 
