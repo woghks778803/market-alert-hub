@@ -3,7 +3,7 @@ import uuid
 import logging
 from typing import Any, Mapping
 from app.core.util.datetime import utcnow, to_epoch_ms
-from app.core.constants import OutboxEventType
+from app.core.constants import OutboxEventType, SNAP, META, TMP, LOCK
 from app.runtime.app_context import WorkerContext
 from app.util.utils import require, try_acquire_lock, release_lock
 from app.exception_handlers import SkipHandler, FatalHandler
@@ -21,16 +21,15 @@ def handle_sync_exchanges(
     batch_size = job_config["batch_size"]
     ttl_sec = job_config["ttl_sec"]
     run_key = job_config["run_key"]
-    redis_key = f"{app_name}:{deploy_env}:snap:{run_key}"
+    redis_key = f"{app_name}:{deploy_env}:{SNAP}:{run_key}"
 
     r = ctx.redis_client.conn()
     run_id = uuid.uuid4().hex
-    tmp_key = f"{app_name}:{deploy_env}:tmp:{run_key}:{run_id}"
-
+    tmp_key = f"{app_name}:{deploy_env}:{TMP}:{run_key}:{run_id}"
     total = 0
     offset = 0
 
-    lock_key = f"{app_name}:{deploy_env}:lock:{run_key}"
+    lock_key = f"{app_name}:{deploy_env}:{LOCK}:{run_key}"
     token = try_acquire_lock(
         ctx.redis_client, lock_key, ttl_sec=ctx.config.outbox_send_lock_ttl_sec
     )
@@ -62,7 +61,7 @@ def handle_sync_exchanges(
             pipe.execute()
 
         # metadata(선택)
-        meta_key = f"{app_name}:{deploy_env}:meta:{run_key}"
+        meta_key = f"{app_name}:{deploy_env}:{META}:{run_key}"
 
         pipe = r.pipeline(transaction=False)
         pipe.hset(
@@ -78,7 +77,6 @@ def handle_sync_exchanges(
         pipe.execute()
 
         # 원자적 스왑: tmp_key -> redis_key
-        # - rename은 원자적, 기존 redis_key가 있으면 덮어씀
         r.rename(tmp_key, redis_key)
 
         logger.info(

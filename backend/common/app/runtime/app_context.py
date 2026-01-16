@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from app.service.factory import ServiceFactory
 from app.core import dto as CoreDTO
+from app.infra.external.redis.port.active_catalog import ActiveMarketCatalog
 from app.infra.external.redis.redis_client import RedisClient
 from app.infra.external.redis.async_redis_client import AsyncRedisClient
 from app.infra.external.exchange.port.ws_client import WsFactoryRegistry, StreamFactoryRegistry
@@ -47,3 +48,4 @@ class CollectorContext:
     stream_facs_register: StreamFactoryRegistry
     ws_facs_register: WsFactoryRegistry
     async_redis_client: AsyncRedisClient
+    active_catalog: ActiveMarketCatalog

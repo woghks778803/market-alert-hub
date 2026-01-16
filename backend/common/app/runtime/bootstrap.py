@@ -1,5 +1,5 @@
 from .settings import settings
-from app.core.constants import ExchangeCode
+from app.core.constants import ExchangeCode, SNAP, META, SYMBOLS, EXCHANGES
 from app.core import dto as CoreDTO
 from app.service.factory import ServiceFactory
 from app.runtime.app_context import (
@@ -12,6 +12,7 @@ from app.runtime.app_context import (
 
 # from app.infra.external.rq.queue_factory import RqQueueFactory, RqQueueConfig
 # from app.infra.external.rq.worker_factory import RqWorkerFactory, RqWorkerConfig
+from app.infra.external.redis.active_catalog import RedisActiveMarketCatalog
 from app.infra.external.exchange.upbit.shared.types import UpbitWsSubscribe
 from app.infra.external.exchange.port.ws_client import (
     WsFactoryRegistry,
@@ -337,9 +338,18 @@ def create_scheduler_context() -> SchedulerContext:
 
 @lru_cache
 def create_collector_context() -> CollectorContext:
+    config = build_collector_config_bag()
     async_redis = get_async_redis_client(settings.REDIS_URL)
     subscribe = UpbitWsSubscribe(
         channel="ticker", codes=["KRW-BTC"], is_only_realtime=True
+    )
+
+    active_catalog = RedisActiveMarketCatalog(
+        async_redis.conn(),
+        exchanges_snap_key=f"{config.app_name}:{config.deploy_env}:{SNAP}:{EXCHANGES}",
+        exchanges_meta_key=f"{config.app_name}:{config.deploy_env}:{META}:{EXCHANGES}",
+        symbols_snap_key_fn=lambda ex: f"{config.app_name}:{config.deploy_env}:{SNAP}:{SYMBOLS}:{ex}",
+        symbols_meta_key_fn=lambda ex: f"{config.app_name}:{config.deploy_env}:{META}:{SYMBOLS}:{ex}",
     )
 
     def _make_stream_factory(exchange_key: str) -> StreamFactory:
@@ -364,10 +374,11 @@ def create_collector_context() -> CollectorContext:
         ExchangeCode.UPBIT.value: _make_stream_factory(ExchangeCode.UPBIT.value),
     }
     return CollectorContext(
-        config=build_collector_config_bag(),
+        config=config,
         stream_facs_register=stream_facs_register,
         ws_facs_register=ws_facs_register,
         async_redis_client=async_redis,
+        active_catalog=active_catalog,
     )
 
 

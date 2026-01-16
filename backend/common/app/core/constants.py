@@ -1,5 +1,13 @@
 import enum
 
+TMP = "tmp"
+SNAP = "snap"
+META = "meta"
+LOCK = "lock"
+
+SYMBOLS = "symbols"
+EXCHANGES = "exchanges"
+
 
 class UseType(str, enum.Enum):
     YES = True

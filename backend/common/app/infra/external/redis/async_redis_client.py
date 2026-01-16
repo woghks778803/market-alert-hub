@@ -66,7 +66,10 @@ class AsyncRedisClient:
         except RedisError as e:
             log.exception("redis delete failed: key=%s", key)
             raise
-
+    
+    def conn(self) -> AsyncRedis:
+        return self._client
+    
     async def aclose(self) -> None:
         """
         프로세스 종료 시 close 호출하면 커넥션 정리 가능.

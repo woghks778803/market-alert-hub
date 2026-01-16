@@ -4,7 +4,14 @@ from urllib.parse import quote_plus
 from pydantic import computed_field, field_validator, Field, EmailStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Any
-from app.core.constants import OutboxEventType
+from app.core.constants import (
+    OutboxEventType,
+    ExchangeCode,
+    SNAP,
+    META,
+    SYMBOLS,
+    EXCHANGES,
+)
 
 
 class Settings(BaseSettings):
@@ -88,12 +95,10 @@ class Settings(BaseSettings):
     REDIS_STREAM_DELIVERIES: str = Field(default="deliveries")
 
     # exchanges
-    SYNC_EXCHANGES_RUN_KEY: str = "exchanges:v1"
     SYNC_EXCHANGES_BATCH_SIZE: int = 500
     SYNC_EXCHANGES_TTL_SEC: int = 600
 
     # symbols
-    SYNC_SYMBOLS_RUN_KEY: str = "symbols:v1"
     SYNC_SYMBOLS_BATCH_SIZE: int = 500
     SYNC_SYMBOLS_TTL_SEC: int = 600
 
@@ -161,12 +166,12 @@ class Settings(BaseSettings):
         """
         return {
             OutboxEventType.SYNC_EXCHANGES.value: {
-                "run_key": self.SYNC_EXCHANGES_RUN_KEY,
+                "run_key": f"{EXCHANGES}",
                 "batch_size": self.SYNC_EXCHANGES_BATCH_SIZE,
                 "ttl_sec": self.SYNC_EXCHANGES_TTL_SEC,
             },
             OutboxEventType.SYNC_SYMBOLS.value: {
-                "run_key": self.SYNC_SYMBOLS_RUN_KEY,
+                "run_key": f"{SYMBOLS}:{ExchangeCode.UPBIT.value}",
                 "batch_size": self.SYNC_SYMBOLS_BATCH_SIZE,
                 "ttl_sec": self.SYNC_SYMBOLS_TTL_SEC,
             },
