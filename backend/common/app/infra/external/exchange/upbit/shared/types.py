@@ -7,21 +7,20 @@ from typing import Literal, Any
 
 @dataclass(frozen=True)
 class UpbitMarket:
-    market: str  # e.g. "KRW-BTC"
+    market: str
     korean_name: str
     english_name: str
 
 
 # ---------- WS ----------
 
-# Upbit WS에서 흔히 등장하는 타입(정확한 스펙은 거래소별로 다름)
-UpbitWsChannel = Literal["ticker", "trade", "orderbook"]
+UpbitWsChannel = Literal["candle.1s", "ticker", "trade", "orderbook"]
 
 
 @dataclass(frozen=True)
 class UpbitWsSubscribe:
     channel: UpbitWsChannel
-    codes: list[str]  # e.g. ["KRW-BTC", "KRW-ETH"]
+    codes: list[str]
     is_only_realtime: bool = True  # 필요 시 옵션으로 노출
 
     def to_frames(self) -> list[dict[str, Any]]:

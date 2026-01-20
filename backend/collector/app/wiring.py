@@ -3,6 +3,7 @@ import asyncio
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any, Callable
+from app.core.constants import CURSOR
 from app.runtime.aio.lifecycle.signals import install_signal_handlers
 from app.runtime.aio.supervision.supervisor import RestartPolicy, build_supervised_tasks
 from app.runtime.aio.state.checkpoint_store import (
@@ -105,39 +106,38 @@ def _build_on_task_error() -> Callable[[str, BaseException], None]:
     return _hook
 
 
-def _build_specs(runtime: CollectorRuntime) -> list[tuple[str, TaskFactory]]:
-    """
-    run.py가 stop_event를 만든 뒤 runtime.stop_event에 바인딩하면,
-    여기서 만든 task_factory들이 그 stop_event를 공유하게 된다.
-
-    각 task_factory는 '코루틴'을 반환해야 한다.
-    """
+def _build_specs(runtime: Any) -> list[tuple[str, TaskFactory]]:
     from app.stream_marketdata import run_stream_marketdata_loop
 
-    # enable_catalog = runtime.ctx.config.enable_catalog_sync
-    # catalog_interval = runtime.ctx.config.catalog_sync_interval_sec
-
-    enable_stream = runtime.ctx.config.enable_stream
-    stream_reconnect_backoff = runtime.ctx.config.stream_reconnect_backoff_sec
+    """
+    - spec은 거래소 단위로만 만든다 (심볼 단위 X)
+    - ctx는 통째로 넘긴다 (덕타이핑)
+    """
+    cfg = runtime.ctx.config
     specs: list[tuple[str, TaskFactory]] = []
 
-    if enable_stream:
+    if not cfg.enable_stream:
+        return specs
 
-        def stream_factory() -> Any:
-            if runtime.stop_event is None:
-                raise RuntimeError(
-                    "runtime.stop_event is not bound (run.py should set it before starting tasks)"
+    for exchange_code in runtime.ctx.ws_facs_register.keys():
+
+        def _make_factory(ex_code: str) -> TaskFactory:
+            def task_factory() -> Any:
+                if runtime.stop_event is None:
+                    raise RuntimeError("runtime.stop_event is not bound")
+
+                return run_stream_marketdata_loop(
+                    stop_event=runtime.stop_event,
+                    checkpoint_store=runtime.checkpoint_store,
+                    ctx=runtime.ctx,
+                    exchange_code=ex_code,
+                    reconnect_backoff_sec=cfg.stream_reconnect_backoff_sec,
+                    checkpoint_key=f"{cfg.app_name}:{cfg.deploy_env}:{CURSOR}:{ex_code}:ticker",
                 )
 
-            # stream_once = _wire_stream_once(runtime)
-            return run_stream_marketdata_loop(
-                stop_event=runtime.stop_event,
-                checkpoint_store=runtime.checkpoint_store,
-                reconnect_backoff_sec=stream_reconnect_backoff,
-                # stream_once=stream_once,
-            )
+            return task_factory
 
-        specs.append(("market_stream", stream_factory))
+        specs.append((f"market_stream:{exchange_code}", _make_factory(exchange_code)))
 
     return specs
 

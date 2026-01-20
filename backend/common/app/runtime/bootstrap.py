@@ -1,3 +1,5 @@
+from ast import Sub
+from re import sub
 from .settings import settings
 from app.core.constants import ExchangeCode, SNAP, META, SYMBOLS, EXCHANGES
 from app.core import dto as CoreDTO
@@ -20,6 +22,8 @@ from app.infra.external.exchange.port.ws_client import (
     StreamFactory,
     StreamFactoryRegistry,
 )
+from app.infra.external.exchange.port.subscribe import SubscribeFactoryRegistry
+
 from app.infra.external.exchange.upbit.provider.symbol import UpbitSymbol
 from app.infra.external.exchange.upbit.rest_client import (
     UpbitRestClient,
@@ -340,9 +344,6 @@ def create_scheduler_context() -> SchedulerContext:
 def create_collector_context() -> CollectorContext:
     config = build_collector_config_bag()
     async_redis = get_async_redis_client(settings.REDIS_URL)
-    subscribe = UpbitWsSubscribe(
-        channel="ticker", codes=["KRW-BTC"], is_only_realtime=True
-    )
 
     active_catalog = RedisActiveMarketCatalog(
         async_redis.conn(),
@@ -352,30 +353,18 @@ def create_collector_context() -> CollectorContext:
         symbols_meta_key_fn=lambda ex: f"{config.app_name}:{config.deploy_env}:{META}:{SYMBOLS}:{ex}",
     )
 
-    def _make_stream_factory(exchange_key: str) -> StreamFactory:
-        ws_factory = ws_facs_register[exchange_key]
-
-        # stop_event는 "그냥 전달"만 받는다(타입은 Any로 유지해서 asyncio import 회피)
-        async def stream_once(cursor: str | None, stop_event: Any):
-            ws = ws_factory()
-            async for item in ws.stream_once(
-                subscribe=subscribe,
-                cursor=cursor,
-                stop_event=stop_event,
-            ):
-                yield item
-
-        return stream_once
-
+    subscribe_facs_register: SubscribeFactoryRegistry = {
+        ExchangeCode.UPBIT.value: lambda codes: UpbitWsSubscribe(
+            channel="candle.1s", codes=codes, is_only_realtime=True
+        ),
+    }
     ws_facs_register: WsFactoryRegistry = {
         ExchangeCode.UPBIT.value: providers.upbit_ws_provider(),
     }
-    stream_facs_register: StreamFactoryRegistry = {
-        ExchangeCode.UPBIT.value: _make_stream_factory(ExchangeCode.UPBIT.value),
-    }
+
     return CollectorContext(
         config=config,
-        stream_facs_register=stream_facs_register,
+        subscribe_facs_register=subscribe_facs_register,
         ws_facs_register=ws_facs_register,
         async_redis_client=async_redis,
         active_catalog=active_catalog,

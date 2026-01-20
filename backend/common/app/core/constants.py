@@ -2,8 +2,10 @@ import enum
 
 TMP = "tmp"
 SNAP = "snap"
+STREAM = "stream"
 META = "meta"
 LOCK = "lock"
+CURSOR = "cursor"
 
 SYMBOLS = "symbols"
 EXCHANGES = "exchanges"
@@ -17,6 +19,7 @@ class UseType(str, enum.Enum):
 class ExchangeCode(str, enum.Enum):
     UPBIT = "UPBIT"
     BINANCE = "BINANCE"
+    BITHUMB = "BITHUMB"
 
 
 class OutboxEventType(str, enum.Enum):
