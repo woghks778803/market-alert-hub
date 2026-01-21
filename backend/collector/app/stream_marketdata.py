@@ -104,9 +104,9 @@ async def upsert_marketdata_and_buffer_5m(
     # Stream 엔트리는 너무 큰 필드명/구조 피하고 최소화
     pipe.xadd(stream_key, {"ts": ts_ms, "p": payload_json})
 
-    print(f"[stream_marketdata] upsert snap {snap_key} [{symbol}]")
-    print(f"[stream_marketdata] upsert stream {stream_key} [{symbol}]")
-    print(payload_json)
+    # print(f"[stream_marketdata] upsert snap {snap_key} [{symbol}]")
+    # print(f"[stream_marketdata] upsert stream {stream_key} [{symbol}]")
+    # print(payload_json)
 
     # 최근 N개 유지(근사) - redis-py 시그니처 차이 대비
     try:

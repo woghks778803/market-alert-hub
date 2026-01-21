@@ -137,9 +137,10 @@ class Settings(BaseSettings):
 
     # Schedule interval
     SCHEDULER_SYNC_INTERVAL_SEC: int = 1800  # 30분
-    # SCHEDULER_SYNC_INTERVAL_SEC: int = 300  # 30분
     SCHEDULER_TRIG_INTERVAL_SEC: int = 5  # 1초
-    SCHEDULER_SNAPSHOT_INTERVAL_SEC: int = 60  # 1분
+    SCHEDULER_SNAPSHOT_INTERVALS: list[int] = Field(
+        default_factory=lambda: [60, 3600, 86400]
+    )
 
     # --- Exchange: Upbit endpoints (REST/WS) ---
     UPBIT_REST_BASE_URL: str = "https://api.upbit.com"  # 업비트 REST API base url
@@ -197,6 +198,29 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return [x.strip() for x in v.split(",")]
         return v
+
+    @field_validator("SCHEDULER_SNAPSHOT_INTERVALS", mode="before")
+    def parse_snapshot_intervals(cls, v):
+        # allow: "60,3600,86400" or [60, 3600, 86400]
+        if v is None or v == "":
+            return [60, 3600, 86400]
+
+        if isinstance(v, str):
+            items = [x.strip() for x in v.split(",") if x.strip()]
+            ints = [int(x) for x in items]
+        else:
+            ints = [int(x) for x in v]
+
+        # validations
+        if not ints:
+            raise ValueError("SCHEDULER_SNAPSHOT_INTERVALS is empty")
+
+        if any(i <= 0 for i in ints):
+            raise ValueError("SCHEDULER_SNAPSHOT_INTERVALS must be positive integers")
+
+        # dedupe + sort
+        uniq = sorted(set(ints))
+        return uniq
 
 
 settings = Settings()

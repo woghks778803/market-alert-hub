@@ -255,7 +255,7 @@ def build_scheduler_config_bag() -> CoreDTO.SchedulerConfigBag:
         # exchange=settings.SCHEDULER_EXCHANGE,
         sync_interval_sec=settings.SCHEDULER_SYNC_INTERVAL_SEC,
         trig_interval_sec=settings.SCHEDULER_TRIG_INTERVAL_SEC,
-        snapshot_interval_sec=settings.SCHEDULER_SNAPSHOT_INTERVAL_SEC,
+        snapshot_intervals_sec=settings.SCHEDULER_SNAPSHOT_INTERVALS,
         restart_base_backoff_sec=settings.SCHEDULER_RESTART_BASE_BACKOFF_SEC,
         restart_max_backoff_sec=settings.SCHEDULER_RESTART_MAX_BACKOFF_SEC,
         restart_jitter_ratio=settings.SCHEDULER_RESTART_JITTER_RATIO,
@@ -355,7 +355,10 @@ def create_collector_context() -> CollectorContext:
 
     subscribe_facs_register: SubscribeFactoryRegistry = {
         ExchangeCode.UPBIT.value: lambda codes: UpbitWsSubscribe(
-            channel="candle.1s", codes=codes, is_only_realtime=True
+            channel="candle.1s",
+            codes=codes,
+            is_only_snapshot=False,
+            is_only_realtime=False,
         ),
     }
     ws_facs_register: WsFactoryRegistry = {

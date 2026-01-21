@@ -24,7 +24,7 @@ class IntervalTask:
         if self._last_slot == slot:
             return
         self._last_slot = slot
-        self.handler(ctx, slot, now_epoch)
+        self.handler(ctx, slot, now_epoch, self.interval_sec)
 
 
 def build_default_tasks(config):
@@ -48,9 +48,12 @@ def build_default_tasks(config):
         #     config.trig_interval_sec,
         #     handle_trigger_alerts,
         # ),
-        # IntervalTask(
-        #     OutboxEventType.PERSIST_SNAPSHOTS,
-        #     config.snapshot_interval_sec,
-        #     handle_persist_snapshots,
-        # ),
+        *[
+            IntervalTask(
+                OutboxEventType.PERSIST_SNAPSHOTS,
+                interval_sec,
+                handle_persist_snapshots,
+            )
+            for interval_sec in config.snapshot_intervals_sec
+        ],
     ]

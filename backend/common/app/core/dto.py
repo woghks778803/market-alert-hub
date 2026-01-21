@@ -72,7 +72,7 @@ class SchedulerConfigBag:
 
     sync_interval_sec: int
     trig_interval_sec: int
-    snapshot_interval_sec: int
+    snapshot_intervals_sec: list[int]
 
     # restart policy (supervisor)
     restart_base_backoff_sec: float

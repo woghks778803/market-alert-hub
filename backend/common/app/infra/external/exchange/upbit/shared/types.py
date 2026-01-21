@@ -21,7 +21,8 @@ UpbitWsChannel = Literal["candle.1s", "ticker", "trade", "orderbook"]
 class UpbitWsSubscribe:
     channel: UpbitWsChannel
     codes: list[str]
-    is_only_realtime: bool = True  # 필요 시 옵션으로 노출
+    is_only_snapshot: bool = False
+    is_only_realtime: bool = False
 
     def to_frames(self) -> list[dict[str, Any]]:
         """
@@ -33,6 +34,7 @@ class UpbitWsSubscribe:
             {
                 "type": self.channel,
                 "codes": self.codes,
-                "isOnlyRealtime": self.is_only_realtime,
+                "is_only_snapshot": self.is_only_snapshot,
+                "is_only_realtime": self.is_only_realtime,
             },
         ]

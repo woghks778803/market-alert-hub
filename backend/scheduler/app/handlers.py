@@ -5,7 +5,7 @@ from app.core.constants import OutboxEventType
 logger = logging.getLogger(__name__)
 
 
-def handle_sync_exchanges(ctx, slot, now_epoch):
+def handle_sync_exchanges(ctx, slot, now_epoch, interval_sec):
     outbox_fingerprint_dict = {
         "event_type": OutboxEventType.SYNC_EXCHANGES,
         "aggregate_type": "system",
@@ -15,6 +15,7 @@ def handle_sync_exchanges(ctx, slot, now_epoch):
     payload = {
         "slot": slot,
         "requested_at_epoch": now_epoch,
+        "interval_sec": interval_sec,
     }
 
     _insert_outbox(
@@ -22,7 +23,7 @@ def handle_sync_exchanges(ctx, slot, now_epoch):
     )
 
 
-def handle_sync_symbols(ctx, slot, now_epoch):
+def handle_sync_symbols(ctx, slot, now_epoch, interval_sec):
     outbox_fingerprint_dict = {
         "event_type": OutboxEventType.SYNC_SYMBOLS,
         "aggregate_type": "system",
@@ -32,11 +33,12 @@ def handle_sync_symbols(ctx, slot, now_epoch):
     payload = {
         "slot": slot,
         "requested_at_epoch": now_epoch,
+        "interval_sec": interval_sec,
     }
     _insert_outbox(ctx, OutboxEventType.SYNC_SYMBOLS, outbox_fingerprint_dict, payload)
 
 
-def handle_trigger_alerts(ctx, slot, now_epoch):
+def handle_trigger_alerts(ctx, slot, now_epoch, interval_sec):
     # shard_total=0
     # shard_index=0
 
@@ -49,13 +51,14 @@ def handle_trigger_alerts(ctx, slot, now_epoch):
     payload = {
         "slot": slot,
         "requested_at_epoch": now_epoch,
+        "interval_sec": interval_sec,
     }
     _insert_outbox(
         ctx, OutboxEventType.TRIGGER_ALERTS, outbox_fingerprint_dict, payload
     )
 
 
-def handle_persist_snapshots(ctx, slot, now_epoch):
+def handle_persist_snapshots(ctx, slot, now_epoch, interval_sec):
     outbox_fingerprint_dict = {
         "event_type": OutboxEventType.PERSIST_SNAPSHOTS,
         "aggregate_type": "system",
@@ -65,6 +68,7 @@ def handle_persist_snapshots(ctx, slot, now_epoch):
     payload = {
         "slot": slot,
         "requested_at_epoch": now_epoch,
+        "interval_sec": interval_sec,
     }
     _insert_outbox(
         ctx, OutboxEventType.PERSIST_SNAPSHOTS, outbox_fingerprint_dict, payload
