@@ -14,8 +14,12 @@ class IntervalTask:
     """
 
     def __init__(self, name, interval_sec, handler):
+        interval_sec = int(interval_sec)
+        if interval_sec <= 0:
+            raise ValueError("interval_sec must be positive")
+
         self.name = name
-        self.interval_sec = int(interval_sec)
+        self.interval_sec = interval_sec
         self.handler = handler
         self._last_slot = None
 

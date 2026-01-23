@@ -1,4 +1,5 @@
 from ast import Sub
+from logging import config
 from re import sub
 from .settings import settings
 from app.core.constants import ExchangeCode, SNAP, META, SYMBOLS, EXCHANGES

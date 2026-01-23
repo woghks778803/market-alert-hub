@@ -65,6 +65,45 @@ class SqlMarketRepo(MarketRepo):
             return None
         return exchange_instrument.to_dto()
 
+    def get_last_1m_by_exchange_instrument_ids(
+        self,
+        exchange_instrument_ids: list[int],
+    ) -> dict[int, MarketDTO.PriceSnapshot]:
+        """
+        exchange_instrument_id별로 가장 최신(최대 ts_open) 1분봉을 bulk로 조회해서 dict로 반환.
+        """
+        ps_1m = PriceSnapshot1mModel
+        ids = [int(x) for x in exchange_instrument_ids]
+        if not ids:
+            return {}
+
+        subq = (
+            select(
+                ps_1m.exchange_instrument_id,
+                func.max(ps_1m.ts_open).label("max_ts_open"),
+            )
+            .where(ps_1m.exchange_instrument_id.in_(ids))
+            .group_by(ps_1m.exchange_instrument_id)
+            .subquery()
+        )
+
+        stmt = select(ps_1m).join(
+            subq,
+            and_(
+                ps_1m.exchange_instrument_id == subq.c.exchange_instrument_id,
+                ps_1m.ts_open == subq.c.max_ts_open,
+            ),
+        )
+
+        rows = self._db.execute(stmt).scalars().all()
+
+        out: dict[int, MarketDTO.PriceSnapshot] = {}
+        for m in rows:
+            dto = m.to_dto()  # type: ignore[attr-defined]
+            out[dto.exchange_instrument_id] = dto
+
+        return out
+
     # Meta
     def list_exchange_by_filter(
         self,
@@ -107,7 +146,7 @@ class SqlMarketRepo(MarketRepo):
             .limit(limit)
             .offset(offset)
         )
-        
+
         if is_active is not None:
             stmt.where(InstrumentModel.is_active == is_active)
 

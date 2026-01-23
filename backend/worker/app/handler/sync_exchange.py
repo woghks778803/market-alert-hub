@@ -2,7 +2,7 @@ import json
 import uuid
 import logging
 from typing import Any, Mapping
-from app.core.util.datetime import utcnow, to_epoch_ms
+from app.core.util.datetime import utcnow, datetime_to_epoch_ms
 from app.core.constants import OutboxEventType, SNAP, META, TMP, LOCK
 from app.runtime.app_context import WorkerContext
 from app.util.utils import require, try_acquire_lock, release_lock
@@ -15,6 +15,8 @@ def handle_sync_exchanges(
     ctx: WorkerContext, payload: Mapping[str, Any]
 ) -> dict[str, Any]:
     started_at = utcnow()
+    interval_sec = int(require(payload, "interval_sec", target="payload.interval_sec"))
+    slot = int(require(payload, "slot", target="payload.slot"))
     job_config = ctx.config.worker_jobs[OutboxEventType.SYNC_EXCHANGES.value]
     app_name = ctx.config.app_name
     deploy_env = ctx.config.deploy_env
@@ -24,12 +26,11 @@ def handle_sync_exchanges(
     redis_key = f"{app_name}:{deploy_env}:{SNAP}:{run_key}"
 
     r = ctx.redis_client.conn()
-    run_id = uuid.uuid4().hex
-    tmp_key = f"{app_name}:{deploy_env}:{TMP}:{run_key}:{run_id}"
+    tmp_key = f"{app_name}:{deploy_env}:{TMP}:{run_key}:{slot}:{interval_sec}"
     total = 0
     offset = 0
 
-    lock_key = f"{app_name}:{deploy_env}:{LOCK}:{run_key}"
+    lock_key = f"{app_name}:{deploy_env}:{LOCK}:{run_key}:{slot}:{interval_sec}"
     token = try_acquire_lock(
         ctx.redis_client, lock_key, ttl_sec=ctx.config.outbox_send_lock_ttl_sec
     )
@@ -66,7 +67,7 @@ def handle_sync_exchanges(
         pipe = r.pipeline(transaction=False)
         pipe.hset(
             meta_key,
-            mapping={"started_at": to_epoch_ms(started_at), "count": total},
+            mapping={"started_at": datetime_to_epoch_ms(started_at), "count": total},
         )
 
         # TTL이 필요하면 tmp/meta 둘 다 TTL 적용

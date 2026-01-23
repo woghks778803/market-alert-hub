@@ -1,8 +1,9 @@
-from typing import NamedTuple
+from typing import Any, Mapping, NamedTuple
 from datetime import datetime
 from dataclasses import dataclass
 from decimal import Decimal
 from app.core.constants import AssetType
+from app.domain.shared.errors import ValidationAppError
 
 
 @dataclass(slots=True, frozen=True)
@@ -27,6 +28,55 @@ class MappingItem:
     exchange_symbol: str | None = None
     base_symbol: str | None = None
     quote_symbol: str | None = None
+
+    @staticmethod
+    def _req_int(d: Mapping[str, Any], key: str) -> int:
+        v = d.get(key)
+        if v is None:
+            raise ValidationAppError(f"MappingItem.{key} is required")
+        try:
+            return int(v)
+        except Exception as e:
+            raise ValidationAppError(
+                f"MappingItem.{key} must be int-like: {v!r}"
+            ) from e
+
+    @staticmethod
+    def _opt_int(d: Mapping[str, Any], key: str) -> int | None:
+        v = d.get(key)
+        if v is None:
+            return None
+        try:
+            return int(v)
+        except Exception as e:
+            raise ValidationAppError(
+                f"MappingItem.{key} must be int-like: {v!r}"
+            ) from e
+
+    @staticmethod
+    def _opt_str(d: Mapping[str, Any], key: str) -> str | None:
+        v = d.get(key)
+        if v is None:
+            return None
+        if isinstance(v, bytes):
+            s = v.decode("utf-8", errors="ignore")
+        else:
+            s = str(v)
+        s = s.strip()
+        return s or None
+
+    @classmethod
+    def from_dict(cls, d: Mapping[str, Any]) -> "MappingItem":
+        return cls(
+            id=cls._req_int(d, "id"),
+            base_asset_id=cls._req_int(d, "base_asset_id"),
+            quote_asset_id=cls._req_int(d, "quote_asset_id"),
+            exchange_id=cls._opt_int(d, "exchange_id"),
+            exchange_name=cls._opt_str(d, "exchange_name"),
+            exchange_symbol=cls._opt_str(d, "exchange_symbol"),
+            base_symbol=cls._opt_str(d, "base_symbol"),
+            quote_symbol=cls._opt_str(d, "quote_symbol"),
+        )
 
 
 @dataclass(slots=True)
@@ -87,6 +137,18 @@ class Instrument:
 @dataclass(slots=True)
 class PriceSnapshot:
     id: int
+    exchange_instrument_id: int
+    ts_open: datetime
+    open: Decimal
+    high: Decimal
+    low: Decimal
+    close: Decimal
+    volume: Decimal
+    updated_at: datetime
+
+
+@dataclass(slots=True)
+class PriceSnapshotCreate:
     exchange_instrument_id: int
     ts_open: datetime
     open: Decimal

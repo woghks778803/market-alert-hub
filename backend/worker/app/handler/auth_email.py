@@ -10,7 +10,7 @@ from app.exception_handlers import SkipHandler, RetryHandler, FatalHandler
 def handle_auth_email(
     ctx: WorkerContext,
     payload: Mapping[str, Any],
-) -> Any:
+) -> dict[str, Any]:
     app_name = ctx.config.app_name
     deploy_env = ctx.config.deploy_env
 

@@ -166,13 +166,16 @@ class Settings(BaseSettings):
         event_type dict로 묶음
         """
         return {
+            OutboxEventType.PERSIST_SNAPSHOTS.value: {
+                "run_key": OutboxEventType.PERSIST_SNAPSHOTS.value,
+            },
             OutboxEventType.SYNC_EXCHANGES.value: {
-                "run_key": f"{EXCHANGES}",
+                "run_key": OutboxEventType.SYNC_EXCHANGES.value,
                 "batch_size": self.SYNC_EXCHANGES_BATCH_SIZE,
                 "ttl_sec": self.SYNC_EXCHANGES_TTL_SEC,
             },
             OutboxEventType.SYNC_SYMBOLS.value: {
-                "run_key": f"{SYMBOLS}:{ExchangeCode.UPBIT.value}",
+                "run_key": f"{OutboxEventType.SYNC_SYMBOLS.value}:{ExchangeCode.UPBIT.value}",
                 "batch_size": self.SYNC_SYMBOLS_BATCH_SIZE,
                 "ttl_sec": self.SYNC_SYMBOLS_TTL_SEC,
             },

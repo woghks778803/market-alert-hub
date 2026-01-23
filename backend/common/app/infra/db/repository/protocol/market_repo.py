@@ -14,6 +14,10 @@ class MarketRepo(Protocol):
         is_active: bool = True,
         is_delete: bool = False,
     ) -> MarketDTO.Exchange | None: ...
+    def get_last_1m_by_exchange_instrument_ids(
+        self,
+        exchange_instrument_ids: list[int],
+    ) -> dict[int, MarketDTO.PriceSnapshot]: ...
     def get_by_exchange_instrument_filter(
         self,
         *,

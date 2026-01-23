@@ -7,7 +7,11 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def to_epoch_ms(dt: datetime) -> int:
+def epoch_to_datetime(epoch: int) -> datetime:
+    return datetime.fromtimestamp(int(epoch), tz=timezone.utc)
+
+
+def datetime_to_epoch_ms(dt: datetime) -> int:
     dt = ensure_utc(dt)
     return int(dt.timestamp() * 1000)
 

@@ -1,8 +1,9 @@
-from typing import Callable, Sequence, Iterable
+from typing import Any, Callable, Sequence, Iterable
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 from app.core.constants import CandleBaseInterval, CandleOutputInterval, ExchangeCode
-from app.core.util.datetime import utcnow
+from app.core.util.datetime import utcnow, epoch_to_datetime
 from app.domain.shared.uow import UnitOfWork
 from app.domain.shared.errors import ValidationAppError, NotFoundError
 from app.domain import MarketDTO, MarketRule, MarketPort
@@ -111,6 +112,101 @@ class MarketService:
             return rows
 
     # ---------------------------------------------------------------------------------------------------------------
+    def ensure_snapshots_1m(
+        self, snapshots: list[MarketDTO.PriceSnapshotCreate]
+    ) -> int:
+        if not snapshots:
+            return 0
+
+        with self._uow_factory() as uow:
+            # uow.markets.upsert_snapshots_1m(snapshots)
+            # uow가 exit에서 commit/rollback 처리하는 구조라면 여기서 추가로 할 건 없음
+            uow.commit()
+            return len(snapshots)
+
+    def normalize_empty_snapshots_1m(
+        self, no_tick_payloads: list[dict[str, Any]], bucket_start_epoch: int
+    ) -> list[MarketDTO.PriceSnapshotCreate]:
+        ts_open = epoch_to_datetime(bucket_start_epoch)
+        now = utcnow()
+        no_tick_symbols = [MarketDTO.MappingItem.from_dict(m) for m in no_tick_payloads]
+        ids = [s.id for s in no_tick_symbols]
+
+        with self._uow_factory() as uow:
+            last_1m_map = uow.markets.get_last_1m_by_exchange_instrument_ids(ids)
+
+        result: list[MarketDTO.PriceSnapshotCreate] = []
+        for s in no_tick_symbols:
+            prev = last_1m_map.get(s.id)
+            if prev is None:
+                # 초기 구간(이전 캔들 없음)은 스킵
+                continue
+
+            close = prev.close  # Decimal
+            result.append(
+                MarketDTO.PriceSnapshotCreate(
+                    exchange_instrument_id=s.id,
+                    ts_open=ts_open,
+                    open=close,
+                    high=close,
+                    low=close,
+                    close=close,
+                    volume=Decimal("0"),
+                    updated_at=now,
+                )
+            )
+
+        return result
+
+    def normalize_snapshots_1m(
+        self,
+        payload: dict[str, Any],
+        symbol_ticks: list[dict[str, Any]],
+        bucket_start_epoch: int,
+    ) -> MarketDTO.PriceSnapshotCreate:
+        symbol = MarketDTO.MappingItem.from_dict(payload)
+        ts_open: datetime = epoch_to_datetime(bucket_start_epoch)
+        first = symbol_ticks[0]
+        last = symbol_ticks[-1]
+
+        # open/close
+        open_p = first.get("opening_price", first.get("trade_price"))
+        close_p = last.get("trade_price", last.get("opening_price"))
+
+        # high/low/volume
+        high_p: Decimal | None = None
+        low_p: Decimal | None = None
+        vol_sum = Decimal("0")
+
+        for t in symbol_ticks:
+            hp = t.get("high_price", t.get("trade_price"))
+            lp = t.get("low_price", t.get("trade_price"))
+            if hp is not None:
+                d = Decimal(str(hp))
+                high_p = d if high_p is None else max(high_p, d)
+            if lp is not None:
+                d = Decimal(str(lp))
+                low_p = d if low_p is None else min(low_p, d)
+
+            vol = t.get("candle_acc_trade_volume") or 0
+            vol_sum += Decimal(str(vol))
+
+        open_d = Decimal(str(open_p or 0))
+        close_d = Decimal(str(close_p or 0))
+        high_d = high_p if high_p is not None else open_d
+        low_d = low_p if low_p is not None else open_d
+
+        snapshot = MarketDTO.PriceSnapshotCreate(
+            exchange_instrument_id=symbol.id,
+            ts_open=ts_open,
+            open=open_d,
+            high=high_d,
+            low=low_d,
+            close=close_d,
+            volume=vol_sum,
+            updated_at=utcnow(),
+        )
+        return snapshot
 
     def sync_exchange_instruments_from_upbit(self):
         raw_symbols = self._upbit_symbol.list_symbols()  # list[MarketDTO.SymbolInfo]
