@@ -54,13 +54,14 @@ def handle_persist_snapshots(
             },
         )
 
-    r = ctx.redis_client.conn()
     lock_key = f"{app_name}:{deploy_env}:{LOCK}:{run_key}:{slot}:{interval_sec}"
     token = try_acquire_lock(
         ctx.redis_client, key=lock_key, ttl_sec=max(30, min(interval_sec, 300))
     )
     if not token:
         raise SkipHandler("locked")
+
+    exchange_result = {}
 
     try:
         logger.info(
@@ -115,12 +116,13 @@ def handle_persist_snapshots(
                             no_tick_payloads, bucket_start_epoch
                         )
                     )
-                print(
-                    f"persist_snapshots: upsert {len(upsert_snapshots_1m)} snapshots for exchange {exchange_code}"
-                )
-                print(upsert_snapshots_1m)
+                # print(
+                #     f"persist_snapshots: upsert {len(upsert_snapshots_1m)} snapshots for exchange {exchange_code}"
+                # )
+                # print(upsert_snapshots_1m)
 
-                ctx.svcs.markets.ensure_snapshots_1m(upsert_snapshots_1m)
+                total = ctx.svcs.markets.ensure_snapshots_1m(upsert_snapshots_1m)
+                exchange_result[exchange_code] = total
             elif interval_sec == 60 * 60:
                 pass  # 1시간틱 롤업 처리
             elif interval_sec == 24 * 60 * 60:
@@ -131,7 +133,7 @@ def handle_persist_snapshots(
             "slot": slot,
             "bucket_start_epoch": bucket_start_epoch,
             "bucket_end_epoch": bucket_end_epoch,
-            "status": "TODO",
+            "upsert_by_exchange": exchange_result,
         }
         logger.info(
             "persist snapshots done interval_sec=%s slot=%s", interval_sec, slot

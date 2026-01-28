@@ -14,6 +14,7 @@ from app.infra.db.model import (
 from app.domain import MarketDTO
 from datetime import datetime
 from ..protocol.market_repo import MarketRepo
+from app.infra.db.utils import to_row_dict
 
 
 class SqlMarketRepo(MarketRepo):
@@ -386,17 +387,26 @@ class SqlMarketRepo(MarketRepo):
 
         return total
 
-    def upsert_1m(self, row: dict) -> Tuple[int, bool]:
-        return self._upsert_one_mysql(PriceSnapshot1mModel, row)
+    def upsert_snapshot_1m(
+        self, row: MarketDTO.PriceSnapshotCreate
+    ) -> Tuple[int, bool]:
+        return self._upsert_snapshot(PriceSnapshot1mModel, row)
 
-    def upsert_1h(self, row: dict) -> Tuple[int, bool]:
-        return self._upsert_one_mysql(PriceSnapshot1hModel, row)
+    def upsert_snapshot_1h(
+        self, row: MarketDTO.PriceSnapshotCreate
+    ) -> Tuple[int, bool]:
+        return self._upsert_snapshot(PriceSnapshot1hModel, row)
 
-    def upsert_1d(self, row: dict) -> Tuple[int, bool]:
-        return self._upsert_one_mysql(PriceSnapshot1dModel, row)
+    def upsert_snapshot_1d(
+        self, row: MarketDTO.PriceSnapshotCreate
+    ) -> Tuple[int, bool]:
+        return self._upsert_snapshot(PriceSnapshot1dModel, row)
 
-    def _upsert_one_mysql(self, model, row: dict) -> Tuple[int, bool]:
-        stmt = mysql_insert(model).values(**row)
+    def _upsert_snapshot(
+        self, model, row: MarketDTO.PriceSnapshotCreate
+    ) -> Tuple[int, bool]:
+        row_dict = to_row_dict(row)
+        stmt = mysql_insert(model).values(**row_dict)
         stmt = stmt.on_duplicate_key_update(
             id=func.last_insert_id(
                 model.id
@@ -412,6 +422,31 @@ class SqlMarketRepo(MarketRepo):
         created = res.rowcount == 1
         _id = int(res.lastrowid)  # insert/duplicate 모두 PK 반환
         return _id, created
+
+    def upsert_snapshots_1m(
+        self,
+        rows: list[MarketDTO.PriceSnapshotCreate],
+        *,
+        chunk_size: int = 1000,
+    ) -> None:
+
+        for i in range(0, len(rows), chunk_size):
+            chunk = rows[i : i + chunk_size]
+            values = [to_row_dict(x) for x in chunk]
+
+            stmt = mysql_insert(PriceSnapshot1mModel).values(values)
+            stmt = stmt.on_duplicate_key_update(
+                # 기존 패턴 유지
+                id=func.last_insert_id(PriceSnapshot1mModel.id),
+                open=stmt.inserted.open,
+                high=stmt.inserted.high,
+                low=stmt.inserted.low,
+                close=stmt.inserted.close,
+                volume=stmt.inserted.volume,
+                updated_at=stmt.inserted.updated_at,
+            )
+
+            self._db.execute(stmt)
 
     # ---------------------------------------------------------------------------------
     def seed_snapshots(self, *, interval: str, chunk: list):

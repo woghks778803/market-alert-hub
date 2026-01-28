@@ -156,9 +156,7 @@ PRICE_Q = Decimal("1e-16")
 VOL_Q = Decimal("1e-16")
 
 
-def dec(x: float | Decimal | None) -> Decimal | None:
-    if x is None:
-        return None
+def dec(x: float | Decimal) -> Decimal:
     return Decimal(str(x)).quantize(PRICE_Q, rounding=ROUND_HALF_UP)
 
 

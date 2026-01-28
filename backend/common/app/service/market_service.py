@@ -112,17 +112,6 @@ class MarketService:
             return rows
 
     # ---------------------------------------------------------------------------------------------------------------
-    def ensure_snapshots_1m(
-        self, snapshots: list[MarketDTO.PriceSnapshotCreate]
-    ) -> int:
-        if not snapshots:
-            return 0
-
-        with self._uow_factory() as uow:
-            # uow.markets.upsert_snapshots_1m(snapshots)
-            # uow가 exit에서 commit/rollback 처리하는 구조라면 여기서 추가로 할 건 없음
-            uow.commit()
-            return len(snapshots)
 
     def normalize_empty_snapshots_1m(
         self, no_tick_payloads: list[dict[str, Any]], bucket_start_epoch: int
@@ -419,15 +408,17 @@ class MarketService:
         반환: {"id": int, "created": bool}
         """
         ts = MarketRule.align_utc(item.ts_open, base, ("base", "ts_open"))
-        row = {
-            "exchange_instrument_id": item.exchange_instrument_id,
-            "ts_open": ts,
-            "open": MarketRule.dec(item.open),
-            "high": MarketRule.dec(item.high),
-            "low": MarketRule.dec(item.low),
-            "close": MarketRule.dec(item.close),
-            "volume": MarketRule.dec(item.volume),
-        }
+
+        row = MarketDTO.PriceSnapshotCreate(
+            exchange_instrument_id=item.exchange_instrument_id,
+            ts_open=ts,
+            open=MarketRule.dec(item.open),
+            high=MarketRule.dec(item.high),
+            low=MarketRule.dec(item.low),
+            close=MarketRule.dec(item.close),
+            volume=MarketRule.dec(item.volume),
+            updated_at=utcnow(),
+        )
 
         with self._uow_factory() as uow:
             # exchange_instrument_id 유효성 검사
@@ -440,11 +431,11 @@ class MarketService:
                 )
 
             if base == CandleBaseInterval.MIN_1:
-                _id, created = uow.markets.upsert_1m(row)
+                _id, created = uow.markets.upsert_snapshot_1m(row)
             elif base == CandleBaseInterval.HOUR_1:
-                _id, created = uow.markets.upsert_1h(row)
+                _id, created = uow.markets.upsert_snapshot_1h(row)
             elif base == CandleBaseInterval.DAY_1:
-                _id, created = uow.markets.upsert_1d(row)
+                _id, created = uow.markets.upsert_snapshot_1d(row)
             else:
                 raise ValidationAppError(
                     f"Unsupported base interval: {base}", target="base"
@@ -453,3 +444,15 @@ class MarketService:
             uow.commit()
 
         return {"id": int(_id), "created": bool(created)}
+
+    def ensure_snapshots_1m(
+        self, snapshots: list[MarketDTO.PriceSnapshotCreate]
+    ) -> int:
+        if not snapshots:
+            return 0
+
+        with self._uow_factory() as uow:
+            uow.markets.upsert_snapshots_1m(snapshots)
+
+            uow.commit()
+            return len(snapshots)
