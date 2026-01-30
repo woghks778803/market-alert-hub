@@ -98,9 +98,4 @@ def _exchange_to_payload(ex: Any) -> dict[str, Any]:
     """
     DTO/엔티티 형태를 (duck-typing) Redis에 저장할 최소 필드만 뽑는다.
     """
-    return {
-        "id": getattr(ex, "id", None),
-        "code": getattr(ex, "code", None),
-        "name": getattr(ex, "name", None),
-        "is_active": getattr(ex, "is_active", None),
-    }
+    return {"id": ex.id, "is_active": ex.is_active}

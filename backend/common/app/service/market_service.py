@@ -1,3 +1,4 @@
+from tracemalloc import start
 from typing import Any, Callable, Sequence, Iterable
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -73,7 +74,7 @@ class MarketService:
         with self._uow_factory() as uow:
 
             if base == CandleBaseInterval.MIN_1:
-                rows = uow.markets.list_1m_by_filter(
+                rows = uow.markets.list_snapshot_1m_by_filter(
                     exchange_instrument_id=exchange_instrument_id,
                     cursor=cursor,
                     start=start,
@@ -82,7 +83,7 @@ class MarketService:
                     asc_order=asc_order,
                 )
             elif base == CandleBaseInterval.HOUR_1:
-                rows = uow.markets.list_1h_by_filter(
+                rows = uow.markets.list_snapshot_1h_by_filter(
                     exchange_instrument_id=exchange_instrument_id,
                     cursor=cursor,
                     start=start,
@@ -91,7 +92,7 @@ class MarketService:
                     asc_order=asc_order,
                 )
             elif base == CandleBaseInterval.DAY_1:
-                rows = uow.markets.list_1d_by_filter(
+                rows = uow.markets.list_snapshot_1d_by_filter(
                     exchange_instrument_id=exchange_instrument_id,
                     cursor=cursor,
                     start=start,
@@ -456,3 +457,37 @@ class MarketService:
 
             uow.commit()
             return len(snapshots)
+
+    def ensure_snapshots_1h(
+        self,
+        bucket_start_epoch: int,
+        bucket_end_epoch: int,
+    ) -> int:
+        start_dt = epoch_to_datetime(bucket_start_epoch)
+        end_dt = epoch_to_datetime(bucket_end_epoch)
+
+        with self._uow_factory() as uow:
+            snapshots = uow.markets.list_snapshot_1h_agg(
+                start_dt=start_dt, end_dt=end_dt
+            )
+
+            uow.markets.upsert_snapshots_1h(snapshots)
+            uow.commit()
+        return len(snapshots)
+
+    def ensure_snapshots_1d(
+        self,
+        bucket_start_epoch: int,
+        bucket_end_epoch: int,
+    ) -> int:
+        start_dt = epoch_to_datetime(bucket_start_epoch)
+        end_dt = epoch_to_datetime(bucket_end_epoch)
+
+        with self._uow_factory() as uow:
+            snapshots = uow.markets.list_snapshot_1d_agg(
+                start_dt=start_dt, end_dt=end_dt
+            )
+
+            uow.markets.upsert_snapshots_1d(snapshots)
+            uow.commit()
+        return 0

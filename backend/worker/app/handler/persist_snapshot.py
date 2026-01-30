@@ -24,6 +24,7 @@ def handle_persist_snapshots(
     ctx: WorkerContext,
     payload: Mapping[str, Any],
 ) -> dict[str, Any]:
+    interval_result = {}
     interval_sec = int(require(payload, "interval_sec", target="payload.interval_sec"))
     slot = int(require(payload, "slot", target="payload.slot"))
     job_config = ctx.config.worker_jobs[OutboxEventType.PERSIST_SNAPSHOTS.value]
@@ -61,8 +62,6 @@ def handle_persist_snapshots(
     if not token:
         raise SkipHandler("locked")
 
-    exchange_result = {}
-
     try:
         logger.info(
             "persist snapshots start interval_sec=%s slot=%s range=[%s,%s)",
@@ -71,19 +70,17 @@ def handle_persist_snapshots(
             bucket_start_epoch,
             bucket_end_epoch,
         )
-
-        exchanges = load_snap_json_map(
-            ctx.redis_client,
-            f"{app_name}:{deploy_env}:{SNAP}:{OutboxEventType.SYNC_EXCHANGES.value}",
-        )
-
-        for exchange_code, exchange_data in exchanges.items():
-            symbols = load_snap_json_map(
+        if interval_sec == 60:
+            exchanges = load_snap_json_map(
                 ctx.redis_client,
-                f"{app_name}:{deploy_env}:{SNAP}:{OutboxEventType.SYNC_SYMBOLS.value}:{exchange_code}",
+                f"{app_name}:{deploy_env}:{SNAP}:{OutboxEventType.SYNC_EXCHANGES.value}",
             )
 
-            if interval_sec == 60:
+            for exchange_code, exchange_data in exchanges.items():
+                symbols = load_snap_json_map(
+                    ctx.redis_client,
+                    f"{app_name}:{deploy_env}:{SNAP}:{OutboxEventType.SYNC_SYMBOLS.value}:{exchange_code}",
+                )
                 upsert_snapshots_1m = []
                 no_tick_payloads = []
                 for symbol, payload in symbols.items():
@@ -122,18 +119,26 @@ def handle_persist_snapshots(
                 # print(upsert_snapshots_1m)
 
                 total = ctx.svcs.markets.ensure_snapshots_1m(upsert_snapshots_1m)
-                exchange_result[exchange_code] = total
-            elif interval_sec == 60 * 60:
-                pass  # 1시간틱 롤업 처리
-            elif interval_sec == 24 * 60 * 60:
-                pass  # 1일틱 롤업 처리
+                interval_result[exchange_code] = total
+        elif interval_sec == 60 * 60:
+            total = ctx.svcs.markets.ensure_snapshots_1h(
+                bucket_start_epoch=bucket_start_epoch,
+                bucket_end_epoch=bucket_end_epoch,
+            )
+            interval_result["1h"] = total
+        elif interval_sec == 24 * 60 * 60:
+            total = ctx.svcs.markets.ensure_snapshots_1d(
+                bucket_start_epoch=bucket_start_epoch,
+                bucket_end_epoch=bucket_end_epoch,
+            )
+            interval_result["1d"] = total
 
         result = {
             "interval_sec": interval_sec,
+            "interval_result": interval_result,
             "slot": slot,
             "bucket_start_epoch": bucket_start_epoch,
             "bucket_end_epoch": bucket_end_epoch,
-            "upsert_by_exchange": exchange_result,
         }
         logger.info(
             "persist snapshots done interval_sec=%s slot=%s", interval_sec, slot

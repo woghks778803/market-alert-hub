@@ -1,4 +1,5 @@
 from cProfile import label
+from decimal import Decimal
 from typing import Iterable, Sequence, Tuple
 from sqlalchemy import update, insert, select, and_, asc, desc, func, tuple_
 from sqlalchemy.dialects.mysql import insert as mysql_insert
@@ -11,6 +12,7 @@ from app.infra.db.model import (
     PriceSnapshot1hModel,
     PriceSnapshot1dModel,
 )
+from app.core.util.datetime import utcnow
 from app.domain import MarketDTO
 from datetime import datetime
 from ..protocol.market_repo import MarketRepo
@@ -220,7 +222,7 @@ class SqlMarketRepo(MarketRepo):
         return [MarketDTO.MappingItem(**row) for row in rows]
 
     # 공통 빌더
-    def _list_candle_by_filter(
+    def _list_snapshot_by_filter(
         self,
         model,
         *,
@@ -262,7 +264,7 @@ class SqlMarketRepo(MarketRepo):
         ]
 
     # 1m/1h/1d 개별 메서드
-    def list_1m_by_filter(
+    def list_snapshot_1m_by_filter(
         self,
         *,
         exchange_instrument_id: int,
@@ -272,7 +274,7 @@ class SqlMarketRepo(MarketRepo):
         limit: int,
         asc_order: bool,
     ) -> list[MarketDTO.CandleBase]:
-        return self._list_candle_by_filter(
+        return self._list_snapshot_by_filter(
             PriceSnapshot1mModel,
             exchange_instrument_id=exchange_instrument_id,
             cursor=cursor,
@@ -282,7 +284,7 @@ class SqlMarketRepo(MarketRepo):
             asc_order=asc_order,
         )
 
-    def list_1h_by_filter(
+    def list_snapshot_1h_by_filter(
         self,
         *,
         exchange_instrument_id: int,
@@ -292,7 +294,7 @@ class SqlMarketRepo(MarketRepo):
         limit: int,
         asc_order: bool,
     ) -> list[MarketDTO.CandleBase]:
-        return self._list_candle_by_filter(
+        return self._list_snapshot_by_filter(
             PriceSnapshot1hModel,
             exchange_instrument_id=exchange_instrument_id,
             cursor=cursor,
@@ -302,7 +304,7 @@ class SqlMarketRepo(MarketRepo):
             asc_order=asc_order,
         )
 
-    def list_1d_by_filter(
+    def list_snapshot_1d_by_filter(
         self,
         *,
         exchange_instrument_id: int,
@@ -312,7 +314,7 @@ class SqlMarketRepo(MarketRepo):
         limit: int,
         asc_order: bool,
     ) -> list[MarketDTO.CandleBase]:
-        return self._list_candle_by_filter(
+        return self._list_snapshot_by_filter(
             PriceSnapshot1dModel,
             exchange_instrument_id=exchange_instrument_id,
             cursor=cursor,
@@ -321,6 +323,131 @@ class SqlMarketRepo(MarketRepo):
             limit=limit,
             asc_order=asc_order,
         )
+
+    def list_snapshot_1h_agg(
+        self,
+        *,
+        start_dt: datetime,
+        end_dt: datetime,
+    ) -> list[MarketDTO.PriceSnapshotCreate]:
+        PS1m = PriceSnapshot1mModel
+
+        agg_sq = (
+            select(
+                PS1m.exchange_instrument_id.label("exchange_instrument_id"),
+                func.max(PS1m.high).label("high"),
+                func.min(PS1m.low).label("low"),
+                func.sum(PS1m.volume).label("volume"),
+                func.min(PS1m.ts_open).label("ts_open_min"),
+                func.max(PS1m.ts_open).label("ts_open_max"),
+            )
+            .where(PS1m.ts_open >= start_dt, PS1m.ts_open < end_dt)
+            .group_by(PS1m.exchange_instrument_id)
+            .subquery("agg")
+        )
+
+        ps_open = aliased(PS1m, name="ps_open")
+        ps_close = aliased(PS1m, name="ps_close")
+
+        stmt = (
+            select(
+                agg_sq.c.exchange_instrument_id.label("exchange_instrument_id"),
+                # literal(start_dt).label("ts_open"),  # 1h candle start is bucket_start
+                ps_open.open.label("open"),
+                agg_sq.c.high.label("high"),
+                agg_sq.c.low.label("low"),
+                ps_close.close.label("close"),
+                agg_sq.c.volume.label("volume"),
+            )
+            .join(
+                ps_open,
+                (ps_open.exchange_instrument_id == agg_sq.c.exchange_instrument_id)
+                & (ps_open.ts_open == agg_sq.c.ts_open_min),
+            )
+            .join(
+                ps_close,
+                (ps_close.exchange_instrument_id == agg_sq.c.exchange_instrument_id)
+                & (ps_close.ts_open == agg_sq.c.ts_open_max),
+            )
+        )
+
+        rows = self._db.execute(stmt).all()
+
+        return [
+            MarketDTO.PriceSnapshotCreate(
+                exchange_instrument_id=r.exchange_instrument_id,
+                ts_open=start_dt,
+                open=r.open,
+                high=r.high,
+                low=r.low,
+                close=r.close,
+                volume=r.volume,
+                updated_at=utcnow(),
+            )
+            for r in rows
+        ]
+
+    def list_snapshot_1d_agg(
+        self,
+        start_dt: datetime,
+        end_dt: datetime,
+    ) -> list[MarketDTO.PriceSnapshotCreate]:
+        PS1h = PriceSnapshot1hModel
+
+        agg_sq = (
+            select(
+                PS1h.exchange_instrument_id.label("exchange_instrument_id"),
+                func.max(PS1h.high).label("high"),
+                func.min(PS1h.low).label("low"),
+                func.sum(PS1h.volume).label("volume"),
+                func.min(PS1h.ts_open).label("ts_open_min"),
+                func.max(PS1h.ts_open).label("ts_open_max"),
+            )
+            .where(PS1h.ts_open >= start_dt, PS1h.ts_open < end_dt)
+            .group_by(PS1h.exchange_instrument_id)
+            .subquery("agg")
+        )
+
+        ps_open = aliased(PS1h, name="ps_open")
+        ps_close = aliased(PS1h, name="ps_close")
+
+        stmt = (
+            select(
+                agg_sq.c.exchange_instrument_id.label("exchange_instrument_id"),
+                # literal(start_dt).label("ts_open"),  # 1h candle start is bucket_start
+                ps_open.open.label("open"),
+                agg_sq.c.high.label("high"),
+                agg_sq.c.low.label("low"),
+                ps_close.close.label("close"),
+                agg_sq.c.volume.label("volume"),
+            )
+            .join(
+                ps_open,
+                (ps_open.exchange_instrument_id == agg_sq.c.exchange_instrument_id)
+                & (ps_open.ts_open == agg_sq.c.ts_open_min),
+            )
+            .join(
+                ps_close,
+                (ps_close.exchange_instrument_id == agg_sq.c.exchange_instrument_id)
+                & (ps_close.ts_open == agg_sq.c.ts_open_max),
+            )
+        )
+
+        rows = self._db.execute(stmt).all()
+
+        return [
+            MarketDTO.PriceSnapshotCreate(
+                exchange_instrument_id=r.exchange_instrument_id,
+                ts_open=start_dt,
+                open=r.open,
+                high=r.high,
+                low=r.low,
+                close=r.close,
+                volume=r.volume,
+                updated_at=utcnow(),
+            )
+            for r in rows
+        ]
 
     # ---------------------------- add ----------------------------------------------
 
@@ -445,6 +572,52 @@ class SqlMarketRepo(MarketRepo):
                 volume=stmt.inserted.volume,
                 updated_at=stmt.inserted.updated_at,
             )
+
+            self._db.execute(stmt)
+
+    def upsert_snapshots_1h(
+        self,
+        rows: list[MarketDTO.PriceSnapshotCreate],
+        *,
+        chunk_size: int = 1000,
+    ) -> None:
+        tbl = PriceSnapshot1hModel.__table__
+        skip_update = {"id", "exchange_instrument_id", "ts_open"}
+
+        for i in range(0, len(rows), chunk_size):
+            chunk = rows[i : i + chunk_size]
+            values = [to_row_dict(r) for r in chunk]
+            stmt = mysql_insert(PriceSnapshot1hModel).values(values)
+
+            update_cols = {
+                c.name: stmt.inserted[c.name]
+                for c in tbl.c
+                if c.name not in skip_update
+            }
+            stmt = stmt.on_duplicate_key_update(**update_cols)
+
+            self._db.execute(stmt)
+
+    def upsert_snapshots_1d(
+        self,
+        rows: list[MarketDTO.PriceSnapshotCreate],
+        *,
+        chunk_size: int = 1000,
+    ) -> None:
+        tbl = PriceSnapshot1dModel.__table__
+        skip_update = {"id", "exchange_instrument_id", "ts_open"}
+
+        for i in range(0, len(rows), chunk_size):
+            chunk = rows[i : i + chunk_size]
+            values = [to_row_dict(r) for r in chunk]
+            stmt = mysql_insert(PriceSnapshot1dModel).values(values)
+
+            update_cols = {
+                c.name: stmt.inserted[c.name]
+                for c in tbl.c
+                if c.name not in skip_update
+            }
+            stmt = stmt.on_duplicate_key_update(**update_cols)
 
             self._db.execute(stmt)
 

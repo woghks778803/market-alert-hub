@@ -53,7 +53,7 @@ class MarketRepo(Protocol):
     def list_mappings_exchange_id(
         self, *, exchange_id: int | None = None
     ) -> list[MarketDTO.MappingItem]: ...
-    def _list_candle_by_filter(
+    def _list_snapshot_by_filter(
         self,
         model,
         *,
@@ -63,7 +63,7 @@ class MarketRepo(Protocol):
         limit: int,
         asc_order: bool,
     ) -> Sequence: ...
-    def list_1m_by_filter(
+    def list_snapshot_1m_by_filter(
         self,
         *,
         exchange_instrument_id: int,
@@ -73,7 +73,7 @@ class MarketRepo(Protocol):
         limit: int | None,
         asc_order: bool,
     ) -> list[MarketDTO.CandleBase]: ...
-    def list_1h_by_filter(
+    def list_snapshot_1h_by_filter(
         self,
         *,
         exchange_instrument_id: int,
@@ -83,7 +83,7 @@ class MarketRepo(Protocol):
         limit: int | None,
         asc_order: bool,
     ) -> list[MarketDTO.CandleBase]: ...
-    def list_1d_by_filter(
+    def list_snapshot_1d_by_filter(
         self,
         *,
         exchange_instrument_id: int,
@@ -93,6 +93,17 @@ class MarketRepo(Protocol):
         limit: int | None,
         asc_order: bool,
     ) -> list[MarketDTO.CandleBase]: ...
+
+    def list_snapshot_1h_agg(
+        self,
+        start_dt: datetime,
+        end_dt: datetime,
+    ) -> list[MarketDTO.PriceSnapshotCreate]: ...
+    def list_snapshot_1d_agg(
+        self,
+        start_dt: datetime,
+        end_dt: datetime,
+    ) -> list[MarketDTO.PriceSnapshotCreate]: ...
     def upsert_exchange_instruments_by_pairs(
         self,
         exchange_id: int,
@@ -114,6 +125,19 @@ class MarketRepo(Protocol):
     ) -> Tuple[int, bool]: ...
 
     def upsert_snapshots_1m(
+        self,
+        rows: list[MarketDTO.PriceSnapshotCreate],
+        *,
+        chunk_size: int = 1000,
+    ) -> None: ...
+    def upsert_snapshots_1h(
+        self,
+        rows: list[MarketDTO.PriceSnapshotCreate],
+        *,
+        chunk_size: int = 1000,
+    ) -> None: ...
+
+    def upsert_snapshots_1d(
         self,
         rows: list[MarketDTO.PriceSnapshotCreate],
         *,

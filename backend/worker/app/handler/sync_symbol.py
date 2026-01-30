@@ -96,12 +96,7 @@ def _exchange_instrument_to_payload(row: Any) -> dict[str, Any]:
     (MappingItem 기준 필드)
     """
     return {
-        "id": getattr(row, "id", None),
-        "exchange_id": getattr(row, "exchange_id", None),
-        "exchange_name": getattr(row, "exchange_name", None),
-        "exchange_symbol": getattr(row, "exchange_symbol", None),
-        "base_asset_id": getattr(row, "base_asset_id", None),
-        "base_symbol": getattr(row, "base_symbol", None),
-        "quote_asset_id": getattr(row, "quote_asset_id", None),
-        "quote_symbol": getattr(row, "quote_symbol", None),
+        "id": row.id,
+        "base_asset_id": row.base_asset_id,
+        "quote_asset_id": row.quote_asset_id,
     }
