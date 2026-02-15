@@ -107,15 +107,6 @@ class AssetType(str, enum.Enum):
     FUTURE = "future"
 
 
-class AlertType(str, enum.Enum):
-    PRICE_ABOVE = "price_above"
-    PRICE_BELOW = "price_below"
-    PCT_CHANGE_WINDOW = "pct_change_window"
-    CROSS_EXCHANGE_SPREAD = "cross_exchange_spread"
-    VOLUME_ABOVE = "volume_above"
-    MOVING_AVG_CROSS = "moving_avg_cross"
-
-
 class AlertScope(str, enum.Enum):
     SINGLE = "single"
     CROSS = "cross"
