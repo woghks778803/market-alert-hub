@@ -1,7 +1,7 @@
 from typing import Sequence
 from sqlalchemy import select, update, desc, and_
 from sqlalchemy.orm import Session as DbSession
-from app.domain import EmailDTO
+from app.domain import EmailDTO, UserDTO
 from app.domain.shared.errors import ValidationAppError
 from app.infra.db.model import UserModel, EmailVerificationModel
 from app.infra.db.utils import to_db_value
@@ -13,17 +13,19 @@ class SqlUserRepo(UserRepo):
     def __init__(self, db: DbSession) -> None:
         self._db = db
 
-    def add_user(self, user: UserModel) -> UserModel:
+    def add_user(self, user: UserDTO.UserCreate) -> UserDTO.User:
+        user = UserModel.from_create_dto(user)
         self._db.add(user)
         self._db.flush()
-        return user
+        return user.to_dto()
 
     def add_email_verification(
-        self, email_verification: EmailVerificationModel
-    ) -> EmailVerificationModel:
+        self, email_verification: UserDTO.EmailVerificationCreate
+    ) -> UserDTO.EmailVerification:
+        email_verification = EmailVerificationModel.from_create_dto(email_verification)
         self._db.add(email_verification)
         self._db.flush()
-        return email_verification
+        return email_verification.to_dto()
 
     def get_user_by_email_fingerprint(
         self, email_fingerprint: bytes

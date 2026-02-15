@@ -40,19 +40,25 @@ def register(
             "email": "alice@example.com",
             "nickname": "Alice",
             "password": "P@ssw0rd!",
+            "agree_service": True,
+            "agree_privacy": True,
+            "agree_marketing": False,
         },
     ),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),  # request_id 주입
 ):
-    token_out = svcs.auths.register(
+    result = svcs.auths.register(
         email=payload.email,
         nickname=payload.nickname,
         password=payload.password,
+        agree_service=payload.agree_service,
+        agree_privacy=payload.agree_privacy,
+        agree_marketing=payload.agree_marketing,
     )
 
     return created(
-        token_out, response=response, request_id=meta.request_id, location="/auth/me"
+        result, response=response, request_id=meta.request_id, location="/auth/me"
     )
 
 

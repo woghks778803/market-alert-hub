@@ -14,6 +14,7 @@ from .user_channel import UserChannel as UserChannelModel
 from .channel_provider import ChannelProvider as ChannelProviderModel
 from .alert_channel_target import AlertChannelTarget as AlertChannelTargetModel
 from .alert_event import AlertEvent as AlertEventModel
+from .alert_type import AlertType as AlertTypeModel
 from .delivery import Delivery as DeliveryModel
 from .watchlist_item import WatchlistItem as WatchlistItemModel
 from .outbox import Outbox as OutboxModel
@@ -24,7 +25,7 @@ __all__ = [
     "UserModel", "SessionModel", "UserOauthAccountModel", "OauthProviderModel",
     "PasswordResetModel", "ExchangeModel", "InstrumentModel", "ExchangeInstrumentModel",
     "PriceSnapshot1mModel", "PriceSnapshot1hModel", "PriceSnapshot1dModel",
-    "AlertModel", "AlertChannelTargetModel", "AlertEventModel", 
+    "AlertModel", "AlertChannelTargetModel", "AlertEventModel", "AlertTypeModel",
     "UserChannelModel", "ChannelProviderModel",
     "DeliveryModel", "WatchlistItemModel",
     "OutboxModel", "OutboxAttemptModel", "EmailVerificationModel"

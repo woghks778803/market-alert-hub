@@ -51,3 +51,20 @@ class EmailVerification(Base):
             created_at=self.created_at,
             updated_at=self.updated_at,
         )
+
+    @classmethod
+    def from_create_dto(cls, dto: UserDTO.EmailVerificationCreate) -> "EmailVerification":
+
+        return cls(
+            user_id=dto.user_id,
+            email_ciphertext=dto.email_ciphertext,
+            email_fingerprint=dto.email_fingerprint,
+            email_nonce=dto.email_nonce,
+            email_key_version=dto.email_key_version,
+            token_hash=dto.token_hash,
+            status=EmailVerificationStatus.PENDING,
+            expires_at=dto.expires_at,
+            sent_at=None,
+            consumed_at=None,
+            fail_count=0,
+        )
