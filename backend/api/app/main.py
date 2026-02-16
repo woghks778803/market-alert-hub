@@ -34,16 +34,11 @@ def _install_openapi_with_bearer(app: FastAPI) -> None:
         schema["x-tagGroups"] = [
             {
                 "name": "Public",
-                "tags": [
-                    "Public • Auth",
-                    "Public • Markets",
-                    "Public • Meta",
-                    "Public • Health",
-                ],
+                "tags": [],
             },
             {
                 "name": "Admin",
-                "tags": ["Admin • Auth", "Admin • Alerts", "Admin • Health"],
+                "tags": [],
             },
         ]
         components = schema.setdefault("components", {})
@@ -83,10 +78,12 @@ def create_app() -> FastAPI:
     )
 
     # --- Middleware ---
+    # CORSMiddleware가 가장 바깥이어야함
+    # ExceptionMiddleware는 FastAPI 기본 미들웨어라 따로 추가 안해도 됨
     app.add_middleware(RequestIdMiddleware)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # TODO: 배포 시 도메인으로 제한
+        allow_origins=ctx.config.cors_allow_origins,  # TODO: 배포 시 도메인으로 제한
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

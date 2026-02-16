@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     APP_NAME: str
     DEPLOY_ENV: str = "dev"
     LOG_LEVEL: str = "INFO"
-    PUBLIC_WEB_BASE_URL: str = "http://localhost:8000"
+    CORS_ALLOW_ORIGINS: str | list[str] = ["http://localhost:5173"]
 
     # --- DB ---
     MYSQL_HOST: str
@@ -196,8 +196,8 @@ class Settings(BaseSettings):
     def REDIS_URL(self) -> str:
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
 
-    @field_validator("PASSLIB_SCHEMES", mode="before")
-    def split_schemes(cls, v):
+    @field_validator("CORS_ALLOW_ORIGINS", "PASSLIB_SCHEMES", mode="before")
+    def split_fields(cls, v):
         if isinstance(v, str):
             return [x.strip() for x in v.split(",")]
         return v

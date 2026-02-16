@@ -108,29 +108,29 @@ def _to_public_error_body(spec: ErrorSpec) -> ErrorBody:
     )
 
 
-# def _apply_cors_headers(
-#     request: Request, response: Response, allow_origins: list[str]
-# ) -> None:
-#     """
-#     실패 응답(unified_exception_handler에서 생성되는 Response)에도
-#     CORS 헤더가 항상 붙도록 강제한다.
+def _apply_cors_headers(
+    request: Request, response: Response, allow_origins: list[str]
+) -> None:
+    """
+    실패 응답(unified_exception_handler에서 생성되는 Response)에도
+    CORS 헤더가 항상 붙도록 강제한다.
 
-#     - allow_credentials=True 전제라서 "*" 금지 → Origin 에코 방식 사용
-#     """
-#     origin = request.headers.get("origin")
-#     allow_set = set(allow_origins or [])
+    - allow_credentials=True 전제라서 "*" 금지 → Origin 에코 방식 사용
+    """
+    origin = request.headers.get("origin")
+    allow_set = set(allow_origins or [])
 
-#     # allow_credentials=True면 * 안됨 → origin 에코(허용된 경우)
-#     if origin and (origin in allow_set):
-#         response.headers["Access-Control-Allow-Origin"] = origin
-#         response.headers["Vary"] = "Origin"
-#         response.headers["Access-Control-Allow-Credentials"] = "true"
-#         # response.headers["Access-Control-Allow-Methods"] = (
-#         #     "GET,POST,PUT,PATCH,DELETE,OPTIONS"
-#         # )
-#         # response.headers["Access-Control-Allow-Headers"] = (
-#         #     "Authorization,Content-Type,Accept,Origin"
-#         # )
+    # allow_credentials=True면 * 안됨 → origin 에코(허용된 경우)
+    if origin and (origin in allow_set):
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Vary"] = "Origin"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        # response.headers["Access-Control-Allow-Methods"] = (
+        #     "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+        # )
+        # response.headers["Access-Control-Allow-Headers"] = (
+        #     "Authorization,Content-Type,Accept,Origin"
+        # )
 
 
 async def unified_exception_handler(request: Request, exc: Exception):
@@ -207,6 +207,6 @@ async def unified_exception_handler(request: Request, exc: Exception):
         request_id=trace_id,
         status_code=public_spec.status_code,
     )
-    # _apply_cors_headers(request, resp, ctx.config.cors_allow_origins)
+    _apply_cors_headers(request, resp, ctx.config.cors_allow_origins)
 
     return resp

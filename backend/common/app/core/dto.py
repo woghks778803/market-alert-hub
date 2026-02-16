@@ -24,7 +24,7 @@ class ServiceConfigBag:
     # 암호화 키 KID (이메일 데이터용)
     crypto_data_kid: int
     # 퍼블릭 웹사이트 기본 URL
-    public_web_base_url: str
+    # public_web_base_url: str
 
 
 @dataclass(frozen=True)
@@ -32,6 +32,7 @@ class ApiConfigBag:
     app_name: str
     deploy_env: str
     log_level: str
+    cors_allow_origins: str | list[str]
 
 
 @dataclass(frozen=True)
