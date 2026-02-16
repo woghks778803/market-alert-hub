@@ -7,6 +7,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from app.core import dto as CoreDTO
 from app.core.constants import UserRole
+
 from app.domain.shared.errors import AuthError, PermissionError
 from app.service.factory import ServiceFactory
 from app.runtime.app_context import ApiContext
@@ -50,11 +51,8 @@ def get_request_meta(request: Request) -> RequestMeta:
 
 
 def get_services(
-    meta: RequestMeta = Depends(get_request_meta),
     ctx: ApiContext = Depends(get_app_context),
 ):
-
-    ctx.svcs._trace_id = meta.request_id
     return ctx.svcs
 
 
@@ -63,7 +61,6 @@ def get_current_token(
 ) -> str:
     """
     Authorization: Bearer <token> 헤더에서 토큰만 추출.
-    라우터에서: token: str = Depends(get_current_token)
     """
     if not creds or creds.scheme.lower() != "bearer":
         raise AuthError(message="Missing or invalid token")

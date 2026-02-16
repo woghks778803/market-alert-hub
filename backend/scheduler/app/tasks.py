@@ -1,4 +1,6 @@
+from uuid import uuid4
 from app.core.constants import OutboxEventType
+from app.core.util.trace import set_trace_id, clear_trace_id
 from app.handlers import (
     handle_sync_exchanges,
     handle_trigger_alerts,
@@ -28,7 +30,11 @@ class IntervalTask:
         if self._last_slot == slot:
             return
         self._last_slot = slot
-        self.handler(ctx, slot, now_epoch, self.interval_sec)
+        set_trace_id(str(uuid4()))
+        try:
+            self.handler(ctx, slot, now_epoch, self.interval_sec)
+        finally:
+            clear_trace_id()
 
 
 def build_default_tasks(config):

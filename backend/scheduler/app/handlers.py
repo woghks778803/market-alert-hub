@@ -1,6 +1,6 @@
 import logging
-import uuid
 from app.core.constants import OutboxEventType
+from app.core.util.trace import get_trace_id
 
 logger = logging.getLogger(__name__)
 
@@ -76,8 +76,7 @@ def handle_persist_snapshots(ctx, slot, now_epoch, interval_sec):
 
 
 def _insert_outbox(ctx, event_type, outbox_fingerprint_dict, payload):
-    # ctx는 scheduler 런타임에서 조립된 컨텍스트를 전제 (service_factory/uow/session)
-    trace_id = str(uuid.uuid4())
+    trace_id = get_trace_id()
     logger.info(f"scheduler.insert_outbox trace_id={trace_id}, event_type={event_type}")
 
     ctx.svcs.outboxs.create_outbox(

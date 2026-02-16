@@ -5,6 +5,7 @@ from datetime import datetime
 # from tenacity import retry, stop_after_attempt, wait_exponential
 from app.core import dto as CoreDTO
 from app.core.constants import OutboxStatus, OutboxEventType
+from app.core.util.trace import get_trace_id
 from app.core.util.datetime import utcnow
 from app.core.util.serialization import to_canonical_json
 from app.domain.shared.uow import UnitOfWork
@@ -17,11 +18,9 @@ logger = logging.getLogger(__name__)
 class OutboxService:
     def __init__(
         self,
-        trace_id: str | None,
         uow_factory: Callable[[], UnitOfWork],
         hmac: CryptoPort.TokenHasher,
     ) -> None:
-        self._trace_id = trace_id
         self._uow_factory = uow_factory
         self._hmac = hmac
 

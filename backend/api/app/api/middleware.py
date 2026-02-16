@@ -2,6 +2,7 @@ import logging, uuid, time
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
+from app.core.util.trace import set_trace_id, clear_trace_id
 
 logger = logging.getLogger(__name__)
 
@@ -11,9 +12,12 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         req_id = request.headers.get("x-request-id") or str(uuid.uuid4())
         request.state.request_id = req_id
         start = time.perf_counter()
+        set_trace_id(req_id)
+
         try:
             response: Response = await call_next(request)
         finally:
+            clear_trace_id()
             duration = (time.perf_counter() - start) * 1000
             logger.info(
                 "request_end",

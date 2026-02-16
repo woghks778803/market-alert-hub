@@ -1,5 +1,4 @@
 import json
-import uuid
 import logging
 from typing import Any, Mapping
 from app.core.util.datetime import utcnow, datetime_to_epoch_ms

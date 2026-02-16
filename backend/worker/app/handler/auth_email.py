@@ -1,4 +1,3 @@
-import uuid
 from typing import Any, Mapping
 from app.core.constants import EmailVerificationStatus, LOCK
 from app.core.util.datetime import utcnow, ensure_utc

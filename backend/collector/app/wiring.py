@@ -110,8 +110,7 @@ def _build_specs(runtime: Any) -> list[tuple[str, TaskFactory]]:
     from app.stream_marketdata import run_stream_marketdata_loop
 
     """
-    - spec은 거래소 단위로만 만든다 (심볼 단위 X)
-    - ctx는 통째로 넘긴다 (덕타이핑)
+    - spec은 거래소 단위
     """
     cfg = runtime.ctx.config
     specs: list[tuple[str, TaskFactory]] = []

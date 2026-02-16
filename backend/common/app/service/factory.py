@@ -30,7 +30,6 @@ class ServiceFactory:
         upbit_symbol: Callable[[], MarketPort.UpbitSymbol],
         config: CoreDTO.ServiceConfigBag,
     ) -> None:
-        self._trace_id: str | None = None
         self._uow = uow
         self._redis_client = redis_client
         self._email_client = email_client
@@ -60,12 +59,10 @@ class ServiceFactory:
 
     @cached_property
     def jwt(self):
-        # 필요 시마다 새 인스턴스 반환(상태 없음)
         return self._jwt_signer()
 
     @cached_property
     def hmac(self):
-        # 필요 시마다 새 인스턴스 반환(상태 없음)
         return self._hmac_hasher()
 
     @cached_property
@@ -106,7 +103,6 @@ class ServiceFactory:
     @cached_property
     def auths(self) -> AuthService:
         return AuthService(
-            trace_id=self._trace_id,
             redis_client=self._redis_client,
             uow_factory=self._uow,
             password=self.password,
@@ -119,7 +115,6 @@ class ServiceFactory:
     @cached_property
     def outboxs(self) -> OutboxService:
         return OutboxService(
-            trace_id=self._trace_id,
             uow_factory=self._uow,
             hmac=self.hmac,
         )

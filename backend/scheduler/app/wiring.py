@@ -26,7 +26,7 @@ TaskFactory = Callable[[], Any]
 class SchedulerRuntime:
     """
     run.py가 duck-typing으로 기대하는 런타임 타입 묶음.
-    stop_event는 run.py에서 생성/바인딩 된다.
+    stop_event는 run.py에서 생성/바인딩
     """
 
     ctx: SchedulerContext
