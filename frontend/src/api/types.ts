@@ -1,0 +1,24 @@
+export type ApiError = {
+    code: string
+    message: string
+    target?: string | null
+    meta?: Record<string, unknown> | null
+}
+
+export type ApiMeta = {
+    request_id?: string
+    timestamp?: string
+    pagination?: {
+        page: number
+        page_size: number
+        total: number
+        has_next: boolean
+    } | null
+}
+
+export type Envelope<T> = {
+    success?: boolean
+    data?: T | null
+    error?: ApiError | null
+    meta?: ApiMeta
+}

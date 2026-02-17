@@ -1,12 +1,69 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router"
 
-const HomeView = () => import('../views/HomeView.vue')
-const AlertsView = () => import('../views/AlertsView.vue')
+import PublicLayout from "@/layouts/PublicLayout.vue"
+import AppLayout from "@/layouts/AppLayout.vue"
+
+import { authRoutes } from "@/routes/modules/auth.routes"
+import { legalRoutes } from "@/routes/modules/legal.routes"
+import { infoRoutes } from "@/routes/modules/info.routes"
+import { appRoutes } from "@/routes/modules/app.routes"
+import { systemRoutes } from "@/routes/modules/system.routes"
+
+// NOTE: 여긴 "조립"만 한다.
+// - 레이아웃(공개/앱) 트리 만들고
+// - children은 modules에서 가져온다.
+const routes: RouteRecordRaw[] = [
+  {
+    path: "/auth",
+    component: PublicLayout,
+    children: authRoutes,
+  },
+  {
+    path: "/legal",
+    component: PublicLayout,
+    children: legalRoutes,
+  },
+  {
+    path: "/info",
+    component: PublicLayout,
+    children: infoRoutes,
+  },
+  {
+    path: "/",
+    component: AppLayout,
+    meta: { requiresAuth: true }, // AppLayout 아래는 기본적으로 로그인 필요
+    children: appRoutes,
+  },
+  ...systemRoutes,
+]
 
 export const router = createRouter({
   history: createWebHistory(),
-  routes: [
-    { path: '/', component: HomeView },
-    { path: '/alerts', component: AlertsView },
-  ],
+  routes,
+})
+
+// --- Global Guard (JWT 기반 최소 가드) ---
+// 너는 JWT 로그인이라고 했으니 우선 localStorage 예시로 둠.
+// (나중에 저장 방식 바뀌면 여기만 바꾸면 됨)
+function getAccessToken(): string | null {
+  return localStorage.getItem("access_token")
+}
+
+router.beforeEach((to) => {
+  const token = getAccessToken()
+  const requiresAuth = Boolean(to.meta.requiresAuth)
+  const guestOnly = Boolean(to.meta.guestOnly)
+  console.log("Global Guard:", { to: to.fullPath, requiresAuth, guestOnly, hasToken: Boolean(token) })
+
+  // 로그인 필요 페이지인데 토큰 없으면 로그인으로
+  if (requiresAuth && !token) {
+    return { name: "Login", query: { next: to.fullPath } }
+  }
+
+  // 게스트 전용(로그인/회원가입)에 토큰 있으면 대시보드로
+  if (guestOnly && token) {
+    return { name: "Home" }
+  }
+
+  return true
 })

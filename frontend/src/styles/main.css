@@ -1,0 +1,452 @@
+.app-container {
+    max-width: 960px;
+    padding: 16px;
+}
+
+.app-card {
+    border-radius: 16px;
+}
+
+.app-title {
+    font-weight: 800;
+    font-size: 18px;
+    margin-bottom: 6px;
+}
+
+.app-subtitle {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+/* 페이지 배경 + 중앙정렬 */
+.auth-page {
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    background: #f6f7fb;
+}
+
+.auth-container {
+    max-width: 460px;
+    padding: 0;
+}
+
+/* 카드 */
+.auth-card {
+    border-radius: 28px;
+    background: #ffffff;
+    width: 100%;
+}
+
+.auth-card__body {
+    padding: 28px 22px 22px;
+}
+
+/* 타이틀 */
+.auth-title {
+    text-align: center;
+    font-weight: 700;
+    font-size: 18px;
+    margin-bottom: 18px;
+}
+
+/* 라벨/필드 간격 */
+.auth-field+.auth-field {
+    margin-top: 14px;
+}
+
+.auth-label {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #111827;
+}
+
+/* 버튼 */
+.auth-btn {
+    margin-top: 18px;
+    border-radius: 12px;
+    height: 52px;
+    font-weight: 700;
+}
+
+/* 카카오 */
+.auth-btn--kakao {
+    background: #fee500;
+    color: #111827;
+}
+
+/* 구분선 */
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 18px 0;
+}
+
+.auth-divider__text {
+    font-size: 13px;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+/* 링크 */
+.auth-links {
+    margin-top: 16px;
+    text-align: center;
+}
+
+.auth-footer {
+    margin-top: 10px;
+    text-align: center;
+}
+
+.auth-link {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    padding: 6px 10px;
+    font-weight: 700;
+    color: rgb(var(--v-theme-primary));
+    cursor: pointer;
+}
+
+.auth-link--muted {
+    font-weight: 600;
+    color: #6b7280;
+}
+
+
+/* 선택 화면은 가운데 정렬 느낌 */
+.auth-card__body--center {
+    text-align: center;
+    padding-top: 36px;
+    /* 스샷처럼 상단 여백 조금 더 */
+    padding-bottom: 28px;
+}
+
+.auth-title--lg {
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.auth-subtitle {
+    font-size: 14px;
+    color: #6b7280;
+    margin-bottom: 22px;
+}
+
+.auth-divider--tight {
+    margin: 16px 0;
+}
+
+.auth-bottom {
+    margin-top: 18px;
+    font-size: 13px;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.auth-bottom__text {
+    line-height: 1;
+}
+
+
+
+/* RegisterEmailView 헤더 */
+.auth-head {
+    margin-bottom: 16px;
+}
+
+.auth-head__title {
+    font-weight: 800;
+    font-size: 18px;
+    margin-bottom: 6px;
+}
+
+.auth-head__desc {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+/* 회색 버튼(비활성 느낌 유지) */
+.auth-btn--muted {
+    background: #d1d5db;
+    color: #ffffff;
+}
+
+.auth-btn--muted.v-btn--disabled {
+    opacity: 1;
+    /* disabled에서도 스샷처럼 ‘회색 덩어리’ 느낌 유지 */
+    background: #d1d5db !important;
+    color: #ffffff !important;
+}
+
+/* VerifyEmailSentView */
+.verify-title {
+    font-weight: 900;
+    font-size: 22px;
+    margin-top: 6px;
+    margin-bottom: 14px;
+}
+
+.verify-desc {
+    font-size: 13px;
+    color: #111827;
+    line-height: 1.6;
+    margin-bottom: 26px;
+}
+
+.verify-email {
+    font-weight: 800;
+    margin-bottom: 8px;
+}
+
+.verify-hint {
+    margin-top: 10px;
+    color: #6b7280;
+}
+
+.verify-btn {
+    border-radius: 12px;
+    height: 52px;
+    font-weight: 800;
+    margin-bottom: 14px;
+}
+
+.verify-login {
+    display: inline-block;
+    margin-top: 4px;
+}
+
+/* EmailVerifyCallbackView */
+.verify-dev-toggle {
+    position: absolute;
+    top: 12px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+}
+
+.verify-cb-title {
+    font-weight: 800;
+    font-size: 18px;
+    margin-top: 56px;
+    /* 위 토글/여백 감안 */
+    margin-bottom: 28px;
+}
+
+.verify-cb-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 999px;
+    margin: 0 auto 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.verify-cb-icon--success {
+    border: 3px solid #16a34a;
+    color: #16a34a;
+}
+
+.verify-cb-icon--fail {
+    border: 3px solid #dc2626;
+    color: #dc2626;
+}
+
+.verify-cb-icon--processing {
+    /* progress는 컴포넌트 자체로 보여서 별도 스타일 최소 */
+}
+
+.verify-cb-sub {
+    font-size: 14px;
+    color: #6b7280;
+    margin-top: 6px;
+}
+
+.verify-cb-msg {
+    margin-top: 6px;
+    margin-bottom: 22px;
+}
+
+.verify-cb-msg__title {
+    font-weight: 800;
+    font-size: 16px;
+    line-height: 1.4;
+    margin-bottom: 6px;
+}
+
+.verify-cb-msg__desc {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.verify-cb-btn {
+    border-radius: 12px;
+    height: 52px;
+    font-weight: 800;
+}
+
+.verify-cb-link {
+    display: inline-block;
+    margin-top: 12px;
+}
+
+/* ---- NotFound ---- */
+.nf-icon-wrap {
+    margin-top: 8px;
+    margin-bottom: 18px;
+}
+
+.nf-icon-circle {
+    width: 72px;
+    height: 72px;
+    border-radius: 999px;
+    background: #f3f4f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nf-icon {
+    color: #9ca3af;
+}
+
+.nf-code {
+    font-size: 56px;
+    font-weight: 900;
+    line-height: 1;
+    color: #e5e7eb;
+    margin-bottom: 12px;
+}
+
+.nf-title {
+    font-size: 18px;
+    font-weight: 900;
+    margin-bottom: 10px;
+    color: #111827;
+}
+
+.nf-desc {
+    font-size: 13px;
+    line-height: 1.6;
+    color: #6b7280;
+    margin-bottom: 22px;
+}
+
+.nf-btn {
+    border-radius: 12px;
+    height: 52px;
+    font-weight: 800;
+    background: #0b1020;
+    /* 스샷처럼 거의 검정 */
+    color: #fff;
+}
+
+.nf-link {
+    margin-top: 14px;
+    border: 0;
+    background: transparent;
+    color: #6b7280;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.nf-foot {
+    margin-top: 22px;
+    font-size: 12px;
+    color: #9ca3af;
+}
+
+
+/* forgot password */
+.fp-desc {
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.6;
+    text-align: center;
+    margin: -6px 0 18px
+}
+
+/* 약관 동의 화면 */
+/* =========================
+   Terms Consent (Public)
+   ========================= */
+
+.terms-card {
+    border-radius: 18px;
+    padding: 14px 12px;
+}
+
+.terms-divider {
+    margin: 10px 0;
+    opacity: 0.6;
+}
+
+.terms-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 2px;
+}
+
+.terms-row--all {
+    padding-top: 2px;
+    padding-bottom: 10px;
+}
+
+.terms-check {
+    margin-left: -2px;
+}
+
+.terms-row__text {
+    flex: 1;
+    min-width: 0;
+}
+
+.terms-row__title {
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.terms-row__desc {
+    margin-top: 2px;
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.terms-link {
+    font-weight: 700;
+    padding-inline: 6px;
+}
+
+.terms-required {
+    color: #ef4444;
+    font-weight: 800;
+    margin-right: 4px;
+}
+
+.terms-optional {
+    color: #6b7280;
+    font-weight: 800;
+    margin-right: 4px;
+}
+
+.terms-actions {
+    margin-top: 14px;
+    display: grid;
+    gap: 8px;
+}
