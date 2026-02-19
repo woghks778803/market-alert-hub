@@ -14,7 +14,12 @@ from app.core.util.trace import get_trace_id
 from app.core.util.datetime import utcnow, ensure_utc
 from app.core.util.serialization import to_canonical_json
 from app.domain.shared.uow import UnitOfWork
-from app.domain.shared.errors import ValidationAppError, PermissionError, AuthError
+from app.domain.shared.errors import (
+    ValidationAppError,
+    PermissionError,
+    ConflictError,
+    AuthError,
+)
 from app.domain import (
     AuthDTO,
     EmailDTO,
@@ -52,6 +57,8 @@ class AuthService:
         agree_service: bool,
         agree_privacy: bool,
         agree_marketing: bool,
+        ip: str | None = None,
+        ua: str | None = None,
     ):
         now = utcnow()
         trace_id = get_trace_id()
@@ -63,9 +70,7 @@ class AuthService:
             email_secrets = self._secrets.encrypt(email.encode("utf-8"))
 
             if uow.users.get_user_by_email_fingerprint(email_fingerprint):
-                raise ValidationAppError(
-                    "email_fingerprint already exists", target="email_fingerprint"
-                )
+                raise ConflictError("email_fingerprint already exists", target="email")
 
             user = uow.users.add_user(
                 UserDTO.UserCreate(
@@ -126,9 +131,23 @@ class AuthService:
                 True,
             )
 
+            token = self._jwt.create_access_token(
+                subject=str(user.id), minutes=self._config.access_token_minutes
+            )
+
+            uow.sessions.add_session(
+                user_id=user.id,
+                token_hash=self._hmac.token_hash(token),
+                expires_at=expires_at,
+                ip_addr=ip,
+                user_agent=ua,
+            )
+
+            user.last_login_at = now
+
             uow.commit()
 
-            return {"ok": True}
+            return AuthDTO.AuthToken(access_token=token)
 
     # 로그인
     def login(
@@ -157,13 +176,15 @@ class AuthService:
             if user.status != UserStatus.ACTIVE:
                 raise PermissionError("User not active status", target="status")
 
-            if user.email_verified_at is None:
-                raise PermissionError(
-                    "Email not verified", target="email_verifications"
-                )
+            # if user.email_verified_at is None:
+            #     raise PermissionError(
+            #         "Email not verified", target="email_verifications"
+            #     )
 
             token = self._jwt.create_access_token(
-                subject=str(user.id), minutes=self._config.access_token_minutes
+                subject=str(user.id),
+                minutes=self._config.access_token_minutes,
+                claims={"ev": bool(user.email_verified_at)},
             )
 
             uow.sessions.add_session(

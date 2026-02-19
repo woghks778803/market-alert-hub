@@ -32,8 +32,8 @@ router = APIRouter(prefix="/auth")
     ),
 )
 def register(
-    response: Response,
     request: Request,
+    response: Response,
     payload: UserSchema.UserCreatePublic = Body(
         ...,
         example={
@@ -48,6 +48,8 @@ def register(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),  # request_id 주입
 ):
+    ip = request.client.host if request.client else None
+    ua = request.headers.get("user-agent")
     result = svcs.auths.register(
         email=payload.email,
         nickname=payload.nickname,
@@ -55,6 +57,8 @@ def register(
         agree_service=payload.agree_service,
         agree_privacy=payload.agree_privacy,
         agree_marketing=payload.agree_marketing,
+        ip=ip,
+        ua=ua,
     )
 
     return created(

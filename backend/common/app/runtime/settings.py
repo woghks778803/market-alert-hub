@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     DEPLOY_ENV: str = "dev"
     LOG_LEVEL: str = "INFO"
     CORS_ALLOW_ORIGINS: str | list[str] = ["http://localhost:5173"]
+    PUBLIC_WEB_BASE_URL: str
 
     # --- DB ---
     MYSQL_HOST: str

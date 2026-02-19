@@ -83,6 +83,17 @@ def get_current_user(
     return svcs.auths.get_current_user(user_id, token)
 
 
+def get_verified_user(
+    user=Depends(get_current_user),
+):
+    if user.email_verified_at is None:
+        raise PermissionError(
+            "Email not verified",
+            target="email_verification",
+        )
+    return user
+
+
 def require_admin(user=Depends(get_current_user)):
     if getattr(user, "role", None) != UserRole.ADMIN:
         raise PermissionError("Admin role required", target="role")

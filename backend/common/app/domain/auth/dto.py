@@ -13,6 +13,7 @@ class AuthUser:
     access_token: str
     id: int
     role: UserRole = UserRole.USER  #  단일 권한
+    email_verified_at: datetime | None = None
 
 
 @dataclass(slots=True)
