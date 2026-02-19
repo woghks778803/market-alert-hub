@@ -8,6 +8,8 @@ import { legalRoutes } from "@/routes/modules/legal.routes"
 import { infoRoutes } from "@/routes/modules/info.routes"
 import { appRoutes } from "@/routes/modules/app.routes"
 import { systemRoutes } from "@/routes/modules/system.routes"
+import { getAccessToken } from "@/api/http";
+import { isTokenExpired, isEmailVerifiedFromToken } from "@/utils/jwt"
 
 // NOTE: 여긴 "조립"만 한다.
 // - 레이아웃(공개/앱) 트리 만들고
@@ -43,27 +45,34 @@ export const router = createRouter({
 })
 
 // --- Global Guard (JWT 기반 최소 가드) ---
-// 너는 JWT 로그인이라고 했으니 우선 localStorage 예시로 둠.
-// (나중에 저장 방식 바뀌면 여기만 바꾸면 됨)
-function getAccessToken(): string | null {
-  return localStorage.getItem("access_token")
-}
-
-router.beforeEach((to) => {
+router.beforeEach((to, _from, next) => {
   const token = getAccessToken()
   const requiresAuth = Boolean(to.meta.requiresAuth)
+  const requiresVerified = Boolean(to.meta.requiresVerified)
   const guestOnly = Boolean(to.meta.guestOnly)
-  console.log("Global Guard:", { to: to.fullPath, requiresAuth, guestOnly, hasToken: Boolean(token) })
+  console.log("Global Guard:", { to: to.fullPath, requiresAuth, requiresVerified, guestOnly, hasToken: Boolean(token) })
 
   // 로그인 필요 페이지인데 토큰 없으면 로그인으로
-  if (requiresAuth && !token) {
-    return { name: "Login", query: { next: to.fullPath } }
+  if (requiresAuth) {
+    if (!token || isTokenExpired(token)) {
+      return next({ name: "Login", query: { next: to.fullPath } })
+    }
+  }
+
+  // 이메일 인증 필요 (UX용)
+  if (requiresVerified) {
+    if (!token || isTokenExpired(token)) {
+      return next({ name: "Login", query: { next: to.fullPath } })
+    }
+    if (!isEmailVerifiedFromToken(token)) {
+      return next({ name: "VerifyEmailSent", query: { next: to.fullPath } })
+    }
   }
 
   // 게스트 전용(로그인/회원가입)에 토큰 있으면 대시보드로
   if (guestOnly && token) {
-    return { name: "Home" }
+    return next({ name: "Home" })
   }
 
-  return true
+  return next()
 })

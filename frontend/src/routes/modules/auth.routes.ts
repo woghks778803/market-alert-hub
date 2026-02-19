@@ -25,13 +25,13 @@ export const authRoutes: RouteRecordRaw[] = [
         path: "forgot-password",
         name: "ForgotPassword",
         component: ForgotPasswordView,
-        meta: { requiresAuth: false, guestOnly: true },
+        meta: { guestOnly: true },
     },
     {
         path: "reset-password",
         name: "ResetPassword",
         component: ResetPasswordView,
-        meta: { requiresAuth: false, guestOnly: true },
+        meta: { guestOnly: true },
     },
 
     // --- Auth: Sign up flow ---
@@ -39,25 +39,19 @@ export const authRoutes: RouteRecordRaw[] = [
         path: "signup",
         name: "Signup",
         component: RegisterSelectView,
-        meta: { requiresAuth: false, guestOnly: true },
+        meta: { guestOnly: true },
     },
     {
         path: "signup/terms",
         name: "SignupTerms",
         component: TermsConsentView,
-        meta: { requiresAuth: false, guestOnly: true },
+        meta: { guestOnly: true },
     },
     {
         path: "signup/email",
         name: "SignupEmail",
         component: RegisterEmailView,
-        meta: { requiresAuth: false, guestOnly: true },
-    },
-    {
-        path: "signup/verify-sent",
-        name: "VerifyEmailSent",
-        component: VerifyEmailSentView,
-        meta: { requiresAuth: false, guestOnly: true },
+        meta: { guestOnly: true },
     },
 
     // --- Email verify callback (from email link) ---
@@ -66,6 +60,12 @@ export const authRoutes: RouteRecordRaw[] = [
         path: "verify-email",
         name: "VerifyEmailCallback",
         component: EmailVerifyCallbackView,
-        meta: { requiresAuth: false, guestOnly: true },
+        meta: { guestOnly: true },
+    },
+    {
+        path: "verify-sent",
+        name: "VerifyEmailSent",
+        component: VerifyEmailSentView,
+        meta: { requiresAuth: true },
     },
 ]

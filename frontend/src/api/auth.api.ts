@@ -28,10 +28,20 @@ export type TokenOut = {
     // user_id?: number
 }
 
+export type SimpleOk = {
+    ok: boolean
+}
+
 export const authApi = {
     // POST /auth/login
     async login(payload: LoginRequest) {
         const { data } = await http.post<Envelope<TokenOut>>("/auth/login", payload)
+        return data
+    },
+
+    // POST /auth/logout
+    async logout() {
+        const { data } = await http.post<Envelope<SimpleOk>>("/auth/logout")
         return data
     },
 
