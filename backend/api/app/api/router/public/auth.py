@@ -19,12 +19,12 @@ router = APIRouter(prefix="/auth")
 @router.post(
     "/register",
     status_code=status.HTTP_201_CREATED,
-    response_model=Envelope[AuthSchema.SimpleOk],  # 래퍼 적용
+    response_model=Envelope[AuthSchema.TokenOut],  # 래퍼 적용
     summary="유저 회원가입",
     description="이메일 중복 시 ConflictError로 처리(전역 핸들러에서 409로 매핑).",
     responses=OpenApi.combine(
         OpenApi.CREATED(
-            Envelope[AuthSchema.SimpleOk],  #  스키마도 래퍼로
+            Envelope[AuthSchema.TokenOut],  #  스키마도 래퍼로
             description="회원가입 성공",
             example=OpenApi.wrap_example({"ok": True}),
         ),
@@ -109,22 +109,16 @@ def login(
     ),
 )
 def resend_email_verification(
-    request: Request,
-    payload: AuthSchema.Login = Body(
-        ..., example={"email": "alice@example.com", "password": "P@ssw0rd!"}
-    ),
+    user: AuthDTO.AuthUser = Security(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ) -> Envelope[AuthSchema.SimpleOk]:
     """
-    - 액세스 토큰으로 유저 식별
     - 이메일 미검증 상태면 인증 메일 재발송(Outbox 생성)
     - 이미 인증된 경우 409 등으로 처리 가능
     """
-    ip = request.client.host if request.client else None
-    ua = request.headers.get("user-agent")
     svcs.auths.resend_email_verification(
-        email=payload.email, password=payload.password, ip=ip, ua=ua
+        user_id=user.id,
     )
     return ok(AuthSchema.SimpleOk(ok=True), request_id=meta.request_id)
 
@@ -145,9 +139,7 @@ def verify_email(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    ip = request.client.host if request.client else None
-    ua = request.headers.get("user-agent")
-    svcs.auths.verify_email(token=payload.token, ip=ip, ua=ua)
+    svcs.auths.verify_email(token=payload.token)
 
     return ok(
         AuthSchema.SimpleOk(ok=True),

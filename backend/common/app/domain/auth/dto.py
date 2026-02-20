@@ -26,3 +26,11 @@ class Session:
     created_at: datetime
     expires_at: datetime
     revoked_at: datetime | None
+
+
+@dataclass(frozen=True)
+class EmailVerificationEnqueueResult:
+    email_verification_id: int
+    verify_token: str
+    expires_at: datetime
+    outbox_fingerprint: bytes | None
