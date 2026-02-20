@@ -1,11 +1,6 @@
 import { http } from "./http"
 import type { Envelope } from "./types"
 
-/**
- * ✅ 백엔드 스펙이 아직 확정이 아니라 "최소 DTO" 형태로만 둠
- * - 필드명은 나중에 백엔드 실제 스펙에 맞춰 수정
- */
-
 export type LoginRequest = {
     email: string
     password: string

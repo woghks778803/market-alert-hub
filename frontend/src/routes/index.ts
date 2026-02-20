@@ -8,7 +8,7 @@ import { legalRoutes } from "@/routes/modules/legal.routes"
 import { infoRoutes } from "@/routes/modules/info.routes"
 import { appRoutes } from "@/routes/modules/app.routes"
 import { systemRoutes } from "@/routes/modules/system.routes"
-import { getAccessToken } from "@/api/http";
+import { getAccessToken, clearAccessToken } from "@/api/http";
 import { isTokenExpired, isEmailVerifiedFromToken } from "@/utils/jwt"
 
 // NOTE: 여긴 "조립"만 한다.
@@ -49,19 +49,30 @@ router.beforeEach((to, _from, next) => {
   const token = getAccessToken()
   const requiresAuth = Boolean(to.meta.requiresAuth)
   const requiresVerified = Boolean(to.meta.requiresVerified)
+  const requiresUnverified = Boolean(to.meta.requiresUnverified)
   const guestOnly = Boolean(to.meta.guestOnly)
-  console.log("Global Guard:", { to: to.fullPath, requiresAuth, requiresVerified, guestOnly, hasToken: Boolean(token) })
+  console.log("Global Guard:", { to: to.fullPath, requiresAuth, requiresVerified, requiresUnverified, guestOnly, hasToken: Boolean(token) })
+
+  if (token && isTokenExpired(token)) {
+    clearAccessToken()
+
+    if (requiresAuth || requiresVerified) {
+      return next({ name: "Login", query: { next: to.fullPath } })
+    }
+
+    return next()
+  }
 
   // 로그인 필요 페이지인데 토큰 없으면 로그인으로
   if (requiresAuth) {
-    if (!token || isTokenExpired(token)) {
+    if (!token) {
       return next({ name: "Login", query: { next: to.fullPath } })
     }
   }
 
-  // 이메일 인증 필요 (UX용)
+  // 이메일 인증 필요(UX) 페이지
   if (requiresVerified) {
-    if (!token || isTokenExpired(token)) {
+    if (!token) {
       return next({ name: "Login", query: { next: to.fullPath } })
     }
     if (!isEmailVerifiedFromToken(token)) {
@@ -69,9 +80,20 @@ router.beforeEach((to, _from, next) => {
     }
   }
 
-  // 게스트 전용(로그인/회원가입)에 토큰 있으면 대시보드로
+  if (requiresUnverified) {
+    if (!token) {
+      return next({ name: "Login", query: { next: to.fullPath } })
+    }
+    if (isEmailVerifiedFromToken(token)) {
+      return next({ name: "Home" })
+    }
+  }
+
   if (guestOnly && token) {
-    return next({ name: "Home" })
+    if (isEmailVerifiedFromToken(token)) {
+      return next({ name: "Home" })
+    }
+    return next({ name: "VerifyEmailSent" })
   }
 
   return next()

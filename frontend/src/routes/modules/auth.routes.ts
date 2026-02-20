@@ -66,6 +66,6 @@ export const authRoutes: RouteRecordRaw[] = [
         path: "verify-sent",
         name: "VerifyEmailSent",
         component: VerifyEmailSentView,
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, requiresUnverified: true },
     },
 ]

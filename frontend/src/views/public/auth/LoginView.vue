@@ -94,14 +94,13 @@
 <script setup lang="ts">
 import CenterCardShell from "@/components/CenterCardShell.vue"
 import { useRoute, useRouter } from "vue-router";
-import { authApi } from "@/api/auth.api";
-import { setAccessToken } from "@/api/http";
+import { useAuthStore } from "@/stores/auth.store"
 import { useLoginForm } from "@/composables/auth/useLoginForm";
 import { isTokenExpired, isEmailVerifiedFromToken } from "@/utils/jwt"
 
 const router = useRouter();
 const route = useRoute();
-
+const authStore = useAuthStore()
 const { email, password, showPassword, submitting, errorMessage, fieldErrors, canSubmit, validate, submit } = useLoginForm();
 
 function onInputChanged() {
@@ -123,18 +122,15 @@ async function onSubmit() {
 
   await submit(async () => {
     try {
-      const env = await authApi.login({
+      const token = await authStore.login({
         email: email.value,
-        password: password.value,
-      });
+        password: password.value
+      })
 
-      const token = env?.data?.access_token;
       if (!token) {
-        errorMessage.value = "로그인 응답이 올바르지 않습니다.";
-        return;
+        errorMessage.value = authStore.loginError;
+        return
       }
-      
-      setAccessToken(token);
 
       if (isTokenExpired(token)) {
         errorMessage.value = "세션이 만료되었습니다. 다시 로그인해주세요.";
@@ -157,7 +153,7 @@ async function onSubmit() {
       }
     } catch (err: any) {
       console.error("Login error:", err);
-      errorMessage.value = "이메일 또는 비밀번호가 올바르지 않습니다.";
+      errorMessage.value = authStore.loginError;
     }
   });
 }
