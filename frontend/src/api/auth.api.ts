@@ -40,9 +40,14 @@ export const authApi = {
         return data
     },
 
-    // POST /auth/register  (백엔드: status_code=201)
+    // POST /auth/register 
     async register(payload: RegisterRequest) {
         const { data } = await http.post<Envelope<TokenOut>>("/auth/register", payload);
+        return data;
+    },
+
+    async resend_email_verification() {
+        const { data } = await http.post<Envelope<SimpleOk>>("/auth/resend-email-verification");
         return data;
     },
 }

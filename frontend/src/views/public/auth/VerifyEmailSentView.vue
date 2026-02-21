@@ -9,6 +9,13 @@
       <div class="verify-hint">메일이 안 보이면 스팸함을 확인해주세요</div>
     </div>
 
+    <div v-if="successMessage" class="auth-success">
+      {{ successMessage }}
+    </div>
+    <div v-if="errorMessage" class="auth-error">
+      {{ errorMessage }}
+    </div>
+
     <v-btn
       class="verify-btn"
       block
@@ -19,7 +26,12 @@
       :disabled="!canResend"
       @click="onResend"
     >
-      인증메일 다시 보내기
+      <template v-if="isCooldown">
+        {{ cooldownSec }}초 후 다시 시도
+      </template>
+      <template v-else>
+        인증메일 다시 보내기
+      </template>
     </v-btn>
 
     <button class="auth-link verify-login" type="button" @click="goLogin">
@@ -31,18 +43,21 @@
 import CenterCardShell from "@/components/CenterCardShell.vue"
 import { onMounted } from "vue"
 import { useRoute, useRouter } from "vue-router"
-import { useAuthStore } from "@/stores/auth.store"
-import { clearAccessToken } from "@/api/http"
 import { useVerifyEmailSent } from "@/composables/auth/useVerifyEmailSent"
+import { resendEmailVerification, logout } from "@/services/auth.service"
 
 const router = useRouter()
 const route = useRoute()
-const authStore = useAuthStore()
 
 const {
+  successMessage,
+  errorMessage,
   sending,
   canResend,
   resend,
+  isCooldown,
+  cooldownSec,
+  startCooldown,
   email,
   loadMe,
 } = useVerifyEmailSent(route)
@@ -52,14 +67,39 @@ onMounted(() => {
 })
 
 async function onResend() {
-  await resend(async () => {
-    console.log("resend verify email:", email.value)
-    // TODO: 실제 resend API 붙이기
-  })
+  try {
+    await resend(async () => {
+      await resendEmailVerification()
+    })
+
+    successMessage.value = "인증 메일이 전송되었습니다."
+  } catch (err: any) {
+    const e = err?.response?.data?.error
+    if (!e) {
+      errorMessage.value = "네트워크 오류가 발생했습니다."
+      return
+    }
+
+    if (e?.code === "rate_limited" && e?.target === "resend_email_verification") {
+      const sec = e?.details?.cooldown_remaining_sec
+      if (typeof sec === "number") {
+        startCooldown(sec)
+        errorMessage.value = "잠시 후 다시 시도해주세요."
+        return
+      }
+    }
+
+    if (e.code === "unauthorized") {
+      await logout()
+      router.push({ name: "Login" })
+      return
+    }
+    errorMessage.value = "요청 처리 중 문제가 발생했습니다."
+  }
 }
 
 async function goLogin() {
-  await authStore.logout()
+  await logout()
   router.push({ name: "Login" }).catch(() => {})
 }
 </script>

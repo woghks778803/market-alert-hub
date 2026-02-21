@@ -60,7 +60,7 @@ export const authRoutes: RouteRecordRaw[] = [
         path: "verify-email",
         name: "VerifyEmailCallback",
         component: EmailVerifyCallbackView,
-        meta: { guestOnly: true },
+        meta: {},
     },
     {
         path: "verify-sent",

@@ -1,21 +1,6 @@
 import axios, { type AxiosError, type AxiosInstance } from "axios"
 
-/**
- * 토큰 저장 키: 기존 코드(getAccessToken)와 맞춤
- */
 const ACCESS_TOKEN_KEY = "access_token"
-
-export function getAccessToken(): string | null {
-    return localStorage.getItem(ACCESS_TOKEN_KEY)
-}
-
-export function setAccessToken(token: string) {
-    localStorage.setItem(ACCESS_TOKEN_KEY, token)
-}
-
-export function clearAccessToken() {
-    localStorage.removeItem(ACCESS_TOKEN_KEY)
-}
 
 function resolveBaseURL() {
     const base = import.meta.env.VITE_API_BASE_URL
@@ -32,7 +17,7 @@ export const http: AxiosInstance = axios.create({
 
 // --- Request: attach Authorization token ---
 http.interceptors.request.use((config) => {
-    const token = getAccessToken()
+    const token = localStorage.getItem(ACCESS_TOKEN_KEY)
     if (token) {
         config.headers = config.headers ?? {}
         config.headers.Authorization = `Bearer ${token}`

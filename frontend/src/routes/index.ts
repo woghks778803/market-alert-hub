@@ -8,7 +8,7 @@ import { legalRoutes } from "@/routes/modules/legal.routes"
 import { infoRoutes } from "@/routes/modules/info.routes"
 import { appRoutes } from "@/routes/modules/app.routes"
 import { systemRoutes } from "@/routes/modules/system.routes"
-import { getAccessToken, clearAccessToken } from "@/api/http";
+import { useAuthStore } from "@/stores/auth.store"
 import { isTokenExpired, isEmailVerifiedFromToken } from "@/utils/jwt"
 
 // NOTE: 여긴 "조립"만 한다.
@@ -46,7 +46,8 @@ export const router = createRouter({
 
 // --- Global Guard (JWT 기반 최소 가드) ---
 router.beforeEach((to, _from, next) => {
-  const token = getAccessToken()
+  const authStore = useAuthStore()
+  const token = authStore.getToken()
   const requiresAuth = Boolean(to.meta.requiresAuth)
   const requiresVerified = Boolean(to.meta.requiresVerified)
   const requiresUnverified = Boolean(to.meta.requiresUnverified)
@@ -54,7 +55,7 @@ router.beforeEach((to, _from, next) => {
   console.log("Global Guard:", { to: to.fullPath, requiresAuth, requiresVerified, requiresUnverified, guestOnly, hasToken: Boolean(token) })
 
   if (token && isTokenExpired(token)) {
-    clearAccessToken()
+    authStore.clearToken()
 
     if (requiresAuth || requiresVerified) {
       return next({ name: "Login", query: { next: to.fullPath } })

@@ -104,7 +104,7 @@ def _to_public_error_body(spec: ErrorSpec) -> ErrorBody:
         code=spec.code,
         message=spec.message,
         target=spec.target,
-        meta=spec.meta,
+        details=spec.meta,
     )
 
 
@@ -148,16 +148,14 @@ async def unified_exception_handler(request: Request, exc: Exception):
 
     elif isinstance(exc, AppError):
         # AppError는 도메인 규칙 위반(비즈니스 에러)이므로 core 쪽 최소 정규화랑 동일한 의미
-        # 의도적으로 raise 에러 (stack X)
         spec = from_exception_minimal(
             exc,
             trace_id=trace_id,
             include_stack=False,
         )
-        # from_exception_minimal은 AppError면 WARNING / status_code는 AppError.status_code 유지
 
     else:
-        # 완전 예기치 않은 예외 → 내부 서버 에러로 처리
+        # 완전 예기치 않은 예외
         spec = from_exception_minimal(
             exc,
             trace_id=trace_id,

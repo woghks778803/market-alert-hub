@@ -63,7 +63,7 @@ def get_current_token(
     Authorization: Bearer <token> 헤더에서 토큰만 추출.
     """
     if not creds or creds.scheme.lower() != "bearer":
-        raise AuthError(message="Missing or invalid token")
+        raise AuthError(message="Missing or invalid token", target="token")
     return creds.credentials
 
 

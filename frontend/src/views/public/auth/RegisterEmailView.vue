@@ -110,14 +110,13 @@
 <script setup lang="ts">
 import { onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { useAuthStore } from "@/stores/auth.store";
+import { register } from "@/services/auth.service"
 import CenterCardShell from "@/components/CenterCardShell.vue"
 import { useRegisterEmailForm } from "@/composables/auth/useRegisterEmailForm";
 import { useTermsConsent } from "@/composables/auth/useTermsConsent";
 
 const router = useRouter();
 const route = useRoute();
-const authStore = useAuthStore();
 
 const { canProceed, consentPayload, resetTermsConsent } = useTermsConsent();
 const {
@@ -163,41 +162,33 @@ async function onSubmit() {
   }
   errorMessage.value = null;
   clearErrors();
-  
-  await submit(async () => {
-    try{
+  try{
+    await submit(async () => {
       const payload = {
         email: email.value,
         nickname: nickname.value,
         password: password.value,
         ...consentPayload.value,
       };
-      const token = await authStore.register(payload) // ✅ 토큰 저장까지 됨
-
-      if (!token) {
-        errorMessage.value = authStore.registerError;
-        return
-      }
+      await register(payload)
 
       resetTermsConsent()
       await router.push({
         name: "VerifyEmailSent",
         query: { email: email.value },
       }).catch(() => {})
+    })
+  }catch (err: any) {
+    console.error("Register error:", err);
+    const e = err?.response?.data?.error;
 
-    }catch (err: any) {
-      console.error("Register error:", err);
-      const e = err?.response?.data?.error;
-
-      if (e.code === "conflict" && e?.target === "email") {
-        errorMessage.value = "이미 사용 중인 이메일입니다.";
-        return;
-      }
-
-      errorMessage.value = authStore.registerError;
+    if (e.code === "conflict" && e?.target === "email") {
+      errorMessage.value = "이미 사용 중인 이메일입니다.";
+      return;
     }
-  })
-  
+
+    errorMessage.value = "회원가입에 실패했습니다. 입력한 정보를 확인해주세요.";
+  }
 };
 
 function goLogin() {

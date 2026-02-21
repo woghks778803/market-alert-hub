@@ -19,6 +19,7 @@ from app.domain.shared.errors import (
     PermissionError,
     ConflictError,
     AuthError,
+    RateLimitError,
 )
 from app.domain import (
     OutboxDTO,
@@ -52,7 +53,7 @@ class AuthService:
     def _enqueue_email_auth_code_outbox_in_tx(
         self,
         *,
-        uow: UnitOfWork,  # 너 프로젝트 UoW 타입
+        uow: UnitOfWork,
         trace_id: str,
         user_id: int,
         email_fingerprint: bytes,
@@ -61,14 +62,14 @@ class AuthService:
         email_key_version: int,
         expires_at: datetime,
         cancel_pending: bool = False,
-        now: datetime | None = None,
+        now: datetime,
     ) -> AuthDTO.EmailVerificationEnqueueResult:
         """
         트랜잭션 내부 전용 공통 함수.
         """
-        now = now or datetime.utcnow()
+        now = now
 
-        # 0) (선택) 기존 pending/sent 취소
+        # pending/sent 취소
         if cancel_pending:
             uow.users.update_email_verification_by_filter(
                 filters=EmailDTO.EmailVerificationFilter(
@@ -277,7 +278,7 @@ class AuthService:
             if not user or not self._password.verify_password(
                 password, user.password_hash
             ):
-                raise AuthError("Invalid credentials")
+                raise AuthError("Invalid credentials", target="user")
 
             if admin_chk == True and user.role != UserRole.ADMIN:
                 raise PermissionError("Admin role required", target="role")
@@ -383,9 +384,9 @@ class AuthService:
             if not ok:
                 remain = self._redis_client().ttl(key)  # -2/-1 처리만 조심
                 remain = remain if remain > 0 else 0  # 가드
-                raise ValidationAppError(
+                raise RateLimitError(
                     "Too many requests. Please try again later.",
-                    target="resend",
+                    target="resend_email_verification",
                     meta={"cooldown_remaining_sec": max(remain, 0)},
                 )
 

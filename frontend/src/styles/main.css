@@ -33,6 +33,20 @@
     padding: 0;
 }
 
+.auth-success {
+    margin: 12px 0;
+    font-size: 14px;
+    color: #2e7d32;
+    text-align: center;
+}
+
+.auth-error {
+    margin: 12px 0;
+    font-size: 14px;
+    color: #d32f2f;
+    text-align: center;
+}
+
 /* 카드 */
 .auth-card {
     border-radius: 28px;

@@ -3,12 +3,18 @@ import type { RouteLocationNormalizedLoaded } from "vue-router"
 import { userApi } from "@/api/user.api"
 
 export function useVerifyEmailSent(route: RouteLocationNormalizedLoaded) {
+    const successMessage = ref<string | null>(null)
+    const errorMessage = ref<string | null>(null)
     const sending = ref(false)
-    const lastSentAt = ref<number | null>(null)
-    const canResend = computed(() => !sending.value)
+    const cooldownSec = ref(0)
+    let timer: number | null = null
+
+    const isCooldown = computed(() => cooldownSec.value > 0)
+    const canResend = computed(() => !sending.value && !isCooldown.value)
 
     const loadingMe = ref(false)
     const meEmail = ref<string | null>(null)
+
 
     async function loadMe() {
         loadingMe.value = true
@@ -30,24 +36,52 @@ export function useVerifyEmailSent(route: RouteLocationNormalizedLoaded) {
         return typeof q === "string" && q.trim() ? q.trim() : "user@example.com"
     })
 
+    function startCooldown(sec: number) {
+        cooldownSec.value = sec
+
+        if (timer) {
+            clearInterval(timer)
+            timer = null
+        }
+
+        timer = window.setInterval(() => {
+            if (cooldownSec.value <= 1) {
+                cooldownSec.value = 0
+                if (timer) {
+                    clearInterval(timer)
+                    timer = null
+                }
+            } else {
+                cooldownSec.value -= 1
+            }
+        }, 1000)
+    }
+
     async function resend(onResend?: () => Promise<void> | void) {
         if (!canResend.value) return
         sending.value = true
+        successMessage.value = null
+        errorMessage.value = null
+
         try {
             // TODO: API 호출은 여기서 붙이면 됨
             await onResend?.()
-            lastSentAt.value = Date.now()
         } finally {
             sending.value = false
         }
     }
 
     return {
+        successMessage,
+        errorMessage,
+
         // resend
         sending,
         canResend,
-        lastSentAt,
         resend,
+        cooldownSec,
+        isCooldown,
+        startCooldown,
 
         // me/email
         loadingMe,

@@ -94,13 +94,12 @@
 <script setup lang="ts">
 import CenterCardShell from "@/components/CenterCardShell.vue"
 import { useRoute, useRouter } from "vue-router";
-import { useAuthStore } from "@/stores/auth.store"
 import { useLoginForm } from "@/composables/auth/useLoginForm";
 import { isTokenExpired, isEmailVerifiedFromToken } from "@/utils/jwt"
+import { login } from "@/services/auth.service"
 
 const router = useRouter();
 const route = useRoute();
-const authStore = useAuthStore()
 const { email, password, showPassword, submitting, errorMessage, fieldErrors, canSubmit, validate, submit } = useLoginForm();
 
 function onInputChanged() {
@@ -119,18 +118,12 @@ function getNextPath(): string | null {
 async function onSubmit() {
   errorMessage.value = null;
   console.log("LoginView onSubmit", { email: email.value, password: password.value ? "****" : "" });
-
-  await submit(async () => {
-    try {
-      const token = await authStore.login({
+  try {
+    await submit(async () => {
+      const token = await login({
         email: email.value,
-        password: password.value
+        password: password.value,
       })
-
-      if (!token) {
-        errorMessage.value = authStore.loginError;
-        return
-      }
 
       if (isTokenExpired(token)) {
         errorMessage.value = "세션이 만료되었습니다. 다시 로그인해주세요.";
@@ -151,11 +144,11 @@ async function onSubmit() {
       } else {
         await router.push({ name: "Home" }).catch(() => {});
       }
-    } catch (err: any) {
+    });
+  } catch (err: any) {
       console.error("Login error:", err);
-      errorMessage.value = authStore.loginError;
-    }
-  });
+      errorMessage.value = "로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.";
+  }
 }
 
 function goSignup() {
