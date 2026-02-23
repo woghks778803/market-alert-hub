@@ -66,7 +66,6 @@ class ErrorSpec:
         return self
 
 
-
 def _safe_stack(exc: Exception, *, include_stack: bool) -> Optional[str]:
     """
     예외에서 stack trace 문자열을 안전하게 추출.
@@ -93,7 +92,9 @@ def _is_app_error(exc: Exception) -> bool:
     """
     has_code = hasattr(exc, "code") and isinstance(getattr(exc, "code"), str)
     has_msg = hasattr(exc, "message") and isinstance(getattr(exc, "message"), str)
-    has_status = hasattr(exc, "status_code") and isinstance(getattr(exc, "status_code"), int)
+    has_status = hasattr(exc, "status_code") and isinstance(
+        getattr(exc, "status_code"), int
+    )
     return has_code and has_msg and has_status
 
 

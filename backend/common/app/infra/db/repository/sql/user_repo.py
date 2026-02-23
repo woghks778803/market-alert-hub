@@ -1,9 +1,10 @@
 from typing import Sequence
+from datetime import datetime
 from sqlalchemy import select, update, desc, and_
 from sqlalchemy.orm import Session as DbSession
 from app.domain import EmailDTO, UserDTO
 from app.domain.shared.errors import ValidationAppError
-from app.infra.db.model import UserModel, EmailVerificationModel
+from app.infra.db.model import PasswordResetModel, UserModel, EmailVerificationModel
 from app.infra.db.utils import to_db_value
 from ..protocol.user_repo import UserRepo
 
@@ -27,6 +28,14 @@ class SqlUserRepo(UserRepo):
         self._db.flush()
         return email_verification.to_dto()
 
+    def add_password_reset(
+        self, password_reset: UserDTO.PasswordResetCreate
+    ) -> UserDTO.PasswordReset:
+        password_reset = PasswordResetModel.from_create_dto(password_reset)
+        self._db.add(password_reset)
+        self._db.flush()
+        return password_reset.to_dto()
+
     def get_user_by_email_fingerprint(
         self, email_fingerprint: bytes
     ) -> UserModel | None:
@@ -39,6 +48,15 @@ class SqlUserRepo(UserRepo):
             and_(UserModel.is_deleted.is_(False), UserModel.id == user_id)
         )
         return self._db.execute(stmt).scalar_one_or_none()
+
+    def get_password_reset_by_id(
+        self, password_reset_id: int
+    ) -> UserDTO.PasswordReset | None:
+        stmt = select(PasswordResetModel).where(
+            PasswordResetModel.id == password_reset_id
+        )
+        model = self._db.execute(stmt).scalar_one_or_none()
+        return model.to_dto() if model else None
 
     def get_email_verification_by_id(
         self, email_verification_id: int
@@ -122,4 +140,47 @@ class SqlUserRepo(UserRepo):
             .execution_options(synchronize_session=False)
         )
 
+        return int(getattr(result, "rowcount", 0) or 0)
+
+    def update_password_reset_by_filter(
+        self,
+        *,
+        id: int | None = None,
+        expires_after: datetime | None = None,
+        sent_at: datetime | None = None,
+        sent_is_null: bool = True,
+        consumed_is_null: bool = True,
+    ) -> int:
+        wheres = []
+
+        if id is not None:
+            wheres.append(PasswordResetModel.id == id)
+
+        if expires_after is not None:
+            wheres.append(PasswordResetModel.expires_at > expires_after)
+
+        if sent_is_null is True:
+            wheres.append(PasswordResetModel.sent_at.is_(None))
+
+        if consumed_is_null is True:
+            wheres.append(PasswordResetModel.consumed_at.is_(None))
+
+        if not wheres:
+            raise ValueError("Unsafe update: at least one narrowing filter required")
+
+        values = {}
+        if sent_at is not None:
+            values[PasswordResetModel.sent_at] = sent_at
+
+        if not values:
+            return 0
+
+        stmt = (
+            update(PasswordResetModel)
+            .where(*wheres)
+            .values(values)
+            .execution_options(synchronize_session=False)
+        )
+
+        result = self._db.execute(stmt)
         return int(getattr(result, "rowcount", 0) or 0)

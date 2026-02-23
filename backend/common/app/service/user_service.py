@@ -45,6 +45,14 @@ class UserService:
             )
         return email_verification
 
+    def _ensure_password_reset(
+        self, uow: UnitOfWork, password_reset_id: int
+    ) -> UserDTO.PasswordReset:
+        password_reset = uow.users.get_password_reset_by_id(password_reset_id)
+        if not password_reset:
+            raise NotFoundError("PasswordReset not found", target="password_reset_id")
+        return password_reset
+
     def list_users_filter(
         self,
         *,
@@ -123,6 +131,14 @@ class UserService:
 
             return user_info
 
+    def get_password_reset_by_id(
+        self, *, password_reset_id: int
+    ) -> UserDTO.PasswordReset:
+        with self._uow_factory() as uow:
+            password_reset = self._ensure_password_reset(uow, password_reset_id)
+
+            return password_reset
+
     def get_email_verification_by_id(
         self, *, email_verification_id: int
     ) -> EmailVerificationModel:
@@ -159,6 +175,19 @@ class UserService:
 
             uow.commit()
             return user
+
+    def set_password_reset_sent(self, *, password_reset_id: int) -> None:
+        now = utcnow()
+
+        with self._uow_factory() as uow:
+            uow.users.update_password_reset_by_filter(
+                id=password_reset_id,
+                expires_after=now,
+                sent_at=now,
+                sent_is_null=True,
+                consumed_is_null=True,  # 멱등성 보장 (이미 보낸 건 다시 안 찍음)
+            )
+            uow.commit()
 
     def set_email_verification_sent(self, *, email_verification_id: int) -> None:
         now = utcnow()

@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from app.core.constants import UserRole, UserStatus, EmailVerificationStatus
 
+
 @dataclass(slots=True)
 class UserPublicInfo:
     id: int
@@ -63,6 +64,7 @@ class User:
     is_privacy: bool
     is_marketing: bool
 
+
 @dataclass(slots=True)
 class UserCreate:
     email_ciphertext: bytes
@@ -76,6 +78,7 @@ class UserCreate:
     is_service: bool
     is_privacy: bool
     is_marketing: bool
+
 
 @dataclass(slots=True)
 class EmailVerification:
@@ -98,6 +101,7 @@ class EmailVerification:
     created_at: datetime
     updated_at: datetime
 
+
 @dataclass(slots=True)
 class EmailVerificationCreate:
     user_id: int
@@ -107,5 +111,23 @@ class EmailVerificationCreate:
     email_nonce: bytes
     email_key_version: int
 
+    token_hash: bytes
+    expires_at: datetime
+
+
+@dataclass(slots=True)
+class PasswordReset:
+    id: int
+    user_id: int
+    token_hash: bytes
+    expires_at: datetime
+    sent_at: datetime | None
+    consumed_at: datetime | None
+    created_at: datetime
+
+
+@dataclass(slots=True)
+class PasswordResetCreate:
+    user_id: int
     token_hash: bytes
     expires_at: datetime

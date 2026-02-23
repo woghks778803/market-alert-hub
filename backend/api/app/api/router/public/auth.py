@@ -132,7 +132,7 @@ def resend_email_verification(
 )
 def verify_email(
     request: Request,
-    payload: AuthSchema.EmailVerifyToken = Body(
+    payload: AuthSchema.VerifyToken = Body(
         ...,
         example={"token": "base64url-encoded-token"},
     ),
@@ -184,6 +184,59 @@ def change_email(
     )
 
     return ok(AuthSchema.SimpleOk(ok=True), request_id=meta.request_id)
+
+
+@router.post(
+    "/password-forgot",
+    response_model=Envelope[AuthSchema.SimpleOk],  # 래퍼 적용
+    summary="비밀번호 재설정 요청",
+)
+def password_forgot(
+    request: Request,
+    payload: AuthSchema.PasswordForgot = Body(
+        ..., example={"email": "alice@example.com"}
+    ),
+    svcs: ServiceFactory = Depends(get_services),
+    meta: RequestMeta = Depends(get_request_meta),
+):
+    ip = request.client.host if request.client else None
+    ua = request.headers.get("user-agent")
+    token_out = svcs.auths.password_forgot(email=payload.email)
+    return ok(token_out, request_id=meta.request_id)
+
+
+# @router.post(
+#     "/password-reset",
+#     response_model=Envelope[AuthSchema.TokenOut],  # 래퍼 적용
+#     summary="비밀번호 재설정",
+#     description="비밀번호 재설정 토큰을 사용하여 비밀번호를 재설정합니다.",
+#     responses=OpenApi.combine(
+#         OpenApi.OK(
+#             Envelope[AuthSchema.TokenOut],
+#             description="비밀번호 재설정 성공",
+#             example=OpenApi.wrap_example(
+#                 {"user_id": 5, "access_token": "<jwt>", "token_type": "bearer"}
+#             ),
+#         ),
+#     ),
+# )
+# def password_reset(
+#     request: Request,
+#     payload: AuthSchema.ChangePasswordIn = Body(
+#         ...,
+#         example={
+#             "token": "base64url-encoded-token",
+#             "current_password": "P@ssw0rd!",
+#             "new_password": "N3wP@ss!",
+#         },
+#     ),
+#     svcs: ServiceFactory = Depends(get_services),
+#     meta: RequestMeta = Depends(get_request_meta),
+# ):
+#     ip = request.client.host if request.client else None
+#     ua = request.headers.get("user-agent")
+#     token_out = svcs.auths.password_reset(token=payload.token, ip=ip, ua=ua)
+#     return ok(token_out, request_id=meta.request_id)
 
 
 @router.post(

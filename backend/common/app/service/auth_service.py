@@ -107,7 +107,7 @@ class AuthService:
 
         # 3) outbox fingerprint (중복 방지)
         fp_dict: dict[str, Any] = {
-            "event_type": OutboxEventType.EMAIL_AUTH_CODE,
+            "event_type": OutboxEventType.AUTH_EMAIL_VERIFY,
             "aggregate_type": "user",
             "aggregate_id": user_id,
             "email_verification_id": email_verification.id,
@@ -124,7 +124,7 @@ class AuthService:
         uow.outboxs.add_outbox(
             OutboxDTO.OutboxCreate(
                 trace_id=trace_id,
-                event_type=OutboxEventType.EMAIL_AUTH_CODE,
+                event_type=OutboxEventType.AUTH_EMAIL_VERIFY,
                 aggregate_type="user",
                 aggregate_id=user_id,
                 outbox_fingerprint=outbox_fingerprint,
@@ -198,49 +198,6 @@ class AuthService:
                 cancel_pending=False,
                 now=now,
             )
-            # email_token = self._jwt.create_access_token(
-            #     subject=str(user.id), minutes=self._config.access_token_minutes
-            # )
-
-            # email_verification = uow.users.add_email_verification(
-            #     UserDTO.EmailVerificationCreate(
-            #         user_id=user.id,
-            #         email_fingerprint=email_fingerprint,
-            #         email_ciphertext=email_secrets["ciphertext"],
-            #         email_nonce=email_secrets["nonce"],
-            #         email_key_version=self._config.crypto_data_kid,
-            #         token_hash=self._hmac.token_hash(email_token),
-            #         expires_at=expires_at,
-            #     )
-            # )
-
-            # outbox_fingerprint_dict = {
-            #     "event_type": OutboxEventType.EMAIL_AUTH_CODE,
-            #     "aggregate_type": "user",
-            #     "aggregate_id": user.id,
-            #     "email_verification_id": email_verification.id,
-            # }
-            # outbox_fingerprint = to_canonical_json(outbox_fingerprint_dict)
-            # if outbox_fingerprint is not None:
-            #     outbox_fingerprint = self._hmac.fp_hash(outbox_fingerprint)
-
-            # uow.outboxs.add_outbox(
-            #     OutboxDTO.OutboxCreate(
-            #         trace_id=trace_id,
-            #         event_type=OutboxEventType.EMAIL_AUTH_CODE,
-            #         aggregate_type="user",
-            #         aggregate_id=user.id,
-            #         outbox_fingerprint=outbox_fingerprint,
-            #         payload={
-            #             "user_id": user.id,
-            #             "email_verification_id": email_verification.id,
-            #             "verify_token": email_token,
-            #         },
-            #         status=OutboxStatus.PENDING,
-            #         attempts=0,
-            #     ),
-            #     True,
-            # )
 
             token = self._jwt.create_access_token(
                 subject=str(user.id), minutes=self._config.access_token_minutes
@@ -403,66 +360,6 @@ class AuthService:
                 now=now,
             )
 
-            # 이전 pending, send 인증 메일 무효화
-            # affected = uow.users.update_email_verification_by_filter(
-            #     filters=EmailDTO.EmailVerificationFilter(
-            #         user_id=user.id,
-            #         statuses=(
-            #             EmailVerificationStatus.PENDING,
-            #             EmailVerificationStatus.SENT,
-            #         ),
-            #         expires_after=now,  # expires_at > now 인 것만
-            #     ),
-            #     updates=EmailDTO.EmailVerificationUpdate(
-            #         status=EmailVerificationStatus.CANCELLED,
-            #         expires_at=now,
-            #     ),
-            # )
-
-            # email_token = self._jwt.create_access_token(
-            #     subject=str(user.id), minutes=self._config.access_token_minutes
-            # )
-
-            # email_verification = uow.users.add_email_verification(
-            #     UserDTO.EmailVerificationCreate(
-            #         user_id=user.id,
-            #         email_fingerprint=email_fingerprint,
-            #         email_ciphertext=email_ciphertext,
-            #         email_nonce=email_nonce,
-            #         email_key_version=email_key_version,
-            #         token_hash=self._hmac.token_hash(email_token),
-            #         expires_at=expires_at,
-            #     )
-            # )
-
-            # outbox_fingerprint_dict = {
-            #     "event_type": OutboxEventType.EMAIL_AUTH_CODE,
-            #     "aggregate_type": "user",
-            #     "aggregate_id": user.id,
-            #     "email_verification_id": email_verification.id,
-            # }
-            # outbox_fingerprint = to_canonical_json(outbox_fingerprint_dict)
-            # if outbox_fingerprint is not None:
-            #     outbox_fingerprint = self._hmac.fp_hash(outbox_fingerprint)
-
-            # uow.outboxs.add_outbox(
-            #     OutboxDTO.OutboxCreate(
-            #         trace_id=trace_id,
-            #         event_type=OutboxEventType.EMAIL_AUTH_CODE,
-            #         aggregate_type="user",
-            #         aggregate_id=user.id,
-            #         outbox_fingerprint=outbox_fingerprint,
-            #         payload={
-            #             "user_id": user.id,
-            #             "email_verification_id": email_verification.id,
-            #             "verify_token": email_token,
-            #         },
-            #         status=OutboxStatus.PENDING,
-            #         attempts=0,
-            #     ),
-            #     True,
-            # )
-
             uow.commit()
 
             return {"ok": True}
@@ -555,7 +452,7 @@ class AuthService:
             # )
 
             # outbox_fingerprint_dict = {
-            #     "event_type": OutboxEventType.EMAIL_AUTH_CODE,
+            #     "event_type": OutboxEventType.AUTH_EMAIL_VERIFY,
             #     "aggregate_type": "user",
             #     "aggregate_id": user.id,
             #     "email_verification_id": email_verification.id,
@@ -567,7 +464,7 @@ class AuthService:
             # uow.outboxs.add_outbox(
             #     OutboxDTO.OutboxCreate(
             #         trace_id=trace_id,
-            #         event_type=OutboxEventType.EMAIL_AUTH_CODE,
+            #         event_type=OutboxEventType.AUTH_EMAIL_VERIFY,
             #         aggregate_type="user",
             #         aggregate_id=user.id,
             #         outbox_fingerprint=outbox_fingerprint,
@@ -591,7 +488,66 @@ class AuthService:
             uow.commit()
             return {"ok": True}
 
-    def get_current_user(self, user_id: int, token: str):
+    def password_forgot(
+        self,
+        *,
+        email: str,
+    ):
+        now = utcnow()
+        trace_id = get_trace_id()
+        expires_at = now + timedelta(minutes=self._config.access_token_minutes)
+        print("trace_id in password_forgot:", trace_id)  # 로그 추가
+        with self._uow_factory() as uow:
+            email_fingerprint = self._hmac.fp_hash(email)
+            user = uow.users.get_user_by_email_fingerprint(email_fingerprint)
+            if not user:
+                raise AuthError("Invalid credentials", target="email")
+
+            password_token = self._jwt.create_access_token(
+                subject=str(user.id),
+                minutes=self._config.access_token_minutes,
+            )
+            password_reset = uow.users.add_password_reset(
+                UserDTO.PasswordResetCreate(
+                    user_id=user.id,
+                    token_hash=self._hmac.token_hash(password_token),
+                    expires_at=expires_at,
+                )
+            )
+
+            outbox_fingerprint_dict = {
+                "event_type": OutboxEventType.AUTH_PASSWORD_RESET,
+                "aggregate_type": "user",
+                "aggregate_id": user.id,
+                "password_reset_id": password_reset.id,
+            }
+
+            outbox_fingerprint = to_canonical_json(outbox_fingerprint_dict)
+            if outbox_fingerprint is not None:
+                outbox_fingerprint = self._hmac.fp_hash(outbox_fingerprint)
+
+            uow.outboxs.add_outbox(
+                OutboxDTO.OutboxCreate(
+                    trace_id=trace_id,
+                    event_type=OutboxEventType.AUTH_PASSWORD_RESET,
+                    aggregate_type="user",
+                    aggregate_id=user.id,
+                    outbox_fingerprint=outbox_fingerprint,
+                    payload={
+                        "user_id": user.id,
+                        "password_reset_id": password_reset.id,
+                        "verify_token": password_token,
+                    },
+                    status=OutboxStatus.PENDING,
+                    attempts=0,
+                ),
+                True,
+            )
+
+            uow.commit()
+            return {"ok": True}
+
+    def get_current_user(self, user_id: int, token: str) -> AuthDTO.AuthUser:
         now = utcnow()
         with self._uow_factory() as uow:
 

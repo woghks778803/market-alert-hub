@@ -96,7 +96,7 @@ class OutboxService:
         with self._uow_factory() as uow:
 
             if result.retryable:
-                if OutboxEventType.EMAIL_AUTH_CODE == event_type:
+                if OutboxEventType.AUTH_EMAIL_VERIFY == event_type:
                     provider = uow.channels.get_channel_by_code("EMAIL")
                     policy = provider.retry_policy  # JSON → dict 파싱
                     if not policy:

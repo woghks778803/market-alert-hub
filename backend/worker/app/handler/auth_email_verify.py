@@ -6,7 +6,7 @@ from app.util.utils import require, try_acquire_lock, release_lock
 from app.exception_handlers import SkipHandler, RetryHandler, FatalHandler
 
 
-def handle_auth_email(
+def handle_auth_email_verify(
     ctx: WorkerContext,
     payload: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -44,7 +44,7 @@ def handle_auth_email(
         raise SkipHandler("locked")
 
     try:
-        ses_result = ctx.svcs.emails.send_verify(
+        ses_result = ctx.svcs.emails.send_email_verify(
             user=user_email_info,
             verify_token=verify_token,
         )
