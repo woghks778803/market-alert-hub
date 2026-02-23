@@ -1,13 +1,20 @@
 import { useAuthStore } from "@/stores/auth.store"
-import { authApi, type RegisterRequest, type LoginRequest } from "@/api/auth.api"
+import { authApi, type RegisterRequest, type LoginRequest, type VerifyEmailRequest } from "@/api/auth.api"
 
-// ✅ 인증메일 재전송 (API만 호출, 상태 변화 없음)
-export async function resendEmailVerification() {
+export async function verifyEmail(payload: VerifyEmailRequest) {
     // 실패하면 그대로 throw → View에서 메시지 처리
-    await authApi.resend_email_verification()
+    const env = await authApi.verifyEmail(payload)
+    const result = env?.success
+    if (!result) {
+        throw new Error("verify_email_failed")
+    }
 }
 
-// ✅ 로그아웃 유스케이스 (서버 로그아웃 시도 + 로컬 토큰 정리)
+export async function resendEmailVerification() {
+    // 실패하면 그대로 throw → View에서 메시지 처리
+    await authApi.resendEmailVerification()
+}
+
 export async function logout() {
     const authStore = useAuthStore()
 
@@ -41,4 +48,6 @@ export async function register(payload: RegisterRequest) {
     authStore.setToken(token)
     return token
 }
+
+
 

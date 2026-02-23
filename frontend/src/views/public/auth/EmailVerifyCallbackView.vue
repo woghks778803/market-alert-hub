@@ -1,13 +1,5 @@
 <template>
   <CenterCardShell center>
-    <!-- (개발용) 상태 토글: 필요 없으면 삭제 -->
-    <div class="verify-dev-toggle">
-      <v-btn-toggle v-model="devMode" density="compact" variant="outlined" divided>
-        <v-btn value="processing">처리중</v-btn>
-        <v-btn value="success">성공</v-btn>
-        <v-btn value="fail">실패</v-btn>
-      </v-btn-toggle>
-    </div>
 
     <div class="verify-cb-title">이메일 인증</div>
 
@@ -56,52 +48,68 @@
         <div class="verify-cb-msg__desc">인증메일을 다시 받아주세요</div>
       </div>
 
-      <v-btn
-        class="verify-cb-btn"
-        block
-        size="large"
-        color="primary"
-        variant="flat"
-        @click="goResend"
-      >
-        인증메일 다시 보내기
-      </v-btn>
-
       <button class="auth-link verify-cb-link" type="button" @click="goLogin">
-        로그인으로
+        다시 로그인하기
       </button>
     </template>
   </CenterCardShell>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue"
-import { useRouter } from "vue-router"
+import { computed, onMounted } from "vue"
+import { useRoute, useRouter } from "vue-router"
 import CenterCardShell from "@/components/CenterCardShell.vue"
-import { type EmailVerifyMode, useEmailVerifyCallback } from "@/composables/auth/useEmailVerifyCallback"
+import { verifyEmail, logout } from "@/services/auth.service"
+import { useEmailVerifyCallback } from "@/composables/auth/useEmailVerifyCallback"
 
+const route = useRoute()
 const router = useRouter()
-const { mode, runVerify } = useEmailVerifyCallback()
 
-// 개발용 토글(실서비스에서는 제거 가능)
-const devMode = ref<EmailVerifyMode>("processing")
+const { mode, setMode, runVerify } = useEmailVerifyCallback()
 
-// 현재는 devMode 우선으로 보이게(퍼블리싱 확인용)
-const viewMode = computed<EmailVerifyMode>(() => devMode.value || mode.value)
+const viewMode = computed(() => mode.value)
+
+function readToken(): string {
+  const q = route.query?.token
+  return typeof q === "string" ? q : ""
+}
+
+async function goLogin() {
+  await logout()
+  router.replace({ name: "Login" })
+}
 
 onMounted(async () => {
-  // TODO: API 붙이기 전까지는 더미 처리
-  await runVerify(async () => {
-    await new Promise((r) => setTimeout(r, 900))
-    return "success"
-  })
+  setMode("processing")
+  try {
+    await runVerify(async () => {
+      const token = readToken()
+      if (!token) {
+        throw new Error("invalid_verify_token")
+      }
+      await verifyEmail({ token })
+    })
+    setMode("success")
+  } catch (e) {
+    setMode("fail")
+  } finally {
+    await logout()
+  }
+
+  // runVerify(async () => {
+  //   const token = readToken()
+  //   if (!token) {
+  //     throw new Error("invalid_verify_token")
+  //   }
+  //   await verifyEmail({ token })
+  // }).then(async (res) => {
+  //   setMode("success")
+  // })
+  // .catch(async (e) => {
+  //   console.error("EmailVerifyCallbackView error", e)
+  //   setMode("fail")
+  // }).finally(async () => {
+  //   await logout()
+  // })
 })
-
-function goLogin() {
-  router.push({ name: "Login" }).catch(() => {})
-}
-
-function goResend() {
-  router.push({ name: "VerifyEmailSent" }).catch(() => {})
-}
 </script>

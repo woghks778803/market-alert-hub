@@ -10,17 +10,12 @@ export function useEmailVerifyCallback() {
         mode.value = next
     }
 
-    async function runVerify(run?: () => Promise<EmailVerifyMode | void> | EmailVerifyMode | void) {
+    async function runVerify(run?: () => Promise<void> | void) {
         if (running.value) return
         running.value = true
-        mode.value = "processing"
+
         try {
-            const result = await run?.()
-            if (result === "success" || result === "fail" || result === "processing") {
-                mode.value = result
-            }
-        } catch {
-            mode.value = "fail"
+            await run?.()
         } finally {
             running.value = false
         }

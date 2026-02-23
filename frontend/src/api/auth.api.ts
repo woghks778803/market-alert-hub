@@ -1,6 +1,10 @@
 import { http } from "./http"
 import type { Envelope } from "./types"
 
+export type VerifyEmailRequest = {
+    token: string
+}
+
 export type LoginRequest = {
     email: string
     password: string
@@ -46,8 +50,15 @@ export const authApi = {
         return data;
     },
 
-    async resend_email_verification() {
+    // POST /auth/resend-email-verification
+    async resendEmailVerification() {
         const { data } = await http.post<Envelope<SimpleOk>>("/auth/resend-email-verification");
+        return data;
+    },
+
+    // POST /auth/verify-email 
+    async verifyEmail(payload: VerifyEmailRequest) {
+        const { data } = await http.post<Envelope<SimpleOk>>("/auth/verify-email", payload);
         return data;
     },
 }
