@@ -14,17 +14,13 @@ function emptyErrors(): FieldErrors {
 }
 
 export function useLoginForm() {
+    const errorMessage = ref<string | null>(null);
+    const submitting = ref(false);
     const email = ref("")
     const password = ref("")
     const showPassword = ref(false)
-    const submitting = ref(false)
 
-    const errorMessage = ref<string | null>(null)
     const fieldErrors = ref<FieldErrors>(emptyErrors()); // 필드 에러용
-
-    function clearErrors() {
-        fieldErrors.value = emptyErrors();
-    }
 
     function validate(): boolean {
         const e = email.value.trim();
@@ -47,6 +43,15 @@ export function useLoginForm() {
         return !errs.email && !errs.password;
     }
 
+    function onInputChanged() {
+        fieldErrors.value = emptyErrors();
+        errorMessage.value = null;
+    }
+
+    function onBlurValidate() {
+        validate();
+    }
+
     const canSubmit = computed(() => {
         const e = email.value.trim();
         const p = password.value.trim();
@@ -54,21 +59,21 @@ export function useLoginForm() {
         if (!e) return false
         if (!isEmail(e)) return false
         if (!p) return false
-        return true
+        return submitting.value === false
     })
 
-    async function submit(onSuccess?: () => Promise<void> | void) {
-        clearErrors();
+    async function submit(onSuccess: () => Promise<void> | void) {
+        if (!canSubmit.value) return
+        fieldErrors.value = emptyErrors();
         errorMessage.value = null;
 
         if (!validate()) return;
 
-        submitting.value = true
+        submitting.value = true;
         try {
-            // TODO: API는 나중에. 지금은 UI 플로우만.
-            await onSuccess?.()
+            await onSuccess();
         } finally {
-            submitting.value = false
+            submitting.value = false;
         }
     }
 
@@ -76,13 +81,16 @@ export function useLoginForm() {
         email,
         password,
         showPassword,
-        submitting,
 
-        errorMessage,
         fieldErrors,
+        errorMessage,
 
         canSubmit,
-        validate,
+        submitting,
         submit,
+
+        validate,
+        onInputChanged,
+        onBlurValidate,
     }
 }

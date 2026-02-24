@@ -58,6 +58,15 @@ class SqlUserRepo(UserRepo):
         model = self._db.execute(stmt).scalar_one_or_none()
         return model.to_dto() if model else None
 
+    def get_password_reset_by_token_hash(
+        self, token_hash: bytes
+    ) -> UserDTO.PasswordReset | None:
+        stmt = select(PasswordResetModel).where(
+            PasswordResetModel.token_hash == token_hash
+        )
+        model = self._db.execute(stmt).scalar_one_or_none()
+        return model.to_dto() if model else None
+
     def get_email_verification_by_id(
         self, email_verification_id: int
     ) -> EmailVerificationModel | None:

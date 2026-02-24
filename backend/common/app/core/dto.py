@@ -18,7 +18,7 @@ class Base:
 @dataclass(frozen=True)
 class ServiceConfigBag:
     # 이메일 재전송 쿨다운 초
-    email_verify_resend_cooldown_sec: int
+    email_resend_cooldown_sec: int
     # 토큰/세션 등 서비스용 상수
     access_token_minutes: int
     # 암호화 키 KID (이메일 데이터용)

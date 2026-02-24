@@ -15,6 +15,7 @@ from app.core.util.datetime import utcnow, ensure_utc
 from app.core.util.serialization import to_canonical_json
 from app.domain.shared.uow import UnitOfWork
 from app.domain.shared.errors import (
+    NotFoundError,
     ValidationAppError,
     PermissionError,
     ConflictError,
@@ -244,7 +245,7 @@ class AuthService:
                 raise PermissionError("User not active status", target="status")
 
             if user.email_verified_at is None:
-                cooldown_sec = self._config.email_verify_resend_cooldown_sec
+                cooldown_sec = self._config.email_resend_cooldown_sec
                 key = f"cooldown:email_verify_resend:{user.id}"
                 ok = self._redis_client().set(key, b"1", nx=True, ex=cooldown_sec)
                 if ok:
@@ -287,7 +288,7 @@ class AuthService:
             uow.commit()
             return {"ok": True}
 
-    def resend_email_verification(
+    def send_email_verification(
         self,
         *,
         user_id: int,
@@ -335,7 +336,7 @@ class AuthService:
             email_key_version = user.email_key_version
 
             #  쿨다운 (연타 방지)
-            cooldown_sec = self._config.email_verify_resend_cooldown_sec
+            cooldown_sec = self._config.email_resend_cooldown_sec
             key = f"cooldown:email_verify_resend:{user.id}"
             ok = self._redis_client().set(key, b"1", nx=True, ex=cooldown_sec)
             if not ok:
@@ -380,7 +381,7 @@ class AuthService:
             )
 
             if not email_verification:
-                raise ValidationAppError("Token not found", target="token")
+                raise NotFoundError("Token not found", target="token")
 
             if email_verification.status != EmailVerificationStatus.SENT:
                 raise ValidationAppError("Invalid status", target="status")
@@ -391,7 +392,7 @@ class AuthService:
 
             user = uow.users.get_by_user_id(email_verification.user_id)
             if not user:
-                raise ValidationAppError("User not found", target="user_id")
+                raise NotFoundError("User not found", target="user_id")
 
             user.email_verified_at = now
             email_verification.status = EmailVerificationStatus.CONSUMED
@@ -488,7 +489,7 @@ class AuthService:
             uow.commit()
             return {"ok": True}
 
-    def password_forgot(
+    def send_password_reset(
         self,
         *,
         email: str,
@@ -496,12 +497,25 @@ class AuthService:
         now = utcnow()
         trace_id = get_trace_id()
         expires_at = now + timedelta(minutes=self._config.access_token_minutes)
-        print("trace_id in password_forgot:", trace_id)  # 로그 추가
+
         with self._uow_factory() as uow:
             email_fingerprint = self._hmac.fp_hash(email)
             user = uow.users.get_user_by_email_fingerprint(email_fingerprint)
             if not user:
                 raise AuthError("Invalid credentials", target="email")
+
+            #  쿨다운 (연타 방지)
+            cooldown_sec = self._config.email_resend_cooldown_sec
+            key = f"cooldown:password_reset_resend:{user.id}"
+            ok = self._redis_client().set(key, b"1", nx=True, ex=cooldown_sec)
+            if not ok:
+                remain = self._redis_client().ttl(key)  # -2/-1 처리만 조심
+                remain = remain if remain > 0 else 0  # 가드
+                raise RateLimitError(
+                    "Too many requests. Please try again later.",
+                    target="resend_password_reset",
+                    meta={"cooldown_remaining_sec": max(remain, 0)},
+                )
 
             password_token = self._jwt.create_access_token(
                 subject=str(user.id),
@@ -545,6 +559,29 @@ class AuthService:
             )
 
             uow.commit()
+            return {"ok": True}
+
+    def change_password(self, *, token: str, new_password: str):
+        now = utcnow()
+        token_hash = self._hmac.token_hash(token)
+        with self._uow_factory() as uow:
+            password_reset = uow.users.get_password_reset_by_token_hash(token_hash)
+            if not password_reset:
+                raise NotFoundError("Token not found", target="token")
+
+            expires_at = ensure_utc(password_reset.expires_at)
+            if expires_at <= now:
+                raise ValidationAppError("Token expired", target="token")
+
+            user = uow.users.get_by_user_id(password_reset.user_id)
+            if not user:
+                raise NotFoundError("User not found", target="user_id")
+
+            user.password_hash = self._password.hash_password(new_password)
+            password_reset.consumed_at = now
+
+            uow.commit()
+
             return {"ok": True}
 
     def get_current_user(self, user_id: int, token: str) -> AuthDTO.AuthUser:

@@ -4,7 +4,7 @@
     <div class="verify-cb-title">이메일 인증</div>
 
     <!-- 처리중 -->
-    <template v-if="viewMode === 'processing'">
+    <template v-if="viewMode === 'default'">
       <div class="verify-cb-icon verify-cb-icon--processing">
         <v-progress-circular indeterminate size="56" width="5" color="primary" />
       </div>
@@ -59,13 +59,14 @@
 import { computed, onMounted } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import CenterCardShell from "@/components/CenterCardShell.vue"
-import { verifyEmail, logout } from "@/services/auth.service"
-import { useEmailVerifyCallback } from "@/composables/auth/useEmailVerifyCallback"
+import { useMode } from "@/composables/common/useMode"
+import { useAuthStore } from "@/stores/auth.store";
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore();
 
-const { mode, setMode, runVerify } = useEmailVerifyCallback()
+const { mode, setMode } = useMode()
 
 const viewMode = computed(() => mode.value)
 
@@ -75,25 +76,24 @@ function readToken(): string {
 }
 
 async function goLogin() {
-  await logout()
+  await authStore.logoutAction()
   router.replace({ name: "Login" })
 }
 
 onMounted(async () => {
-  setMode("processing")
+  setMode("default")
   try {
-    await runVerify(async () => {
-      const token = readToken()
-      if (!token) {
-        throw new Error("invalid_verify_token")
-      }
-      await verifyEmail({ token })
-    })
+    const token = readToken()
+    if (!token) {
+      throw new Error("invalid_verify_token")
+    }
+    await authStore.verifyEmailAction({ token })
+
     setMode("success")
-  } catch (e) {
+  } catch (err: any) {
     setMode("fail")
   } finally {
-    await logout()
+    await authStore.logoutAction()
   }
 
   // runVerify(async () => {

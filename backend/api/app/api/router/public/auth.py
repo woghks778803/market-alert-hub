@@ -108,7 +108,7 @@ def login(
         OpenApi.ERR_429,  # 예: 쿨다운/레이트리밋
     ),
 )
-def resend_email_verification(
+def send_email_verification(
     user: AuthDTO.AuthUser = Security(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
@@ -117,7 +117,7 @@ def resend_email_verification(
     - 이메일 미검증 상태면 인증 메일 재발송(Outbox 생성)
     - 이미 인증된 경우 409 등으로 처리 가능
     """
-    svcs.auths.resend_email_verification(
+    svcs.auths.send_email_verification(
         user_id=user.id,
     )
     return ok(AuthSchema.SimpleOk(ok=True), request_id=meta.request_id)
@@ -187,11 +187,15 @@ def change_email(
 
 
 @router.post(
-    "/password-forgot",
-    response_model=Envelope[AuthSchema.SimpleOk],  # 래퍼 적용
+    "/request-password-reset",
+    response_model=Envelope[AuthSchema.SimpleOk],
     summary="비밀번호 재설정 요청",
+    description="이메일을 입력하면 해당 이메일로 비밀번호 재설정 토큰이 발송됩니다. (쿨다운/레이트리밋 정책 적용)",
+    responses=OpenApi.combine(
+        OpenApi.ERR_429,
+    ),
 )
-def password_forgot(
+def send_password_reset(
     request: Request,
     payload: AuthSchema.PasswordForgot = Body(
         ..., example={"email": "alice@example.com"}
@@ -201,42 +205,43 @@ def password_forgot(
 ):
     ip = request.client.host if request.client else None
     ua = request.headers.get("user-agent")
-    token_out = svcs.auths.password_forgot(email=payload.email)
+    token_out = svcs.auths.send_password_reset(email=payload.email)
     return ok(token_out, request_id=meta.request_id)
 
 
-# @router.post(
-#     "/password-reset",
-#     response_model=Envelope[AuthSchema.TokenOut],  # 래퍼 적용
-#     summary="비밀번호 재설정",
-#     description="비밀번호 재설정 토큰을 사용하여 비밀번호를 재설정합니다.",
-#     responses=OpenApi.combine(
-#         OpenApi.OK(
-#             Envelope[AuthSchema.TokenOut],
-#             description="비밀번호 재설정 성공",
-#             example=OpenApi.wrap_example(
-#                 {"user_id": 5, "access_token": "<jwt>", "token_type": "bearer"}
-#             ),
-#         ),
-#     ),
-# )
-# def password_reset(
-#     request: Request,
-#     payload: AuthSchema.ChangePasswordIn = Body(
-#         ...,
-#         example={
-#             "token": "base64url-encoded-token",
-#             "current_password": "P@ssw0rd!",
-#             "new_password": "N3wP@ss!",
-#         },
-#     ),
-#     svcs: ServiceFactory = Depends(get_services),
-#     meta: RequestMeta = Depends(get_request_meta),
-# ):
-#     ip = request.client.host if request.client else None
-#     ua = request.headers.get("user-agent")
-#     token_out = svcs.auths.password_reset(token=payload.token, ip=ip, ua=ua)
-#     return ok(token_out, request_id=meta.request_id)
+@router.post(
+    "/change-password",
+    response_model=Envelope[AuthSchema.SimpleOk],
+    summary="비밀번호 재설정",
+    description="비밀번호 재설정 토큰을 사용하여 비밀번호를 재설정합니다.",
+    responses=OpenApi.combine(
+        OpenApi.OK(
+            Envelope[AuthSchema.SimpleOk],
+            description="비밀번호 재설정 성공",
+            example=OpenApi.wrap_example({"ok": True}),
+        ),
+        OpenApi.ERR_400,  # 예: 토큰 만료/무효, 비밀번호 정책 위반 등
+        OpenApi.ERR_404,  # 예: 토큰 또는 사용자 미존재
+    ),
+)
+def change_password(
+    request: Request,
+    payload: AuthSchema.ChangePasswordIn = Body(
+        ...,
+        example={
+            "token": "base64url-encoded-token",
+            "new_password": "N3wP@ss!",
+        },
+    ),
+    svcs: ServiceFactory = Depends(get_services),
+    meta: RequestMeta = Depends(get_request_meta),
+):
+    ip = request.client.host if request.client else None
+    ua = request.headers.get("user-agent")
+    result = svcs.auths.change_password(
+        token=payload.token, new_password=payload.new_password
+    )
+    return ok(result, request_id=meta.request_id)
 
 
 @router.post(

@@ -96,19 +96,29 @@ import CenterCardShell from "@/components/CenterCardShell.vue"
 import { useRoute, useRouter } from "vue-router";
 import { useLoginForm } from "@/composables/auth/useLoginForm";
 import { isTokenExpired, isEmailVerifiedFromToken } from "@/utils/jwt"
-import { login } from "@/services/auth.service"
+import { useAuthStore } from "@/stores/auth.store";
 
 const router = useRouter();
 const route = useRoute();
-const { email, password, showPassword, submitting, errorMessage, fieldErrors, canSubmit, validate, submit } = useLoginForm();
+const authStore = useAuthStore();
+const {
+  email,
+  password,
+  showPassword,
 
-function onInputChanged() {
-  errorMessage.value = null;
-}
+  fieldErrors,
+  errorMessage,
 
-function onBlurValidate() {
-  validate();
-}
+  submitting,
+  canSubmit,
+  submit,
+
+  validate,
+  onInputChanged,
+  onBlurValidate,
+} = useLoginForm();
+
+
 
 function getNextPath(): string | null {
   const next = route.query.next;
@@ -116,20 +126,18 @@ function getNextPath(): string | null {
 }
 
 async function onSubmit() {
-  errorMessage.value = null;
-  console.log("LoginView onSubmit", { email: email.value, password: password.value ? "****" : "" });
   try {
     await submit(async () => {
-      const token = await login({
+      const token = await authStore.loginAction({
         email: email.value,
         password: password.value,
-      })
+      });
 
       if (isTokenExpired(token)) {
         errorMessage.value = "세션이 만료되었습니다. 다시 로그인해주세요.";
         return;
       }
-      
+
       const next = getNextPath();
       if (!isEmailVerifiedFromToken(token)) {
         await router.push({
@@ -139,15 +147,12 @@ async function onSubmit() {
         return;
       }
 
-      if (next) {
-        await router.push(next).catch(() => {});
-      } else {
-        await router.push({ name: "Home" }).catch(() => {});
-      }
+      if (next) await router.push(next).catch(() => {});
+      else await router.push({ name: "Home" }).catch(() => {});
     });
   } catch (err: any) {
-      console.error("Login error:", err);
-      errorMessage.value = "로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.";
+    console.error("Login error:", err);
+    errorMessage.value = "로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.";
   }
 }
 

@@ -93,7 +93,7 @@
         size="large"
         variant="flat"
         color="primary"
-        :disabled="!canSubmit"
+        :disabled="!canSubmit || !canProceed"
         :loading="submitting"
       >
         인증메일 보내기
@@ -110,13 +110,14 @@
 <script setup lang="ts">
 import { onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { register } from "@/services/auth.service"
 import CenterCardShell from "@/components/CenterCardShell.vue"
 import { useRegisterEmailForm } from "@/composables/auth/useRegisterEmailForm";
 import { useTermsConsent } from "@/composables/auth/useTermsConsent";
+import { useAuthStore } from "@/stores/auth.store";
 
 const router = useRouter();
 const route = useRoute();
+const authStore = useAuthStore();
 
 const { canProceed, consentPayload, resetTermsConsent } = useTermsConsent();
 const {
@@ -126,13 +127,16 @@ const {
   passwordConfirm,
   showPassword,
   showPasswordConfirm,
-  submitting,
+  
   fieldErrors,
-  clearErrors,
-  validate,
   errorMessage,
+
+  submitting,
   canSubmit,
   submit,
+
+  onInputChanged,
+  onBlurValidate,
 } = useRegisterEmailForm();
 
 onMounted(() => {
@@ -147,21 +151,13 @@ onMounted(() => {
   }
 });
 
-function onInputChanged() {
-  errorMessage.value = null;
-}
-
-function onBlurValidate() {
-  validate();
-}
-
 async function onSubmit() {
   if (!canProceed.value) {
+    errorMessage.value = "약관 동의가 필요합니다.";
     await router.push({ name: "SignupTerms", query: { source: "email", next: "/auth/signup/email" } }).catch(() => {});
     return;
   }
-  errorMessage.value = null;
-  clearErrors();
+
   try{
     await submit(async () => {
       const payload = {
@@ -170,14 +166,15 @@ async function onSubmit() {
         password: password.value,
         ...consentPayload.value,
       };
-      await register(payload)
+      await authStore.registerAction(payload)
+    });
 
-      resetTermsConsent()
-      await router.push({
-        name: "VerifyEmailSent",
-        query: { email: email.value },
-      }).catch(() => {})
-    })
+    resetTermsConsent()
+    await router.push({
+      name: "VerifyEmailSent",
+      query: { email: email.value },
+    }).catch(() => {})
+
   }catch (err: any) {
     console.error("Register error:", err);
     const e = err?.response?.data?.error;

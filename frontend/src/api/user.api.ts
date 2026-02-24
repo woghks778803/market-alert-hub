@@ -1,7 +1,7 @@
 import { http } from "./http"
 import type { Envelope } from "./types"
 
-export type userInfo = {
+export type UserInfo = {
     id: number
     email: string
     nickname: string
@@ -12,7 +12,7 @@ export type userInfo = {
 export const userApi = {
     // GET /user/me
     async me() {
-        const { data } = await http.get<Envelope<userInfo>>("/user/me")
+        const { data } = await http.get<Envelope<UserInfo>>("/user/me")
         return data
     },
 

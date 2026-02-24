@@ -3,7 +3,7 @@
     <div class="verify-title">인증 메일을 보냈어요</div>
 
     <div class="verify-desc">
-      <div class="verify-email">{{ email }}</div>
+      <div class="verify-email">{{ userStore.me?.email }}</div>
       <div>인증 링크를 전송했습니다</div>
       <div>메일함에서 링크를 눌러 가입을 완료하세요</div>
       <div class="verify-hint">메일이 안 보이면 스팸함을 확인해주세요</div>
@@ -23,8 +23,8 @@
       variant="outlined"
       color="primary"
       :loading="sending"
-      :disabled="!canResend"
-      @click="onResend"
+      :disabled="!canResend || isCooldown"
+      @click="onSubmit"
     >
       <template v-if="isCooldown">
         {{ cooldownSec }}초 후 다시 시도
@@ -39,67 +39,63 @@
     </button>
   </CenterCardShell>
 </template>
+
 <script setup lang="ts">
+import { onMounted } from "vue";
 import CenterCardShell from "@/components/CenterCardShell.vue"
-import { onMounted } from "vue"
-import { useRoute, useRouter } from "vue-router"
-import { useVerifyEmailSent } from "@/composables/auth/useVerifyEmailSent"
-import { resendEmailVerification, logout } from "@/services/auth.service"
+import { useRouter, useRoute } from "vue-router"
+import { useCooldown } from "@/composables/common/useCooldown"
+import { useUserStore } from "@/stores/user.store";
+import { useAuthStore } from "@/stores/auth.store";
+import { useVerifyEmailSent } from "@/composables/auth/useVerifyEmailSent";
 
 const router = useRouter()
 const route = useRoute()
+const userStore = useUserStore();
+const authStore = useAuthStore();
+const { successMessage, errorMessage, canResend, send, sending } = useVerifyEmailSent(route);
 
-const {
-  successMessage,
-  errorMessage,
-  sending,
-  canResend,
-  resend,
-  isCooldown,
-  cooldownSec,
-  startCooldown,
-  email,
-  loadMe,
-} = useVerifyEmailSent(route)
+const { cooldownSec, isCooldown, startCooldown } =
+  useCooldown();
 
 onMounted(() => {
-  loadMe()
-})
+  userStore.fetchMe().catch(() => {});
+});
 
-async function onResend() {
+async function onSubmit() {
+  if (isCooldown.value || !canResend.value) return;
+
   try {
-    await resend(async () => {
-      await resendEmailVerification()
-    })
-
-    successMessage.value = "인증 메일이 전송되었습니다."
+    await send(async () => {
+      await authStore.resendEmailVerificationAction();
+      successMessage.value = "인증 메일이 전송되었습니다. 메일함을 확인해주세요.";
+    });
   } catch (err: any) {
-    const e = err?.response?.data?.error
+    const e = err?.response?.data?.error;
     if (!e) {
       errorMessage.value = "네트워크 오류가 발생했습니다."
       return
     }
 
     if (e?.code === "rate_limited" && e?.target === "resend_email_verification") {
-      const sec = e?.details?.cooldown_remaining_sec
-      if (typeof sec === "number") {
-        startCooldown(sec)
-        errorMessage.value = "잠시 후 다시 시도해주세요."
-        return
-      }
+      const sec = e?.details?.cooldown_remaining_sec;
+      if (typeof sec === "number") startCooldown(sec);
+      errorMessage.value = "잠시 후 다시 시도해주세요.";
+      return;
     }
 
-    if (e.code === "unauthorized") {
-      await logout()
-      router.push({ name: "Login" })
-      return
+    if (e?.code === "unauthorized") {
+      await authStore.logoutAction();
+      router.push({ name: "Login" }).catch(() => {});
+      return;
     }
-    errorMessage.value = "요청 처리 중 문제가 발생했습니다."
+
+    errorMessage.value = "요청 처리에 실패했습니다. 다시 시도해주세요.";
   }
 }
 
 async function goLogin() {
-  await logout()
+  await authStore.logoutAction()
   router.push({ name: "Login" }).catch(() => {})
 }
 </script>

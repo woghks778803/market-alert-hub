@@ -1,4 +1,3 @@
-<!-- src/views/auth/TermsConsentView.vue -->
 <template>
   <CenterCardShell :center="false">
     <div class="auth-head">

@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     FP_MASTER_PEPPER: str = "FP_MASTER_PEPPER"
 
     # --- email ---
-    EMAIL_VERIFY_RESEND_COOLDOWN_SEC: int = 60
+    EMAIL_RESEND_COOLDOWN_SEC: int = 60
 
     # --- password ---
     ARGON2_TIME_COST: int = 2

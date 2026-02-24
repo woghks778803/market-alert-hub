@@ -1,6 +1,5 @@
 from typing import Protocol, Iterable
 from app.infra.db.model import PasswordResetModel, UserModel, EmailVerificationModel
-from app.core.constants import EmailVerificationStatus
 from app.domain import EmailDTO, UserDTO
 from datetime import datetime
 
@@ -20,6 +19,9 @@ class UserRepo(Protocol):
     def get_by_user_id(self, user_id: int) -> UserModel | None: ...
     def get_password_reset_by_id(
         self, password_reset_id: int
+    ) -> UserDTO.PasswordReset | None: ...
+    def get_password_reset_by_token_hash(
+        self, token_hash: bytes
     ) -> UserDTO.PasswordReset | None: ...
     def get_email_verification_by_id(
         self, email_verification_id: int

@@ -1,6 +1,11 @@
 import { http } from "./http"
 import type { Envelope } from "./types"
 
+export type ResetPasswordRequest = {
+    token: string,
+    new_password: string,
+}
+
 export type VerifyEmailRequest = {
     token: string
 }
@@ -59,6 +64,24 @@ export const authApi = {
     // POST /auth/verify-email 
     async verifyEmail(payload: VerifyEmailRequest) {
         const { data } = await http.post<Envelope<SimpleOk>>("/auth/verify-email", payload);
+        return data;
+    },
+
+    // POST /auth/refresh-token
+    async refreshToken() {
+        const { data } = await http.post<Envelope<TokenOut>>("/auth/refresh-token");
+        return data;
+    },
+
+    // POST /auth/request-password-reset
+    async requestPasswordReset(payload: { email: string }) {
+        const { data } = await http.post<Envelope<SimpleOk>>("/auth/request-password-reset", payload);
+        return data;
+    },
+
+    // POST /auth/change-password
+    async resetPassword(payload: ResetPasswordRequest) {
+        const { data } = await http.post<Envelope<SimpleOk>>("/auth/change-password", payload);
         return data;
     },
 }

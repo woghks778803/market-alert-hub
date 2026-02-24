@@ -32,6 +32,9 @@ function emptyErrors(): FieldErrors {
 }
 
 export function useRegisterEmailForm() {
+    const errorMessage = ref<string | null>(null);
+    const submitting = ref(false);
+
     const email = ref("")
     const nickname = ref("")
     const password = ref("")
@@ -39,16 +42,9 @@ export function useRegisterEmailForm() {
 
     const showPassword = ref(false)
     const showPasswordConfirm = ref(false)
-    const submitting = ref(false)
-    const errorMessage = ref<string | null>(null)
 
     const fieldErrors = ref<FieldErrors>(emptyErrors());
 
-    function clearErrors() {
-        fieldErrors.value = emptyErrors();
-    }
-
-    // ✅ 유효성 검사 + 에러 채우기
     function validate(): boolean {
         const e = email.value.trim();
         const n = nickname.value.trim();
@@ -73,8 +69,15 @@ export function useRegisterEmailForm() {
 
         fieldErrors.value = errs;
 
-        // 하나라도 메시지가 있으면 실패
         return !errs.email && !errs.nickname && !errs.password && !errs.passwordConfirm;
+    }
+
+    function onInputChanged() {
+        fieldErrors.value = emptyErrors();
+        errorMessage.value = null;
+    }
+    function onBlurValidate() {
+        validate();
     }
 
     const canSubmit = computed(() => {
@@ -96,20 +99,21 @@ export function useRegisterEmailForm() {
         if (!pc.trim()) return false;
         if (p !== pc) return false;
 
-        return true;
+        return submitting.value === false;
     });
 
-    async function submit(onSuccess?: () => Promise<void> | void) {
-        clearErrors();
+    async function submit(onSuccess: () => Promise<void> | void) {
+        if (!canSubmit.value) return
+        fieldErrors.value = emptyErrors();
         errorMessage.value = null;
 
         if (!validate()) return;
 
-        submitting.value = true
+        submitting.value = true;
         try {
-            await onSuccess?.()
+            await onSuccess();
         } finally {
-            submitting.value = false
+            submitting.value = false;
         }
     }
 
@@ -120,14 +124,15 @@ export function useRegisterEmailForm() {
         passwordConfirm,
         showPassword,
         showPasswordConfirm,
-        submitting,
 
         fieldErrors,
-        clearErrors,
         validate,
 
         errorMessage,
-        canSubmit,
+        submitting,
         submit,
+        canSubmit,
+        onInputChanged,
+        onBlurValidate,
     }
 }
