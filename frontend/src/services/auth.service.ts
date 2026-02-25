@@ -1,11 +1,18 @@
-import { authApi, type RegisterRequest, type LoginRequest, type VerifyEmailRequest, type ResetPasswordRequest } from "@/api/auth.api"
+import { authApi, type RegisterRequest, type LoginRequest, type VerifyTokenRequest, type ResetPasswordRequest } from "@/api/auth.api"
 
-export async function verifyEmail(payload: VerifyEmailRequest) {
-    // 실패하면 그대로 throw → View에서 메시지 처리
+export async function verifyEmail(payload: VerifyTokenRequest) {
     const env = await authApi.verifyEmail(payload)
     const result = env?.success
     if (!result) {
         throw new Error("verify_email_failed")
+    }
+}
+
+export async function verifyPasswordReset(payload: VerifyTokenRequest) {
+    const env = await authApi.verifyPasswordReset(payload)
+    const result = env?.success
+    if (!result) {
+        throw new Error("verify_password_reset_failed")
     }
 }
 

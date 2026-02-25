@@ -4,7 +4,6 @@ from app.core.constants import UserStatus, UserRole, EmailVerificationStatus
 from app.domain.shared.uow import UnitOfWork
 from app.domain.shared.errors import ValidationAppError, NotFoundError
 from app.domain import UserDTO, EmailDTO, CryptoPort
-from app.infra.db.model import EmailVerificationModel
 
 
 class UserService:
@@ -141,7 +140,7 @@ class UserService:
 
     def get_email_verification_by_id(
         self, *, email_verification_id: int
-    ) -> EmailVerificationModel:
+    ) -> UserDTO.EmailVerification:
         with self._uow_factory() as uow:
             email_verification = self._ensure_email_verification(
                 uow, email_verification_id
@@ -150,7 +149,7 @@ class UserService:
 
     def get_email_verification_by_token_hash(
         self, *, token_hash: bytes
-    ) -> EmailVerificationModel:
+    ) -> UserDTO.EmailVerification:
         with self._uow_factory() as uow:
             email_verification = uow.users.get_email_verification_by_token_hash(
                 token_hash

@@ -179,6 +179,11 @@ async function onSubmit() {
     console.error("Register error:", err);
     const e = err?.response?.data?.error;
 
+    if (!e) {
+      errorMessage.value = "네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+      return
+    }
+    
     if (e.code === "conflict" && e?.target === "email") {
       errorMessage.value = "이미 사용 중인 이메일입니다.";
       return;

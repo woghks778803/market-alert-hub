@@ -74,12 +74,12 @@ def get_current_user(
     try:
         payload = svcs.jwt.decode_token(token)
     except ExpiredSignatureError:
-        raise AuthError("Token expired")
+        raise AuthError("Token expired", target="token")
     except InvalidTokenError:
-        raise AuthError("Invalid token")
+        raise AuthError("Invalid token", target="token")
     user_id = int(payload["sub"])
     if not user_id:
-        raise AuthError(message="Invalid token payload")
+        raise AuthError(message="Invalid token payload", target="token")
     return svcs.auths.get_current_user(user_id, token)
 
 

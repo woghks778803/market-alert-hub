@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
-import type { LoginRequest, RegisterRequest, VerifyEmailRequest, ResetPasswordRequest } from "@/api/auth.api";
+import type { LoginRequest, RegisterRequest, VerifyTokenRequest, ResetPasswordRequest } from "@/api/auth.api";
 import {
     login as loginService,
     register as registerService,
@@ -8,6 +8,7 @@ import {
     requestPasswordReset as requestPasswordResetService,
     logout as logoutService,
     verifyEmail as verifyEmailService,
+    verifyPasswordReset as verifyPasswordResetService,
     resetPassword as resetPasswordService,
 } from "@/services/auth.service";
 
@@ -44,8 +45,12 @@ export const useAuthStore = defineStore("auth", () => {
         return token;
     }
 
-    async function verifyEmailAction(payload: VerifyEmailRequest): Promise<void> {
+    async function verifyEmailAction(payload: VerifyTokenRequest): Promise<void> {
         await verifyEmailService(payload);
+    }
+
+    async function verifyPasswordResetAction(payload: VerifyTokenRequest): Promise<void> {
+        await verifyPasswordResetService(payload);
     }
 
     async function resendEmailVerificationAction(): Promise<void> {
@@ -86,5 +91,6 @@ export const useAuthStore = defineStore("auth", () => {
         resetPasswordAction,
         logoutAction,
         verifyEmailAction,
+        verifyPasswordResetAction,
     };
 });

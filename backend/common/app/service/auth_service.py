@@ -180,10 +180,10 @@ class AuthService:
                     email_key_version=self._config.crypto_data_kid,
                     nickname=nickname,
                     password_hash=self._password.hash_password(password),
+                    last_login_at=now,
                     is_service=agree_service,
                     is_privacy=agree_privacy,
                     is_marketing=agree_marketing,
-                    # role/status 기본값은 모델 default/enum 디폴트 사용
                 )
             )
 
@@ -212,7 +212,6 @@ class AuthService:
                 user_agent=ua,
             )
 
-            user.last_login_at = now
             uow.commit()
 
             return AuthDTO.AuthToken(access_token=token)
@@ -249,18 +248,31 @@ class AuthService:
                 key = f"cooldown:email_verify_resend:{user.id}"
                 ok = self._redis_client().set(key, b"1", nx=True, ex=cooldown_sec)
                 if ok:
-                    self._enqueue_email_auth_code_outbox_in_tx(
-                        uow=uow,
-                        trace_id=get_trace_id(),
-                        user_id=user.id,
-                        email_fingerprint=user.email_fingerprint,
-                        email_ciphertext=user.email_ciphertext,
-                        email_nonce=user.email_nonce,
-                        email_key_version=user.email_key_version,
-                        expires_at=expires_at,
-                        cancel_pending=True,
-                        now=now,
-                    )
+                    if (
+                        user.email_fingerprint is not None
+                        and user.email_ciphertext is not None
+                        and user.email_nonce is not None
+                        and user.email_key_version is not None
+                    ):
+                        self._enqueue_email_auth_code_outbox_in_tx(
+                            uow=uow,
+                            trace_id=get_trace_id(),
+                            user_id=user.id,
+                            email_fingerprint=user.email_fingerprint,
+                            email_ciphertext=user.email_ciphertext,
+                            email_nonce=user.email_nonce,
+                            email_key_version=user.email_key_version,
+                            expires_at=expires_at,
+                            cancel_pending=True,
+                            now=now,
+                        )
+                    else:
+                        # TODO: 소셜 가입자 여부 - 이메일 등록 페이지로 유도
+                        # 이메일 가입자 - 관리자 문의
+                        raise AuthError(
+                            "Account email data missing. Contact support.",
+                            target="email",
+                        )
 
             token = self._jwt.create_access_token(
                 subject=str(user.id),
@@ -276,7 +288,7 @@ class AuthService:
                 user_agent=ua,
             )
 
-            user.last_login_at = now
+            uow.users.update_user_last_login_at(user.id, now)
             uow.commit()
 
             return AuthDTO.AuthToken(access_token=token)
@@ -305,36 +317,6 @@ class AuthService:
             if user.email_verified_at is not None:
                 raise ConflictError("Email already verified", target="email")
 
-            if user.email_fingerprint is None:
-                raise ValidationAppError(
-                    message="User email_fingerprint is missing",
-                    target="users.email_fingerprint",
-                    meta={"user_id": user.id},
-                )
-            if user.email_ciphertext is None:
-                raise ValidationAppError(
-                    message="User email_ciphertext is missing",
-                    target="users.email_ciphertext",
-                    meta={"user_id": user.id},
-                )
-            if user.email_nonce is None:
-                raise ValidationAppError(
-                    message="User email_nonce is missing",
-                    target="users.email_nonce",
-                    meta={"user_id": user.id},
-                )
-            if user.email_key_version is None:
-                raise ValidationAppError(
-                    message="User email_key_version is missing",
-                    target="users.email_key_version",
-                    meta={"user_id": user.id},
-                )
-
-            email_fingerprint = user.email_fingerprint
-            email_ciphertext = user.email_ciphertext
-            email_nonce = user.email_nonce
-            email_key_version = user.email_key_version
-
             #  쿨다운 (연타 방지)
             cooldown_sec = self._config.email_resend_cooldown_sec
             key = f"cooldown:email_verify_resend:{user.id}"
@@ -348,18 +330,31 @@ class AuthService:
                     meta={"cooldown_remaining_sec": max(remain, 0)},
                 )
 
-            self._enqueue_email_auth_code_outbox_in_tx(
-                uow=uow,
-                trace_id=trace_id,
-                user_id=user.id,
-                email_fingerprint=email_fingerprint,
-                email_ciphertext=email_ciphertext,
-                email_nonce=email_nonce,
-                email_key_version=email_key_version,
-                expires_at=expires_at,
-                cancel_pending=True,
-                now=now,
-            )
+            if (
+                user.email_fingerprint is not None
+                and user.email_ciphertext is not None
+                and user.email_nonce is not None
+                and user.email_key_version is not None
+            ):
+                self._enqueue_email_auth_code_outbox_in_tx(
+                    uow=uow,
+                    trace_id=trace_id,
+                    user_id=user.id,
+                    email_fingerprint=user.email_fingerprint,
+                    email_ciphertext=user.email_ciphertext,
+                    email_nonce=user.email_nonce,
+                    email_key_version=user.email_key_version,
+                    expires_at=expires_at,
+                    cancel_pending=True,
+                    now=now,
+                )
+            else:
+                # TODO: 소셜 가입자 여부 - 이메일 등록 페이지로 유도
+                # 이메일 가입자 - 관리자 문의
+                raise AuthError(
+                    "Account email data missing. Contact support.",
+                    target="email",
+                )
 
             uow.commit()
 
@@ -395,8 +390,13 @@ class AuthService:
                 raise NotFoundError("User not found", target="user_id")
 
             user.email_verified_at = now
-            email_verification.status = EmailVerificationStatus.CONSUMED
-            email_verification.consumed_at = now
+            uow.users.update_email_verification_by_filter(
+                filters=EmailDTO.EmailVerificationFilter(id=email_verification.id),
+                updates=EmailDTO.EmailVerificationUpdate(
+                    status=EmailVerificationStatus.CONSUMED,
+                    consumed_at=now,
+                ),
+            )
 
             uow.commit()
 
@@ -565,7 +565,9 @@ class AuthService:
         now = utcnow()
         token_hash = self._hmac.token_hash(token)
         with self._uow_factory() as uow:
-            password_reset = uow.users.get_password_reset_by_token_hash(token_hash)
+            password_reset = uow.users.get_password_reset_by_token_hash(
+                token_hash, consumed_is_null=True, expires_after=now
+            )
             if not password_reset:
                 raise NotFoundError("Token not found", target="token")
 
@@ -578,9 +580,32 @@ class AuthService:
                 raise NotFoundError("User not found", target="user_id")
 
             user.password_hash = self._password.hash_password(new_password)
-            password_reset.consumed_at = now
+
+            uow.users.update_password_reset_by_filter(
+                id=password_reset.id,
+                expires_after=now,
+                consumed_at=now,
+                sent_is_null=False,
+                consumed_is_null=True,
+            )
 
             uow.commit()
+
+            return {"ok": True}
+
+    def verify_password_reset(self, *, token: str):
+        now = utcnow()
+        token_hash = self._hmac.token_hash(token)
+        with self._uow_factory() as uow:
+            password_reset = uow.users.get_password_reset_by_token_hash(
+                token_hash, consumed_is_null=True, expires_after=now
+            )
+            if not password_reset:
+                raise NotFoundError("Token not found", target="token")
+
+            expires_at = ensure_utc(password_reset.expires_at)
+            if expires_at <= now:
+                raise ValidationAppError("Token expired", target="token")
 
             return {"ok": True}
 

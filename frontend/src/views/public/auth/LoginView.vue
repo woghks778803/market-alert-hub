@@ -152,6 +152,25 @@ async function onSubmit() {
     });
   } catch (err: any) {
     console.error("Login error:", err);
+    const e = err?.response?.data?.error;
+
+    if (!e) {
+      errorMessage.value = "네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+      return
+    }
+    if (e.code === "forbidden" && e?.target === "role") {
+      errorMessage.value = "권한이 없습니다.";
+      return;
+    }
+    if (e.code === "forbidden" && e?.target === "status") {
+      errorMessage.value = "계정이 정지되었습니다. 자세한 내용은 고객센터에 문의해주세요.";
+      return;
+    }
+    if (e.code === "unauthorized" && e?.target === "email") {
+      errorMessage.value = "이메일 정보에 문제가 있습니다. 고객센터에 문의해주세요.";
+      return;
+    }
+
     errorMessage.value = "로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.";
   }
 }

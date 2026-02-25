@@ -245,6 +245,35 @@ def change_password(
 
 
 @router.post(
+    "/verify-password-reset",
+    response_model=Envelope[AuthSchema.SimpleOk],
+    summary="비밀번호 재설정 토큰 검증",
+    description="비밀번호 재설정 토큰이 유효한지 검증합니다.",
+    responses=OpenApi.combine(
+        OpenApi.OK(
+            Envelope[AuthSchema.SimpleOk],
+            description="비밀번호 재설정 토큰 검증 성공",
+            example=OpenApi.wrap_example({"ok": True}),
+        ),
+        OpenApi.ERR_400,  # 예: 토큰 무효 등
+        OpenApi.ERR_401,  # 예: 토큰 만료 등
+    ),
+)
+def verify_password_reset(
+    payload: AuthSchema.VerifyToken = Body(
+        ...,
+        example={
+            "token": "base64url-encoded-token",
+        },
+    ),
+    svcs: ServiceFactory = Depends(get_services),
+    meta: RequestMeta = Depends(get_request_meta),
+):
+    result = svcs.auths.verify_password_reset(token=payload.token)
+    return ok(result, request_id=meta.request_id)
+
+
+@router.post(
     "/logout",
     response_model=Envelope[AuthSchema.SimpleOk],  #  래퍼 적용
     summary="로그아웃 (세션 무효화)",

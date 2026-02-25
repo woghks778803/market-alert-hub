@@ -1,5 +1,5 @@
-from typing import Protocol, Iterable
-from app.infra.db.model import PasswordResetModel, UserModel, EmailVerificationModel
+from typing import Protocol
+from app.infra.db.model import UserModel
 from app.domain import EmailDTO, UserDTO
 from datetime import datetime
 
@@ -15,23 +15,26 @@ class UserRepo(Protocol):
     ) -> UserDTO.PasswordReset: ...
     def get_user_by_email_fingerprint(
         self, email_fingerprint: bytes
-    ) -> UserModel | None: ...
+    ) -> UserDTO.User | None: ...
     def get_by_user_id(self, user_id: int) -> UserModel | None: ...
     def get_password_reset_by_id(
         self, password_reset_id: int
     ) -> UserDTO.PasswordReset | None: ...
     def get_password_reset_by_token_hash(
-        self, token_hash: bytes
+        self,
+        token_hash: bytes,
+        consumed_is_null: bool = True,
+        expires_after: datetime | None = None,
     ) -> UserDTO.PasswordReset | None: ...
     def get_email_verification_by_id(
         self, email_verification_id: int
-    ) -> EmailVerificationModel | None: ...
+    ) -> UserDTO.EmailVerification | None: ...
     def get_email_verification_by_token_hash(
         self, token_hash: bytes
-    ) -> EmailVerificationModel | None: ...
+    ) -> UserDTO.EmailVerification | None: ...
     def list_users_filter(
         self, *, status: str | None, role: str | None, limit: int, offset: int
-    ) -> list[UserModel]: ...
+    ) -> list[UserDTO.User]: ...
     def update_email_verification_by_filter(
         self,
         filters: EmailDTO.EmailVerificationFilter,
@@ -43,6 +46,10 @@ class UserRepo(Protocol):
         id: int | None = None,
         expires_after: datetime | None = None,
         sent_at: datetime | None = None,
-        sent_is_null: bool = True,
-        consumed_is_null: bool = True,
+        consumed_at: datetime | None = None,
+        sent_is_null: bool | None = None,
+        consumed_is_null: bool | None = None,
     ) -> int: ...
+    def update_user_last_login_at(
+        self, user_id: int, last_login_at: datetime
+    ) -> None: ...

@@ -75,6 +75,8 @@ class UserCreate:
     nickname: str
     password_hash: str
 
+    last_login_at: datetime | None
+
     is_service: bool
     is_privacy: bool
     is_marketing: bool

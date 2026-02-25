@@ -38,10 +38,10 @@ class SqlUserRepo(UserRepo):
 
     def get_user_by_email_fingerprint(
         self, email_fingerprint: bytes
-    ) -> UserModel | None:
+    ) -> UserDTO.User | None:
         stmt = select(UserModel).where(UserModel.email_fingerprint == email_fingerprint)
         result = self._db.execute(stmt).scalar_one_or_none()
-        return result is not None and result
+        return result.to_dto() if result is not None else None
 
     def get_by_user_id(self, user_id: int) -> UserModel | None:
         stmt = select(UserModel).where(
@@ -59,33 +59,44 @@ class SqlUserRepo(UserRepo):
         return model.to_dto() if model else None
 
     def get_password_reset_by_token_hash(
-        self, token_hash: bytes
+        self,
+        token_hash: bytes,
+        consumed_is_null: bool = True,
+        expires_after: datetime | None = None,
     ) -> UserDTO.PasswordReset | None:
         stmt = select(PasswordResetModel).where(
             PasswordResetModel.token_hash == token_hash
         )
+
+        if consumed_is_null:
+            stmt = stmt.where(PasswordResetModel.consumed_at.is_(None))
+        if expires_after is not None:
+            stmt = stmt.where(PasswordResetModel.expires_at > expires_after)
+
         model = self._db.execute(stmt).scalar_one_or_none()
         return model.to_dto() if model else None
 
     def get_email_verification_by_id(
         self, email_verification_id: int
-    ) -> EmailVerificationModel | None:
+    ) -> UserDTO.EmailVerification | None:
         stmt = select(EmailVerificationModel).where(
             EmailVerificationModel.id == email_verification_id
         )
-        return self._db.execute(stmt).scalar_one_or_none()
+        model = self._db.execute(stmt).scalar_one_or_none()
+        return model.to_dto() if model else None
 
     def get_email_verification_by_token_hash(
         self, token_hash: bytes
-    ) -> EmailVerificationModel | None:
+    ) -> UserDTO.EmailVerification | None:
         stmt = select(EmailVerificationModel).where(
             EmailVerificationModel.token_hash == token_hash
         )
-        return self._db.execute(stmt).scalar_one_or_none()
+        model = self._db.execute(stmt).scalar_one_or_none()
+        return model.to_dto() if model else None
 
     def list_users_filter(
         self, *, status: str | None, role: str | None, limit: int, offset: int
-    ) -> Sequence[UserModel]:
+    ) -> Sequence[UserDTO.User]:
         stmt = select(UserModel).where(UserModel.is_deleted.is_(False))
         if status:
             stmt = stmt.where(UserModel.status == to_db_value(status))
@@ -93,7 +104,8 @@ class SqlUserRepo(UserRepo):
             stmt = stmt.where(UserModel.role == to_db_value(role))
 
         stmt = stmt.order_by(desc(UserModel.created_at)).limit(limit).offset(offset)
-        return self._db.execute(stmt).scalars().all()
+        result = self._db.execute(stmt).scalars().all()
+        return [user.to_dto() for user in result]
 
     def _to_email_verification_where_mapping(
         self, filters: EmailDTO.EmailVerificationFilter
@@ -121,6 +133,8 @@ class SqlUserRepo(UserRepo):
             values[EmailVerificationModel.expires_at] = updates.expires_at
         if updates.sent_at is not None:
             values[EmailVerificationModel.sent_at] = updates.sent_at
+        if updates.consumed_at is not None:
+            values[EmailVerificationModel.consumed_at] = updates.consumed_at
         return values
 
     def update_email_verification_by_filter(
@@ -154,16 +168,15 @@ class SqlUserRepo(UserRepo):
     def update_password_reset_by_filter(
         self,
         *,
-        id: int | None = None,
+        id: int,
         expires_after: datetime | None = None,
         sent_at: datetime | None = None,
-        sent_is_null: bool = True,
-        consumed_is_null: bool = True,
+        consumed_at: datetime | None = None,
+        sent_is_null: bool | None = None,
+        consumed_is_null: bool | None = None,
     ) -> int:
         wheres = []
-
-        if id is not None:
-            wheres.append(PasswordResetModel.id == id)
+        wheres.append(PasswordResetModel.id == id)
 
         if expires_after is not None:
             wheres.append(PasswordResetModel.expires_at > expires_after)
@@ -180,6 +193,8 @@ class SqlUserRepo(UserRepo):
         values = {}
         if sent_at is not None:
             values[PasswordResetModel.sent_at] = sent_at
+        if consumed_at is not None:
+            values[PasswordResetModel.consumed_at] = consumed_at
 
         if not values:
             return 0
@@ -193,3 +208,12 @@ class SqlUserRepo(UserRepo):
 
         result = self._db.execute(stmt)
         return int(getattr(result, "rowcount", 0) or 0)
+
+    def update_user_last_login_at(self, user_id: int, last_login_at: datetime) -> None:
+        stmt = (
+            update(UserModel)
+            .where(UserModel.id == user_id)
+            .values({UserModel.last_login_at: last_login_at})
+            .execution_options(synchronize_session=False)
+        )
+        self._db.execute(stmt)

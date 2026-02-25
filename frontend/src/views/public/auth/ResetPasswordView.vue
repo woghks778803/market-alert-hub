@@ -162,15 +162,26 @@ function readToken(): string {
   return typeof q === "string" ? q : ""
 }
 
-onMounted(() => {
+onMounted(async () => {
   setMode("default")
+  try {
+    const token = readToken()
+    if (!token) {
+      throw new Error("invalid_verify_token")
+    }
+    await authStore.verifyPasswordResetAction({ token })
+
+    console.log("verify success")
+  } catch (err: any) {
+    setMode("fail")
+  }
 });
 
 async function onSubmit() {
   try {
     const token = readToken()
     if (!token) {
-      setMode("fail")
+      throw new Error("invalid_verify_token")
     }
 
     await submit(async () => {
@@ -182,6 +193,16 @@ async function onSubmit() {
 
     setMode("success")
   } catch (err: any) {
+    const e = err?.response?.data?.error;
+    if (!e) {
+      errorMessage.value = "네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+      return
+    }
+    
+    if (err?.message === "invalid_verify_token") {
+      setMode("fail")
+      return
+    }
     errorMessage.value = "비밀번호 변경에 실패했습니다. 다시 시도해주세요."
   }
 }

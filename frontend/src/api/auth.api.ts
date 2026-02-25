@@ -6,7 +6,7 @@ export type ResetPasswordRequest = {
     new_password: string,
 }
 
-export type VerifyEmailRequest = {
+export type VerifyTokenRequest = {
     token: string
 }
 
@@ -62,7 +62,7 @@ export const authApi = {
     },
 
     // POST /auth/verify-email 
-    async verifyEmail(payload: VerifyEmailRequest) {
+    async verifyEmail(payload: VerifyTokenRequest) {
         const { data } = await http.post<Envelope<SimpleOk>>("/auth/verify-email", payload);
         return data;
     },
@@ -82,6 +82,12 @@ export const authApi = {
     // POST /auth/change-password
     async resetPassword(payload: ResetPasswordRequest) {
         const { data } = await http.post<Envelope<SimpleOk>>("/auth/change-password", payload);
+        return data;
+    },
+
+    // POST /auth/verify-password-reset
+    async verifyPasswordReset(payload: VerifyTokenRequest) {
+        const { data } = await http.post<Envelope<SimpleOk>>("/auth/verify-password-reset", payload);
         return data;
     },
 }
