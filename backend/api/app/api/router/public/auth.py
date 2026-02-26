@@ -1,7 +1,15 @@
-from fastapi import APIRouter, Depends, Body, Response, Request, status, Security
+from fastapi import (
+    APIRouter,
+    Depends,
+    Body,
+    Response,
+    Request,
+    status,
+    Security,
+    Cookie,
+)
 
 from app.service.factory import ServiceFactory
-from app.domain import AuthDTO
 from app.api.schema import UserSchema, AuthSchema
 from app.api.common.envelope import Envelope, ok, created
 from app.api.deps import (
@@ -14,6 +22,53 @@ from app.api.deps import (
 import app.api.openapi as OpenApi
 
 router = APIRouter(prefix="/auth")
+
+
+@router.post(
+    "/refresh-token",
+    status_code=status.HTTP_201_CREATED,
+    response_model=Envelope[AuthSchema.TokenOut],  # 래퍼 적용
+    summary="리프레시 토큰으로 액세스 토큰 갱신",
+    description="리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급합니다.",
+    responses=OpenApi.combine(
+        OpenApi.CREATED(
+            Envelope[AuthSchema.TokenOut],  #  스키마도 래퍼로
+            description="액세스 토큰 갱신 성공",
+            example=OpenApi.wrap_example({"ok": True}),
+        ),
+        OpenApi.ERR_409,
+    ),
+)
+def refresh_token(
+    request: Request,
+    response: Response,
+    refresh_token: str = Cookie(..., alias="refresh_token"),
+    svcs: ServiceFactory = Depends(get_services),
+    meta: RequestMeta = Depends(get_request_meta),  # request_id 주입
+):
+    ip = request.client.host if request.client else None
+    ua = request.headers.get("user-agent")
+    token_out = svcs.auths.refresh_token(refresh_token=refresh_token, ip=ip, ua=ua)
+
+    response.set_cookie(
+        key="refresh_token",
+        value=token_out.refresh_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=60 * 60 * 24 * 7,
+        path="/",
+    )
+
+    return created(
+        AuthSchema.TokenOut(
+            access_token=token_out.access_token,
+            token_type="bearer",
+        ),
+        response=response,
+        request_id=meta.request_id,
+        location="/",
+    )
 
 
 @router.post(
@@ -50,7 +105,7 @@ def register(
 ):
     ip = request.client.host if request.client else None
     ua = request.headers.get("user-agent")
-    result = svcs.auths.register(
+    token_out = svcs.auths.register(
         email=payload.email,
         nickname=payload.nickname,
         password=payload.password,
@@ -61,8 +116,24 @@ def register(
         ua=ua,
     )
 
+    response.set_cookie(
+        key="refresh_token",
+        value=token_out.refresh_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=60 * 60 * 24 * 7,
+        path="/",
+    )
+
     return created(
-        result, response=response, request_id=meta.request_id, location="/auth/me"
+        AuthSchema.TokenOut(
+            access_token=token_out.access_token,
+            token_type="bearer",
+        ),
+        response=response,
+        request_id=meta.request_id,
+        location="/auth/register",
     )
 
 
@@ -82,6 +153,7 @@ def register(
 )
 def login(
     request: Request,
+    response: Response,
     payload: AuthSchema.Login = Body(
         ..., example={"email": "alice@example.com", "password": "P@ssw0rd!"}
     ),
@@ -93,7 +165,24 @@ def login(
     token_out = svcs.auths.login(
         email=payload.email, password=payload.password, ip=ip, ua=ua, admin_chk=False
     )
-    return ok(token_out, request_id=meta.request_id)
+
+    response.set_cookie(
+        key="refresh_token",
+        value=token_out.refresh_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=60 * 60 * 24 * 7,
+        path="/",
+    )
+
+    return ok(
+        AuthSchema.TokenOut(
+            access_token=token_out.access_token,
+            token_type="bearer",
+        ),
+        request_id=meta.request_id,
+    )
 
 
 @router.post(
@@ -109,7 +198,7 @@ def login(
     ),
 )
 def send_email_verification(
-    user: AuthDTO.AuthUser = Security(get_current_user),
+    user: AuthSchema.CurrentUser = Security(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ) -> Envelope[AuthSchema.SimpleOk]:
@@ -166,7 +255,7 @@ def change_email(
             "new_email": "new@example.com",
         },
     ),
-    user: AuthDTO.AuthUser = Security(get_current_user),
+    user: AuthSchema.CurrentUser = Security(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):

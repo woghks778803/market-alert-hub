@@ -5,9 +5,9 @@ from dataclasses import dataclass
 from fastapi import Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
+from app.api.schema import AuthSchema
 from app.core import dto as CoreDTO
 from app.core.constants import UserRole
-
 from app.domain.shared.errors import AuthError, PermissionError
 from app.service.factory import ServiceFactory
 from app.runtime.app_context import ApiContext
@@ -16,7 +16,6 @@ from app.runtime.bootstrap import (
 )
 
 _bearer = HTTPBearer(auto_error=False)
-# api_config = get_core_api_config_bag()
 
 
 @dataclass(frozen=True)
@@ -77,21 +76,18 @@ def get_current_user(
         raise AuthError("Token expired", target="token")
     except InvalidTokenError:
         raise AuthError("Invalid token", target="token")
-    user_id = int(payload["sub"])
-    if not user_id:
-        raise AuthError(message="Invalid token payload", target="token")
-    return svcs.auths.get_current_user(user_id, token)
 
+    try:
+        user_id = int(payload["sub"])
+        role = UserRole(payload["role"])
+    except (KeyError, ValueError):
+        raise AuthError("Invalid token payload", target="token")
 
-def get_verified_user(
-    user=Depends(get_current_user),
-):
-    if user.email_verified_at is None:
-        raise PermissionError(
-            "Email not verified",
-            target="email_verification",
-        )
-    return user
+    return AuthSchema.CurrentUser(
+        id=user_id,
+        role=role,
+        email_verified=payload.get("ev"),
+    )
 
 
 def require_admin(user=Depends(get_current_user)):

@@ -67,22 +67,44 @@ class UserService:
             rows = uow.users.list_users_filter(
                 status=status, role=role, limit=limit, offset=offset
             )
-            return rows
+
+            user_infos = []
+            for user in rows:
+                user_info = UserDTO.UserAdminInfo(
+                    id=user.id,
+                    email=(
+                        self._secrets.decrypt(
+                            ciphertext=user.email_ciphertext,
+                            nonce=user.email_nonce,
+                        ).decode("utf-8")
+                        if user.email_ciphertext and user.email_nonce
+                        else None
+                    ),
+                    nickname=user.nickname,
+                    role=user.role,
+                    status=user.status,
+                    created_at=user.created_at,
+                    last_login_at=user.last_login_at,
+                )
+
+                user_infos.append(user_info)
+            return user_infos
 
     def get_user_public_info(self, *, user_id: int) -> UserDTO.UserPublicInfo:
         with self._uow_factory() as uow:
             user = self._ensure_user(uow, user_id)
 
-            if user.email_ciphertext is None or user.email_nonce is None:
-                raise ValidationAppError("user email is not set", target="user.email")
-
             user_info = UserDTO.UserPublicInfo(
                 id=user.id,
                 nickname=user.nickname,
-                email=self._secrets.decrypt(
-                    ciphertext=user.email_ciphertext,
-                    nonce=user.email_nonce,
-                ).decode("utf-8"),
+                email=(
+                    self._secrets.decrypt(
+                        ciphertext=user.email_ciphertext,
+                        nonce=user.email_nonce,
+                    ).decode("utf-8")
+                    if user.email_ciphertext and user.email_nonce
+                    else None
+                ),
                 created_at=user.created_at,
                 last_login_at=user.last_login_at,
             )
@@ -112,15 +134,16 @@ class UserService:
         with self._uow_factory() as uow:
             user = self._ensure_user(uow, user_id)
 
-            if user.email_ciphertext is None or user.email_nonce is None:
-                raise ValidationAppError("user email is not set", target="user.email")
-
             user_info = UserDTO.UserAdminInfo(
                 id=user.id,
-                email=self._secrets.decrypt(
-                    ciphertext=user.email_ciphertext,
-                    nonce=user.email_nonce,
-                ).decode("utf-8"),
+                email=(
+                    self._secrets.decrypt(
+                        ciphertext=user.email_ciphertext,
+                        nonce=user.email_nonce,
+                    ).decode("utf-8")
+                    if user.email_ciphertext and user.email_nonce
+                    else None
+                ),
                 nickname=user.nickname,
                 role=user.role,
                 status=user.status,

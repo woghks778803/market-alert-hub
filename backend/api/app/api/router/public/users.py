@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends, Security
 
 from app.service.factory import ServiceFactory
-from app.domain import AuthDTO
-from app.api.schema import UserSchema
+from app.api.schema import UserSchema, AuthSchema
 from app.api.common.envelope import Envelope, ok, created
 from app.api.deps import (
     get_current_user,
@@ -36,7 +35,7 @@ router = APIRouter(prefix="/user")
     ),
 )
 def me(
-    user: AuthDTO.AuthUser = Security(get_current_user),
+    user: AuthSchema.CurrentUser = Security(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),  #
 ):

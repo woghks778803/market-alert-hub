@@ -1,4 +1,4 @@
-from encodings.punycode import T
+import secrets
 from typing import Callable, Dict, Any
 from datetime import datetime, timedelta, timezone
 
@@ -61,7 +61,6 @@ class AuthService:
         email_ciphertext: bytes,
         email_nonce: bytes,
         email_key_version: int,
-        expires_at: datetime,
         cancel_pending: bool = False,
         now: datetime,
     ) -> AuthDTO.EmailVerificationEnqueueResult:
@@ -69,6 +68,7 @@ class AuthService:
         트랜잭션 내부 전용 공통 함수.
         """
         now = now
+        email_expires_at = now + timedelta(minutes=self._config.email_token_minutes)
 
         # pending/sent 취소
         if cancel_pending:
@@ -90,7 +90,7 @@ class AuthService:
         # 1) verify token 생성 (plain token은 outbox payload로만)
         email_token = self._jwt.create_access_token(
             subject=str(user_id),
-            minutes=self._config.access_token_minutes,
+            minutes=self._config.email_token_minutes,
         )
 
         # 2) email_verification row 생성 (DB에는 해시만)
@@ -102,7 +102,7 @@ class AuthService:
                 email_nonce=email_nonce,
                 email_key_version=email_key_version,
                 token_hash=self._hmac.token_hash(email_token),
-                expires_at=expires_at,
+                expires_at=email_expires_at,
             )
         )
 
@@ -143,9 +143,54 @@ class AuthService:
         return AuthDTO.EmailVerificationEnqueueResult(
             email_verification_id=email_verification.id,
             verify_token=email_token,
-            expires_at=expires_at,
+            expires_at=email_expires_at,
             outbox_fingerprint=outbox_fingerprint,
         )
+
+    def refresh_token(
+        self, *, refresh_token: str, ip: str | None = None, ua: str | None = None
+    ) -> AuthDTO.AuthToken:
+        now = utcnow()
+        refresh_expires_at = now + timedelta(minutes=self._config.refresh_token_minutes)
+
+        with self._uow_factory() as uow:
+            s = uow.sessions.get_session_by_hash(self._hmac.token_hash(refresh_token))
+            if not s:
+                raise AuthError("Invalid token", target="token")
+
+            if s.revoked_at is not None or ensure_utc(s.expires_at) <= now:
+                raise AuthError("Expired token", target="token")
+
+            user = uow.users.get_by_user_id(s.user_id)
+            if not user:
+                raise AuthError("Invalid token", target="token")
+
+            access_token = self._jwt.create_access_token(
+                subject=str(user.id),
+                minutes=self._config.access_token_minutes,
+                claims={
+                    "ev": bool(user.email_verified_at),
+                    "role": user.role.value,
+                },
+            )
+
+            new_refresh_token = secrets.token_urlsafe(48)
+            uow.sessions.add_session(
+                user_id=user.id,
+                token_hash=self._hmac.token_hash(new_refresh_token),
+                expires_at=refresh_expires_at,
+                ip_addr=ip,
+                user_agent=ua,
+            )
+
+            # 기존 세션 무효화
+            uow.sessions.update_session(self._hmac.token_hash(refresh_token))
+
+            uow.commit()
+
+            return AuthDTO.AuthToken(
+                access_token=access_token, refresh_token=new_refresh_token
+            )
 
     # 회원가입
     def register(
@@ -163,7 +208,7 @@ class AuthService:
         now = utcnow()
         trace_id = get_trace_id()
 
-        expires_at = now + timedelta(minutes=self._config.access_token_minutes)
+        refresh_expires_at = now + timedelta(minutes=self._config.refresh_token_minutes)
 
         with self._uow_factory() as uow:
             email_fingerprint = self._hmac.fp_hash(email)
@@ -195,26 +240,32 @@ class AuthService:
                 email_ciphertext=email_secrets["ciphertext"],
                 email_nonce=email_secrets["nonce"],
                 email_key_version=self._config.crypto_data_kid,
-                expires_at=expires_at,
                 cancel_pending=False,
                 now=now,
             )
 
-            token = self._jwt.create_access_token(
-                subject=str(user.id), minutes=self._config.access_token_minutes
+            access_token = self._jwt.create_access_token(
+                subject=str(user.id),
+                minutes=self._config.access_token_minutes,
+                claims={
+                    "role": user.role.value,
+                },
             )
 
+            refresh_token = secrets.token_urlsafe(48)
             uow.sessions.add_session(
                 user_id=user.id,
-                token_hash=self._hmac.token_hash(token),
-                expires_at=expires_at,
+                token_hash=self._hmac.token_hash(refresh_token),
+                expires_at=refresh_expires_at,
                 ip_addr=ip,
                 user_agent=ua,
             )
 
             uow.commit()
 
-            return AuthDTO.AuthToken(access_token=token)
+            return AuthDTO.AuthToken(
+                access_token=access_token, refresh_token=refresh_token
+            )
 
     # 로그인
     def login(
@@ -227,7 +278,7 @@ class AuthService:
         admin_chk: bool = False,
     ) -> AuthDTO.AuthToken:
         now = utcnow()
-        expires_at = now + timedelta(minutes=self._config.access_token_minutes)
+        refresh_expires_at = now + timedelta(minutes=self._config.refresh_token_minutes)
 
         with self._uow_factory() as uow:
             email_fingerprint = self._hmac.fp_hash(email)
@@ -262,7 +313,6 @@ class AuthService:
                             email_ciphertext=user.email_ciphertext,
                             email_nonce=user.email_nonce,
                             email_key_version=user.email_key_version,
-                            expires_at=expires_at,
                             cancel_pending=True,
                             now=now,
                         )
@@ -274,16 +324,20 @@ class AuthService:
                             target="email",
                         )
 
-            token = self._jwt.create_access_token(
+            access_token = self._jwt.create_access_token(
                 subject=str(user.id),
                 minutes=self._config.access_token_minutes,
-                claims={"ev": bool(user.email_verified_at)},
+                claims={
+                    "ev": bool(user.email_verified_at),
+                    "role": user.role.value,
+                },
             )
 
+            refresh_token = secrets.token_urlsafe(48)
             uow.sessions.add_session(
                 user_id=user.id,
-                token_hash=self._hmac.token_hash(token),
-                expires_at=expires_at,
+                token_hash=self._hmac.token_hash(refresh_token),
+                expires_at=refresh_expires_at,
                 ip_addr=ip,
                 user_agent=ua,
             )
@@ -291,10 +345,13 @@ class AuthService:
             uow.users.update_user_last_login_at(user.id, now)
             uow.commit()
 
-            return AuthDTO.AuthToken(access_token=token)
+            return AuthDTO.AuthToken(
+                access_token=access_token, refresh_token=refresh_token
+            )
 
     # 로그아웃 (세션 무효화)
     def logout(self, *, token: str) -> Dict[str, Any]:
+        print("logout token:", token)
         with self._uow_factory() as uow:
             uow.sessions.update_session(self._hmac.token_hash(token))
             uow.commit()
@@ -307,7 +364,6 @@ class AuthService:
     ) -> Dict[str, Any]:
         now = utcnow()
         trace_id = get_trace_id()
-        expires_at = now + timedelta(minutes=self._config.access_token_minutes)
 
         with self._uow_factory() as uow:
             user = uow.users.get_by_user_id(user_id)
@@ -344,7 +400,6 @@ class AuthService:
                     email_ciphertext=user.email_ciphertext,
                     email_nonce=user.email_nonce,
                     email_key_version=user.email_key_version,
-                    expires_at=expires_at,
                     cancel_pending=True,
                     now=now,
                 )
@@ -405,7 +460,6 @@ class AuthService:
     ):
         now = utcnow()
         trace_id = get_trace_id()
-        expires_at = now + timedelta(minutes=self._config.access_token_minutes)
 
         with self._uow_factory() as uow:
             user = uow.users.get_by_user_id(user_id)
@@ -432,7 +486,6 @@ class AuthService:
                 email_ciphertext=new_email_secrets["ciphertext"],
                 email_nonce=new_email_secrets["nonce"],
                 email_key_version=self._config.crypto_data_kid,
-                expires_at=expires_at,
                 cancel_pending=True,
                 now=now,
             )
@@ -496,7 +549,7 @@ class AuthService:
     ):
         now = utcnow()
         trace_id = get_trace_id()
-        expires_at = now + timedelta(minutes=self._config.access_token_minutes)
+        email_expires_at = now + timedelta(minutes=self._config.email_token_minutes)
 
         with self._uow_factory() as uow:
             email_fingerprint = self._hmac.fp_hash(email)
@@ -519,13 +572,13 @@ class AuthService:
 
             password_token = self._jwt.create_access_token(
                 subject=str(user.id),
-                minutes=self._config.access_token_minutes,
+                minutes=self._config.email_token_minutes,
             )
             password_reset = uow.users.add_password_reset(
                 UserDTO.PasswordResetCreate(
                     user_id=user.id,
                     token_hash=self._hmac.token_hash(password_token),
-                    expires_at=expires_at,
+                    expires_at=email_expires_at,
                 )
             )
 
@@ -618,7 +671,9 @@ class AuthService:
                 raise AuthError("Invalid credentials", target="token")
 
             # 세션 유효성(선택이지만 권장)
-            s = uow.sessions.get_session_by_hash(self._hmac.token_hash(token))
+            s = uow.sessions.get_session_by_hash(
+                self._hmac.token_hash(token),
+            )
             if s is None:
                 raise AuthError("Invalid credentials", target="token")
 

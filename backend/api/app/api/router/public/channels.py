@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends, Body, Request, Response, status, Security, Path
 
 from app.service.factory import ServiceFactory
-from app.api.schema import ChannelSchema
-from app.domain import AuthDTO
+from app.api.schema import AuthSchema, ChannelSchema
 from app.api.common.envelope import Envelope, ok, created, no_content
 from app.api.deps import get_current_user, get_services, get_request_meta, RequestMeta
 import app.api.openapi as OpenApi
@@ -23,7 +22,7 @@ router = APIRouter(prefix="/channels")
     ),
 )
 def list_channels(
-    user: AuthDTO.AuthUser = Depends(get_current_user),
+    user: AuthSchema.CurrentUser = Depends(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
@@ -67,7 +66,7 @@ def create_channel(
     payload: ChannelSchema.ChannelCreate = Body(
         ...,
     ),
-    user: AuthDTO.AuthUser = Depends(get_current_user),
+    user: AuthSchema.CurrentUser = Depends(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):

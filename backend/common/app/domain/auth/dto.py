@@ -5,6 +5,7 @@ from app.core.constants import UserRole
 
 @dataclass(slots=True, frozen=True)
 class AuthToken:
+    refresh_token: str
     access_token: str
 
 

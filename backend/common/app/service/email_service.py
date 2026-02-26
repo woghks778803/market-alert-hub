@@ -67,7 +67,7 @@ class EmailService:
             {
                 "user_name": user.nickname,
                 "verify_link": verify_link,
-                "expiration_hours": self._config.access_token_minutes,
+                "expiration_hours": self._config.email_token_minutes,
             },
         )
 
@@ -98,7 +98,7 @@ class EmailService:
             {
                 "user_name": user.nickname,
                 "verify_link": verify_link,
-                "expiration_hours": self._config.access_token_minutes,
+                "expiration_hours": self._config.email_token_minutes,
             },
         )
 

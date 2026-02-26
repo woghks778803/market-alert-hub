@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr
+from app.core.constants import UserRole
 
 
 class Login(BaseModel):
@@ -31,3 +32,12 @@ class ChangePasswordIn(BaseModel):
 class ChangeEmailIn(BaseModel):
     current_password: str
     new_email: EmailStr
+
+
+class CurrentUser(BaseModel):
+    id: int
+    role: UserRole
+    email_verified: bool | None = None
+
+    class Config:
+        frozen = True  # 불변 객체 (선택)

@@ -20,7 +20,9 @@ class ServiceConfigBag:
     # 이메일 재전송 쿨다운 초
     email_resend_cooldown_sec: int
     # 토큰/세션 등 서비스용 상수
+    refresh_token_minutes: int
     access_token_minutes: int
+    email_token_minutes: int
     # 암호화 키 KID (이메일 데이터용)
     crypto_data_kid: int
     # 퍼블릭 웹사이트 기본 URL

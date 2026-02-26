@@ -6,7 +6,7 @@ from app.core.constants import UserRole, UserStatus, EmailVerificationStatus
 @dataclass(slots=True)
 class UserPublicInfo:
     id: int
-    email: str
+    email: str | None
     nickname: str
     created_at: datetime
     last_login_at: datetime | None
@@ -15,7 +15,7 @@ class UserPublicInfo:
 @dataclass(slots=True)
 class UserAdminInfo:
     id: int
-    email: str
+    email: str | None
     nickname: str
     created_at: datetime
     last_login_at: datetime | None

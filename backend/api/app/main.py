@@ -41,13 +41,13 @@ def _install_openapi_with_bearer(app: FastAPI) -> None:
                 "tags": [],
             },
         ]
-        components = schema.setdefault("components", {})
-        security_schemes = components.setdefault("securitySchemes", {})
-        security_schemes["bearerAuth"] = {
-            "type": "http",
-            "scheme": "bearer",
-            "bearerFormat": "JWT",
-        }
+        # components = schema.setdefault("components", {})
+        # security_schemes = components.setdefault("securitySchemes", {})
+        # security_schemes["bearerAuth"] = {
+        #     "type": "http",
+        #     "scheme": "bearer",
+        #     "bearerFormat": "JWT",
+        # }
         # 전역 보안 적용을 원하면 아래 주석을 해제
         # schema["security"] = [{"bearerAuth": []}]
         app.openapi_schema = schema
