@@ -2,7 +2,7 @@ export type ApiError = {
     code: string
     message: string
     target?: string | null
-    meta?: Record<string, unknown> | null
+    details?: Record<string, unknown> | null
 }
 
 export type ApiMeta = {

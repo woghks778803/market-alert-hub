@@ -131,6 +131,8 @@ import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth.store";
 import { useResetPasswordForm } from "@/composables/auth/useResetPasswordForm";
 import { useMode } from "@/composables/common/useMode"
+import { mapCommonError } from "@/api/error/errorMapper"
+import { mapResetPasswordError } from "./resetPasswordErrorMapper"
 
 const router = useRouter();
 const route = useRoute();
@@ -193,17 +195,28 @@ async function onSubmit() {
 
     setMode("success")
   } catch (err: any) {
-    const e = err?.response?.data?.error;
-    if (!e) {
-      errorMessage.value = "네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
-      return
-    }
-    
     if (err?.message === "invalid_verify_token") {
       setMode("fail")
       return
     }
-    errorMessage.value = "비밀번호 변경에 실패했습니다. 다시 시도해주세요."
+
+    const apiError = err?.response?.data?.error
+
+    const r = mapResetPasswordError(apiError)
+    if(r){
+      if (r.kind === "fail_mode") {
+        setMode("fail")
+        return
+      }
+
+      errorMessage.value = r.message
+    }
+    
+    const commonMessage = mapCommonError(apiError)
+    if (commonMessage) {
+      errorMessage.value = commonMessage
+      return
+    }
   }
 }
 

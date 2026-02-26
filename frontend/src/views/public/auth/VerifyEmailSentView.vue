@@ -48,6 +48,8 @@ import { useCooldown } from "@/composables/common/useCooldown"
 import { useUserStore } from "@/stores/user.store";
 import { useAuthStore } from "@/stores/auth.store";
 import { useVerifyEmailSent } from "@/composables/auth/useVerifyEmailSent";
+import { mapCommonError } from "@/api/error/errorMapper"
+import { mapVerifyEmailSentError } from "./verifyEmailSentErrorMapper"
 
 const router = useRouter()
 const route = useRoute()
@@ -71,36 +73,31 @@ async function onSubmit() {
       successMessage.value = "인증 메일이 전송되었습니다. 메일함을 확인해주세요.";
     });
   } catch (err: any) {
-    const e = err?.response?.data?.error;
-    if (!e) {
-      errorMessage.value = "네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+    const apiError = err?.response?.data?.error
+
+    const r = mapVerifyEmailSentError(apiError)
+    if(r){
+      if (r.kind === "cooldown") {
+        startCooldown(r.cooldownSec)
+        errorMessage.value = r.message
+        return
+      }
+
+      if (r.kind === "logout") {
+        await authStore.logoutAction()
+        await router.push({ name: "Login" }).catch(() => {})
+        return
+      }
+
+      errorMessage.value = r.message
+    }
+
+    const commonMessage = mapCommonError(apiError)
+    if (commonMessage) {
+      errorMessage.value = commonMessage
       return
     }
-
-    if (e?.code === "rate_limited" && e?.target === "resend_email_verification") {
-      const sec = e?.details?.cooldown_remaining_sec;
-      if (typeof sec === "number") startCooldown(sec);
-      errorMessage.value = "잠시 후 다시 시도해주세요.";
-      return;
-    }
-
-    if (e?.code === "conflict" && e?.target === "email") {
-      errorMessage.value = "이미 인증된 이메일입니다.";
-      return;
-    }
-
-    if (e?.code === "unauthorized" && e?.target === "email") {
-      errorMessage.value = "이메일 정보에 문제가 있습니다. 고객센터에 문의해주세요.";
-      return;
-    }
     
-    if (e?.code === "unauthorized" && (e?.target === "user" || e?.target === "token")) {
-      await authStore.logoutAction();
-      await router.push({ name: "Login" }).catch(() => {});
-      return;
-    }
-
-    errorMessage.value = "요청 처리에 실패했습니다. 다시 시도해주세요.";
   }
 }
 

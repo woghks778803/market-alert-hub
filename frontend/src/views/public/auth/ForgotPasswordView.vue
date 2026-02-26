@@ -60,6 +60,8 @@ import { useRouter } from "vue-router"
 import CenterCardShell from "@/components/CenterCardShell.vue"
 import { useAuthStore } from "@/stores/auth.store";
 import { useForgotPasswordForm } from "@/composables/auth/useForgotPasswordForm";
+import { mapCommonError } from "@/api/error/errorMapper"
+import { mapForgotPasswordError } from "./forgotPasswordErrorMapper"
 
 const router = useRouter()
 const authStore = useAuthStore();
@@ -90,22 +92,21 @@ async function onSubmit() {
     });
   } catch (err: any) {
     console.error(err);
-    const e = err?.response?.data?.error
-    if (!e) {
-      errorMessage.value = "네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
-      return
+    const apiError = err?.response?.data?.error
+
+    const r = mapForgotPasswordError(apiError)
+    if(r){
+      if (r.kind === "cooldown") {
+        startCooldown(r.cooldownSec)
+      }
+      errorMessage.value = r.message
     }
 
-    if (e?.code === "rate_limited" && e?.target === "resend_password_reset") {
-      const sec = e?.details?.cooldown_remaining_sec
-      if (typeof sec === "number") {
-        startCooldown(sec)
-        errorMessage.value = "잠시 후 다시 시도해주세요."
-        return
-      }
+    const commonMessage = mapCommonError(apiError)
+    if (commonMessage) {
+      errorMessage.value = commonMessage
+      return
     }
-    
-    errorMessage.value = "요청 처리에 실패했습니다. 다시 시도해주세요.";
   }
 }
 
