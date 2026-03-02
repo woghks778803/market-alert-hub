@@ -3,7 +3,7 @@ import boto3
 from botocore.config import Config as BotoConfig
 from botocore.exceptions import ClientError
 from app.domain import EmailPort
-from app.domain.shared.errors import EmailSendError
+from app.domain.shared.errors import ExternalServiceError
 
 
 class SesEmailClient(EmailPort.EmailClient):
@@ -75,4 +75,4 @@ class SesEmailClient(EmailPort.EmailClient):
             return self.client.send_email(**kwargs)
         except ClientError as ex:
             code = ex.response.get("Error", {}).get("Code", "unknown")
-            raise EmailSendError(f"SES send_email failed: {code}") from ex
+            raise ExternalServiceError(f"SES send_email failed: {code}") from ex

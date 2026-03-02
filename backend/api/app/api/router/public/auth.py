@@ -7,7 +7,9 @@ from fastapi import (
     status,
     Security,
     Cookie,
+    Query,
 )
+from fastapi.responses import RedirectResponse
 
 from app.service.factory import ServiceFactory
 from app.api.schema import UserSchema, AuthSchema
@@ -89,7 +91,7 @@ def refresh_token(
 def register(
     request: Request,
     response: Response,
-    payload: UserSchema.UserCreatePublic = Body(
+    payload: UserSchema.UserCreateIn = Body(
         ...,
         example={
             "email": "alice@example.com",
@@ -364,7 +366,7 @@ def verify_password_reset(
 
 @router.post(
     "/logout",
-    response_model=Envelope[AuthSchema.SimpleOk],  #  래퍼 적용
+    response_model=Envelope[AuthSchema.SimpleOk],
     summary="로그아웃 (세션 무효화)",
     responses=OpenApi.combine(
         OpenApi.OK(
@@ -381,3 +383,86 @@ def logout(
 ):
     svcs.auths.logout(token=token)
     return ok(AuthSchema.SimpleOk(ok=True), request_id=meta.request_id)
+
+
+@router.post(
+    "/oauth/start",
+    response_model=Envelope[AuthSchema.SimpleOk],
+    summary="OAuth 인가 요청 시작",
+    responses=OpenApi.combine(
+        OpenApi.ERR_400,
+        OpenApi.ERR_401,
+        OpenApi.ERR_404,
+    ),
+)
+def oauth_start(
+    payload: AuthSchema.OAuthStartIn = Body(
+        ...,
+        example={
+            "provider": "kakao",
+            "agree_service": True,
+            "agree_privacy": True,
+            "agree_marketing": False,
+        },
+    ),
+    svcs: ServiceFactory = Depends(get_services),
+    meta: RequestMeta = Depends(get_request_meta),
+):
+    authorize_url = svcs.auths.oauth_start(
+        provider=payload.provider,
+        agree_marketing=payload.agree_marketing,
+        agree_privacy=payload.agree_privacy,
+        agree_service=payload.agree_service,
+    )
+    return RedirectResponse(url=authorize_url, status_code=302)
+
+
+@router.get(
+    "/oauth/callback",
+    response_model=Envelope[AuthSchema.SimpleOk],
+    summary="OAuth 콜백 처리",
+    responses=OpenApi.combine(
+        OpenApi.ERR_400,
+        OpenApi.ERR_401,
+        OpenApi.ERR_404,
+    ),
+)
+def oauth_callback(
+    request: Request,
+    provider: str = Query(..., description="OAuth provider code"),
+    code: str = Query(..., description="Authorization code"),
+    state: str = Query(..., description="CSRF state"),
+    svcs: ServiceFactory = Depends(get_services),
+    meta: RequestMeta = Depends(get_request_meta),  #
+):
+    ip = request.client.host if request.client else None
+    ua = request.headers.get("user-agent")
+    svcs.auths.oauth_callback(
+        provider=provider,
+        code=code,
+        state=state,
+        ip=ip,
+        ua=ua,
+    )
+    redirect_url = f"{svcs.config.public_web_base_url}/auth/verify-email"
+    return RedirectResponse(url=redirect_url, status_code=302)
+
+
+# @router.post(
+#     "/oauth/unlink",
+#     response_model=Envelope[AuthSchema.SimpleOk],
+#     summary="",
+#     responses=OpenApi.combine(
+#         OpenApi.OK(
+#             Envelope[AuthSchema.SimpleOk],
+#             description="",
+#             example=OpenApi.wrap_example({"ok": True}),
+#         ),
+#     ),
+# )
+# def oauth_unlink(
+#     svcs: ServiceFactory = Depends(get_services),
+#     meta: RequestMeta = Depends(get_request_meta),  #
+# ):
+#     svcs.auths.oauth_unlink()
+#     return ok(AuthSchema.SimpleOk(ok=True), request_id=meta.request_id)

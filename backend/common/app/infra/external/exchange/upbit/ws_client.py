@@ -129,5 +129,5 @@ class UpbitWsClient(WsClient):
         return fallback or str(uuid.uuid4())
 
 
-def get_ws_client(config: UpbitWsClientConfig) -> UpbitWsClient:
+def get_upbit_ws_client(config: UpbitWsClientConfig) -> UpbitWsClient:
     return UpbitWsClient(config)

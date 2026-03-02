@@ -83,6 +83,5 @@ class UpbitRestClient:
         return out
 
 
-def get_rest_client(config: UpbitRestClientConfig) -> UpbitRestClient:
-    # 기본 transport는 여기서 만든다(다른 거래소도 같은 transport 패턴으로 통일 가능)
+def get_upbit_rest_client(config: UpbitRestClientConfig) -> UpbitRestClient:
     return UpbitRestClient(config)

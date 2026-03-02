@@ -3,7 +3,7 @@ from functools import cached_property
 
 from app.core import dto as CoreDTO
 from app.domain.shared.uow import UnitOfWork
-from app.domain import EmailPort, CryptoPort, MarketPort
+from app.domain import EmailPort, CryptoPort, MarketPort, AuthPort
 
 from .auth_service import AuthService
 from .user_service import UserService
@@ -28,6 +28,7 @@ class ServiceFactory:
         jwt_signer: Callable[[], CryptoPort.TokenSigner],
         secret_crypto: Callable[[], CryptoPort.SecretCrypto],
         upbit_symbol: Callable[[], MarketPort.UpbitSymbol],
+        kakao_oauth: Callable[[], AuthPort.KakaoOAuth],
         config: CoreDTO.ServiceConfigBag,
     ) -> None:
         self._uow = uow
@@ -39,6 +40,7 @@ class ServiceFactory:
         self._jwt_signer = jwt_signer
         self._secret_crypto = secret_crypto
         self._upbit_symbol = upbit_symbol
+        self._kakao_oauth = kakao_oauth
         self._config = config
 
     @cached_property
@@ -48,6 +50,10 @@ class ServiceFactory:
     @cached_property
     def upbit_symbol(self):
         return self._upbit_symbol()
+
+    @cached_property
+    def kakao_oauth(self):
+        return self._kakao_oauth()
 
     @cached_property
     def password(self):
@@ -104,6 +110,7 @@ class ServiceFactory:
     def auths(self) -> AuthService:
         return AuthService(
             redis_client=self._redis_client,
+            kakao_oauth=self.kakao_oauth,
             uow_factory=self._uow,
             password=self.password,
             hmac=self.hmac,

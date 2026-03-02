@@ -24,7 +24,7 @@ export function mapCommonError(error?: ApiError | null): string | null {
         case "rate_limited":
             return "요청이 너무 많습니다. 잠시 후 다시 시도해주세요."
 
-        case "email_send_error":
+        case "external_service_error":
             return "메일 발송 중 오류가 발생했습니다."
 
         case "internal_error":

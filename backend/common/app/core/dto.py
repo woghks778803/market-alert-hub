@@ -25,8 +25,10 @@ class ServiceConfigBag:
     email_token_minutes: int
     # 암호화 키 KID (이메일 데이터용)
     crypto_data_kid: int
-    # 퍼블릭 웹사이트 기본 URL
+    # 기본 URL
     public_web_base_url: str
+    kakao_auth_rest_base_url: str
+    kakao_api_rest_base_url: str
 
 
 @dataclass(frozen=True)
@@ -48,8 +50,8 @@ class WorkerConfigBag:
     outbox_retry_delay_sec: int
     outbox_send_lock_ttl_sec: int
     outbox_concurrency: int
-    redis_stream_alerts: str
-    redis_stream_deliveries: str
+    # redis_stream_alerts: str
+    # redis_stream_deliveries: str
     worker_jobs: dict[str, dict[str, object]]
 
 

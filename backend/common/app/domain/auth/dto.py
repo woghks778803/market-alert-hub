@@ -35,3 +35,10 @@ class EmailVerificationEnqueueResult:
     verify_token: str
     expires_at: datetime
     outbox_fingerprint: bytes | None
+
+
+@dataclass(frozen=True)
+class OAuthIdentity:
+    provider_user_id: str
+    email: str | None = None
+    nickname: str | None = None

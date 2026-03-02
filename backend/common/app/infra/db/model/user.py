@@ -30,7 +30,7 @@ class User(Base):
     email_key_version: Mapped[int | None] = mapped_column(SMALLINT)
 
     nickname: Mapped[str] = mapped_column(String(100))
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    password_hash: Mapped[str | None] = mapped_column(String(255))
 
     role: Mapped[UserRole] = mapped_column(
         SAEnum(
@@ -57,7 +57,7 @@ class User(Base):
         server_default=UserStatus.ACTIVE,
     )
 
-    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=False))
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, nullable=False
     )
@@ -68,9 +68,15 @@ class User(Base):
     is_deleted: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("0")
     )
-    is_service: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("0"))
-    is_privacy: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("0"))
-    is_marketing: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("0"))
+    is_service: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("0")
+    )
+    is_privacy: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("0")
+    )
+    is_marketing: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("0")
+    )
 
     __table_args__ = (
         # ciphertext/nonce/key_version는 셋이 함께 NULL이거나 함께 NOT NULL이어야 함
@@ -111,11 +117,9 @@ class User(Base):
             email_key_version=dto.email_key_version,
             nickname=dto.nickname,
             password_hash=dto.password_hash,
-
             is_service=dto.is_service,
             is_privacy=dto.is_privacy,
             is_marketing=dto.is_marketing,
-
             # 생성 기본값
             role=UserRole.USER,
             status=UserStatus.ACTIVE,

@@ -34,6 +34,13 @@ class ChangeEmailIn(BaseModel):
     new_email: EmailStr
 
 
+class OAuthStartIn(BaseModel):
+    provider: str
+    agree_service: bool
+    agree_privacy: bool
+    agree_marketing: bool
+
+
 class CurrentUser(BaseModel):
     id: int
     role: UserRole

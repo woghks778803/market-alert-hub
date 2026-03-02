@@ -24,7 +24,6 @@ class Settings(BaseSettings):
     APP_NAME: str
     DEPLOY_ENV: str = "dev"
     LOG_LEVEL: str = "INFO"
-    CORS_ALLOW_ORIGINS: str | list[str] = ["http://localhost:5173"]
     PUBLIC_WEB_BASE_URL: str
 
     # --- DB ---
@@ -83,6 +82,10 @@ class Settings(BaseSettings):
     # 네트워크/보안: 기본은 IAM Role 사용 권장. 로컬 개발 시만 키 사용.
     AWS_ACCESS_KEY_ID: str | None = None
     AWS_SECRET_ACCESS_KEY: str | None = None
+
+    # --- API ---
+    API_LOG_LEVEL: str = Field(default="INFO")
+    CORS_ALLOW_ORIGINS: str | list[str] = ["http://localhost:5173"]
 
     # --- Dispatcher, Worker ---
     WORKER_LOG_LEVEL: str = Field(default="INFO")
@@ -145,14 +148,27 @@ class Settings(BaseSettings):
         default_factory=lambda: [60, 3600, 86400]
     )
 
+    # --- network tuning (optional) ---
+    HTTP_TIMEOUT_SEC: float = 10.0  # REST 요청 전체 타임아웃
+    WS_PING_INTERVAL_SEC: float = 20.0  # WS ping 간격 (None이면 비활성)
+    WS_CLOSE_TIMEOUT_SEC: float = 5.0  # WS close 타임아웃
+
     # --- Exchange: Upbit endpoints (REST/WS) ---
     UPBIT_REST_BASE_URL: str = "https://api.upbit.com"  # 업비트 REST API base url
     UPBIT_WS_URL: str = "wss://api.upbit.com/websocket/v1"  # 업비트 WebSocket endpoint
 
-    # --- Exchange: Upbit network tuning (optional) ---
-    UPBIT_HTTP_TIMEOUT_SEC: float = 10.0  # REST 요청 전체 타임아웃
-    UPBIT_WS_PING_INTERVAL_SEC: float = 20.0  # WS ping 간격 (None이면 비활성)
-    UPBIT_WS_CLOSE_TIMEOUT_SEC: float = 5.0  # WS close 타임아웃
+    # --- Oauth: Kakao endpoints (REST) ---
+    KAKAO_API_REST_BASE_URL: str = "https://kapi.kakao.com"
+    KAKAO_AUTH_REST_BASE_URL: str = "https://kauth.kakao.com"
+
+    # --- Kakao network authorize ---
+    KAKAO_CLIENT_ID: str
+    KAKAO_CLIENT_SECRET: str | None = None
+    # KAKAO_ADMIN_KEY
+
+    # --- Oauth: Kakao network authorize
+    KAKAO_OAUTH_REDIRECT_URI: str
+    KAKAO_OAUTH_ADMIN_KEY: str
 
     # 로컬 개발 편의: .env 읽기 (컨테이너에선 ENV가 우선)
     model_config = SettingsConfigDict(

@@ -15,6 +15,15 @@ class HttpResponse:
 
 class SyncHttpTransport(Protocol):
     def get(
-        self, path: str, *, params: dict[str, Any] | None = None
+        self, path: str, *, params: dict[str, Any] | None = None, headers: dict[str, str] | None = None
+    ) -> HttpResponse: ...
+    def post(
+        self,
+        path: str,
+        *,
+        params: dict[str, Any] | None = None,
+        data: dict[str, Any] | None = None,
+        json: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
     ) -> HttpResponse: ...
     def close(self) -> None: ...

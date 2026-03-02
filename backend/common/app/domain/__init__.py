@@ -1,6 +1,6 @@
 from .channel import dto as ChannelDTO, rules as ChannelRule
 from .market import dto as MarketDTO, ports as MarketPort, rules as MarketRule
-from .auth import dto as AuthDTO
+from .auth import dto as AuthDTO, ports as AuthPort, rules as AuthRule
 from .watchlist import dto as WatchlistDTO
 from .email import dto as EmailDTO, ports as EmailPort
 from .outbox import dto as OutboxDTO, rules as OutboxRule
@@ -14,6 +14,8 @@ __all__ = [
     "MarketRule",
     "MarketPort",
     "AuthDTO",
+    "AuthPort",
+    "AuthRule",
     "WatchlistDTO",
     "EmailDTO",
     "EmailPort",

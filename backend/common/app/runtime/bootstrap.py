@@ -12,13 +12,22 @@ from app.runtime.app_context import (
 
 # from app.infra.external.rq.queue_factory import RqQueueFactory, RqQueueConfig
 # from app.infra.external.rq.worker_factory import RqWorkerFactory, RqWorkerConfig
+from app.infra.external.transport.impl.httpx import (
+    HttpxSyncTransport,
+    HttpxTransportConfig,
+)
+
+from app.infra.external.oauth.kakao.provider.oauth import KakaoOAuth
+from app.infra.external.oauth.kakao.rest_client import (
+    KakaoRestClient,
+    KakaoRestClientConfig,
+    get_kakao_rest_client,
+)
 from app.infra.external.redis.active_catalog import RedisActiveMarketCatalog
 from app.infra.external.exchange.upbit.shared.types import UpbitWsSubscribe
 from app.infra.external.exchange.port.ws_client import (
     WsFactoryRegistry,
     WsClient,
-    StreamFactory,
-    StreamFactoryRegistry,
 )
 from app.infra.external.exchange.port.subscribe import SubscribeFactoryRegistry
 
@@ -26,12 +35,12 @@ from app.infra.external.exchange.upbit.provider.symbol import UpbitSymbol
 from app.infra.external.exchange.upbit.rest_client import (
     UpbitRestClient,
     UpbitRestClientConfig,
-    get_rest_client,
+    get_upbit_rest_client,
 )
 from app.infra.external.exchange.upbit.ws_client import (
     UpbitWsClient,
     UpbitWsClientConfig,
-    get_ws_client,
+    get_upbit_ws_client,
 )
 from app.infra.external.redis.async_redis_client import (
     AsyncRedisClient,
@@ -86,19 +95,85 @@ def _resolve_master_key() -> str:
 
 class Providers:
     @staticmethod
+    def kakao_oauth_provider() -> Callable[[], KakaoOAuth]:
+        config = KakaoRestClientConfig(
+            client_id=settings.KAKAO_CLIENT_ID,
+            redirect_uri=settings.KAKAO_OAUTH_REDIRECT_URI,
+            client_secret=settings.KAKAO_CLIENT_SECRET,
+            admin_key=settings.KAKAO_OAUTH_ADMIN_KEY,
+        )
+        auth_transport = HttpxSyncTransport(
+            HttpxTransportConfig(
+                base_url=settings.KAKAO_AUTH_REST_BASE_URL,
+                timeout_sec=10.0,
+            )
+        )
+
+        api_transport = HttpxSyncTransport(
+            HttpxTransportConfig(
+                base_url=settings.KAKAO_API_REST_BASE_URL,
+                timeout_sec=10.0,
+            )
+        )
+
+        return lambda: KakaoOAuth(
+            rest_client=get_kakao_rest_client(
+                config=config,
+                auth_transport=auth_transport,
+                api_transport=api_transport,
+            )
+        )
+
+    @staticmethod
+    def kakao_rest_provider() -> Callable[[], KakaoRestClient]:
+        config = KakaoRestClientConfig(
+            client_id=settings.KAKAO_CLIENT_ID,
+            redirect_uri=settings.KAKAO_OAUTH_REDIRECT_URI,
+            client_secret=settings.KAKAO_CLIENT_SECRET,
+            admin_key=settings.KAKAO_OAUTH_ADMIN_KEY,
+        )
+        auth_transport = HttpxSyncTransport(
+            HttpxTransportConfig(
+                base_url=settings.KAKAO_AUTH_REST_BASE_URL,
+                timeout_sec=settings.HTTP_TIMEOUT_SEC,
+            )
+        )
+
+        api_transport = HttpxSyncTransport(
+            HttpxTransportConfig(
+                base_url=settings.KAKAO_API_REST_BASE_URL,
+                timeout_sec=settings.HTTP_TIMEOUT_SEC,
+            )
+        )
+
+        return lambda: get_kakao_rest_client(
+            config, auth_transport=auth_transport, api_transport=api_transport
+        )
+
+    @staticmethod
     def upbit_symbol_provider() -> Callable[[], UpbitSymbol]:
-        config = UpbitRestClientConfig()
-        return lambda: UpbitSymbol(rest_client=get_rest_client(config))
+        config = UpbitRestClientConfig(
+            base_url=settings.UPBIT_REST_BASE_URL,
+            timeout_sec=settings.HTTP_TIMEOUT_SEC,
+        )
+        return lambda: UpbitSymbol(rest_client=get_upbit_rest_client(config))
 
     @staticmethod
     def upbit_rest_provider() -> Callable[[], UpbitRestClient]:
-        config = UpbitRestClientConfig()
-        return lambda: get_rest_client(config)
+        config = UpbitRestClientConfig(
+            base_url=settings.UPBIT_REST_BASE_URL,
+            timeout_sec=settings.HTTP_TIMEOUT_SEC,
+        )
+        return lambda: get_upbit_rest_client(config)
 
     @staticmethod
     def upbit_ws_provider() -> Callable[[], WsClient]:
-        config = UpbitWsClientConfig()
-        return lambda: get_ws_client(config)
+        config = UpbitWsClientConfig(
+            url=settings.UPBIT_WS_URL,
+            ping_interval_sec=settings.WS_PING_INTERVAL_SEC,
+            close_timeout_sec=settings.WS_CLOSE_TIMEOUT_SEC,
+        )
+        return lambda: get_upbit_ws_client(config)
 
     @staticmethod
     def redis_provider() -> Callable[[], RedisClient]:
@@ -207,13 +282,15 @@ def build_service_config_bag() -> CoreDTO.ServiceConfigBag:
         email_token_minutes=settings.EMAIL_TOKEN_EXPIRE_MINUTES,
         crypto_data_kid=settings.CRYPTO_DATA_ENC_KID,
         public_web_base_url=settings.PUBLIC_WEB_BASE_URL,
+        kakao_auth_rest_base_url=settings.KAKAO_AUTH_REST_BASE_URL,
+        kakao_api_rest_base_url=settings.KAKAO_API_REST_BASE_URL,
     )
 
 
 def build_api_config_bag() -> CoreDTO.ApiConfigBag:
     return CoreDTO.ApiConfigBag(
         app_name=settings.APP_NAME,
-        deploy_env=settings.DEPLOY_ENV,
+        deploy_env=settings.API_LOG_LEVEL or settings.DEPLOY_ENV,
         log_level=settings.LOG_LEVEL,
         cors_allow_origins=settings.CORS_ALLOW_ORIGINS,
     )
@@ -230,8 +307,8 @@ def build_worker_config_bag() -> CoreDTO.WorkerConfigBag:
         outbox_retry_delay_sec=settings.OUTBOX_RETRY_DELAY_SEC,
         outbox_send_lock_ttl_sec=settings.OUTBOX_SEND_LOCK_TTL_SEC,
         outbox_concurrency=settings.OUTBOX_CONCURRENCY,
-        redis_stream_alerts=settings.REDIS_STREAM_ALERTS,
-        redis_stream_deliveries=settings.REDIS_STREAM_DELIVERIES,
+        # redis_stream_alerts=settings.REDIS_STREAM_ALERTS,
+        # redis_stream_deliveries=settings.REDIS_STREAM_DELIVERIES,
         worker_jobs=settings.WORKER_JOBS,
     )
 
@@ -300,6 +377,7 @@ def create_service_factory() -> ServiceFactory:
         jwt_signer=providers.jwt_signer_provider(),
         secret_crypto=providers.secret_crypto_provider(),
         upbit_symbol=providers.upbit_symbol_provider(),
+        kakao_oauth=providers.kakao_oauth_provider(),
         config=build_service_config_bag(),
     )
 

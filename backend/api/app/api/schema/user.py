@@ -7,7 +7,7 @@ from app.core.constants import UserRole, UserStatus
 _model_cfg = ConfigDict(from_attributes=True, use_enum_values=True)
 
 
-class UserCreatePublic(BaseModel):
+class UserCreateIn(BaseModel):
     email: EmailStr
     nickname: str = Field(max_length=100)
     password: str = Field(min_length=8, max_length=255)

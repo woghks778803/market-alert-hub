@@ -30,10 +30,37 @@ class HttpxSyncTransport(SyncHttpTransport):
             timeout=httpx.Timeout(self._config.timeout_sec),
         )
 
-    def get(self, path: str, *, params: dict[str, Any] | None = None) -> HttpResponse:
+    def _get_client(self) -> httpx.Client:
         self._ensure()
-        assert self._client is not None
-        r = self._client.get(path, params=params)
+        if self._client is None:
+            raise RuntimeError("HttpxSyncTransport client is not initialized")
+        return self._client
+    
+    def get(self, path: str, *, params: dict[str, Any] | None = None, headers: dict[str, str] | None = None) -> HttpResponse:
+        self._client = self._get_client()
+        
+        r = self._client.get(path, params=params, headers=headers)
+        return HttpResponse(status_code=r.status_code, text=r.text)
+    
+    def post(
+        self,
+        path: str,
+        *,
+        params: dict[str, Any] | None = None,
+        data: dict[str, Any] | None = None,
+        json: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> HttpResponse:
+        self._client = self._get_client()
+
+        r = self._client.post(
+            path,
+            params=params,
+            data=data,
+            json=json,
+            headers=headers,
+        )
+
         return HttpResponse(status_code=r.status_code, text=r.text)
 
     def close(self) -> None:

@@ -4,7 +4,13 @@ from sqlalchemy import select, update, desc, and_
 from sqlalchemy.orm import Session as DbSession
 from app.domain import EmailDTO, UserDTO
 from app.domain.shared.errors import ValidationAppError
-from app.infra.db.model import PasswordResetModel, UserModel, EmailVerificationModel
+from app.infra.db.model import (
+    PasswordResetModel,
+    UserModel,
+    EmailVerificationModel,
+    OauthProviderModel,
+    UserOauthAccountModel,
+)
 from app.infra.db.utils import to_db_value
 from ..protocol.user_repo import UserRepo
 
@@ -13,6 +19,14 @@ class SqlUserRepo(UserRepo):
 
     def __init__(self, db: DbSession) -> None:
         self._db = db
+
+    def add_user_oauth_accounts(
+        self, user_oauth_account: UserDTO.UserOAuthAccountCreate
+    ) -> UserDTO.UserOAuthAccount:
+        user_oauth_account = UserOauthAccountModel.from_create_dto(user_oauth_account)
+        self._db.add(user_oauth_account)
+        self._db.flush()
+        return user_oauth_account.to_dto()
 
     def add_user(self, user: UserDTO.UserCreate) -> UserDTO.User:
         user = UserModel.from_create_dto(user)
@@ -43,11 +57,12 @@ class SqlUserRepo(UserRepo):
         result = self._db.execute(stmt).scalar_one_or_none()
         return result.to_dto() if result is not None else None
 
-    def get_by_user_id(self, user_id: int) -> UserModel | None:
+    def get_by_user_id(self, user_id: int) -> UserDTO.User | None:
         stmt = select(UserModel).where(
             and_(UserModel.is_deleted.is_(False), UserModel.id == user_id)
         )
-        return self._db.execute(stmt).scalar_one_or_none()
+        model = self._db.execute(stmt).scalar_one_or_none()
+        return model.to_dto() if model else None
 
     def get_password_reset_by_id(
         self, password_reset_id: int
@@ -91,6 +106,35 @@ class SqlUserRepo(UserRepo):
         stmt = select(EmailVerificationModel).where(
             EmailVerificationModel.token_hash == token_hash
         )
+        model = self._db.execute(stmt).scalar_one_or_none()
+        return model.to_dto() if model else None
+
+    def get_oauth_provider_by_code(
+        self, code: str, is_active: bool | None = None
+    ) -> UserDTO.OauthProvider | None:
+        stmt = select(OauthProviderModel).where(OauthProviderModel.code == code)
+
+        if is_active is not None:
+            stmt.where(OauthProviderModel.is_active.is_(is_active))
+
+        model = self._db.execute(stmt).scalar_one_or_none()
+        return model.to_dto() if model else None
+
+    def get_oauth_account_by_filter(
+        self,
+        oauth_provider_id: int,
+        provider_user_id: str,
+        unlinked_at_is_null: bool | None = None,
+    ) -> UserDTO.UserOAuthAccount | None:
+        uoa = UserOauthAccountModel
+        stmt = select(uoa).where(
+            uoa.oauth_providers_id == oauth_provider_id,
+            uoa.provider_user_id == provider_user_id,
+        )
+
+        if unlinked_at_is_null:
+            stmt.where(uoa.unlinked_at._is(None))
+
         model = self._db.execute(stmt).scalar_one_or_none()
         return model.to_dto() if model else None
 
@@ -181,10 +225,10 @@ class SqlUserRepo(UserRepo):
         if expires_after is not None:
             wheres.append(PasswordResetModel.expires_at > expires_after)
 
-        if sent_is_null is True:
+        if sent_is_null:
             wheres.append(PasswordResetModel.sent_at.is_(None))
 
-        if consumed_is_null is True:
+        if consumed_is_null:
             wheres.append(PasswordResetModel.consumed_at.is_(None))
 
         if not wheres:
@@ -216,4 +260,28 @@ class SqlUserRepo(UserRepo):
             .values({UserModel.last_login_at: last_login_at})
             .execution_options(synchronize_session=False)
         )
+        self._db.execute(stmt)
+
+    def update_user_by_filter(
+        self,
+        id: int,
+        email_fingerprint: bytes | None = None,
+        email_ciphertext: bytes | None = None,
+        email_nonce: bytes | None = None,
+        email_key_version: int | None = None,
+        email_verified_at: datetime | None = None,
+    ) -> None:
+        stmt = (
+            update(UserModel)
+            .where(UserModel.id == id)
+            .values(
+                email_fingerprint=email_fingerprint,
+                email_ciphertext=email_ciphertext,
+                email_nonce=email_nonce,
+                email_key_version=email_key_version,
+                email_verified_at=email_verified_at,
+            )
+            .execution_options(synchronize_session=False)
+        )
+
         self._db.execute(stmt)

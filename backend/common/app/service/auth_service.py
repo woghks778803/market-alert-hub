@@ -1,4 +1,5 @@
 import secrets
+import json
 from typing import Callable, Dict, Any
 from datetime import datetime, timedelta, timezone
 
@@ -21,6 +22,7 @@ from app.domain.shared.errors import (
     ConflictError,
     AuthError,
     RateLimitError,
+    InternalServerError,
 )
 from app.domain import (
     OutboxDTO,
@@ -28,6 +30,8 @@ from app.domain import (
     AuthDTO,
     EmailDTO,
     CryptoPort,
+    AuthPort,
+    AuthRule,
 )
 
 
@@ -36,6 +40,7 @@ class AuthService:
         self,
         *,
         redis_client: Callable[[], Any],
+        kakao_oauth: AuthPort.KakaoOAuth,
         uow_factory: Callable[[], UnitOfWork],
         password: CryptoPort.PasswordHasher,
         hmac: CryptoPort.TokenHasher,
@@ -44,6 +49,7 @@ class AuthService:
         config: CoreDTO.ServiceConfigBag,
     ) -> None:
         self._redis_client = redis_client
+        self._kakao_oauth = kakao_oauth
         self._uow_factory = uow_factory
         self._password = password
         self._hmac = hmac
@@ -283,7 +289,10 @@ class AuthService:
         with self._uow_factory() as uow:
             email_fingerprint = self._hmac.fp_hash(email)
             user = uow.users.get_user_by_email_fingerprint(email_fingerprint)
-            if not user or not self._password.verify_password(
+            if not user:
+                raise NotFoundError("User not found", target="user")
+
+            if user.password_hash is None or not self._password.verify_password(
                 password, user.password_hash
             ):
                 raise AuthError("Invalid credentials", target="user")
@@ -351,7 +360,6 @@ class AuthService:
 
     # 로그아웃 (세션 무효화)
     def logout(self, *, token: str) -> Dict[str, Any]:
-        print("logout token:", token)
         with self._uow_factory() as uow:
             uow.sessions.update_session(self._hmac.token_hash(token))
             uow.commit()
@@ -444,7 +452,10 @@ class AuthService:
             if not user:
                 raise NotFoundError("User not found", target="user_id")
 
-            user.email_verified_at = now
+            uow.users.update_user_by_filter(
+                id=user.id,
+                email_verified_at=now,
+            )
             uow.users.update_email_verification_by_filter(
                 filters=EmailDTO.EmailVerificationFilter(id=email_verification.id),
                 updates=EmailDTO.EmailVerificationUpdate(
@@ -464,12 +475,12 @@ class AuthService:
         with self._uow_factory() as uow:
             user = uow.users.get_by_user_id(user_id)
             if not user:
-                raise ValidationAppError("User not found", target="user_id")
+                raise NotFoundError("User not found", target="user_id")
 
-            if not self._password.verify_password(current_password, user.password_hash):
-                raise ValidationAppError(
-                    "Current password is incorrect", target="current_password"
-                )
+            if user.password_hash is None or not self._password.verify_password(
+                current_password, user.password_hash
+            ):
+                raise AuthError("Invalid credentials", target="user")
 
             new_email_fingerprint = self._hmac.fp_hash(new_email)
             new_email_secrets = self._secrets.encrypt(new_email.encode("utf-8"))
@@ -533,11 +544,14 @@ class AuthService:
             #     True,
             # )
 
-            user.email_fingerprint = new_email_fingerprint
-            user.email_ciphertext = new_email_secrets["ciphertext"]
-            user.email_nonce = new_email_secrets["nonce"]
-            user.email_key_version = self._config.crypto_data_kid
-            user.email_verified_at = None
+            uow.users.update_user_by_filter(
+                id=user.id,
+                email_fingerprint=new_email_fingerprint,
+                email_ciphertext=new_email_secrets["ciphertext"],
+                email_nonce=new_email_secrets["nonce"],
+                email_key_version=self._config.crypto_data_kid,
+                email_verified_at=None,
+            )
             uow.sessions.update_session(self._hmac.token_hash(session_token))
             uow.commit()
             return {"ok": True}
@@ -686,3 +700,137 @@ class AuthService:
                 raise AuthError("Missing or invalid token", target="token")
 
             return AuthDTO.AuthUser(access_token=token, id=user.id, role=user.role)
+
+    def oauth_start(
+        self,
+        provider: str,
+        agree_service: bool,
+        agree_privacy: bool,
+        agree_marketing: bool,
+    ) -> str:
+        with self._uow_factory() as uow:
+            oauth_provider = uow.users.get_oauth_provider_by_code(
+                code=provider, is_active=True
+            )
+
+            if oauth_provider is None:
+                raise NotFoundError("Provider not found", target="oauth_provider")
+
+        # state 저장 위치/정책에 맞게 구현
+        # - redis 사용 시: key= f"oauth:state:{provider}:{state}"
+        # - value에 created_at, provider 정도 저장
+        # - TTL (예: 300초)
+        state = secrets.token_urlsafe(32)
+        key = f"oauth:state:{provider}:{state}"
+        value_dict = {
+            "agree_service": agree_service,
+            "agree_privacy": agree_privacy,
+            "agree_marketing": agree_marketing,
+        }
+        value = json.dumps(value_dict).encode()
+
+        redis = self._redis_client()
+        ok = redis.set(key, value, nx=True, ex=300)
+        if not ok:
+            raise InternalServerError("OAuth state store failed")
+
+        authorize_url = (
+            self._config.kakao_auth_rest_base_url
+            + self._kakao_oauth.build_authorize_path(state=state)
+        )
+        return authorize_url
+
+    def oauth_callback(
+        self,
+        provider: str,
+        code: str,
+        state: str,
+        ip: str | None = None,
+        ua: str | None = None,
+    ):
+        now = utcnow()
+        with self._uow_factory() as uow:
+            oauth_provider = uow.users.get_oauth_provider_by_code(
+                code=provider, is_active=True
+            )
+
+            if oauth_provider is None:
+                raise NotFoundError("Provider not found", target="oauth_provider")
+
+        # 2) state 검증 (redis)
+        key = f"oauth:state:{provider}:{state}"
+        redis = self._redis_client()
+        raw = redis.conn().get(key)
+        if raw == -2:  # key not exist
+            raise ValidationAppError("Invalid state", target="state")
+        redis.delete(key)  # 1회성 소모 (멱등 방지)
+        data = json.loads(raw.decode())
+
+        agree_service = data["agree_service"]
+        agree_privacy = data["agree_privacy"]
+        agree_marketing = data["agree_marketing"]
+
+        # 3) provider client로 사용자 식별 정보 가져오기
+        # - kakao_oauth.fetch_identity(code) -> AuthDto.Identity
+        oauth_identity = self._kakao_oauth.fetch_identity(code)
+
+        with self._uow_factory() as uow:
+            oauth_account = uow.users.get_oauth_account_by_filter(
+                oauth_provider_id=oauth_provider.id,
+                provider_user_id=oauth_identity.provider_user_id,
+                unlinked_at_is_null=True,
+            )
+            if oauth_account:
+                user = uow.users.get_by_user_id(oauth_account.user_id)
+                if user is None:
+                    raise InternalServerError(
+                        "OAuth account linked user not found", target="user"
+                    )  # 데이터 정합성 오류
+            else:
+                user = uow.users.add_user(
+                    UserDTO.UserCreate(
+                        nickname=oauth_identity.nickname
+                        or AuthRule.generate_default_nickname(),
+                        last_login_at=now,
+                        is_service=agree_service,
+                        is_privacy=agree_privacy,
+                        is_marketing=agree_marketing,
+                    )
+                )
+                uow.users.add_user_oauth_accounts(
+                    UserDTO.UserOAuthAccountCreate(
+                        user_id=user.id,
+                        oauth_providers_id=oauth_provider.id,
+                        provider_user_id=oauth_identity.provider_user_id,
+                        linked_at=now,
+                    )
+                )
+
+            # JWT 발급
+            access_token = self._jwt.create_access_token(
+                subject=str(user.id),
+                minutes=self._config.access_token_minutes,
+                claims={
+                    "role": user.role.value,
+                },
+            )
+
+            refresh_expires_at = now + timedelta(
+                minutes=self._config.refresh_token_minutes
+            )
+            refresh_token = secrets.token_urlsafe(48)
+            uow.sessions.add_session(
+                user_id=user.id,
+                token_hash=self._hmac.token_hash(refresh_token),
+                expires_at=refresh_expires_at,
+                ip_addr=ip,
+                user_agent=ua,
+            )
+
+            uow.commit()
+
+        # 6) 응답 DTO 리턴
+        return AuthDTO.AuthToken(access_token=access_token, refresh_token=refresh_token)
+
+    def oauth_unlink(self):
+        pass
