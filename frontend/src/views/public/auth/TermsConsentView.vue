@@ -74,37 +74,44 @@
         <v-btn variant="text" class="terms-link" @click="openLegal('marketing')">보기</v-btn>
       </div>
     </v-card>
+    
+    <div v-if="errorMessage" class="auth-error">
+      {{ errorMessage }}
+    </div>
 
-      <v-btn
-        block
-        size="large"
-        class="auth-btn auth-btn--muted"
-        color="primary"
-        :disabled="!canProceed"
-        @click="onNext"
-      >
-        다음
+    <v-btn
+      block
+      size="large"
+      class="auth-btn auth-btn--muted"
+      color="primary"
+      :disabled="!canProceed || loading"
+      @click="onNext"
+    >
+      다음
+    </v-btn>
+
+    <div class="auth-footer">
+      <v-btn variant="text" class="auth-link auth-link--muted" @click="onCancel">
+        취소하고 로그인으로
       </v-btn>
-
-      <div class="auth-footer">
-        <v-btn variant="text" class="auth-link auth-link--muted" @click="onCancel">
-          취소하고 로그인으로
-        </v-btn>
-      </div>
+    </div>
 
   </CenterCardShell>
 </template>
 
 <script setup lang="ts">
 import { useRoute, useRouter } from "vue-router";
-import { useTermsConsent } from "@/composables/auth/useTermsConsent";
 import CenterCardShell from "@/components/CenterCardShell.vue";
+import { useTermsConsent } from "@/composables/auth/useTermsConsent";
+import { useAsyncAction } from "@/composables/common/useAsyncAction";
+import { useAuthStore } from "@/stores/auth.store";
 
 type LegalKind = "terms" | "privacy" | "marketing";
 
 const router = useRouter();
 const route = useRoute();
-
+const authStore = useAuthStore();
+const { run, loading, errorMessage } = useAsyncAction()
 const {
   agreeService,
   agreePrivacy,
@@ -130,7 +137,7 @@ function openLegal(kind: LegalKind) {
   });
 }
 
-function onNext() {
+async function onNext() {
   const source = typeof route.query.source === "string" ? route.query.source : "email";
   const next =
     typeof route.query.next === "string"
@@ -141,14 +148,23 @@ function onNext() {
     router.replace(next).catch(() => {});
     return;
   }
+
   if (source === "kakao") {
-    router.push({ name: "KakaoAuthStart" }).catch(() => {}); 
-    return;
+    const params = new URLSearchParams({
+      provider: source,
+      agree_service: String(agreeService.value),
+      agree_privacy: String(agreePrivacy.value),
+      agree_marketing: String(agreeMarketing.value),
+    })
+
+    window.location.href =
+      `${import.meta.env.VITE_API_BASE_URL}/auth/oauth/start?${params.toString()}`
+    
+    return
   }else {
     router.push({ name: "SignupEmail" }).catch(() => {});
     return;
   }
-
 }
 
 function onCancel() {

@@ -99,7 +99,7 @@ class Providers:
         config = KakaoRestClientConfig(
             client_id=settings.KAKAO_CLIENT_ID,
             redirect_uri=settings.KAKAO_OAUTH_REDIRECT_URI,
-            client_secret=settings.KAKAO_CLIENT_SECRET,
+            client_secret=settings.KAKAO_OAUTH_CLIENT_SECRET,
             admin_key=settings.KAKAO_OAUTH_ADMIN_KEY,
         )
         auth_transport = HttpxSyncTransport(
@@ -129,7 +129,7 @@ class Providers:
         config = KakaoRestClientConfig(
             client_id=settings.KAKAO_CLIENT_ID,
             redirect_uri=settings.KAKAO_OAUTH_REDIRECT_URI,
-            client_secret=settings.KAKAO_CLIENT_SECRET,
+            client_secret=settings.KAKAO_OAUTH_CLIENT_SECRET,
             admin_key=settings.KAKAO_OAUTH_ADMIN_KEY,
         )
         auth_transport = HttpxSyncTransport(

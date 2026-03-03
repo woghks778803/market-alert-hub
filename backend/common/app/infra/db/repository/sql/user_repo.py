@@ -113,9 +113,8 @@ class SqlUserRepo(UserRepo):
         self, code: str, is_active: bool | None = None
     ) -> UserDTO.OauthProvider | None:
         stmt = select(OauthProviderModel).where(OauthProviderModel.code == code)
-
         if is_active is not None:
-            stmt.where(OauthProviderModel.is_active.is_(is_active))
+            stmt = stmt.where(OauthProviderModel.is_active.is_(is_active))
 
         model = self._db.execute(stmt).scalar_one_or_none()
         return model.to_dto() if model else None
@@ -133,7 +132,7 @@ class SqlUserRepo(UserRepo):
         )
 
         if unlinked_at_is_null:
-            stmt.where(uoa.unlinked_at._is(None))
+            stmt = stmt.where(uoa.unlinked_at.is_(None))
 
         model = self._db.execute(stmt).scalar_one_or_none()
         return model.to_dto() if model else None

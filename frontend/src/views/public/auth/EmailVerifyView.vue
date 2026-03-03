@@ -1,6 +1,6 @@
 <template>
   <AuthFormCard
-    title="비밀번호 찾기"
+    title="인증 메일 등록하기"
     :successMessage="successMessage"
     :errorMessage="errorMessage"
     :loading="sending"
@@ -41,14 +41,13 @@
   </AuthFormCard>
 </template>
 
-
 <script setup lang="ts">
 import { useRouter } from "vue-router"
 import AuthFormCard from "@/components/auth/AuthFormCard.vue"
 import { useAuthStore } from "@/stores/auth.store";
 import { useEmailActionForm } from "@/composables/auth/useEmailActionForm";
 import { mapCommonError } from "@/api/error/errorMapper"
-import { mapForgotPasswordError } from "./forgotPasswordErrorMapper"
+import { mapEmailVerifyError } from "./emailVerifyErrorMapper"
 
 const router = useRouter()
 const authStore = useAuthStore();
@@ -74,14 +73,14 @@ const {
 async function onSubmit() {
   try {
     await send(async () => {
-      await authStore.requestPasswordResetAction({ email: fields.value.email });
+      // await authStore.requestPasswordResetAction({ email: email.value.trim() });
       successMessage.value = "재설정 링크를 전송했습니다. 메일함을 확인해주세요.";
     });
   } catch (err: any) {
     console.error(err);
     const apiError = err?.response?.data?.error
 
-    const r = mapForgotPasswordError(apiError)
+    const r = mapEmailVerifyError(apiError)
     if(r){
       if (r.kind === "cooldown") {
         startCooldown(r.cooldownSec)

@@ -163,10 +163,10 @@ class Settings(BaseSettings):
 
     # --- Kakao network authorize ---
     KAKAO_CLIENT_ID: str
-    KAKAO_CLIENT_SECRET: str | None = None
     # KAKAO_ADMIN_KEY
 
     # --- Oauth: Kakao network authorize
+    KAKAO_OAUTH_CLIENT_SECRET: str | None = None
     KAKAO_OAUTH_REDIRECT_URI: str
     KAKAO_OAUTH_ADMIN_KEY: str
 

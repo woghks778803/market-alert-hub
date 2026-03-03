@@ -4,6 +4,12 @@ from app.core.constants import UserRole
 
 
 @dataclass(slots=True, frozen=True)
+class OAuthResult:
+    authorize_url: str
+    refresh_token: str | None = None
+
+
+@dataclass(slots=True, frozen=True)
 class AuthToken:
     refresh_token: str
     access_token: str

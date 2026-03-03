@@ -58,7 +58,7 @@ def refresh_token(
         httponly=True,
         secure=False,
         samesite="lax",
-        max_age=60 * 60 * 24 * 7,
+        max_age=svcs._config.refresh_token_minutes * 60,
         path="/",
     )
 
@@ -124,7 +124,7 @@ def register(
         httponly=True,
         secure=False,
         samesite="lax",
-        max_age=60 * 60 * 24 * 7,
+        max_age=svcs._config.refresh_token_minutes * 60,
         path="/",
     )
 
@@ -174,7 +174,7 @@ def login(
         httponly=True,
         secure=False,
         samesite="lax",
-        max_age=60 * 60 * 24 * 7,
+        max_age=svcs._config.refresh_token_minutes * 60,
         path="/",
     )
 
@@ -385,7 +385,7 @@ def logout(
     return ok(AuthSchema.SimpleOk(ok=True), request_id=meta.request_id)
 
 
-@router.post(
+@router.get(
     "/oauth/start",
     response_model=Envelope[AuthSchema.SimpleOk],
     summary="OAuth 인가 요청 시작",
@@ -396,25 +396,44 @@ def logout(
     ),
 )
 def oauth_start(
-    payload: AuthSchema.OAuthStartIn = Body(
+    # payload: AuthSchema.OAuthStartIn = Body(
+    #     ...,
+    #     example={
+    #         "provider": "kakao",
+    #         "agree_service": True,
+    #         "agree_privacy": True,
+    #         "agree_marketing": False,
+    #     },
+    # ),
+    provider: str = Query(..., description="OAuth provider code (e.g., kakao)"),
+    agree_service: bool = Query(
+        ..., description="User consent to required service terms (true/false)"
+    ),
+    agree_privacy: bool = Query(
+        ..., description="User consent to required privacy policy (true/false)"
+    ),
+    agree_marketing: bool = Query(
         ...,
-        example={
-            "provider": "kakao",
-            "agree_service": True,
-            "agree_privacy": True,
-            "agree_marketing": False,
-        },
+        description="User consent to optional marketing communications (true/false)",
     ),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    authorize_url = svcs.auths.oauth_start(
-        provider=payload.provider,
-        agree_marketing=payload.agree_marketing,
-        agree_privacy=payload.agree_privacy,
-        agree_service=payload.agree_service,
-    )
-    return RedirectResponse(url=authorize_url, status_code=302)
+    try:
+        oauth_result = svcs.auths.oauth_start(
+            provider=provider,
+            agree_marketing=agree_marketing,
+            agree_privacy=agree_privacy,
+            agree_service=agree_service,
+        )
+        redirect = RedirectResponse(url=oauth_result.authorize_url, status_code=302)
+        return redirect
+    except Exception as e:
+        error_url = (
+            f"{svcs._config.public_web_base_url}/auth/oauth/error"
+            f"?code=internal_error"
+        )
+        return RedirectResponse(url=error_url, status_code=302)
 
 
 @router.get(
@@ -429,23 +448,39 @@ def oauth_start(
 )
 def oauth_callback(
     request: Request,
-    provider: str = Query(..., description="OAuth provider code"),
     code: str = Query(..., description="Authorization code"),
     state: str = Query(..., description="CSRF state"),
     svcs: ServiceFactory = Depends(get_services),
-    meta: RequestMeta = Depends(get_request_meta),  #
+    meta: RequestMeta = Depends(get_request_meta),
 ):
-    ip = request.client.host if request.client else None
-    ua = request.headers.get("user-agent")
-    svcs.auths.oauth_callback(
-        provider=provider,
-        code=code,
-        state=state,
-        ip=ip,
-        ua=ua,
-    )
-    redirect_url = f"{svcs.config.public_web_base_url}/auth/verify-email"
-    return RedirectResponse(url=redirect_url, status_code=302)
+    try:
+        ip = request.client.host if request.client else None
+        ua = request.headers.get("user-agent")
+        oauth_result = svcs.auths.oauth_callback(
+            code=code,
+            state=state,
+            ip=ip,
+            ua=ua,
+        )
+
+        redirect = RedirectResponse(url=oauth_result.authorize_url, status_code=302)
+        redirect.set_cookie(
+            key="refresh_token",
+            value=oauth_result.refresh_token,
+            httponly=True,
+            secure=False,
+            samesite="lax",
+            max_age=svcs._config.refresh_token_minutes * 60,
+            path="/",
+        )
+
+        return redirect
+    except Exception as e:
+        error_url = (
+            f"{svcs._config.public_web_base_url}/auth/oauth/error"
+            f"?code=internal_error"
+        )
+        return RedirectResponse(url=error_url, status_code=302)
 
 
 # @router.post(

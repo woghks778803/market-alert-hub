@@ -10,6 +10,13 @@ export type VerifyTokenRequest = {
     token: string
 }
 
+export type OauthStartRequest = {
+    provider: string;
+    agree_service: boolean;
+    agree_privacy: boolean;
+    agree_marketing: boolean;
+}
+
 export type LoginRequest = {
     email: string
     password: string
@@ -90,4 +97,16 @@ export const authApi = {
         const { data } = await http.post<Envelope<SimpleOk>>("/auth/verify-password-reset", payload);
         return data;
     },
+
+    // GET /auth/oauth/callback
+    async oauthCallback(code: string, state: string) {
+        const { data } = await http.get<Envelope<TokenOut>>(
+            "/auth/oauth/callback",
+            {
+                params: { code, state, provider: "kakao" }
+            }
+        )
+        return data
+    }
+
 }

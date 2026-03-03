@@ -707,22 +707,25 @@ class AuthService:
         agree_service: bool,
         agree_privacy: bool,
         agree_marketing: bool,
-    ) -> str:
+    ) -> AuthDTO.OAuthResult:
         with self._uow_factory() as uow:
             oauth_provider = uow.users.get_oauth_provider_by_code(
                 code=provider, is_active=True
             )
 
             if oauth_provider is None:
-                raise NotFoundError("Provider not found", target="oauth_provider")
+                authorize_url = f"{self._config.public_web_base_url}/auth/oauth/error?source=kakao&error=not_found&target=oauth_provider"
+                # raise NotFoundError("Provider not found", target="oauth_provider")
+                return AuthDTO.OAuthResult(authorize_url=authorize_url)
 
         # state 저장 위치/정책에 맞게 구현
         # - redis 사용 시: key= f"oauth:state:{provider}:{state}"
         # - value에 created_at, provider 정도 저장
         # - TTL (예: 300초)
         state = secrets.token_urlsafe(32)
-        key = f"oauth:state:{provider}:{state}"
+        key = f"oauth:state:{state}"
         value_dict = {
+            "provider": provider,
             "agree_service": agree_service,
             "agree_privacy": agree_privacy,
             "agree_marketing": agree_marketing,
@@ -732,23 +735,41 @@ class AuthService:
         redis = self._redis_client()
         ok = redis.set(key, value, nx=True, ex=300)
         if not ok:
-            raise InternalServerError("OAuth state store failed")
+            authorize_url = f"{self._config.public_web_base_url}/auth/oauth/error?source=kakao&error=internal_error&target=state"
+            # raise InternalServerError("OAuth state store failed", target="state")
+            return AuthDTO.OAuthResult(authorize_url=authorize_url)
 
         authorize_url = (
             self._config.kakao_auth_rest_base_url
             + self._kakao_oauth.build_authorize_path(state=state)
         )
-        return authorize_url
+        return AuthDTO.OAuthResult(authorize_url=authorize_url)
 
     def oauth_callback(
         self,
-        provider: str,
+        # provider: str,
         code: str,
         state: str,
         ip: str | None = None,
         ua: str | None = None,
     ):
         now = utcnow()
+
+        key = f"oauth:state:{state}"
+        redis = self._redis_client()
+        raw = redis.conn().get(key)
+        if raw == -2:  # key not exist
+            authorize_url = f"{self._config.public_web_base_url}/auth/oauth/error?source=kakao&error=validation_error&target=state"
+            return AuthDTO.OAuthResult(authorize_url=authorize_url)
+            # raise ValidationAppError("Invalid state", target="state")
+        redis.delete(key)  # 1회성 소모 (멱등 방지)
+        data = json.loads(raw.decode())
+
+        provider = data["provider"]
+        agree_service = data["agree_service"]
+        agree_privacy = data["agree_privacy"]
+        agree_marketing = data["agree_marketing"]
+
         with self._uow_factory() as uow:
             oauth_provider = uow.users.get_oauth_provider_by_code(
                 code=provider, is_active=True
@@ -756,19 +777,6 @@ class AuthService:
 
             if oauth_provider is None:
                 raise NotFoundError("Provider not found", target="oauth_provider")
-
-        # 2) state 검증 (redis)
-        key = f"oauth:state:{provider}:{state}"
-        redis = self._redis_client()
-        raw = redis.conn().get(key)
-        if raw == -2:  # key not exist
-            raise ValidationAppError("Invalid state", target="state")
-        redis.delete(key)  # 1회성 소모 (멱등 방지)
-        data = json.loads(raw.decode())
-
-        agree_service = data["agree_service"]
-        agree_privacy = data["agree_privacy"]
-        agree_marketing = data["agree_marketing"]
 
         # 3) provider client로 사용자 식별 정보 가져오기
         # - kakao_oauth.fetch_identity(code) -> AuthDto.Identity
@@ -783,9 +791,12 @@ class AuthService:
             if oauth_account:
                 user = uow.users.get_by_user_id(oauth_account.user_id)
                 if user is None:
-                    raise InternalServerError(
-                        "OAuth account linked user not found", target="user"
-                    )  # 데이터 정합성 오류
+                    # 데이터 정합성 오류
+                    # raise InternalServerError(
+                    #     "OAuth account linked user not found", target="user"
+                    # )
+                    authorize_url = f"{self._config.public_web_base_url}/auth/oauth/error?source=kakao&error=internal_error&target=state"
+                    return AuthDTO.OAuthResult(authorize_url=authorize_url)
             else:
                 user = uow.users.add_user(
                     UserDTO.UserCreate(
@@ -806,15 +817,7 @@ class AuthService:
                     )
                 )
 
-            # JWT 발급
-            access_token = self._jwt.create_access_token(
-                subject=str(user.id),
-                minutes=self._config.access_token_minutes,
-                claims={
-                    "role": user.role.value,
-                },
-            )
-
+            # token 발급
             refresh_expires_at = now + timedelta(
                 minutes=self._config.refresh_token_minutes
             )
@@ -830,7 +833,10 @@ class AuthService:
             uow.commit()
 
         # 6) 응답 DTO 리턴
-        return AuthDTO.AuthToken(access_token=access_token, refresh_token=refresh_token)
+        return AuthDTO.OAuthResult(
+            authorize_url=f"{self._config.public_web_base_url}/auth/verify-email",
+            refresh_token=refresh_token,
+        )
 
     def oauth_unlink(self):
         pass

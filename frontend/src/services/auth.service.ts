@@ -1,4 +1,7 @@
-import { authApi, type RegisterRequest, type LoginRequest, type VerifyTokenRequest, type ResetPasswordRequest } from "@/api/auth.api"
+import {
+    authApi,
+    type RegisterRequest, type LoginRequest, type VerifyTokenRequest, type ResetPasswordRequest
+} from "@/api/auth.api"
 
 export async function verifyEmail(payload: VerifyTokenRequest) {
     const env = await authApi.verifyEmail(payload)

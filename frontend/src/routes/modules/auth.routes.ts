@@ -7,6 +7,7 @@ import RegisterSelectView from "@/views/public/auth/RegisterSelectView.vue"
 import TermsConsentView from "@/views/public/auth/TermsConsentView.vue"
 import RegisterEmailView from "@/views/public/auth/RegisterEmailView.vue"
 import VerifyEmailSentView from "@/views/public/auth/VerifyEmailSentView.vue"
+import EmailVerifyView from "@/views/public/auth/EmailVerifyView.vue"
 import EmailVerifyCallbackView from "@/views/public/auth/EmailVerifyCallbackView.vue"
 
 export const authRoutes: RouteRecordRaw[] = [
@@ -58,6 +59,12 @@ export const authRoutes: RouteRecordRaw[] = [
     // 예: /verify-email?token=...
     {
         path: "verify-email",
+        name: "VerifyEmail",
+        component: EmailVerifyView,
+        meta: {},
+    },
+    {
+        path: "verify-email-callback",
         name: "VerifyEmailCallback",
         component: EmailVerifyCallbackView,
         meta: {},
