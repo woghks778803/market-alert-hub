@@ -30,7 +30,7 @@
         {{ cooldownSec }}초 후 다시 시도
       </template>
       <template v-else>
-        인증메일 다시 보내기
+        인증 메일 다시 보내기
       </template>
     </v-btn>
 
@@ -48,6 +48,7 @@ import { useCooldown } from "@/composables/common/useCooldown"
 import { useUserStore } from "@/stores/user.store";
 import { useAuthStore } from "@/stores/auth.store";
 import { useVerifyEmailSent } from "@/composables/auth/useVerifyEmailSent";
+import { useAsyncAction } from "@/composables/common/useAsyncAction";
 import { mapCommonError } from "@/api/error/errorMapper"
 import { mapVerifyEmailSentError } from "./verifyEmailSentErrorMapper"
 
@@ -56,12 +57,18 @@ const route = useRoute()
 const userStore = useUserStore();
 const authStore = useAuthStore();
 const { successMessage, errorMessage, canResend, send, sending } = useVerifyEmailSent(route);
-
+const { run } = useAsyncAction()
 const { cooldownSec, isCooldown, startCooldown } =
   useCooldown();
 
-onMounted(() => {
-  userStore.fetchMe().catch(() => {});
+onMounted(async () => {
+  try{
+    await run(async () => {
+      await userStore.fetchMeAction()
+    })
+  } catch (err: any){
+    userStore.clearMe()
+  }
 });
 
 async function onSubmit() {
@@ -90,6 +97,7 @@ async function onSubmit() {
       }
 
       errorMessage.value = r.message
+      return
     }
 
     const commonMessage = mapCommonError(apiError)

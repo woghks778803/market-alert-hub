@@ -29,7 +29,7 @@
         {{ cooldownSec }}초 후 다시 시도
       </template>
       <template v-else>
-        재설정 링크 보내기
+        재설정 메일 보내기
       </template>
     </template>
 
@@ -87,6 +87,7 @@ async function onSubmit() {
         startCooldown(r.cooldownSec)
       }
       errorMessage.value = r.message
+      return
     }
 
     const commonMessage = mapCommonError(apiError)

@@ -104,14 +104,12 @@ import { useRoute, useRouter } from "vue-router";
 import CenterCardShell from "@/components/CenterCardShell.vue";
 import { useTermsConsent } from "@/composables/auth/useTermsConsent";
 import { useAsyncAction } from "@/composables/common/useAsyncAction";
-import { useAuthStore } from "@/stores/auth.store";
 
 type LegalKind = "terms" | "privacy" | "marketing";
 
 const router = useRouter();
 const route = useRoute();
-const authStore = useAuthStore();
-const { run, loading, errorMessage } = useAsyncAction()
+const { loading, errorMessage } = useAsyncAction()
 const {
   agreeService,
   agreePrivacy,

@@ -1,6 +1,6 @@
 import {
     authApi,
-    type RegisterRequest, type LoginRequest, type VerifyTokenRequest, type ResetPasswordRequest
+    type RegisterRequest, type LoginRequest, type VerifyTokenRequest, type ResetPasswordRequest, type ChangeEmailRequest
 } from "@/api/auth.api"
 
 export async function verifyEmail(payload: VerifyTokenRequest) {
@@ -33,6 +33,20 @@ export async function resetPassword(payload: ResetPasswordRequest) {
 
 export async function logout() {
     await authApi.logout()
+}
+
+export async function changeEmail(payload: ChangeEmailRequest) {
+    const env = await authApi.changeEmail(payload)
+    const token = env?.data?.access_token
+    if (!token) throw new Error("invalid_refresh_response")
+    return token
+}
+
+export async function reissue() {
+    const env = await authApi.reissue()
+    const token = env?.data?.access_token
+    if (!token) throw new Error("invalid_refresh_response")
+    return token
 }
 
 export async function login(payload: LoginRequest) {

@@ -474,3 +474,75 @@
     display: grid;
     gap: 8px;
 }
+
+/* social login fail (minimal) */
+.sle-page {
+    min-height: 100dvh;
+    background: #f6f7fb
+}
+
+.sle-appbar-title {
+    text-align: center;
+    font-weight: 700;
+    font-size: 15px
+}
+
+.sle-iconWrap {
+    display: flex;
+    justify-content: center;
+    margin: 8px 0 18px
+}
+
+.sle-iconCircle {
+    width: 56px;
+    height: 56px;
+    border-radius: 999px;
+    background: #fff7ed;
+    display: flex;
+    align-items: center;
+    justify-content: center
+}
+
+.sle-title {
+    font-weight: 800;
+    font-size: 18px;
+    margin-bottom: 10px
+}
+
+.sle-desc {
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.6;
+    margin-bottom: 14px
+}
+
+.sle-chip {
+    display: inline-block;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #f3f4f6;
+    color: #374151;
+    font-weight: 600;
+    margin: 6px 0 18px
+}
+
+.sle-primary {
+    border-radius: 12px;
+    height: 52px;
+    font-weight: 800;
+    margin-top: 6px
+}
+
+.sle-secondary {
+    border-radius: 12px;
+    height: 52px;
+    font-weight: 800;
+    margin-top: 10px
+}
+
+.sle-help {
+    margin-top: 16px;
+    font-size: 13px;
+    color: #6b7280;
+    font-weight: 600
+}

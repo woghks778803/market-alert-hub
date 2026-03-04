@@ -40,6 +40,7 @@ class KakaoRestClient:
                 "client_id": self._config.client_id,
                 "redirect_uri": self._config.redirect_uri,
                 "state": state,
+                # "prompt": "login",
             }
         )
         # transport base_url은 bootstrap에서 이미 세팅됨

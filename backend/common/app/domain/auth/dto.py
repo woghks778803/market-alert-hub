@@ -11,8 +11,8 @@ class OAuthResult:
 
 @dataclass(slots=True, frozen=True)
 class AuthToken:
-    refresh_token: str
     access_token: str
+    refresh_token: str | None = None
 
 
 @dataclass(slots=True, frozen=True)

@@ -15,6 +15,16 @@ export function mapEmailVerifyError(error?: ApiError | null): EmailVerifyErrorRe
         return { kind: "message", message: "네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요." }
     }
 
+    // 이미 사용중인 이메일
+    if (error.code === "conflict" && error.target === "new_email") {
+        return { kind: "message", message: "이미 사용 중인 이메일입니다." }
+    }
+
+    // 입력값 검증 실패
+    if (error.code === "validation_error") {
+        return { kind: "message", message: "입력 정보를 다시 확인해주세요." }
+    }
+
     // 쿨다운
     if (error.code === "rate_limited" && error.target === "resend_password_reset") {
         const sec = pickCooldownSec(error.details)

@@ -30,7 +30,6 @@ class ChangePasswordIn(BaseModel):
 
 
 class ChangeEmailIn(BaseModel):
-    current_password: str
     new_email: EmailStr
 
 

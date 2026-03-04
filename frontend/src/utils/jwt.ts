@@ -2,6 +2,7 @@ type JwtPayload = {
     sub?: string
     exp?: number
     ev?: boolean // email verified
+    ee?: boolean // email enrolled
 }
 
 // base64url decode (no external lib)
@@ -25,6 +26,8 @@ function decodeJwtPayload(token: string): JwtPayload | null {
 export function isTokenExpired(token: string): boolean {
     const p = decodeJwtPayload(token)
     if (!p?.exp) return true
+
+    // console.log("Token Expiration Check:", { p: p, exp: p.exp, now: Math.floor(Date.now() / 1000) })
     const nowSec = Math.floor(Date.now() / 1000)
     return nowSec >= p.exp
 }
@@ -32,4 +35,9 @@ export function isTokenExpired(token: string): boolean {
 export function isEmailVerifiedFromToken(token: string): boolean {
     const p = decodeJwtPayload(token)
     return !!p?.ev
+}
+
+export function isEmailEnrolledFromToken(token: string): boolean {
+    const p = decodeJwtPayload(token)
+    return !!p?.ee
 }

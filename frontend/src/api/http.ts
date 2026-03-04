@@ -42,7 +42,7 @@ function processQueue(token: string | null) {
 
 async function refreshAccessToken(): Promise<string> {
     const { data } = await axios.post(
-        `${resolveBaseURL()}/auth/refresh-token`,
+        `${resolveBaseURL()}/auth/reissue`,
         {},
         { withCredentials: true }
     )
@@ -63,9 +63,6 @@ http.interceptors.response.use(
         const originalRequest: any = err.config
         const status = err.response?.status
 
-
-        console.log("status:", status)
-
         if (status !== 401 || originalRequest._retry) {
             return Promise.reject(err)
         }
@@ -79,7 +76,7 @@ http.interceptors.response.use(
 
         if (
             originalRequest.url?.includes("/auth/login") ||
-            originalRequest.url?.includes("/auth/refresh-token")
+            originalRequest.url?.includes("/auth/reissue")
         ) {
             return Promise.reject(err)
         }

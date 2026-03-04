@@ -10,6 +10,10 @@ export type VerifyTokenRequest = {
     token: string
 }
 
+export type ChangeEmailRequest = {
+    new_email: string
+}
+
 export type OauthStartRequest = {
     provider: string;
     agree_service: boolean;
@@ -44,6 +48,12 @@ export type SimpleOk = {
 }
 
 export const authApi = {
+    // POST /auth/reissue
+    async reissue() {
+        const { data } = await http.post<Envelope<TokenOut>>("/auth/reissue");
+        return data;
+    },
+
     // POST /auth/login
     async login(payload: LoginRequest) {
         const { data } = await http.post<Envelope<TokenOut>>("/auth/login", payload)
@@ -74,9 +84,9 @@ export const authApi = {
         return data;
     },
 
-    // POST /auth/refresh-token
-    async refreshToken() {
-        const { data } = await http.post<Envelope<TokenOut>>("/auth/refresh-token");
+    // POST /auth/change-email
+    async changeEmail(payload: ChangeEmailRequest) {
+        const { data } = await http.post<Envelope<TokenOut>>("/auth/change-email", payload);
         return data;
     },
 

@@ -158,6 +158,7 @@ async function onSubmit() {
     const r = mapLoginError(apiError)
     if(r){
       errorMessage.value = r
+      return 
     }
 
     const commonMessage = mapCommonError(apiError)

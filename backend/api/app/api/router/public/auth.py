@@ -27,7 +27,7 @@ router = APIRouter(prefix="/auth")
 
 
 @router.post(
-    "/refresh-token",
+    "/reissue",
     status_code=status.HTTP_201_CREATED,
     response_model=Envelope[AuthSchema.TokenOut],  # 래퍼 적용
     summary="리프레시 토큰으로 액세스 토큰 갱신",
@@ -41,7 +41,7 @@ router = APIRouter(prefix="/auth")
         OpenApi.ERR_409,
     ),
 )
-def refresh_token(
+def reissue_token(
     request: Request,
     response: Response,
     refresh_token: str = Cookie(..., alias="refresh_token"),
@@ -50,17 +50,17 @@ def refresh_token(
 ):
     ip = request.client.host if request.client else None
     ua = request.headers.get("user-agent")
-    token_out = svcs.auths.refresh_token(refresh_token=refresh_token, ip=ip, ua=ua)
+    token_out = svcs.auths.reissue_token(refresh_token=refresh_token, ip=ip, ua=ua)
 
-    response.set_cookie(
-        key="refresh_token",
-        value=token_out.refresh_token,
-        httponly=True,
-        secure=False,
-        samesite="lax",
-        max_age=svcs._config.refresh_token_minutes * 60,
-        path="/",
-    )
+    # response.set_cookie(
+    #     key="refresh_token",
+    #     value=token_out.refresh_token,
+    #     httponly=True,
+    #     secure=False,
+    #     samesite="lax",
+    #     max_age=svcs._config.refresh_token_minutes * 60,
+    #     path="/",
+    # )
 
     return created(
         AuthSchema.TokenOut(
@@ -76,7 +76,7 @@ def refresh_token(
 @router.post(
     "/register",
     status_code=status.HTTP_201_CREATED,
-    response_model=Envelope[AuthSchema.TokenOut],  # 래퍼 적용
+    response_model=Envelope[AuthSchema.TokenOut],
     summary="유저 회원가입",
     description="이메일 중복 시 ConflictError로 처리(전역 핸들러에서 409로 매핑).",
     responses=OpenApi.combine(
@@ -240,20 +240,19 @@ def verify_email(
 
 @router.post(
     "/change-email",
-    response_model=Envelope[AuthSchema.SimpleOk],
+    response_model=Envelope[AuthSchema.TokenOut],
     summary="이메일 변경",
     description="현재 비밀번호를 확인한 뒤 새 이메일로 인증 메일을 발송합니다.",
     responses=OpenApi.combine(
-        OpenApi.ERR_400,
         OpenApi.ERR_401,
         OpenApi.ERR_409,  # 예: 이미 사용 중인 이메일 등
+        OpenApi.ERR_429,
     ),
 )
 def change_email(
     payload: AuthSchema.ChangeEmailIn = Body(
         ...,
         example={
-            "current_password": "P@ssw0rd!",
             "new_email": "new@example.com",
         },
     ),
@@ -263,18 +262,22 @@ def change_email(
 ):
     """
     - 액세스 토큰으로 유저 식별
-    - current_password 검증
     - 새 이메일로 인증 메일 발송 + 내부 상태 업데이트
     """
 
-    svcs.auths.change_email(
+    token_out = svcs.auths.change_email(
         user_id=user.id,
-        session_token=user.access_token,
-        current_password=payload.current_password,
+        # current_password=payload.current_password,
         new_email=payload.new_email,
     )
 
-    return ok(AuthSchema.SimpleOk(ok=True), request_id=meta.request_id)
+    return ok(
+        AuthSchema.TokenOut(
+            access_token=token_out.access_token,
+            token_type="bearer",
+        ),
+        request_id=meta.request_id,
+    )
 
 
 @router.post(
@@ -377,11 +380,13 @@ def verify_password_reset(
     ),
 )
 def logout(
-    token: str = Depends(get_current_token),
+    response: Response,
+    refresh_token: str = Cookie(..., alias="refresh_token"),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),  #
 ):
-    svcs.auths.logout(token=token)
+    response.delete_cookie("refresh_token", path="/")
+    svcs.auths.logout(token=refresh_token)
     return ok(AuthSchema.SimpleOk(ok=True), request_id=meta.request_id)
 
 
@@ -430,7 +435,7 @@ def oauth_start(
         return redirect
     except Exception as e:
         error_url = (
-            f"{svcs._config.public_web_base_url}/auth/oauth/error"
+            f"{svcs._config.public_web_base_url}/auth/oauth/fail"
             f"?code=internal_error"
         )
         return RedirectResponse(url=error_url, status_code=302)
@@ -477,7 +482,7 @@ def oauth_callback(
         return redirect
     except Exception as e:
         error_url = (
-            f"{svcs._config.public_web_base_url}/auth/oauth/error"
+            f"{svcs._config.public_web_base_url}/auth/oauth/fail"
             f"?code=internal_error"
         )
         return RedirectResponse(url=error_url, status_code=302)

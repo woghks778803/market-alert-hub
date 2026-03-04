@@ -210,6 +210,7 @@ async function onSubmit() {
       }
 
       errorMessage.value = r.message
+      return
     }
     
     const commonMessage = mapCommonError(apiError)

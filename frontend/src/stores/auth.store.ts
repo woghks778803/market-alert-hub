@@ -1,7 +1,8 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
-import type { LoginRequest, RegisterRequest, VerifyTokenRequest, ResetPasswordRequest } from "@/api/auth.api";
+import type { LoginRequest, RegisterRequest, VerifyTokenRequest, ResetPasswordRequest, ChangeEmailRequest } from "@/api/auth.api";
 import {
+    reissue as reissueService,
     login as loginService,
     register as registerService,
     resendEmailVerification as resendEmailVerificationService,
@@ -10,6 +11,7 @@ import {
     verifyEmail as verifyEmailService,
     verifyPasswordReset as verifyPasswordResetService,
     resetPassword as resetPasswordService,
+    changeEmail as changeEmailService
 } from "@/services/auth.service";
 
 const LS_KEY = "access_token";
@@ -31,6 +33,12 @@ export const useAuthStore = defineStore("auth", () => {
     function clearToken() {
         accessToken.value = null;
         localStorage.removeItem(LS_KEY);
+    }
+
+    async function reissueAction() {
+        const token = await reissueService();
+        setToken(token);
+        return token;
     }
 
     async function loginAction(payload: LoginRequest): Promise<string> {
@@ -65,6 +73,12 @@ export const useAuthStore = defineStore("auth", () => {
         await resetPasswordService(payload);
     }
 
+    async function changeEmailAction(payload: ChangeEmailRequest): Promise<string | null> {
+        const token = await changeEmailService(payload);
+        setToken(token);
+        return token;
+    }
+
     async function logoutAction(): Promise<void> {
         try {
             await logoutService();
@@ -84,11 +98,13 @@ export const useAuthStore = defineStore("auth", () => {
         setToken,
         clearToken,
 
+        reissueAction,
         loginAction,
         registerAction,
         resendEmailVerificationAction,
         requestPasswordResetAction,
         resetPasswordAction,
+        changeEmailAction,
         logoutAction,
         verifyEmailAction,
         verifyPasswordResetAction,

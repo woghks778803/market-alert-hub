@@ -48,7 +48,7 @@ class JwtTokenSigner(CryptoPort.TokenSigner):
         self._default_minutes = default_minutes
         self._leeway = leeway_seconds
 
-    def create_access_token(
+    def create_token(
         self,
         subject: str | int,
         *,

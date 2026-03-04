@@ -114,6 +114,8 @@ import CenterCardShell from "@/components/CenterCardShell.vue"
 import { useRegisterEmailForm } from "@/composables/auth/useRegisterEmailForm";
 import { useTermsConsent } from "@/composables/auth/useTermsConsent";
 import { useAuthStore } from "@/stores/auth.store";
+import { mapCommonError } from "@/api/error/errorMapper"
+import { mapRegisterError } from "./registerErrorMapper"
 
 const router = useRouter();
 const route = useRoute();
@@ -176,20 +178,19 @@ async function onSubmit() {
     }).catch(() => {})
 
   }catch (err: any) {
-    console.error("Register error:", err);
-    const e = err?.response?.data?.error;
+    const apiError = err?.response?.data?.error
 
-    if (!e) {
-      errorMessage.value = "네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+    const r = mapRegisterError(apiError)
+    if(r){
+      errorMessage.value = r
       return
     }
-    
-    if (e.code === "conflict" && e?.target === "email") {
-      errorMessage.value = "이미 사용 중인 이메일입니다.";
-      return;
-    }
 
-    errorMessage.value = "회원가입에 실패했습니다. 입력한 정보를 확인해주세요.";
+    const commonMessage = mapCommonError(apiError)
+    if (commonMessage) {
+      errorMessage.value = commonMessage
+      return
+    }
   }
 };
 

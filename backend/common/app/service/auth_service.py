@@ -94,7 +94,7 @@ class AuthService:
             )
 
         # 1) verify token 생성 (plain token은 outbox payload로만)
-        email_token = self._jwt.create_access_token(
+        email_token = self._jwt.create_token(
             subject=str(user_id),
             minutes=self._config.email_token_minutes,
         )
@@ -153,7 +153,7 @@ class AuthService:
             outbox_fingerprint=outbox_fingerprint,
         )
 
-    def refresh_token(
+    def reissue_token(
         self, *, refresh_token: str, ip: str | None = None, ua: str | None = None
     ) -> AuthDTO.AuthToken:
         now = utcnow()
@@ -171,31 +171,37 @@ class AuthService:
             if not user:
                 raise AuthError("Invalid token", target="token")
 
-            access_token = self._jwt.create_access_token(
+            access_token = self._jwt.create_token(
                 subject=str(user.id),
                 minutes=self._config.access_token_minutes,
                 claims={
                     "ev": bool(user.email_verified_at),
+                    "ee": bool(
+                        user.email_fingerprint is not None
+                        and user.email_ciphertext is not None
+                        and user.email_nonce is not None
+                        and user.email_key_version is not None
+                    ),
                     "role": user.role.value,
                 },
             )
 
-            new_refresh_token = secrets.token_urlsafe(48)
-            uow.sessions.add_session(
-                user_id=user.id,
-                token_hash=self._hmac.token_hash(new_refresh_token),
-                expires_at=refresh_expires_at,
-                ip_addr=ip,
-                user_agent=ua,
-            )
+            # new_refresh_token = secrets.token_urlsafe(48)
+            # uow.sessions.add_session(
+            #     user_id=user.id,
+            #     token_hash=self._hmac.token_hash(new_refresh_token),
+            #     expires_at=refresh_expires_at,
+            #     ip_addr=ip,
+            #     user_agent=ua,
+            # )
 
-            # 기존 세션 무효화
-            uow.sessions.update_session(self._hmac.token_hash(refresh_token))
+            # # 기존 세션 무효화
+            # uow.sessions.update_session(self._hmac.token_hash(refresh_token))
 
             uow.commit()
 
             return AuthDTO.AuthToken(
-                access_token=access_token, refresh_token=new_refresh_token
+                access_token=access_token, refresh_token=refresh_token
             )
 
     # 회원가입
@@ -250,10 +256,16 @@ class AuthService:
                 now=now,
             )
 
-            access_token = self._jwt.create_access_token(
+            access_token = self._jwt.create_token(
                 subject=str(user.id),
                 minutes=self._config.access_token_minutes,
                 claims={
+                    "ee": bool(
+                        user.email_fingerprint is not None
+                        and user.email_ciphertext is not None
+                        and user.email_nonce is not None
+                        and user.email_key_version is not None
+                    ),
                     "role": user.role.value,
                 },
             )
@@ -326,18 +338,23 @@ class AuthService:
                             now=now,
                         )
                     else:
-                        # TODO: 소셜 가입자 여부 - 이메일 등록 페이지로 유도
                         # 이메일 가입자 - 관리자 문의
                         raise AuthError(
                             "Account email data missing. Contact support.",
                             target="email",
                         )
 
-            access_token = self._jwt.create_access_token(
+            access_token = self._jwt.create_token(
                 subject=str(user.id),
                 minutes=self._config.access_token_minutes,
                 claims={
                     "ev": bool(user.email_verified_at),
+                    "ee": bool(
+                        user.email_fingerprint is not None
+                        and user.email_ciphertext is not None
+                        and user.email_nonce is not None
+                        and user.email_key_version is not None
+                    ),
                     "role": user.role.value,
                 },
             )
@@ -376,7 +393,7 @@ class AuthService:
         with self._uow_factory() as uow:
             user = uow.users.get_by_user_id(user_id)
             if not user:
-                raise AuthError("Invalid credentials")
+                raise AuthError("Invalid credentials", target="user")
 
             if user.email_verified_at is not None:
                 raise ConflictError("Email already verified", target="email")
@@ -467,7 +484,7 @@ class AuthService:
             uow.commit()
 
     def change_email(
-        self, *, user_id: int, session_token: str, current_password: str, new_email: str
+        self, *, user_id: int, new_email: str, current_password: str | None = None
     ):
         now = utcnow()
         trace_id = get_trace_id()
@@ -475,18 +492,31 @@ class AuthService:
         with self._uow_factory() as uow:
             user = uow.users.get_by_user_id(user_id)
             if not user:
-                raise NotFoundError("User not found", target="user_id")
-
-            if user.password_hash is None or not self._password.verify_password(
-                current_password, user.password_hash
-            ):
                 raise AuthError("Invalid credentials", target="user")
+
+            # if user.password_hash is None or not self._password.verify_password(
+            #     current_password, user.password_hash
+            # ):
+            #     raise AuthError("Invalid credentials", target="user")
 
             new_email_fingerprint = self._hmac.fp_hash(new_email)
             new_email_secrets = self._secrets.encrypt(new_email.encode("utf-8"))
             if uow.users.get_user_by_email_fingerprint(new_email_fingerprint):
-                raise ValidationAppError(
+                raise ConflictError(
                     "email_fingerprint already exists", target="new_email"
+                )
+
+            #  쿨다운 (연타 방지)
+            cooldown_sec = self._config.email_resend_cooldown_sec
+            key = f"cooldown:email_verify_resend:{user.id}"
+            ok = self._redis_client().set(key, b"1", nx=True, ex=cooldown_sec)
+            if not ok:
+                remain = self._redis_client().ttl(key)  # -2/-1 처리만 조심
+                remain = remain if remain > 0 else 0  # 가드
+                raise RateLimitError(
+                    "Too many requests. Please try again later.",
+                    target="resend_email_verification",
+                    meta={"cooldown_remaining_sec": max(remain, 0)},
                 )
 
             self._enqueue_email_auth_code_outbox_in_tx(
@@ -500,49 +530,6 @@ class AuthService:
                 cancel_pending=True,
                 now=now,
             )
-            # email_token = self._jwt.create_access_token(
-            #     subject=str(user.id), minutes=self._config.access_token_minutes
-            # )
-
-            # email_verification = uow.users.add_email_verification(
-            #     UserDTO.EmailVerificationCreate(
-            #         user_id=user.id,
-            #         email_fingerprint=new_email_fingerprint,
-            #         email_ciphertext=new_email_secrets["ciphertext"],
-            #         email_nonce=new_email_secrets["nonce"],
-            #         email_key_version=self._config.crypto_data_kid,
-            #         token_hash=self._hmac.token_hash(email_token),
-            #         expires_at=expires_at,
-            #     )
-            # )
-
-            # outbox_fingerprint_dict = {
-            #     "event_type": OutboxEventType.AUTH_EMAIL_VERIFY,
-            #     "aggregate_type": "user",
-            #     "aggregate_id": user.id,
-            #     "email_verification_id": email_verification.id,
-            # }
-            # outbox_fingerprint = to_canonical_json(outbox_fingerprint_dict)
-            # if outbox_fingerprint is not None:
-            #     outbox_fingerprint = self._hmac.fp_hash(outbox_fingerprint)
-
-            # uow.outboxs.add_outbox(
-            #     OutboxDTO.OutboxCreate(
-            #         trace_id=trace_id,
-            #         event_type=OutboxEventType.AUTH_EMAIL_VERIFY,
-            #         aggregate_type="user",
-            #         aggregate_id=user.id,
-            #         outbox_fingerprint=outbox_fingerprint,
-            #         payload={
-            #             "user_id": user.id,
-            #             "email_verification_id": email_verification.id,
-            #             "verify_token": email_token,
-            #         },
-            #         status=OutboxStatus.PENDING,
-            #         attempts=0,
-            #     ),
-            #     True,
-            # )
 
             uow.users.update_user_by_filter(
                 id=user.id,
@@ -552,9 +539,25 @@ class AuthService:
                 email_key_version=self._config.crypto_data_kid,
                 email_verified_at=None,
             )
-            uow.sessions.update_session(self._hmac.token_hash(session_token))
+
+            access_token = self._jwt.create_token(
+                subject=str(user.id),
+                minutes=self._config.access_token_minutes,
+                claims={
+                    "ev": bool(user.email_verified_at),
+                    "ee": bool(
+                        new_email_fingerprint is not None
+                        and new_email_secrets["ciphertext"] is not None
+                        and new_email_secrets["nonce"] is not None
+                        and self._config.crypto_data_kid is not None
+                    ),
+                    "role": user.role.value,
+                },
+            )
+
             uow.commit()
-            return {"ok": True}
+
+            return AuthDTO.AuthToken(access_token=access_token)
 
     def send_password_reset(
         self,
@@ -584,7 +587,7 @@ class AuthService:
                     meta={"cooldown_remaining_sec": max(remain, 0)},
                 )
 
-            password_token = self._jwt.create_access_token(
+            password_token = self._jwt.create_token(
                 subject=str(user.id),
                 minutes=self._config.email_token_minutes,
             )
@@ -714,7 +717,7 @@ class AuthService:
             )
 
             if oauth_provider is None:
-                authorize_url = f"{self._config.public_web_base_url}/auth/oauth/error?source=kakao&error=not_found&target=oauth_provider"
+                authorize_url = f"{self._config.public_web_base_url}/auth/oauth/fail?source=kakao&code=not_found&target=oauth_provider"
                 # raise NotFoundError("Provider not found", target="oauth_provider")
                 return AuthDTO.OAuthResult(authorize_url=authorize_url)
 
@@ -735,7 +738,7 @@ class AuthService:
         redis = self._redis_client()
         ok = redis.set(key, value, nx=True, ex=300)
         if not ok:
-            authorize_url = f"{self._config.public_web_base_url}/auth/oauth/error?source=kakao&error=internal_error&target=state"
+            authorize_url = f"{self._config.public_web_base_url}/auth/oauth/fail?source=kakao&code=internal_error&target=state"
             # raise InternalServerError("OAuth state store failed", target="state")
             return AuthDTO.OAuthResult(authorize_url=authorize_url)
 
@@ -754,12 +757,14 @@ class AuthService:
         ua: str | None = None,
     ):
         now = utcnow()
+        is_enroll_email = False
+        is_verify_email = False
 
         key = f"oauth:state:{state}"
         redis = self._redis_client()
         raw = redis.conn().get(key)
         if raw == -2:  # key not exist
-            authorize_url = f"{self._config.public_web_base_url}/auth/oauth/error?source=kakao&error=validation_error&target=state"
+            authorize_url = f"{self._config.public_web_base_url}/auth/oauth/fail?source=kakao&code=validation_error&target=state"
             return AuthDTO.OAuthResult(authorize_url=authorize_url)
             # raise ValidationAppError("Invalid state", target="state")
         redis.delete(key)  # 1회성 소모 (멱등 방지)
@@ -791,12 +796,27 @@ class AuthService:
             if oauth_account:
                 user = uow.users.get_by_user_id(oauth_account.user_id)
                 if user is None:
+                    authorize_url = f"{self._config.public_web_base_url}/auth/oauth/fail?source=kakao&code=internal_error&target=state"
+                    return AuthDTO.OAuthResult(authorize_url=authorize_url)
                     # 데이터 정합성 오류
                     # raise InternalServerError(
                     #     "OAuth account linked user not found", target="user"
                     # )
-                    authorize_url = f"{self._config.public_web_base_url}/auth/oauth/error?source=kakao&error=internal_error&target=state"
-                    return AuthDTO.OAuthResult(authorize_url=authorize_url)
+
+                uow.users.update_user_last_login_at(user_id=user.id, last_login_at=now)
+
+                # 메일 등록 여부
+                if (
+                    user.email_fingerprint is not None
+                    and user.email_ciphertext is not None
+                    and user.email_nonce is not None
+                    and user.email_key_version is not None
+                ):
+                    is_enroll_email = True
+
+                # 메인 인증 여부
+                if user.email_verified_at:
+                    is_verify_email = True
             else:
                 user = uow.users.add_user(
                     UserDTO.UserCreate(
@@ -832,9 +852,16 @@ class AuthService:
 
             uow.commit()
 
+        if not is_enroll_email:
+            authorize_url = f"{self._config.public_web_base_url}/auth/verify-email"
+        elif not is_verify_email:
+            authorize_url = f"{self._config.public_web_base_url}/auth/verify-sent"
+        else:
+            authorize_url = f"{self._config.public_web_base_url}"
+
         # 6) 응답 DTO 리턴
         return AuthDTO.OAuthResult(
-            authorize_url=f"{self._config.public_web_base_url}/auth/verify-email",
+            authorize_url=authorize_url,
             refresh_token=refresh_token,
         )
 

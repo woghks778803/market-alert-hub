@@ -50,12 +50,12 @@ class PasswordHasher(Protocol):
 class TokenSigner(Protocol):
     """
     액세스 토큰(JWT 등) 생성/검증/지문 해시 포트.
-    - token_hash: create_access_token 결과(토큰 문자열)를 해시해 DB에 저장/조회용 지문 생성
+    - token_hash: create_token 결과(토큰 문자열)를 해시해 DB에 저장/조회용 지문 생성
       (기본 SHA-256, 구현체에 따라 pepper를 써서 HMAC-SHA256로 강화 가능)
     - consteq: 상수시간 비교(타이밍 공격 완화)
     """
 
-    def create_access_token(
+    def create_token(
         self,
         subject: str | int,
         *,

@@ -23,5 +23,4 @@ export function mapLoginError(error?: ApiError | null): string | null {
     }
 
     return null
-    return "로그인에 실패했습니다."
 }
