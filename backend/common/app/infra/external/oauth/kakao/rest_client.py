@@ -1,12 +1,8 @@
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 from urllib.parse import urlencode
 
 from app.infra.external.transport.port.http import SyncHttpTransport, HttpResponse
-from app.infra.external.transport.impl.httpx import (
-    HttpxSyncTransport,
-    HttpxTransportConfig,
-)
 
 
 @dataclass

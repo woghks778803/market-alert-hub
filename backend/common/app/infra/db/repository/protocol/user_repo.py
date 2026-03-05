@@ -64,12 +64,14 @@ class UserRepo(Protocol):
     def update_user_last_login_at(
         self, user_id: int, last_login_at: datetime
     ) -> None: ...
-    def update_user_by_filter(
+    def update_user_email_verified_at(
+        self, user_id: int, email_verified_at: datetime
+    ) -> None: ...
+    def update_user_email(
         self,
         id: int,
         email_fingerprint: bytes | None = None,
         email_ciphertext: bytes | None = None,
         email_nonce: bytes | None = None,
         email_key_version: int | None = None,
-        email_verified_at: datetime | None = None,
     ) -> None: ...

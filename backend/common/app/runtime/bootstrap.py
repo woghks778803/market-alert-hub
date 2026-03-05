@@ -282,6 +282,8 @@ def build_service_config_bag() -> CoreDTO.ServiceConfigBag:
         email_token_minutes=settings.EMAIL_TOKEN_EXPIRE_MINUTES,
         crypto_data_kid=settings.CRYPTO_DATA_ENC_KID,
         public_web_base_url=settings.PUBLIC_WEB_BASE_URL,
+        public_api_base_url=settings.PUBLIC_API_BASE_URL,
+        public_admin_api_base_url=settings.PUBLIC_ADMIN_API_BASE_URL,
         kakao_auth_rest_base_url=settings.KAKAO_AUTH_REST_BASE_URL,
         kakao_api_rest_base_url=settings.KAKAO_API_REST_BASE_URL,
     )

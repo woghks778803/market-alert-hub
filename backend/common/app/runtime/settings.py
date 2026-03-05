@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     DEPLOY_ENV: str = "dev"
     LOG_LEVEL: str = "INFO"
     PUBLIC_WEB_BASE_URL: str
+    PUBLIC_API_BASE_URL: str
+    PUBLIC_ADMIN_API_BASE_URL: str
 
     # --- DB ---
     MYSQL_HOST: str

@@ -15,7 +15,6 @@ from app.service.factory import ServiceFactory
 from app.api.schema import UserSchema, AuthSchema
 from app.api.common.envelope import Envelope, ok, created
 from app.api.deps import (
-    get_current_token,
     get_current_user,
     get_services,
     get_request_meta,
@@ -214,7 +213,7 @@ def send_email_verification(
     return ok(AuthSchema.SimpleOk(ok=True), request_id=meta.request_id)
 
 
-@router.post(
+@router.get(
     "/verify-email",
     response_model=Envelope[AuthSchema.SimpleOk],
     summary="이메일 인증",
@@ -223,19 +222,17 @@ def send_email_verification(
 )
 def verify_email(
     request: Request,
-    payload: AuthSchema.VerifyToken = Body(
-        ...,
-        example={"token": "base64url-encoded-token"},
-    ),
+    token: str = Query(..., description="verification token"),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    svcs.auths.verify_email(token=payload.token)
-
-    return ok(
-        AuthSchema.SimpleOk(ok=True),
-        request_id=meta.request_id,
-    )
+    redirect_url = f"{svcs._config.public_web_base_url}/auth/verify-email-callback?"
+    try:
+        path = svcs.auths.verify_email(token=token)
+    except Exception as e:
+        path = "code=invalid_token"
+    finally:
+        return RedirectResponse(url=redirect_url + path, status_code=302)
 
 
 @router.post(
@@ -425,14 +422,28 @@ def oauth_start(
     meta: RequestMeta = Depends(get_request_meta),
 ):
     try:
+
         oauth_result = svcs.auths.oauth_start(
             provider=provider,
             agree_marketing=agree_marketing,
             agree_privacy=agree_privacy,
             agree_service=agree_service,
         )
-        redirect = RedirectResponse(url=oauth_result.authorize_url, status_code=302)
-        return redirect
+
+        # 실패 케이스 (urlencode 된 값)
+        if oauth_result.authorize_path.startswith("source="):
+            fail_url = (
+                f"{svcs._config.public_web_base_url}/auth/oauth/fail?"
+                f"{oauth_result.authorize_path}"
+            )
+            return RedirectResponse(url=fail_url, status_code=302)
+
+        # 성공 케이스 (카카오 authorize path)
+        authorize_url = (
+            f"{svcs._config.kakao_auth_rest_base_url}" f"{oauth_result.authorize_path}"
+        )
+
+        return RedirectResponse(url=authorize_url, status_code=302)
     except Exception as e:
         error_url = (
             f"{svcs._config.public_web_base_url}/auth/oauth/fail"
@@ -461,6 +472,7 @@ def oauth_callback(
     try:
         ip = request.client.host if request.client else None
         ua = request.headers.get("user-agent")
+
         oauth_result = svcs.auths.oauth_callback(
             code=code,
             state=state,
@@ -468,7 +480,16 @@ def oauth_callback(
             ua=ua,
         )
 
-        redirect = RedirectResponse(url=oauth_result.authorize_url, status_code=302)
+        path = oauth_result.authorize_path
+        if path.startswith("source="):
+            redirect_url = (
+                f"{svcs._config.public_web_base_url}/auth/oauth/fail?" f"{path}"
+            )
+        else:
+            redirect_url = f"{svcs._config.public_web_base_url}" f"{path}"
+
+        redirect = RedirectResponse(url=redirect_url, status_code=302)
+
         redirect.set_cookie(
             key="refresh_token",
             value=oauth_result.refresh_token,

@@ -27,6 +27,8 @@ class ServiceConfigBag:
     crypto_data_kid: int
     # 기본 URL
     public_web_base_url: str
+    public_api_base_url: str
+    public_admin_api_base_url: str
     kakao_auth_rest_base_url: str
     kakao_api_rest_base_url: str
 

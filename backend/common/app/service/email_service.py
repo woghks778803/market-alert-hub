@@ -59,9 +59,8 @@ class EmailService:
         to = self._validate_recipients([to.decode("utf-8")])
 
         verify_link = (
-            f"{self._config.public_web_base_url}/auth/verify-email?token={verify_token}"
+            f"{self._config.public_api_base_url}/auth/verify-email?token={verify_token}"
         )
-
         html = self.renderer().render(
             "user_email_verify.html",
             {

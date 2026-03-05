@@ -2,7 +2,7 @@ import secrets
 import json
 from typing import Callable, Dict, Any
 from datetime import datetime, timedelta, timezone
-
+from urllib.parse import urlencode
 from app.core.constants import (
     UserRole,
     UserStatus,
@@ -444,33 +444,36 @@ class AuthService:
         self,
         *,
         token: str,
-    ) -> None:
+    ) -> str:
         now = utcnow()
 
         token_hash = self._hmac.token_hash(token)
 
         with self._uow_factory() as uow:
-
             email_verification = uow.users.get_email_verification_by_token_hash(
                 token_hash
             )
 
+            build_path = {
+                "code": "success",
+            }
+
             if not email_verification:
-                raise NotFoundError("Token not found", target="token")
+                return urlencode({"code": "not_found", "target": "token"})
 
             if email_verification.status != EmailVerificationStatus.SENT:
-                raise ValidationAppError("Invalid status", target="status")
+                return urlencode({"code": "validation_error", "target": "status"})
 
             expires_at = ensure_utc(email_verification.expires_at)
             if expires_at <= now:
-                raise ValidationAppError("Token expired", target="token")
+                return urlencode({"code": "validation_error", "target": "token"})
 
             user = uow.users.get_by_user_id(email_verification.user_id)
             if not user:
-                raise NotFoundError("User not found", target="user_id")
+                return urlencode({"code": "not_found", "target": "user"})
 
-            uow.users.update_user_by_filter(
-                id=user.id,
+            uow.users.update_user_email_verified_at(
+                user_id=user.id,
                 email_verified_at=now,
             )
             uow.users.update_email_verification_by_filter(
@@ -482,6 +485,8 @@ class AuthService:
             )
 
             uow.commit()
+
+            return urlencode(build_path)
 
     def change_email(
         self, *, user_id: int, new_email: str, current_password: str | None = None
@@ -531,13 +536,12 @@ class AuthService:
                 now=now,
             )
 
-            uow.users.update_user_by_filter(
+            uow.users.update_user_email(
                 id=user.id,
                 email_fingerprint=new_email_fingerprint,
                 email_ciphertext=new_email_secrets["ciphertext"],
                 email_nonce=new_email_secrets["nonce"],
                 email_key_version=self._config.crypto_data_kid,
-                email_verified_at=None,
             )
 
             access_token = self._jwt.create_token(
@@ -717,9 +721,15 @@ class AuthService:
             )
 
             if oauth_provider is None:
-                authorize_url = f"{self._config.public_web_base_url}/auth/oauth/fail?source=kakao&code=not_found&target=oauth_provider"
-                # raise NotFoundError("Provider not found", target="oauth_provider")
-                return AuthDTO.OAuthResult(authorize_url=authorize_url)
+                return AuthDTO.OAuthResult(
+                    authorize_path=urlencode(
+                        {
+                            "source": provider,
+                            "code": "not_found",
+                            "target": "oauth_provider",
+                        }
+                    )
+                )
 
         # state 저장 위치/정책에 맞게 구현
         # - redis 사용 시: key= f"oauth:state:{provider}:{state}"
@@ -738,15 +748,15 @@ class AuthService:
         redis = self._redis_client()
         ok = redis.set(key, value, nx=True, ex=300)
         if not ok:
-            authorize_url = f"{self._config.public_web_base_url}/auth/oauth/fail?source=kakao&code=internal_error&target=state"
-            # raise InternalServerError("OAuth state store failed", target="state")
-            return AuthDTO.OAuthResult(authorize_url=authorize_url)
+            return AuthDTO.OAuthResult(
+                authorize_path=urlencode(
+                    {"source": provider, "code": "internal_error", "target": "state"}
+                )
+            )
 
-        authorize_url = (
-            self._config.kakao_auth_rest_base_url
-            + self._kakao_oauth.build_authorize_path(state=state)
+        return AuthDTO.OAuthResult(
+            authorize_path=self._kakao_oauth.build_authorize_path(state=state)
         )
-        return AuthDTO.OAuthResult(authorize_url=authorize_url)
 
     def oauth_callback(
         self,
@@ -763,10 +773,17 @@ class AuthService:
         key = f"oauth:state:{state}"
         redis = self._redis_client()
         raw = redis.conn().get(key)
-        if raw == -2:  # key not exist
-            authorize_url = f"{self._config.public_web_base_url}/auth/oauth/fail?source=kakao&code=validation_error&target=state"
-            return AuthDTO.OAuthResult(authorize_url=authorize_url)
-            # raise ValidationAppError("Invalid state", target="state")
+
+        if raw == None:  # key not exist
+            return AuthDTO.OAuthResult(
+                authorize_path=urlencode(
+                    {
+                        "source": None,
+                        "code": "validation_error",
+                        "target": "state",
+                    }
+                )
+            )
         redis.delete(key)  # 1회성 소모 (멱등 방지)
         data = json.loads(raw.decode())
 
@@ -781,7 +798,15 @@ class AuthService:
             )
 
             if oauth_provider is None:
-                raise NotFoundError("Provider not found", target="oauth_provider")
+                return AuthDTO.OAuthResult(
+                    authorize_path=urlencode(
+                        {
+                            "source": provider,
+                            "code": "not_found",
+                            "target": "oauth_provider",
+                        }
+                    )
+                )
 
         # 3) provider client로 사용자 식별 정보 가져오기
         # - kakao_oauth.fetch_identity(code) -> AuthDto.Identity
@@ -794,10 +819,18 @@ class AuthService:
                 unlinked_at_is_null=True,
             )
             if oauth_account:
+                # TODO: 탈퇴, 정지 처리 추가 예정
                 user = uow.users.get_by_user_id(oauth_account.user_id)
                 if user is None:
-                    authorize_url = f"{self._config.public_web_base_url}/auth/oauth/fail?source=kakao&code=internal_error&target=state"
-                    return AuthDTO.OAuthResult(authorize_url=authorize_url)
+                    return AuthDTO.OAuthResult(
+                        authorize_path=urlencode(
+                            {
+                                "source": provider,
+                                "code": "internal_error",
+                                "target": "user",
+                            }
+                        )
+                    )
                     # 데이터 정합성 오류
                     # raise InternalServerError(
                     #     "OAuth account linked user not found", target="user"
@@ -853,15 +886,14 @@ class AuthService:
             uow.commit()
 
         if not is_enroll_email:
-            authorize_url = f"{self._config.public_web_base_url}/auth/verify-email"
+            path = "/auth/verify-email"
         elif not is_verify_email:
-            authorize_url = f"{self._config.public_web_base_url}/auth/verify-sent"
+            path = "/auth/verify-sent"
         else:
-            authorize_url = f"{self._config.public_web_base_url}"
+            path = "/"
 
-        # 6) 응답 DTO 리턴
         return AuthDTO.OAuthResult(
-            authorize_url=authorize_url,
+            authorize_path=path,
             refresh_token=refresh_token,
         )
 

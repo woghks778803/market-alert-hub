@@ -70,31 +70,46 @@ const { mode, setMode } = useMode()
 
 const viewMode = computed(() => mode.value)
 
-function readToken(): string {
-  const q = route.query?.token
-  return typeof q === "string" ? q : ""
-}
-
 async function goLogin() {
   await authStore.logoutAction()
   router.replace({ name: "Login" })
 }
 
 onMounted(async () => {
+  const code = String(route.query.code ?? "")
+  const target = String(route.query.target ?? "")
   setMode("default")
-  try {
-    const token = readToken()
-    if (!token) {
-      throw new Error("invalid_verify_token")
-    }
-    await authStore.verifyEmailAction({ token })
 
+  if (code === "success") {
     setMode("success")
-  } catch (err: any) {
-    setMode("fail")
-  } finally {
-    await authStore.logoutAction()
+    return
   }
+
+  // 실패 케이스
+  if (
+    code === "not_found" ||
+    code === "validation_error" ||
+    code === "expired" ||
+    code === "invalid_status" ||
+    code === "user_not_found" ||
+    code === "internal_error"
+  ) {
+    setMode("fail")
+    return
+  }
+  // try {
+  //   const token = readToken()
+  //   if (!token) {
+  //     throw new Error("invalid_verify_token")
+  //   }
+  //   await authStore.verifyEmailAction({ token })
+
+  //   setMode("success")
+  // } catch (err: any) {
+  //   setMode("fail")
+  // } finally {
+  //   await authStore.logoutAction()
+  // }
 
   // runVerify(async () => {
   //   const token = readToken()

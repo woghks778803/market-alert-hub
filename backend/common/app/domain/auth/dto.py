@@ -5,7 +5,7 @@ from app.core.constants import UserRole
 
 @dataclass(slots=True, frozen=True)
 class OAuthResult:
-    authorize_url: str
+    authorize_path: str
     refresh_token: str | None = None
 
 

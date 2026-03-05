@@ -261,14 +261,24 @@ class SqlUserRepo(UserRepo):
         )
         self._db.execute(stmt)
 
-    def update_user_by_filter(
+    def update_user_email_verified_at(
+        self, user_id: int, email_verified_at: datetime
+    ) -> None:
+        stmt = (
+            update(UserModel)
+            .where(UserModel.id == user_id)
+            .values({UserModel.email_verified_at: email_verified_at})
+            .execution_options(synchronize_session=False)
+        )
+        self._db.execute(stmt)
+
+    def update_user_email(
         self,
         id: int,
         email_fingerprint: bytes | None = None,
         email_ciphertext: bytes | None = None,
         email_nonce: bytes | None = None,
         email_key_version: int | None = None,
-        email_verified_at: datetime | None = None,
     ) -> None:
         stmt = (
             update(UserModel)
@@ -278,7 +288,6 @@ class SqlUserRepo(UserRepo):
                 email_ciphertext=email_ciphertext,
                 email_nonce=email_nonce,
                 email_key_version=email_key_version,
-                email_verified_at=email_verified_at,
             )
             .execution_options(synchronize_session=False)
         )

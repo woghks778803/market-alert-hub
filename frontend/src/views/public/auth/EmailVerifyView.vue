@@ -74,7 +74,7 @@ async function onSubmit() {
   try {
     await send(async () => {
       await authStore.changeEmailAction({ new_email: fields.value.email });
-      
+      router.push({ name: "VerifyEmailSent" }).catch(() => {})
     });
   } catch (err: any) {
     const apiError = err?.response?.data?.error

@@ -88,6 +88,11 @@ router.beforeEach(async (to, _from, next) => {
     authStore.clearToken()
   }
 
+
+  if (!allows || allows.length === 0) {
+    return next()
+  }
+
   if (!allows.includes(authState)) {
     if (authState == "guest")
       return next({ name: "Login", query: { next: to.fullPath } })
@@ -100,39 +105,5 @@ router.beforeEach(async (to, _from, next) => {
   }
 
   return next()
-
-  // 로그인 필요 페이지인데 토큰 없으면 로그인으로
-  // if (requiresAuth) {
-  //   if (!token) {
-  //     return next({ name: "Login", query: { next: to.fullPath } })
-  //   }
-  // }
-
-  // // 이메일 인증 필요(UX) 페이지
-  // if (requiresVerified) {
-  //   if (!token) {
-  //     return next({ name: "Login", query: { next: to.fullPath } })
-  //   }
-  //   if (!isEmailVerifiedFromToken(token)) {
-  //     return next({ name: "VerifyEmailSent", query: { next: to.fullPath } })
-  //   }
-  // }
-
-  // if (requiresUnverified) {
-  //   if (!token) {
-  //     return next({ name: "Login", query: { next: to.fullPath } })
-  //   }
-  //   if (isEmailVerifiedFromToken(token)) {
-  //     return next({ name: "Home" })
-  //   }
-  // }
-
-  // if (guestOnly && token) {
-  //   if (isEmailVerifiedFromToken(token)) {
-  //     return next({ name: "Home" })
-  //   }
-  //   return next({ name: "VerifyEmailSent" })
-  // }
-
 
 })
