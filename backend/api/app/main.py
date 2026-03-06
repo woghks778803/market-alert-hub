@@ -77,7 +77,8 @@ def create_app() -> FastAPI:
         dsn=ctx.config.sentry_dsn,
         integrations=[FastApiIntegration()],
         environment=ctx.config.deploy_env,
-        traces_sample_rate=0,
+        sample_rate=ctx.config.sample_rate,
+        traces_sample_rate=ctx.config.traces_sample_rate,
         send_default_pii=True,
         # enable_logs=True,
     )

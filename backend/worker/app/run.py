@@ -20,7 +20,8 @@ def run() -> None:
     sentry_sdk.init(
         dsn=rt.config.sentry_dsn,
         environment=rt.config.deploy_env,
-        traces_sample_rate=0,
+        sample_rate=rt.config.sample_rate,
+        traces_sample_rate=rt.config.traces_sample_rate,
         # enable_logs=True,
     )
     sentry_sdk.set_tag("service", "worker")

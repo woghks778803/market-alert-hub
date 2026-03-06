@@ -19,7 +19,8 @@ def main() -> int:
     sentry_sdk.init(
         dsn=rt.ctx.config.sentry_dsn,
         environment=rt.ctx.config.deploy_env,
-        traces_sample_rate=0,
+        sample_rate=rt.ctx.config.sample_rate,
+        traces_sample_rate=rt.ctx.config.traces_sample_rate,
         # enable_logs=True,
     )
     sentry_sdk.set_tag("service", "collector")

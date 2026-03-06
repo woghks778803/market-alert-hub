@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     PUBLIC_API_BASE_URL: str
     PUBLIC_ADMIN_API_BASE_URL: str
     SENTRY_DSN: str
+    SAMPLE_RATE: float
+    TRACES_SAMPLE_RATE: float
 
     # --- DB ---
     MYSQL_HOST: str

@@ -335,11 +335,6 @@ def change_password(
     return ok(result, request_id=meta.request_id)
 
 
-@router.get("/sentry-test")
-def sentry_test():
-    1 / 0
-
-
 @router.post(
     "/verify-password-reset",
     response_model=Envelope[AuthSchema.SimpleOk],

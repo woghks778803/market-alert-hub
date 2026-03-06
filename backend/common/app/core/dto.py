@@ -39,6 +39,8 @@ class ApiConfigBag:
     deploy_env: str
     log_level: str
     sentry_dsn: str
+    sample_rate: float
+    traces_sample_rate: float
     cors_allow_origins: str | list[str]
 
 
@@ -48,6 +50,9 @@ class WorkerConfigBag:
     deploy_env: str
     log_level: str
     sentry_dsn: str
+    sample_rate: float
+    traces_sample_rate: float
+
     redis_url: str
     outbox_poll_limit: int
     outbox_idle_sleep: float
@@ -65,6 +70,9 @@ class DispatcherConfigBag:
     deploy_env: str
     log_level: str
     sentry_dsn: str
+    sample_rate: float
+    traces_sample_rate: float
+
     redis_url: str
     outbox_poll_limit: int
     outbox_idle_sleep: float
@@ -76,6 +84,9 @@ class SchedulerConfigBag:
     deploy_env: str
     log_level: str
     sentry_dsn: str
+    sample_rate: float
+    traces_sample_rate: float
+
     redis_url: str
 
     # exchange
@@ -103,6 +114,9 @@ class CollectorConfigBag:
     deploy_env: str
     log_level: str
     sentry_dsn: str
+    sample_rate: float
+    traces_sample_rate: float
+
     redis_url: str
 
     # exchange
