@@ -37,7 +37,6 @@ websockets>=12
 httpx[http2]==0.28.1
 
 #--------- collector ----------------
-# --- Async + network (collector core) ---
-httpx>=0.27
-websockets>=12.0
 
+# --- Error Tracking ---
+sentry-sdk==2.3.1

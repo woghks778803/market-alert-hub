@@ -39,3 +39,6 @@ httpx[http2]==0.28.1
 #--------- worker ----------------
 # Retry Utility
 # tenacity==8.2.3
+
+# --- Error Tracking ---
+sentry-sdk==2.3.1

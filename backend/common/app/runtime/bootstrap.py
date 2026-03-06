@@ -292,8 +292,9 @@ def build_service_config_bag() -> CoreDTO.ServiceConfigBag:
 def build_api_config_bag() -> CoreDTO.ApiConfigBag:
     return CoreDTO.ApiConfigBag(
         app_name=settings.APP_NAME,
-        deploy_env=settings.API_LOG_LEVEL or settings.DEPLOY_ENV,
-        log_level=settings.LOG_LEVEL,
+        deploy_env=settings.DEPLOY_ENV,
+        log_level=settings.API_LOG_LEVEL or settings.LOG_LEVEL,
+        sentry_dsn=settings.SENTRY_DSN,
         cors_allow_origins=settings.CORS_ALLOW_ORIGINS,
     )
 
@@ -303,6 +304,7 @@ def build_worker_config_bag() -> CoreDTO.WorkerConfigBag:
         app_name=settings.APP_NAME,
         deploy_env=settings.DEPLOY_ENV,
         log_level=settings.WORKER_LOG_LEVEL or settings.LOG_LEVEL,
+        sentry_dsn=settings.SENTRY_DSN,
         redis_url=settings.REDIS_URL,
         outbox_poll_limit=settings.OUTBOX_POLL_LIMIT,
         outbox_idle_sleep=settings.OUTBOX_IDLE_SLEEP,
@@ -320,6 +322,7 @@ def build_dispatcher_config_bag() -> CoreDTO.DispatcherConfigBag:
         app_name=settings.APP_NAME,
         deploy_env=settings.DEPLOY_ENV,
         log_level=settings.DISPATCHER_LOG_LEVEL or settings.LOG_LEVEL,
+        sentry_dsn=settings.SENTRY_DSN,
         redis_url=settings.REDIS_URL,
         outbox_poll_limit=settings.OUTBOX_POLL_LIMIT,
         outbox_idle_sleep=settings.OUTBOX_IDLE_SLEEP,
@@ -331,6 +334,7 @@ def build_scheduler_config_bag() -> CoreDTO.SchedulerConfigBag:
         app_name=settings.APP_NAME,
         deploy_env=settings.DEPLOY_ENV,
         log_level=settings.SCHEDULER_LOG_LEVEL or settings.LOG_LEVEL,
+        sentry_dsn=settings.SENTRY_DSN,
         redis_url=settings.REDIS_URL,
         # exchange=settings.SCHEDULER_EXCHANGE,
         sync_interval_sec=settings.SCHEDULER_SYNC_INTERVAL_SEC,
@@ -350,6 +354,7 @@ def build_collector_config_bag() -> CoreDTO.CollectorConfigBag:
         app_name=settings.APP_NAME,
         deploy_env=settings.DEPLOY_ENV,
         log_level=settings.COLLECTOR_LOG_LEVEL or settings.LOG_LEVEL,
+        sentry_dsn=settings.SENTRY_DSN,
         redis_url=settings.REDIS_URL,
         # exchange=settings.COLLECTOR_EXCHANGE,
         # enable_catalog_sync=settings.COLLECTOR_ENABLE_CATALOG_SYNC,

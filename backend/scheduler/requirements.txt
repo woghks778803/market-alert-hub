@@ -37,3 +37,6 @@ websockets>=12
 httpx[http2]==0.28.1
 
 #--------- scheduler ----------------
+
+# --- Error Tracking ---
+sentry-sdk==2.3.1

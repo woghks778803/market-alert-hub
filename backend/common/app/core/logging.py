@@ -1,7 +1,9 @@
 import logging, sys, json
 from typing import Any
+from .util.datetime import utcnow, ISO_FMT
 
 _CONFIGURED = False  # 멱등 플래그
+
 
 def setup_logging(level: int = logging.INFO, *, service: str = "app") -> None:
     global _CONFIGURED
@@ -26,6 +28,7 @@ class JSONLogFormatter(logging.Formatter):
             "logger": record.name,
             "service": self.service,
             "message": record.getMessage(),
+            "time": utcnow().strftime(ISO_FMT),
         }
         if hasattr(record, "request_id"):
             payload["request_id"] = getattr(record, "request_id")

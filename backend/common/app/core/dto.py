@@ -38,6 +38,7 @@ class ApiConfigBag:
     app_name: str
     deploy_env: str
     log_level: str
+    sentry_dsn: str
     cors_allow_origins: str | list[str]
 
 
@@ -46,6 +47,7 @@ class WorkerConfigBag:
     app_name: str
     deploy_env: str
     log_level: str
+    sentry_dsn: str
     redis_url: str
     outbox_poll_limit: int
     outbox_idle_sleep: float
@@ -62,6 +64,7 @@ class DispatcherConfigBag:
     app_name: str
     deploy_env: str
     log_level: str
+    sentry_dsn: str
     redis_url: str
     outbox_poll_limit: int
     outbox_idle_sleep: float
@@ -72,6 +75,7 @@ class SchedulerConfigBag:
     app_name: str
     deploy_env: str
     log_level: str
+    sentry_dsn: str
     redis_url: str
 
     # exchange
@@ -98,6 +102,7 @@ class CollectorConfigBag:
     app_name: str
     deploy_env: str
     log_level: str
+    sentry_dsn: str
     redis_url: str
 
     # exchange

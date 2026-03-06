@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     PUBLIC_WEB_BASE_URL: str
     PUBLIC_API_BASE_URL: str
     PUBLIC_ADMIN_API_BASE_URL: str
+    SENTRY_DSN: str
 
     # --- DB ---
     MYSQL_HOST: str

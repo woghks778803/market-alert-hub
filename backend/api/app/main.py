@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
-
 import logging
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
 from app.core.constants import DeploymentEnvironment
 from app.core.logging import setup_logging
 from app.api.deps import get_app_context
@@ -11,11 +12,6 @@ from app.api.exception_handlers import unified_exception_handler
 from app.api.router import api
 
 ctx = get_app_context()
-
-TAGS_METADATA = [
-    {"name": "health", "description": "헬스체크/진단"},
-    {"name": "auth", "description": "회원가입 · 로그인 · 토큰"},
-]
 
 
 def _install_openapi_with_bearer(app: FastAPI) -> None:
@@ -66,7 +62,7 @@ def create_app() -> FastAPI:
         title="Market Alert Hub API",
         description="실시간 크립토 알림 서비스의 백엔드 API",
         version="0.1.0",
-        openapi_tags=TAGS_METADATA,
+        # openapi_tags=TAGS_METADATA,
         docs_url="/api/docs",
         redoc_url="/api/redoc",
         openapi_url="/api/openapi.json",
@@ -76,6 +72,17 @@ def create_app() -> FastAPI:
             "persistAuthorization": True,
         },
     )
+
+    sentry_sdk.init(
+        dsn=ctx.config.sentry_dsn,
+        integrations=[FastApiIntegration()],
+        environment=ctx.config.deploy_env,
+        traces_sample_rate=0,
+        send_default_pii=True,
+        # enable_logs=True,
+    )
+    sentry_sdk.set_tag("service", "api")
+    sentry_sdk.capture_message("sentry api connected")
 
     # --- Middleware ---
     # CORSMiddleware가 가장 바깥이어야함

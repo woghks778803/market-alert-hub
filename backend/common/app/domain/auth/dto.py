@@ -12,7 +12,7 @@ class OAuthResult:
 @dataclass(slots=True, frozen=True)
 class AuthToken:
     access_token: str
-    refresh_token: str | None = None
+    refresh_token: str
 
 
 @dataclass(slots=True, frozen=True)

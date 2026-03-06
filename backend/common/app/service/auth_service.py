@@ -490,7 +490,7 @@ class AuthService:
 
     def change_email(
         self, *, user_id: int, new_email: str, current_password: str | None = None
-    ):
+    ) -> str:
         now = utcnow()
         trace_id = get_trace_id()
 
@@ -561,7 +561,7 @@ class AuthService:
 
             uow.commit()
 
-            return AuthDTO.AuthToken(access_token=access_token)
+            return access_token
 
     def send_password_reset(
         self,
@@ -897,5 +897,5 @@ class AuthService:
             refresh_token=refresh_token,
         )
 
-    def oauth_unlink(self):
+    def oauth_unlink(self, token: str):
         pass

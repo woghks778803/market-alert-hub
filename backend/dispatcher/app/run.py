@@ -1,17 +1,31 @@
 import logging
+import sentry_sdk
 import signal
 import time
 
 from app.core.logging import setup_logging
+from app.core.constants import DeploymentEnvironment
 from .wiring import build_dispatcher_runtime
 
-log = logging.getLogger("dispatcher")
+log = logging.getLogger(__name__)
 
 
 def run() -> None:
-    setup_logging(level=logging.INFO, service="dispatcher")
-
     rt = build_dispatcher_runtime()
+    if rt.config.deploy_env == DeploymentEnvironment.PROD:
+        setup_logging(level=logging.INFO, service="dispatcher")
+    else:
+        setup_logging(level=logging.DEBUG, service="dispatcher")
+
+    sentry_sdk.init(
+        dsn=rt.config.sentry_dsn,
+        environment=rt.config.deploy_env,
+        traces_sample_rate=0,
+        # enable_logs=True,
+    )
+    sentry_sdk.set_tag("service", "dispatcher")
+    sentry_sdk.capture_message("sentry dispatcher connected")
+
     stop = {"flag": False}
 
     def _handle_stop(signum, frame):  # noqa: ARG001

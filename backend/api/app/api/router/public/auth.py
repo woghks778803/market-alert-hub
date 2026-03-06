@@ -262,7 +262,7 @@ def change_email(
     - 새 이메일로 인증 메일 발송 + 내부 상태 업데이트
     """
 
-    token_out = svcs.auths.change_email(
+    access_token = svcs.auths.change_email(
         user_id=user.id,
         # current_password=payload.current_password,
         new_email=payload.new_email,
@@ -270,7 +270,7 @@ def change_email(
 
     return ok(
         AuthSchema.TokenOut(
-            access_token=token_out.access_token,
+            access_token=access_token,
             token_type="bearer",
         ),
         request_id=meta.request_id,
@@ -333,6 +333,11 @@ def change_password(
         token=payload.token, new_password=payload.new_password
     )
     return ok(result, request_id=meta.request_id)
+
+
+@router.get("/sentry-test")
+def sentry_test():
+    1 / 0
 
 
 @router.post(
@@ -509,21 +514,24 @@ def oauth_callback(
         return RedirectResponse(url=error_url, status_code=302)
 
 
-# @router.post(
-#     "/oauth/unlink",
-#     response_model=Envelope[AuthSchema.SimpleOk],
-#     summary="",
-#     responses=OpenApi.combine(
-#         OpenApi.OK(
-#             Envelope[AuthSchema.SimpleOk],
-#             description="",
-#             example=OpenApi.wrap_example({"ok": True}),
-#         ),
-#     ),
-# )
-# def oauth_unlink(
-#     svcs: ServiceFactory = Depends(get_services),
-#     meta: RequestMeta = Depends(get_request_meta),  #
-# ):
-#     svcs.auths.oauth_unlink()
-#     return ok(AuthSchema.SimpleOk(ok=True), request_id=meta.request_id)
+@router.post(
+    "/oauth/unlink",
+    response_model=Envelope[AuthSchema.SimpleOk],
+    summary="OAuth 연결 해제 및 탈퇴 처리",
+    responses=OpenApi.combine(
+        OpenApi.OK(
+            Envelope[AuthSchema.SimpleOk],
+            description="회원 틽퇴 (세션 무효화)",
+            example=OpenApi.wrap_example({"ok": True}),
+        ),
+    ),
+)
+def oauth_unlink(
+    response: Response,
+    refresh_token: str = Cookie(..., alias="refresh_token"),
+    svcs: ServiceFactory = Depends(get_services),
+    meta: RequestMeta = Depends(get_request_meta),  #
+):
+    response.delete_cookie("refresh_token", path="/")
+    svcs.auths.oauth_unlink(token=refresh_token)
+    return ok(AuthSchema.SimpleOk(ok=True), request_id=meta.request_id)

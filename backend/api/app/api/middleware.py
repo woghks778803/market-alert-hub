@@ -11,6 +11,7 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         req_id = request.headers.get("x-request-id") or str(uuid.uuid4())
         request.state.request_id = req_id
+        logger.info("request_start")
         start = time.perf_counter()
         set_trace_id(req_id)
 

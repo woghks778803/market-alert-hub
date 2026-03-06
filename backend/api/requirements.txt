@@ -36,6 +36,12 @@ aiohttp>=3.9
 websockets>=12
 httpx[http2]==0.28.1
 
+
+#--------- api ----------------
+
 # --- Web framework ---
 fastapi==0.115.0
 uvicorn[standard]==0.30.1
+
+# --- Error Tracking ---
+sentry-sdk[fastapi]==2.3.1 # Sentry 에러 모니터링 (FastAPI 예외 자동 수집)

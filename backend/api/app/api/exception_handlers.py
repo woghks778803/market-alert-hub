@@ -1,4 +1,5 @@
 import logging
+import sentry_sdk
 from fastapi import Request, Response
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -134,6 +135,9 @@ def _apply_cors_headers(
 
 
 async def unified_exception_handler(request: Request, exc: Exception):
+    if not isinstance(exc, AppError):
+        sentry_sdk.capture_exception(exc)
+
     trace_id = get_trace_id()
     print(f"unified_exception_handler trace_id={trace_id} exc={exc!r}")
     # 1) 예외 타입을 API 맥락에서 해석해 ErrorSpec으로 변환

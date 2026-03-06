@@ -63,14 +63,8 @@ let authBootstrapped = false
 router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore()
   const allows = Array.isArray(to.meta.allows) ? to.meta.allows : []
-  // const requiresAuth = Boolean(to.meta.requiresAuth)
-  // const requiresVerified = Boolean(to.meta.requiresVerified)
-  // const requiresUnverified = Boolean(to.meta.requiresUnverified)
-  // const guestOnly = Boolean(to.meta.guestOnly)
 
   let token = authStore.getToken()
-  const authState = getAuthState(token)
-  console.log("Global Guard:", { to: to.fullPath, authState, allows, hasToken: Boolean(token) })
 
   if (!authBootstrapped) {
     authBootstrapped = true
@@ -84,10 +78,12 @@ router.beforeEach(async (to, _from, next) => {
     }
   }
 
+  const authState = getAuthState(token)
+  console.log("Global Guard:", { to: to.fullPath, authState, allows, hasToken: Boolean(token) })
+
   if (token && isTokenExpired(token)) {
     authStore.clearToken()
   }
-
 
   if (!allows || allows.length === 0) {
     return next()
