@@ -15,7 +15,9 @@ class SessionRepo(Protocol):
         user_agent: str | None
     ) -> AuthDTO.Session: ...
 
-    def update_session(self, token_hash: bytes) -> int: ...
+    def update_session_revoke(
+        self, user_id: int, revoked_at: datetime, token_hash: bytes | None = None
+    ) -> int: ...
 
     def get_session_by_hash(
         self,

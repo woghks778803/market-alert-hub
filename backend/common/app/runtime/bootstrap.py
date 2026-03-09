@@ -345,6 +345,7 @@ def build_scheduler_config_bag() -> CoreDTO.SchedulerConfigBag:
         traces_sample_rate=settings.TRACES_SAMPLE_RATE,
         redis_url=settings.REDIS_URL,
         # exchange=settings.SCHEDULER_EXCHANGE,
+        cleanup_interval_sec=settings.SCHEDULER_CLEANUP_INTERVAL_SEC,
         sync_interval_sec=settings.SCHEDULER_SYNC_INTERVAL_SEC,
         trig_interval_sec=settings.SCHEDULER_TRIG_INTERVAL_SEC,
         snapshot_intervals_sec=settings.SCHEDULER_SNAPSHOT_INTERVALS,

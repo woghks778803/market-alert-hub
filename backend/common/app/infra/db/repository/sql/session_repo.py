@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, update
 from app.core.util.datetime import utcnow
 from app.infra.db.model import SessionModel
 from sqlalchemy.orm import Session as DbSession
@@ -31,15 +31,18 @@ class SqlSessionRepo(SessionRepo):
         self._db.flush()
         return s.to_dto()
 
-    def update_session(self, token_hash: bytes) -> int:
-        stmt = select(SessionModel).where(SessionModel.token_hash == token_hash)
+    def update_session_revoke(
+        self, user_id: int, revoked_at: datetime, token_hash: bytes | None = None
+    ) -> int:
+        wheres = [SessionModel.user_id == user_id]
 
-        s = self._db.execute(stmt).scalar_one_or_none()
-        if not s:
-            return 0
-        s.revoked_at = utcnow()
-        self._db.flush()
-        return 1
+        if token_hash is not None:
+            wheres.append(SessionModel.token_hash == token_hash)
+
+        stmt = update(SessionModel).where(*wheres).values(revoked_at=revoked_at)
+
+        result = self._db.execute(stmt)
+        return int(getattr(result, "rowcount", 0) or 0)
 
     def get_session_by_hash(
         self,

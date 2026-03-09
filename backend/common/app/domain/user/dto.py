@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from datetime import datetime
 from app.core.constants import UserRole, UserStatus, EmailVerificationStatus
 
@@ -32,6 +32,13 @@ class UserEmailInfo:
     email_nonce: bytes | None
     email_key_version: int | None
     email_verified_at: datetime | None
+
+    def to_dict(self, include_none: bool = False) -> dict:
+        data = asdict(self)
+
+        if include_none:
+            return data
+        return {k: v for k, v in data.items() if v is not None}
 
 
 @dataclass(slots=True)
@@ -76,8 +83,8 @@ class User:
     email_verified_at: datetime | None
     created_at: datetime
     updated_at: datetime
+    deleted_at: datetime | None
     last_login_at: datetime | None
-    is_deleted: bool
     is_service: bool
     is_privacy: bool
     is_marketing: bool

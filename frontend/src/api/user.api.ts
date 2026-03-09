@@ -11,7 +11,7 @@ export type UserInfo = {
 
 export const userApi = {
     // GET /user/me
-    async me() {
+    async getMe() {
         const { data } = await http.get<Envelope<UserInfo>>("/user/me")
         return data
     },

@@ -9,8 +9,10 @@ export function mapLoginError(error?: ApiError | null): string | null {
         return "권한이 없습니다."
     }
 
-    if (error.code === "forbidden" && error.target === "status") {
-        return "계정이 정지되었습니다. 자세한 내용은 고객센터에 문의해주세요."
+    if (error.code === "forbidden" && error.target === "status.suspended") {
+        return "이용이 제한된 계정입니다."
+    } else if (error.code === "forbidden" && error.target === "status.deleted") {
+        return "탈퇴 처리중인 계정입니다."
     }
 
     if (error.code === "unauthorized" && error.target === "email") {

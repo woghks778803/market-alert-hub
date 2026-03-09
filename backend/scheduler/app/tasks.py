@@ -2,6 +2,7 @@ from uuid import uuid4
 from app.core.constants import OutboxEventType
 from app.core.util.trace import set_trace_id, clear_trace_id
 from app.handlers import (
+    handle_cleanup_deleted_users,
     handle_sync_exchanges,
     handle_trigger_alerts,
     handle_sync_symbols,
@@ -43,6 +44,11 @@ def build_default_tasks(config):
     """
 
     return [
+        IntervalTask(
+            OutboxEventType.SYNC_SYMBOLS,
+            config.cleanup_interval_sec,
+            handle_cleanup_deleted_users,
+        ),
         IntervalTask(
             OutboxEventType.SYNC_EXCHANGES,
             config.sync_interval_sec,

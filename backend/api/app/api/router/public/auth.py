@@ -13,7 +13,7 @@ from fastapi.responses import RedirectResponse
 
 from app.service.factory import ServiceFactory
 from app.api.schema import UserSchema, AuthSchema
-from app.api.common.envelope import Envelope, ok, created
+from app.api.common.envelope import Envelope, ok, created, no_content
 from app.api.deps import (
     get_current_user,
     get_services,
@@ -379,11 +379,12 @@ def verify_password_reset(
 def logout(
     response: Response,
     refresh_token: str = Cookie(..., alias="refresh_token"),
+    user: AuthSchema.CurrentUser = Security(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),  #
 ):
+    svcs.auths.logout(user_id=user.id, token=refresh_token)
     response.delete_cookie("refresh_token", path="/")
-    svcs.auths.logout(token=refresh_token)
     return ok(AuthSchema.SimpleOk(ok=True), request_id=meta.request_id)
 
 
@@ -464,8 +465,9 @@ def oauth_start(
 )
 def oauth_callback(
     request: Request,
-    code: str = Query(..., description="Authorization code"),
-    state: str = Query(..., description="CSRF state"),
+    code: str | None = Query(None, description="Authorization code"),
+    state: str | None = Query(None, description="CSRF state"),
+    error: str | None = Query(None, description="Error code"),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
@@ -476,6 +478,7 @@ def oauth_callback(
         oauth_result = svcs.auths.oauth_callback(
             code=code,
             state=state,
+            error=error,
             ip=ip,
             ua=ua,
         )
@@ -509,24 +512,16 @@ def oauth_callback(
         return RedirectResponse(url=error_url, status_code=302)
 
 
-@router.post(
-    "/oauth/unlink",
-    response_model=Envelope[AuthSchema.SimpleOk],
-    summary="OAuth 연결 해제 및 탈퇴 처리",
-    responses=OpenApi.combine(
-        OpenApi.OK(
-            Envelope[AuthSchema.SimpleOk],
-            description="회원 틽퇴 (세션 무효화)",
-            example=OpenApi.wrap_example({"ok": True}),
-        ),
-    ),
+@router.delete(
+    "/deactivate",
+    summary="회원 탈퇴 (soft delete + OAuth unlink)",
+    responses=OpenApi.combine(OpenApi.NO_CONTENT({}, description="탈퇴 완료")),
 )
-def oauth_unlink(
+def deactivate_user(
     response: Response,
-    refresh_token: str = Cookie(..., alias="refresh_token"),
+    user: AuthSchema.CurrentUser = Security(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
-    meta: RequestMeta = Depends(get_request_meta),  #
 ):
+    svcs.auths.deactivate_user(user_id=user.id)
     response.delete_cookie("refresh_token", path="/")
-    svcs.auths.oauth_unlink(token=refresh_token)
-    return ok(AuthSchema.SimpleOk(ok=True), request_id=meta.request_id)
+    return no_content()

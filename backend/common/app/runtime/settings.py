@@ -95,8 +95,8 @@ class Settings(BaseSettings):
     # --- Dispatcher, Worker ---
     WORKER_LOG_LEVEL: str = Field(default="INFO")
     DISPATCHER_LOG_LEVEL: str = Field(default="INFO")
-    OUTBOX_POLL_LIMIT: int = Field(default=50)
-    OUTBOX_IDLE_SLEEP: float = Field(default=1.0)
+    OUTBOX_POLL_LIMIT: int = Field(default=100)
+    OUTBOX_IDLE_SLEEP: float = Field(default=0.5)
     # --- Worker 전용 ---
     OUTBOX_RETRY_DELAY_SEC: int = Field(default=60)
     OUTBOX_SEND_LOCK_TTL_SEC: int = Field(default=120)
@@ -147,6 +147,7 @@ class Settings(BaseSettings):
     SCHEDULER_CHECKPOINT_FILE_PATH: str = "/tmp/scheduler_checkpoint.json"
 
     # Schedule interval
+    SCHEDULER_CLEANUP_INTERVAL_SEC: int = 86400
     SCHEDULER_SYNC_INTERVAL_SEC: int = 1800  # 30분
     SCHEDULER_TRIG_INTERVAL_SEC: int = 5  # 1초
     SCHEDULER_SNAPSHOT_INTERVALS: list[int] = Field(
@@ -190,6 +191,9 @@ class Settings(BaseSettings):
         event_type dict로 묶음
         """
         return {
+            OutboxEventType.CLEANUP_DELETED_USERS.value: {
+                "run_key": OutboxEventType.CLEANUP_DELETED_USERS.value,
+            },
             OutboxEventType.PERSIST_SNAPSHOTS.value: {
                 "run_key": OutboxEventType.PERSIST_SNAPSHOTS.value,
             },

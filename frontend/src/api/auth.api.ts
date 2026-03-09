@@ -1,5 +1,5 @@
 import { http } from "./http"
-import type { Envelope } from "./types"
+import type { Envelope, SimpleOk } from "./types"
 
 export type ResetPasswordRequest = {
     token: string,
@@ -43,9 +43,6 @@ export type TokenOut = {
     // user_id?: number
 }
 
-export type SimpleOk = {
-    ok: boolean
-}
 
 export const authApi = {
     // POST /auth/reissue
@@ -63,6 +60,12 @@ export const authApi = {
     // POST /auth/logout
     async logout() {
         const { data } = await http.post<Envelope<SimpleOk>>("/auth/logout")
+        return data
+    },
+
+    // DELETE /auth/deactivate
+    async deactivate() {
+        const { data } = await http.delete<Envelope<SimpleOk>>("/auth/deactivate")
         return data
     },
 
@@ -117,6 +120,6 @@ export const authApi = {
             }
         )
         return data
-    }
+    },
 
 }

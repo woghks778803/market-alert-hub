@@ -11,6 +11,7 @@ from .handler.auth_password_reset import handle_auth_password_reset
 from .handler.sync_exchange import handle_sync_exchanges
 from .handler.sync_symbol import handle_sync_symbols
 from .handler.persist_snapshot import handle_persist_snapshots
+from .handler.cleanup_deleted_user import handle_cleanup_deleted_users
 
 
 logger = logging.getLogger(__name__)
@@ -22,6 +23,7 @@ HANDLERS: dict[OutboxEventType, Handler] = {
     OutboxEventType.PERSIST_SNAPSHOTS: handle_persist_snapshots,
     OutboxEventType.SYNC_EXCHANGES: handle_sync_exchanges,
     OutboxEventType.SYNC_SYMBOLS: handle_sync_symbols,
+    OutboxEventType.CLEANUP_DELETED_USERS: handle_cleanup_deleted_users,
 }
 
 

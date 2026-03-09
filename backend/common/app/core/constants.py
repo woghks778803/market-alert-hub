@@ -22,9 +22,15 @@ class ExchangeCode(str, enum.Enum):
     BITHUMB = "BITHUMB"
 
 
+class OAutheCode(str, enum.Enum):
+    KAKAO = "KAKAO"
+
+
 class OutboxEventType(str, enum.Enum):
     AUTH_EMAIL_VERIFY = "AUTH_EMAIL_VERIFY"
     AUTH_PASSWORD_RESET = "AUTH_PASSWORD_RESET"
+
+    CLEANUP_DELETED_USERS = "CLEANUP_DELETED_USERS"
     SYNC_EXCHANGES = "SYNC_EXCHANGES"
     SYNC_SYMBOLS = "SYNC_SYMBOLS"
     TRIGGER_ALERTS = "TRIGGER_ALERTS"

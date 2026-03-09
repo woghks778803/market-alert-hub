@@ -10,9 +10,11 @@ export function mapRegisterError(error?: ApiError | null): string | null {
         return "이미 사용 중인 이메일입니다."
     }
 
-    // 입력값 검증 실패
-    if (error.code === "validation_error") {
-        return "입력 정보를 다시 확인해주세요."
+    // 값 검증 실패
+    if (error.code === "forbidden" && error.target === "status.suspended") {
+        return "이용이 제한된 계정입니다."
+    } else if (error.code === "forbidden" && error.target === "status.deleted") {
+        return "탈퇴 처리중인 계정입니다."
     }
 
     // 요청 과다

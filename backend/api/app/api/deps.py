@@ -86,6 +86,7 @@ def get_current_user(
     return AuthSchema.CurrentUser(
         id=user_id,
         role=role,
+        email_enrolled=payload.get("ee"),
         email_verified=payload.get("ev"),
     )
 

@@ -92,6 +92,7 @@ class SchedulerConfigBag:
     # exchange
     # exchange: str
 
+    cleanup_interval_sec: int
     sync_interval_sec: int
     trig_interval_sec: int
     snapshot_intervals_sec: list[int]

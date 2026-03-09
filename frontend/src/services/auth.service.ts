@@ -35,6 +35,10 @@ export async function logout() {
     await authApi.logout()
 }
 
+export async function deactivate() {
+    await authApi.deactivate()
+}
+
 export async function changeEmail(payload: ChangeEmailRequest) {
     const env = await authApi.changeEmail(payload)
     const token = env?.data?.access_token

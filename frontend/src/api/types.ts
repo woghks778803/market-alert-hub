@@ -22,3 +22,7 @@ export type Envelope<T> = {
     error?: ApiError | null
     meta?: ApiMeta
 }
+
+export type SimpleOk = {
+    ok: boolean
+}

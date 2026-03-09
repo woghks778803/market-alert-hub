@@ -1,7 +1,8 @@
 from typing import Sequence
 from datetime import datetime
-from sqlalchemy import select, update, desc, and_
+from sqlalchemy import select, update, delete, bindparam, desc, and_
 from sqlalchemy.orm import Session as DbSession
+from app.core.constants import UserStatus
 from app.domain import EmailDTO, UserDTO
 from app.domain.shared.errors import ValidationAppError
 from app.infra.db.model import (
@@ -20,7 +21,7 @@ class SqlUserRepo(UserRepo):
     def __init__(self, db: DbSession) -> None:
         self._db = db
 
-    def add_user_oauth_accounts(
+    def add_user_oauth_account(
         self, user_oauth_account: UserDTO.UserOAuthAccountCreate
     ) -> UserDTO.UserOAuthAccount:
         user_oauth_account = UserOauthAccountModel.from_create_dto(user_oauth_account)
@@ -57,10 +58,14 @@ class SqlUserRepo(UserRepo):
         result = self._db.execute(stmt).scalar_one_or_none()
         return result.to_dto() if result is not None else None
 
-    def get_by_user_id(self, user_id: int) -> UserDTO.User | None:
-        stmt = select(UserModel).where(
-            and_(UserModel.is_deleted.is_(False), UserModel.id == user_id)
-        )
+    def get_by_user_id(
+        self, user_id: int, deleted_is_null: bool = True
+    ) -> UserDTO.User | None:
+        stmt = select(UserModel).where(and_(UserModel.id == user_id))
+
+        if deleted_is_null:
+            stmt = stmt.where(UserModel.deleted_at.is_(None))
+
         model = self._db.execute(stmt).scalar_one_or_none()
         return model.to_dto() if model else None
 
@@ -119,11 +124,20 @@ class SqlUserRepo(UserRepo):
         model = self._db.execute(stmt).scalar_one_or_none()
         return model.to_dto() if model else None
 
+    def get_oauth_provider_by_id(
+        self, id: int, is_active: bool | None = None
+    ) -> UserDTO.OauthProvider | None:
+        stmt = select(OauthProviderModel).where(OauthProviderModel.id == id)
+        if is_active is not None:
+            stmt = stmt.where(OauthProviderModel.is_active.is_(is_active))
+
+        model = self._db.execute(stmt).scalar_one_or_none()
+        return model.to_dto() if model else None
+
     def get_oauth_account_by_filter(
         self,
         oauth_provider_id: int,
         provider_user_id: str,
-        unlinked_at_is_null: bool | None = None,
     ) -> UserDTO.UserOAuthAccount | None:
         uoa = UserOauthAccountModel
         stmt = select(uoa).where(
@@ -131,20 +145,49 @@ class SqlUserRepo(UserRepo):
             uoa.provider_user_id == provider_user_id,
         )
 
-        if unlinked_at_is_null:
-            stmt = stmt.where(uoa.unlinked_at.is_(None))
-
         model = self._db.execute(stmt).scalar_one_or_none()
         return model.to_dto() if model else None
 
-    def list_users_filter(
-        self, *, status: str | None, role: str | None, limit: int, offset: int
-    ) -> Sequence[UserDTO.User]:
-        stmt = select(UserModel).where(UserModel.is_deleted.is_(False))
+    def list_oauth_accounts_by_user(
+        self, user_id: int, unlinked_at_is_null: bool | None = None
+    ) -> list[UserDTO.UserOAuthAccount]:
+        uoa = UserOauthAccountModel
+        stmt = select(uoa).where(uoa.user_id == user_id)
+        if unlinked_at_is_null:
+            stmt = stmt.where(uoa.unlinked_at.is_(None))
+        rows = self._db.execute(stmt).scalars().all()
+        return [row.to_dto() for row in rows]
+
+    def list_deleted_user(
+        self, status: str | None, start_date: datetime, end_date: datetime
+    ) -> list[UserDTO.User]:
+        stmt = select(UserModel).where(
+            UserModel.deleted_at >= start_date, UserModel.deleted_at < end_date
+        )
+
+        if status:
+            stmt = stmt.where(UserModel.status == to_db_value(status))
+
+        result = self._db.execute(stmt).scalars().all()
+        return [user.to_dto() for user in result]
+
+    def list_user_filter(
+        self,
+        *,
+        status: str | None,
+        role: str | None,
+        limit: int,
+        offset: int,
+        deleted_is_null: bool | None = None,
+    ) -> list[UserDTO.User]:
+        stmt = select(UserModel)
+
         if status:
             stmt = stmt.where(UserModel.status == to_db_value(status))
         if role:
             stmt = stmt.where(UserModel.role == to_db_value(role))
+        if deleted_is_null:
+            stmt = stmt.where(UserModel.deleted_at.is_(None))
 
         stmt = stmt.order_by(desc(UserModel.created_at)).limit(limit).offset(offset)
         result = self._db.execute(stmt).scalars().all()
@@ -179,6 +222,18 @@ class SqlUserRepo(UserRepo):
         if updates.consumed_at is not None:
             values[EmailVerificationModel.consumed_at] = updates.consumed_at
         return values
+
+    def update_oauth_accounts_unlinked_at(
+        self, user_id: int, *, unlinked_at: datetime
+    ) -> int:
+        stmt = (
+            update(UserOauthAccountModel)
+            .where(UserOauthAccountModel.user_id == user_id)
+            .where(UserOauthAccountModel.unlinked_at.is_(None))
+            .values(unlinked_at=unlinked_at)
+        )
+        result = self._db.execute(stmt)
+        return result.rowcount or 0
 
     def update_email_verification_by_filter(
         self,
@@ -252,21 +307,23 @@ class SqlUserRepo(UserRepo):
         result = self._db.execute(stmt)
         return int(getattr(result, "rowcount", 0) or 0)
 
-    def update_user_last_login_at(self, user_id: int, last_login_at: datetime) -> None:
+    def update_user_last_login_at(
+        self, id: int, last_login_at: datetime | None = None
+    ) -> None:
         stmt = (
             update(UserModel)
-            .where(UserModel.id == user_id)
+            .where(UserModel.id == id)
             .values({UserModel.last_login_at: last_login_at})
             .execution_options(synchronize_session=False)
         )
         self._db.execute(stmt)
 
     def update_user_email_verified_at(
-        self, user_id: int, email_verified_at: datetime
+        self, id: int, email_verified_at: datetime | None = None
     ) -> None:
         stmt = (
             update(UserModel)
-            .where(UserModel.id == user_id)
+            .where(UserModel.id == id)
             .values({UserModel.email_verified_at: email_verified_at})
             .execution_options(synchronize_session=False)
         )
@@ -289,6 +346,66 @@ class SqlUserRepo(UserRepo):
                 email_nonce=email_nonce,
                 email_key_version=email_key_version,
             )
+            .execution_options(synchronize_session=False)
+        )
+
+        self._db.execute(stmt)
+
+    def update_user_emails(self, user_email_updates: list[UserDTO.UserEmailInfo]):
+        formatted_data = [
+            {
+                "b_id": d["id"],
+                "b_nickname": d.get("nickname"),
+                "b_fingerprint": d.get("email_fingerprint"),
+                "b_ciphertext": d.get("email_ciphertext"),
+                "b_nonce": d.get("email_nonce"),
+                "b_key_version": d.get("email_key_version"),
+                "b_verified_at": d.get("email_verified_at"),
+            }
+            for d in [item.to_dict(include_none=True) for item in user_email_updates]
+        ]
+
+        # No primary key value supplied for column(s) users.id; per-row ORM Bulk UPDATE by Primary Key requires that records contain primary key values
+        # 세션 동기화 로직으로 인해 PK 확인 에러가 발생함.
+        # 이를 회피하기 위해 ORM 계층을 건너뛰는 __table__ 기반의 SQL Expression Language 사용. 한마디로 ORM 개억까. 이런것도 안될거면 왜 쓰는거야
+        stmt = (
+            update(UserModel.__table__)
+            .where(UserModel.__table__.c.id == bindparam("b_id"))
+            .values(
+                nickname=bindparam("b_nickname"),
+                email_fingerprint=bindparam("b_fingerprint"),
+                email_ciphertext=bindparam("b_ciphertext"),
+                email_nonce=bindparam("b_nonce"),
+                email_key_version=bindparam("b_key_version"),
+                email_verified_at=bindparam("b_verified_at"),
+            )
+        )
+
+        self._db.execute(stmt, formatted_data)
+
+    def delete_user(
+        self, user_id: int, *, status: UserStatus, deleted_at: datetime
+    ) -> int:
+        stmt = (
+            update(UserModel)
+            .where(UserModel.id == user_id)
+            .where(UserModel.deleted_at.is_(None))
+            .values(status=to_db_value(status), deleted_at=deleted_at)
+            .execution_options(synchronize_session=False)
+        )
+        result = self._db.execute(stmt)
+        return int(getattr(result, "rowcount", 0) or 0)
+
+    def delete_user_oauth_accounts(
+        self,
+        user_ids: list[int],
+    ):
+        if not user_ids:
+            return
+
+        stmt = (
+            delete(UserOauthAccountModel)
+            .where(UserOauthAccountModel.user_id.in_(user_ids))
             .execution_options(synchronize_session=False)
         )
 

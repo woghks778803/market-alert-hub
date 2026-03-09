@@ -9,6 +9,7 @@ from app.core.constants import (
     OutboxStatus,
     EmailVerificationStatus,
     OutboxEventType,
+    OAutheCode,
 )
 from app.core import dto as CoreDTO
 from app.core.util.trace import get_trace_id
@@ -49,8 +50,8 @@ class AuthService:
         config: CoreDTO.ServiceConfigBag,
     ) -> None:
         self._redis_client = redis_client
-        self._kakao_oauth = kakao_oauth
         self._uow_factory = uow_factory
+        self._kakao_oauth = kakao_oauth
         self._password = password
         self._hmac = hmac
         self._jwt = jwt
@@ -226,7 +227,18 @@ class AuthService:
             email_fingerprint = self._hmac.fp_hash(email)
             email_secrets = self._secrets.encrypt(email.encode("utf-8"))
 
-            if uow.users.get_user_by_email_fingerprint(email_fingerprint):
+            user = uow.users.get_user_by_email_fingerprint(email_fingerprint)
+
+            if user:
+                if user.status == UserStatus.DELETED:
+                    raise PermissionError(
+                        "user status deleted", target="status.deleted"
+                    )
+                elif user.status == UserStatus.SUSPENDED:
+                    raise PermissionError(
+                        "user status suspended", target="status.suspended"
+                    )
+
                 raise ConflictError("email_fingerprint already exists", target="email")
 
             user = uow.users.add_user(
@@ -304,6 +316,13 @@ class AuthService:
             if not user:
                 raise NotFoundError("User not found", target="user")
 
+            if user.status == UserStatus.DELETED:
+                raise PermissionError("user status deleted", target="status.deleted")
+            elif user.status == UserStatus.SUSPENDED:
+                raise PermissionError(
+                    "user status suspended", target="status.suspended"
+                )
+
             if user.password_hash is None or not self._password.verify_password(
                 password, user.password_hash
             ):
@@ -311,9 +330,6 @@ class AuthService:
 
             if admin_chk == True and user.role != UserRole.ADMIN:
                 raise PermissionError("Admin role required", target="role")
-
-            if user.status != UserStatus.ACTIVE:
-                raise PermissionError("User not active status", target="status")
 
             if user.email_verified_at is None:
                 cooldown_sec = self._config.email_resend_cooldown_sec
@@ -376,9 +392,16 @@ class AuthService:
             )
 
     # 로그아웃 (세션 무효화)
-    def logout(self, *, token: str) -> Dict[str, Any]:
+    def logout(self, *, user_id: int, token: str) -> Dict[str, Any]:
+        now = utcnow()
         with self._uow_factory() as uow:
-            uow.sessions.update_session(self._hmac.token_hash(token))
+            user = uow.users.get_by_user_id(user_id)
+            if not user:
+                raise AuthError("Invalid credentials", target="user")
+
+            uow.sessions.update_session_revoke(
+                user_id=user_id, revoked_at=now, token_hash=self._hmac.token_hash(token)
+            )
             uow.commit()
             return {"ok": True}
 
@@ -473,7 +496,7 @@ class AuthService:
                 return urlencode({"code": "not_found", "target": "user"})
 
             uow.users.update_user_email_verified_at(
-                user_id=user.id,
+                id=user.id,
                 email_verified_at=now,
             )
             uow.users.update_email_verification_by_filter(
@@ -716,6 +739,7 @@ class AuthService:
         agree_marketing: bool,
     ) -> AuthDTO.OAuthResult:
         with self._uow_factory() as uow:
+            provider = provider.upper()
             oauth_provider = uow.users.get_oauth_provider_by_code(
                 code=provider, is_active=True
             )
@@ -763,6 +787,7 @@ class AuthService:
         # provider: str,
         code: str,
         state: str,
+        error: str,
         ip: str | None = None,
         ua: str | None = None,
     ):
@@ -792,6 +817,28 @@ class AuthService:
         agree_privacy = data["agree_privacy"]
         agree_marketing = data["agree_marketing"]
 
+        if error:
+            return AuthDTO.OAuthResult(
+                authorize_path=urlencode(
+                    {
+                        "source": provider,
+                        "code": error,
+                        "target": "oauth",
+                    }
+                )
+            )
+
+        if not code or not state:
+            return AuthDTO.OAuthResult(
+                authorize_path=urlencode(
+                    {
+                        "source": provider,
+                        "code": "invalid_request",
+                        "target": "oauth",
+                    }
+                )
+            )
+
         with self._uow_factory() as uow:
             oauth_provider = uow.users.get_oauth_provider_by_code(
                 code=provider, is_active=True
@@ -803,7 +850,7 @@ class AuthService:
                         {
                             "source": provider,
                             "code": "not_found",
-                            "target": "oauth_provider",
+                            "target": "oauth",
                         }
                     )
                 )
@@ -816,11 +863,12 @@ class AuthService:
             oauth_account = uow.users.get_oauth_account_by_filter(
                 oauth_provider_id=oauth_provider.id,
                 provider_user_id=oauth_identity.provider_user_id,
-                unlinked_at_is_null=True,
             )
             if oauth_account:
-                # TODO: 탈퇴, 정지 처리 추가 예정
-                user = uow.users.get_by_user_id(oauth_account.user_id)
+                user = uow.users.get_by_user_id(
+                    oauth_account.user_id, deleted_is_null=False
+                )
+
                 if user is None:
                     return AuthDTO.OAuthResult(
                         authorize_path=urlencode(
@@ -836,7 +884,28 @@ class AuthService:
                     #     "OAuth account linked user not found", target="user"
                     # )
 
-                uow.users.update_user_last_login_at(user_id=user.id, last_login_at=now)
+                if user.status == UserStatus.DELETED:
+                    return AuthDTO.OAuthResult(
+                        authorize_path=urlencode(
+                            {
+                                "source": provider,
+                                "code": "forbidden",
+                                "target": "status.deleted",
+                            }
+                        )
+                    )
+                elif user.status == UserStatus.SUSPENDED:
+                    return AuthDTO.OAuthResult(
+                        authorize_path=urlencode(
+                            {
+                                "source": provider,
+                                "code": "forbidden",
+                                "target": "status.suspended",
+                            }
+                        )
+                    )
+
+                uow.users.update_user_last_login_at(id=user.id, last_login_at=now)
 
                 # 메일 등록 여부
                 if (
@@ -861,7 +930,7 @@ class AuthService:
                         is_marketing=agree_marketing,
                     )
                 )
-                uow.users.add_user_oauth_accounts(
+                uow.users.add_user_oauth_account(
                     UserDTO.UserOAuthAccountCreate(
                         user_id=user.id,
                         oauth_providers_id=oauth_provider.id,
@@ -897,5 +966,51 @@ class AuthService:
             refresh_token=refresh_token,
         )
 
-    def oauth_unlink(self, token: str):
-        pass
+    def deactivate_user(self, *, user_id: int) -> None:
+        now = utcnow()
+        with self._uow_factory() as uow:
+            user = uow.users.get_by_user_id(user_id)
+            if not user:
+                raise NotFoundError("User not found", target="user_id")
+
+            # 외부 OAuth 연동 해제
+            accounts = uow.users.list_oauth_accounts_by_user(
+                user_id=user_id, unlinked_at_is_null=True
+            )
+
+            if accounts:
+
+                def _unlink_kakao(provider_user_id: str) -> None:
+                    self._kakao_oauth.unlink(int(provider_user_id))
+
+                unlink_map = {
+                    OAutheCode.KAKAO.value: _unlink_kakao,
+                    # 다른 OAuth 프로바이더 추가 시 여기서 매핑
+                }
+
+                for account in accounts:
+                    provider = uow.users.get_oauth_provider_by_id(
+                        id=account.oauth_providers_id
+                    )
+                    if not provider:
+                        continue
+                    handler = unlink_map.get(provider.code)
+                    if handler:
+                        try:
+                            handler(account.provider_user_id)
+                        except Exception as e:
+                            raise InternalServerError(
+                                f"Failed to unlink {provider.code} account",
+                                target="oauth",
+                            ) from e
+
+                uow.users.update_oauth_accounts_unlinked_at(
+                    user_id=user_id, unlinked_at=now
+                )
+
+            uow.users.delete_user(
+                user_id=user_id, status=UserStatus.DELETED, deleted_at=now
+            )
+            uow.sessions.update_session_revoke(user_id=user_id, revoked_at=now)
+            uow.users.update_user_email_verified_at(id=user_id)
+            uow.commit()

@@ -1,9 +1,19 @@
-from typing import Callable
-from app.core.util.datetime import utcnow
+from typing import Callable, Any
+from app.core.util.datetime import (
+    utcnow,
+    get_days_ago,
+    get_days_later,
+    start_of_day,
+    ISO_FMT,
+)
 from app.core.constants import UserStatus, UserRole, EmailVerificationStatus
 from app.domain.shared.uow import UnitOfWork
-from app.domain.shared.errors import ValidationAppError, NotFoundError
-from app.domain import UserDTO, EmailDTO, CryptoPort
+from app.domain.shared.errors import (
+    ValidationAppError,
+    NotFoundError,
+    InternalServerError,
+)
+from app.domain import UserDTO, EmailDTO, CryptoPort, AuthPort
 
 
 class UserService:
@@ -11,10 +21,12 @@ class UserService:
         self,
         *,
         uow_factory: Callable[[], UnitOfWork],
+        kakao_oauth: AuthPort.KakaoOAuth,
         hmac: CryptoPort.TokenHasher,
         secrets: CryptoPort.SecretCrypto,
     ) -> None:
         self._uow_factory = uow_factory
+        self._kakao_oauth = kakao_oauth
         self._hmac = hmac
         self._secrets = secrets
 
@@ -52,7 +64,7 @@ class UserService:
             raise NotFoundError("PasswordReset not found", target="password_reset_id")
         return password_reset
 
-    def list_users_filter(
+    def list_user_filter(
         self,
         *,
         status: UserStatus | None,
@@ -64,8 +76,11 @@ class UserService:
         status = self.coerce(status, UserStatus, "status")
 
         with self._uow_factory() as uow:
-            rows = uow.users.list_users_filter(
-                status=status, role=role, limit=limit, offset=offset
+            rows = uow.users.list_user_filter(
+                status=status,
+                role=role,
+                limit=limit,
+                offset=offset,
             )
 
             user_infos = []
@@ -227,10 +242,44 @@ class UserService:
             )
             uow.commit()
 
-    def delete_user(self, *, user_id: int) -> None:
+    def delete_user(self) -> dict[str, Any]:
+        days_ago = get_days_ago(utcnow(), days=30)
+        start_date = start_of_day(days_ago)
+        end_date = get_days_later(start_date, days=1)
+
         with self._uow_factory() as uow:
-            user = self._ensure_user(uow, user_id)
-            user.status = UserStatus.DELETED
-            if hasattr(user, "is_deleted"):
-                user.is_deleted = True
+            deleted_list = uow.users.list_deleted_user(
+                status=UserStatus.DELETED, start_date=start_date, end_date=end_date
+            )
+
+            user_email_updates = []
+            user_ids = []
+
+            for user in deleted_list:
+                # bulk update용
+                user_email_updates.append(
+                    UserDTO.UserEmailInfo(
+                        id=user.id,
+                        nickname=user.nickname,
+                        email_ciphertext=None,
+                        email_fingerprint=None,
+                        email_nonce=None,
+                        email_key_version=None,
+                        email_verified_at=None,
+                    )
+                )
+
+                # bulk delete용
+                user_ids.append(user.id)
+
+            if user_email_updates:
+                uow.users.update_user_emails(user_email_updates)
+            if user_ids:
+                uow.users.delete_user_oauth_accounts(user_ids)
+
             uow.commit()
+            return {
+                "start_date": start_date.strftime(ISO_FMT),
+                "end_date": end_date.strftime(ISO_FMT),
+                "processed_count": len(deleted_list),
+            }

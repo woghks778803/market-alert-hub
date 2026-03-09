@@ -5,6 +5,28 @@ from app.core.util.trace import get_trace_id
 logger = logging.getLogger(__name__)
 
 
+def handle_cleanup_deleted_users(ctx, slot, now_epoch, interval_sec):
+    outbox_fingerprint_dict = {
+        "event_type": OutboxEventType.CLEANUP_DELETED_USERS,
+        "aggregate_type": "system",
+        "aggregate_id": 0,
+        "slot": slot,
+    }
+
+    payload = {
+        "slot": slot,
+        "requested_at_epoch": now_epoch,
+        "interval_sec": interval_sec,
+    }
+
+    _insert_outbox(
+        ctx,
+        OutboxEventType.CLEANUP_DELETED_USERS,
+        outbox_fingerprint_dict,
+        payload,
+    )
+
+
 def handle_sync_exchanges(ctx, slot, now_epoch, interval_sec):
     outbox_fingerprint_dict = {
         "event_type": OutboxEventType.SYNC_EXCHANGES,

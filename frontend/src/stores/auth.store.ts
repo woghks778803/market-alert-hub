@@ -8,11 +8,14 @@ import {
     resendEmailVerification as resendEmailVerificationService,
     requestPasswordReset as requestPasswordResetService,
     logout as logoutService,
+    deactivate as deactivateService,
     verifyEmail as verifyEmailService,
     verifyPasswordReset as verifyPasswordResetService,
     resetPassword as resetPasswordService,
     changeEmail as changeEmailService
 } from "@/services/auth.service";
+
+import { useUserStore } from "@/stores/user.store";
 
 const LS_KEY = "access_token";
 
@@ -80,13 +83,28 @@ export const useAuthStore = defineStore("auth", () => {
     }
 
     async function logoutAction(): Promise<void> {
+        const userStore = useUserStore()
+
         try {
             await logoutService();
         } catch (_) {
             // 무조건 무시
         } finally {
-            console.log("Clearing token on logout");
             clearToken();
+            userStore.clearMe()
+        }
+    }
+
+    async function deactivateAction(): Promise<void> {
+        const userStore = useUserStore()
+
+        try {
+            await deactivateService();
+        } catch (_) {
+            // 무조건 무시
+        } finally {
+            clearToken();
+            userStore.clearMe()
         }
     }
 
@@ -106,6 +124,7 @@ export const useAuthStore = defineStore("auth", () => {
         resetPasswordAction,
         changeEmailAction,
         logoutAction,
+        deactivateAction,
         verifyEmailAction,
         verifyPasswordResetAction,
     };

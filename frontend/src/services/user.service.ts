@@ -1,4 +1,4 @@
-import { userApi, type UserInfo } from "@/api/user.api";
+import { userApi } from "@/api/user.api";
 
 export type MeDto = {
     id: number;
@@ -6,7 +6,7 @@ export type MeDto = {
 };
 
 export async function getMe(): Promise<MeDto> {
-    const envelope = await userApi.me();
+    const envelope = await userApi.getMe();
 
     const data = envelope?.data;
     if (!data) {

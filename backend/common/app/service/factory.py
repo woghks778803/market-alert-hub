@@ -95,6 +95,7 @@ class ServiceFactory:
     def users(self) -> UserService:
         return UserService(
             uow_factory=self._uow,
+            kakao_oauth=self.kakao_oauth,
             hmac=self.hmac,
             secrets=self.secrets,
         )
@@ -110,8 +111,8 @@ class ServiceFactory:
     def auths(self) -> AuthService:
         return AuthService(
             redis_client=self._redis_client,
-            kakao_oauth=self.kakao_oauth,
             uow_factory=self._uow,
+            kakao_oauth=self.kakao_oauth,
             password=self.password,
             hmac=self.hmac,
             jwt=self.jwt,

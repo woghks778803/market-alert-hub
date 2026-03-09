@@ -37,6 +37,9 @@
       <v-btn class="mt-3" block variant="tonal" color="error" @click="goLogin">
         로그아웃
       </v-btn>
+      <v-btn class="mt-3" block variant="tonal" color="error" @click="goDeactivate">
+        회원탈퇴
+      </v-btn>
     </v-card-text>
   </v-card>
 </template>
@@ -50,6 +53,11 @@ const authStore = useAuthStore()
 
 async function goLogin() {
   await authStore.logoutAction() 
+  router.replace({ name: "Login" })
+}
+
+async function goDeactivate() {
+  await authStore.deactivateAction() 
   router.replace({ name: "Login" })
 }
 </script>

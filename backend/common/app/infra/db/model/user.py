@@ -64,10 +64,8 @@ class User(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
     )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    is_deleted: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False, server_default=text("0")
-    )
     is_service: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("0")
     )
@@ -101,8 +99,8 @@ class User(Base):
             email_verified_at=self.email_verified_at,
             created_at=self.created_at,
             updated_at=self.updated_at,
+            deleted_at=self.deleted_at,
             last_login_at=self.last_login_at,
-            is_deleted=self.is_deleted,
             is_service=self.is_service,
             is_privacy=self.is_privacy,
             is_marketing=self.is_marketing,
@@ -125,5 +123,5 @@ class User(Base):
             status=UserStatus.ACTIVE,
             email_verified_at=None,
             last_login_at=None,
-            is_deleted=False,
+            deleted_at=None,
         )
