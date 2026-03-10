@@ -1,0 +1,6 @@
+from typing import Protocol
+
+
+class Cooldown(Protocol):
+    def acquire(self, key: str, ttl_sec: int) -> bool: ...
+    def remain(self, key: str) -> int: ...

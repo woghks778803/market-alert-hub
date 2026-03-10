@@ -33,6 +33,7 @@ from app.domain import (
     CryptoPort,
     AuthPort,
     AuthRule,
+    ThrottlePort,
 )
 
 
@@ -40,7 +41,8 @@ class AuthService:
     def __init__(
         self,
         *,
-        redis_client: Callable[[], Any],
+        cooldown: ThrottlePort.Cooldown,
+        state: AuthPort.AuthState,
         kakao_oauth: AuthPort.KakaoOAuth,
         uow_factory: Callable[[], UnitOfWork],
         password: CryptoPort.PasswordHasher,
@@ -49,7 +51,8 @@ class AuthService:
         secrets: CryptoPort.SecretCrypto,
         config: CoreDTO.ServiceConfigBag,
     ) -> None:
-        self._redis_client = redis_client
+        self._cooldown = cooldown
+        self._state = state
         self._uow_factory = uow_factory
         self._kakao_oauth = kakao_oauth
         self._password = password
@@ -333,8 +336,8 @@ class AuthService:
 
             if user.email_verified_at is None:
                 cooldown_sec = self._config.email_resend_cooldown_sec
-                key = f"cooldown:email_verify_resend:{user.id}"
-                ok = self._redis_client().set(key, b"1", nx=True, ex=cooldown_sec)
+                key = f"email_verify_resend:{user.id}"
+                ok = self._cooldown.acquire(key, cooldown_sec)
                 if ok:
                     if (
                         user.email_fingerprint is not None
@@ -423,11 +426,10 @@ class AuthService:
 
             #  쿨다운 (연타 방지)
             cooldown_sec = self._config.email_resend_cooldown_sec
-            key = f"cooldown:email_verify_resend:{user.id}"
-            ok = self._redis_client().set(key, b"1", nx=True, ex=cooldown_sec)
+            key = f"email_verify_resend:{user.id}"
+            ok = self._cooldown.acquire(key, cooldown_sec)
             if not ok:
-                remain = self._redis_client().ttl(key)  # -2/-1 처리만 조심
-                remain = remain if remain > 0 else 0  # 가드
+                remain = self._cooldown.remain(key)  # -2/-1 처리만 조심
                 raise RateLimitError(
                     "Too many requests. Please try again later.",
                     target="resend_email_verification",
@@ -537,10 +539,9 @@ class AuthService:
             #  쿨다운 (연타 방지)
             cooldown_sec = self._config.email_resend_cooldown_sec
             key = f"cooldown:email_verify_resend:{user.id}"
-            ok = self._redis_client().set(key, b"1", nx=True, ex=cooldown_sec)
+            ok = self._cooldown.acquire(key, cooldown_sec)
             if not ok:
-                remain = self._redis_client().ttl(key)  # -2/-1 처리만 조심
-                remain = remain if remain > 0 else 0  # 가드
+                remain = self._cooldown.remain(key)  # -2/-1 처리만 조심
                 raise RateLimitError(
                     "Too many requests. Please try again later.",
                     target="resend_email_verification",
@@ -603,11 +604,10 @@ class AuthService:
 
             #  쿨다운 (연타 방지)
             cooldown_sec = self._config.email_resend_cooldown_sec
-            key = f"cooldown:password_reset_resend:{user.id}"
-            ok = self._redis_client().set(key, b"1", nx=True, ex=cooldown_sec)
+            key = f"email_verify_resend:{user.id}"
+            ok = self._cooldown.acquire(key, cooldown_sec)
             if not ok:
-                remain = self._redis_client().ttl(key)  # -2/-1 처리만 조심
-                remain = remain if remain > 0 else 0  # 가드
+                remain = self._cooldown.remain(key)  # -2/-1 처리만 조심
                 raise RateLimitError(
                     "Too many requests. Please try again later.",
                     target="resend_password_reset",
@@ -759,19 +759,18 @@ class AuthService:
         # - redis 사용 시: key= f"oauth:state:{provider}:{state}"
         # - value에 created_at, provider 정도 저장
         # - TTL (예: 300초)
-        state = secrets.token_urlsafe(32)
-        key = f"oauth:state:{state}"
         value_dict = {
             "provider": provider,
             "agree_service": agree_service,
             "agree_privacy": agree_privacy,
             "agree_marketing": agree_marketing,
         }
-        value = json.dumps(value_dict).encode()
 
-        redis = self._redis_client()
-        ok = redis.set(key, value, nx=True, ex=300)
-        if not ok:
+        try:
+            state = self._state.create(
+                "oauth", value_dict, self._config.oauth_state_sec
+            )
+        except RuntimeError:
             return AuthDTO.OAuthResult(
                 authorize_path=urlencode(
                     {"source": provider, "code": "internal_error", "target": "state"}
@@ -795,11 +794,9 @@ class AuthService:
         is_enroll_email = False
         is_verify_email = False
 
-        key = f"oauth:state:{state}"
-        redis = self._redis_client()
-        raw = redis.conn().get(key)
+        data = self._state.consume("oauth", state)
 
-        if raw == None:  # key not exist
+        if data == None:  # key not exist
             return AuthDTO.OAuthResult(
                 authorize_path=urlencode(
                     {
@@ -809,8 +806,6 @@ class AuthService:
                     }
                 )
             )
-        redis.delete(key)  # 1회성 소모 (멱등 방지)
-        data = json.loads(raw.decode())
 
         provider = data["provider"]
         agree_service = data["agree_service"]

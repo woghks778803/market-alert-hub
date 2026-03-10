@@ -17,6 +17,7 @@ class Base:
 
 @dataclass(frozen=True)
 class ServiceConfigBag:
+    oauth_state_sec: int
     # 이메일 재전송 쿨다운 초
     email_resend_cooldown_sec: int
     # 토큰/세션 등 서비스용 상수

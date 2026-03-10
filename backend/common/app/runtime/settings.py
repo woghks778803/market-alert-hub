@@ -63,6 +63,9 @@ class Settings(BaseSettings):
     # --- email ---
     EMAIL_RESEND_COOLDOWN_SEC: int = 60
 
+    # --- OAuth ---
+    OAUTH_STATE_TTL_SEC: int = 300
+
     # --- password ---
     ARGON2_TIME_COST: int = 2
     ARGON2_MEMORY_COST: int = 102_400

@@ -6,6 +6,7 @@ from .email import dto as EmailDTO, ports as EmailPort
 from .outbox import dto as OutboxDTO, rules as OutboxRule
 from .crypto import ports as CryptoPort
 from .user import dto as UserDTO
+from .throttle import ports as ThrottlePort
 
 __all__ = [
     "ChannelDTO",
@@ -23,4 +24,5 @@ __all__ = [
     "OutboxRule",
     "CryptoPort",
     "UserDTO",
+    "ThrottlePort",
 ]

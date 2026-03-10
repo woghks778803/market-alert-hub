@@ -23,6 +23,9 @@ from app.infra.external.oauth.kakao.rest_client import (
     KakaoRestClientConfig,
     get_kakao_rest_client,
 )
+
+from app.infra.external.redis.provider.cooldown import RedisCooldown
+from app.infra.external.redis.provider.state import RedisState
 from app.infra.external.redis.active_catalog import RedisActiveMarketCatalog
 from app.infra.external.exchange.upbit.shared.types import UpbitWsSubscribe
 from app.infra.external.exchange.port.ws_client import (
@@ -94,6 +97,11 @@ def _resolve_master_key() -> str:
 
 
 class Providers:
+    """
+    - provider는 객체 lifecycle을 관리하지 않는다.
+    - 객체 생성/캐싱 책임은 factory, wiring에 있다.
+    """
+
     @staticmethod
     def kakao_oauth_provider() -> Callable[[], KakaoOAuth]:
         config = KakaoRestClientConfig(
@@ -176,8 +184,12 @@ class Providers:
         return lambda: get_upbit_ws_client(config)
 
     @staticmethod
-    def redis_provider() -> Callable[[], RedisClient]:
-        return lambda: get_redis_client(settings.REDIS_URL)
+    def state_provider() -> Callable[[], RedisState]:
+        return lambda: RedisState(redis=get_redis_client(settings.REDIS_URL))
+
+    @staticmethod
+    def cooldown_provider() -> Callable[[], RedisCooldown]:
+        return lambda: RedisCooldown(redis=get_redis_client(settings.REDIS_URL))
 
     @staticmethod
     def uow_provider(sqlalchemy_url: str) -> Callable[[], UnitOfWork]:
@@ -276,6 +288,7 @@ providers = Providers()
 
 def build_service_config_bag() -> CoreDTO.ServiceConfigBag:
     return CoreDTO.ServiceConfigBag(
+        oauth_state_sec=settings.OAUTH_STATE_TTL_SEC,
         email_resend_cooldown_sec=settings.EMAIL_RESEND_COOLDOWN_SEC,
         access_token_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
         refresh_token_minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES,
@@ -387,7 +400,8 @@ def create_service_factory() -> ServiceFactory:
 
     return ServiceFactory(
         uow=providers.uow_provider(settings.SQLALCHEMY_URL),
-        redis_client=providers.redis_provider(),
+        state=providers.state_provider(),
+        cooldown=providers.cooldown_provider(),
         email_client=providers.email_client_provider(),
         email_renderer=providers.email_renderer_provider(),
         password_hasher=providers.password_hasher_provider(),

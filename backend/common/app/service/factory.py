@@ -3,7 +3,7 @@ from functools import cached_property
 
 from app.core import dto as CoreDTO
 from app.domain.shared.uow import UnitOfWork
-from app.domain import EmailPort, CryptoPort, MarketPort, AuthPort
+from app.domain import EmailPort, CryptoPort, MarketPort, AuthPort, ThrottlePort
 
 from .auth_service import AuthService
 from .user_service import UserService
@@ -20,7 +20,8 @@ class ServiceFactory:
         self,
         *,
         uow: Callable[[], UnitOfWork],
-        redis_client: Callable[[], Any],
+        state: Callable[[], AuthPort.AuthState],
+        cooldown: Callable[[], ThrottlePort.Cooldown],
         email_client: Callable[[], EmailPort.EmailClient],
         email_renderer: Callable[[], EmailPort.EmailTemplateRenderer],
         password_hasher: Callable[[], CryptoPort.PasswordHasher],
@@ -32,7 +33,8 @@ class ServiceFactory:
         config: CoreDTO.ServiceConfigBag,
     ) -> None:
         self._uow = uow
-        self._redis_client = redis_client
+        self._state = state
+        self._cooldown = cooldown
         self._email_client = email_client
         self._email_renderer = email_renderer
         self._password_hasher = password_hasher
@@ -44,8 +46,12 @@ class ServiceFactory:
         self._config = config
 
     @cached_property
-    def redis(self):
-        return self._redis_client()
+    def cooldown(self):
+        return self._cooldown()
+
+    @cached_property
+    def state(self):
+        return self._state()
 
     @cached_property
     def upbit_symbol(self):
@@ -110,7 +116,8 @@ class ServiceFactory:
     @cached_property
     def auths(self) -> AuthService:
         return AuthService(
-            redis_client=self._redis_client,
+            state=self.state,
+            cooldown=self.cooldown,
             uow_factory=self._uow,
             kakao_oauth=self.kakao_oauth,
             password=self.password,

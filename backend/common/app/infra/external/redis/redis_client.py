@@ -2,9 +2,10 @@ import logging
 from dataclasses import dataclass
 from functools import lru_cache
 
-from redis.client import Redis as SyncRedis
+from redis.client import Redis as SyncRedis, Pipeline
 from redis.exceptions import RedisError
 from typing import cast
+
 log = logging.getLogger(__name__)
 
 
@@ -80,11 +81,26 @@ class RedisClient:
         except RedisError:
             log.exception("redis delete failed: key=%s", key)
             raise
-    
+
     def conn(self) -> SyncRedis:
         return self._client
 
-    # # --- 쿠다운/락 같은 용도로 자주 쓰는 helper ---
+    def pipeline(self) -> Pipeline:
+        """
+        redis pipeline wrapper
+
+        사용 예:
+            pipe = redis.pipeline()
+            pipe.get(key)
+            pipe.delete(key)
+            raw, _ = pipe.execute()
+        """
+        try:
+            return self._client.pipeline()
+        except RedisError:
+            log.exception("redis pipeline create failed")
+            raise
+
     # def set_cooldown(self, key: str, *, ttl_sec: int) -> bool:
     #     """
     #     NX + EX ttl
@@ -105,4 +121,3 @@ class RedisClient:
 @lru_cache
 def get_redis_client(redis_url: str) -> RedisClient:
     return RedisClient(redis_url)
-
