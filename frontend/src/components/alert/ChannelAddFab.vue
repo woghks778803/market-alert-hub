@@ -1,0 +1,10 @@
+<template>
+  <v-btn
+    class="alert-channel-fab"
+    color="deep-purple"
+    icon
+    size="large"
+  >
+    <v-icon>mdi-plus</v-icon>
+  </v-btn>
+</template>
