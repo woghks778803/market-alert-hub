@@ -95,7 +95,7 @@
 import CenterCardShell from "@/components/CenterCardShell.vue"
 import { useRoute, useRouter } from "vue-router";
 import { useLoginForm } from "@/composables/auth/useLoginForm";
-import { isTokenExpired, isEmailVerifiedFromToken } from "@/utils/jwt"
+import { isEmailVerifiedFromToken } from "@/utils/jwt"
 import { useAuthStore } from "@/stores/auth.store";
 import { mapCommonError } from "@/api/error/errorMapper"
 import { mapLoginError } from "./loginErrorMapper"
@@ -133,11 +133,6 @@ async function onSubmit() {
         email: email.value,
         password: password.value,
       });
-
-      if (isTokenExpired(token)) {
-        errorMessage.value = "세션이 만료되었습니다. 다시 로그인해주세요.";
-        return;
-      }
 
       const next = getNextPath();
       if (!isEmailVerifiedFromToken(token)) {
@@ -178,7 +173,14 @@ function goForgotPassword() {
 }
 
 function onKakaoLogin() {
-  console.log("kakao login")
+  const params = new URLSearchParams({
+    provider: "kakao",
+  })
+
+  window.location.href =
+    `${import.meta.env.VITE_API_BASE_URL}/auth/oauth/start?${params.toString()}`
+  
+  return
 }
 </script>
 

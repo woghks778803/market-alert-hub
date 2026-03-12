@@ -5,6 +5,10 @@ export function mapLoginError(error?: ApiError | null): string | null {
         return "네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
     }
 
+    if (error.code === "validation_error" && error.target === "terms") {
+        return "약관 동의가 필요합니다."
+    }
+
     if (error.code === "forbidden" && error.target === "role") {
         return "권한이 없습니다."
     }

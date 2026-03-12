@@ -409,14 +409,14 @@ def oauth_start(
     #     },
     # ),
     provider: str = Query(..., description="OAuth provider code (e.g., kakao)"),
-    agree_service: bool = Query(
-        ..., description="User consent to required service terms (true/false)"
+    agree_service: bool | None = Query(
+        None, description="User consent to required service terms (true/false)"
     ),
-    agree_privacy: bool = Query(
-        ..., description="User consent to required privacy policy (true/false)"
+    agree_privacy: bool | None = Query(
+        None, description="User consent to required privacy policy (true/false)"
     ),
-    agree_marketing: bool = Query(
-        ...,
+    agree_marketing: bool | None = Query(
+        None,
         description="User consent to optional marketing communications (true/false)",
     ),
     svcs: ServiceFactory = Depends(get_services),
@@ -434,7 +434,7 @@ def oauth_start(
         # 실패 케이스 (urlencode 된 값)
         if oauth_result.authorize_path.startswith("source="):
             fail_url = (
-                f"{svcs._config.public_web_base_url}/auth/oauth/fail?"
+                f"{svcs._config.public_web_base_url}/auth/oauth/callback?"
                 f"{oauth_result.authorize_path}"
             )
             return RedirectResponse(url=fail_url, status_code=302)
@@ -447,7 +447,7 @@ def oauth_start(
         return RedirectResponse(url=authorize_url, status_code=302)
     except Exception as e:
         error_url = (
-            f"{svcs._config.public_web_base_url}/auth/oauth/fail"
+            f"{svcs._config.public_web_base_url}/auth/oauth/callback"
             f"?code=internal_error"
         )
         return RedirectResponse(url=error_url, status_code=302)
@@ -483,13 +483,10 @@ def oauth_callback(
             ua=ua,
         )
 
-        path = oauth_result.authorize_path
-        if path.startswith("source="):
-            redirect_url = (
-                f"{svcs._config.public_web_base_url}/auth/oauth/fail?" f"{path}"
-            )
-        else:
-            redirect_url = f"{svcs._config.public_web_base_url}" f"{path}"
+        redirect_url = (
+            f"{svcs._config.public_web_base_url}/auth/oauth/callback?"
+            f"{oauth_result.authorize_path}"
+        )
 
         redirect = RedirectResponse(url=redirect_url, status_code=302)
 
@@ -506,7 +503,7 @@ def oauth_callback(
         return redirect
     except Exception as e:
         error_url = (
-            f"{svcs._config.public_web_base_url}/auth/oauth/fail"
+            f"{svcs._config.public_web_base_url}/auth/oauth/callback"
             f"?code=internal_error"
         )
         return RedirectResponse(url=error_url, status_code=302)

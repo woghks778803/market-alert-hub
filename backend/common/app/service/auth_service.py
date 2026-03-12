@@ -169,6 +169,9 @@ class AuthService:
                 raise AuthError("Invalid token", target="token")
 
             if s.revoked_at is not None or ensure_utc(s.expires_at) <= now:
+                uow.sessions.update_session_revoke(
+                    user_id=s.user_id, revoked_at=now, token_hash=s.token_hash
+                )
                 raise AuthError("Expired token", target="token")
 
             user = uow.users.get_by_user_id(s.user_id)
@@ -676,7 +679,9 @@ class AuthService:
             if not user:
                 raise NotFoundError("User not found", target="user_id")
 
-            user.password_hash = self._password.hash_password(new_password)
+            uow.users.update_user_password_hash(
+                id=user.id, password_hash=self._password.hash_password(new_password)
+            )
 
             uow.users.update_password_reset_by_filter(
                 id=password_reset.id,
@@ -734,9 +739,9 @@ class AuthService:
     def oauth_start(
         self,
         provider: str,
-        agree_service: bool,
-        agree_privacy: bool,
-        agree_marketing: bool,
+        agree_service: bool | None,
+        agree_privacy: bool | None,
+        agree_marketing: bool | None,
     ) -> AuthDTO.OAuthResult:
         with self._uow_factory() as uow:
             provider = provider.upper()
@@ -901,20 +906,18 @@ class AuthService:
                     )
 
                 uow.users.update_user_last_login_at(id=user.id, last_login_at=now)
-
-                # 메일 등록 여부
-                if (
-                    user.email_fingerprint is not None
-                    and user.email_ciphertext is not None
-                    and user.email_nonce is not None
-                    and user.email_key_version is not None
-                ):
-                    is_enroll_email = True
-
-                # 메인 인증 여부
-                if user.email_verified_at:
-                    is_verify_email = True
             else:
+                if not agree_service or not agree_privacy:
+                    return AuthDTO.OAuthResult(
+                        authorize_path=urlencode(
+                            {
+                                "source": provider,
+                                "code": "validation_error",
+                                "target": "terms",
+                            }
+                        )
+                    )
+
                 user = uow.users.add_user(
                     UserDTO.UserCreate(
                         nickname=oauth_identity.nickname
@@ -949,15 +952,14 @@ class AuthService:
 
             uow.commit()
 
-        if not is_enroll_email:
-            path = "/auth/verify-email"
-        elif not is_verify_email:
-            path = "/auth/verify-sent"
-        else:
-            path = "/"
-
+        authorize_path = urlencode(
+            {
+                "source": provider,
+                "code": "ok",
+            }
+        )
         return AuthDTO.OAuthResult(
-            authorize_path=path,
+            authorize_path=authorize_path,
             refresh_token=refresh_token,
         )
 

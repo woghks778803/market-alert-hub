@@ -307,6 +307,15 @@ class SqlUserRepo(UserRepo):
         result = self._db.execute(stmt)
         return int(getattr(result, "rowcount", 0) or 0)
 
+    def update_user_password_hash(self, id: int, password_hash: str) -> None:
+        stmt = (
+            update(UserModel)
+            .where(UserModel.id == id)
+            .values({UserModel.password_hash: password_hash})
+            .execution_options(synchronize_session=False)
+        )
+        self._db.execute(stmt)
+
     def update_user_last_login_at(
         self, id: int, last_login_at: datetime | None = None
     ) -> None:

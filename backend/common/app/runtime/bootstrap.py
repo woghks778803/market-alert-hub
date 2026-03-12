@@ -26,7 +26,7 @@ from app.infra.external.oauth.kakao.rest_client import (
 
 from app.infra.external.redis.provider.cooldown import RedisCooldown
 from app.infra.external.redis.provider.state import RedisState
-from app.infra.external.redis.active_catalog import RedisActiveMarketCatalog
+from app.infra.external.redis.provider.active_catalog import RedisActiveMarketCatalog
 from app.infra.external.exchange.upbit.shared.types import UpbitWsSubscribe
 from app.infra.external.exchange.port.ws_client import (
     WsFactoryRegistry,

@@ -45,7 +45,7 @@ export const router = createRouter({
 })
 
 function getAuthState(token: string | null) {
-  if (!token || (token && isTokenExpired(token))) return "guest"
+  if (!token) return "guest"
 
   if (!isEmailEnrolledFromToken(token)) {
     return "unenrolled"
@@ -73,7 +73,7 @@ router.beforeEach(async (to, _from, next) => {
         token = await authStore.reissueAction()
       } catch {
         authStore.clearToken()
-        console.log("token :", token)
+        // console.log("token :", token)
       }
     }
   }
@@ -82,7 +82,7 @@ router.beforeEach(async (to, _from, next) => {
   console.log("Global Guard:", { to: to.fullPath, authState, allows, hasToken: Boolean(token) })
 
   if (token && isTokenExpired(token)) {
-    authStore.clearToken()
+    // authStore.clearToken()
   }
 
   if (!allows || allows.length === 0) {

@@ -35,7 +35,7 @@ npm run dev   # http://localhost:5173
 - API 엔트리: `backend/api/app/main.py`; 인증·DI: `backend/api/app/api/deps.py`; 라우터: `backend/api/app/api/router/`.
 - 서비스 공통 설정·프로바이더: `backend/common/app/runtime/`.
 - Nginx 설정: `gateway/nginx.conf`.
-- 배포/운영 문서: `docs/`, `infra/`.
+- 배포/운영 문서: `docs/`
 
 ## 향후 보완
 - API 명세(`docs/API-Contracts.md`)와 서비스별 README 확충

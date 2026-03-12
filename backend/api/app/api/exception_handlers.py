@@ -12,7 +12,7 @@ from app.core.error.error_model import (
     build_log_fields,
 )
 from app.core.util.trace import get_trace_id
-from app.domain.shared.errors import AppError
+from app.domain.shared.errors import AppError, AuthError
 from app.api.deps import get_app_context
 from app.api.common.envelope import fail, ErrorBody
 
@@ -209,6 +209,14 @@ async def unified_exception_handler(request: Request, exc: Exception):
         request_id=trace_id,
         status_code=public_spec.status_code,
     )
+
+    # 401 token 에러일때 refresh_token 쿠키 제거
+    if isinstance(exc, AuthError) and getattr(exc, "target", None) == "token":
+        resp.delete_cookie(
+            key="refresh_token",
+            path="/",
+        )
+
     _apply_cors_headers(request, resp, ctx.config.cors_allow_origins)
 
     return resp
