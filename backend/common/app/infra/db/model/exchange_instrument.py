@@ -41,9 +41,7 @@ class ExchangeInstrument(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
     )
-    is_deleted: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False, server_default=text("0")
-    )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     is_active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("0")
     )
@@ -78,7 +76,7 @@ class ExchangeInstrument(Base):
             min_notional=self.min_notional,
             created_at=self.created_at,
             updated_at=self.updated_at,
-            is_deleted=self.is_deleted,
+            deleted_at=self.deleted_at,
             is_active=self.is_active,
         )
 

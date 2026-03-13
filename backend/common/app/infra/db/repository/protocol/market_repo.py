@@ -12,7 +12,7 @@ class MarketRepo(Protocol):
         id: int | None = None,
         code: str | None = None,
         is_active: bool = True,
-        is_delete: bool = False,
+        deleted_is_null: bool = True,
     ) -> MarketDTO.Exchange | None: ...
     def get_last_1m_by_exchange_instrument_ids(
         self,
@@ -23,21 +23,32 @@ class MarketRepo(Protocol):
         *,
         exchange_instrument_id: int,
         is_active: bool = True,
-        is_delete: bool = False,
+        deleted_is_null: bool = True,
     ) -> MarketDTO.ExchangeInstrument | None: ...
     def list_exchange_by_filter(
         self,
         *,
         is_active: bool = True,
-        is_deleted: bool = False,
+        deleted_is_null: bool = True,
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[MarketDTO.Exchange]: ...
+    def list_market_by_filter(
+        self,
+        *,
+        user_id: int,
+        exchange_codes: list[str] | None,
+        search: str | None,
+        watchlist_only: bool,
+        sort: str,
+        limit: int,
+        offset: int,
+    ) -> Sequence[MarketDTO.Market]: ...
     def list_instrument_by_filter(
         self,
         *,
         is_active: bool | None = None,
-        is_deleted: bool = False,
+        deleted_is_null: bool = True,
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[MarketDTO.Instrument]: ...
@@ -46,7 +57,7 @@ class MarketRepo(Protocol):
         *,
         exchange_id: int | None = None,
         is_active: bool | None = None,
-        is_deleted: bool = False,
+        deleted_is_null: bool = True,
         limit: int = 200,
         offset: int = 0,
     ) -> list[MarketDTO.MappingItem]: ...

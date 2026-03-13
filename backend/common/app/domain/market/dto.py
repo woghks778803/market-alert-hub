@@ -80,6 +80,23 @@ class MappingItem:
 
 
 @dataclass(slots=True)
+class Market:
+    market_id: int
+    symbol: str
+    exchange_code: str
+
+    base_asset: str
+    quote_asset: str
+    asset_name: str
+
+    volume: Decimal | None
+    price: Decimal | None
+    change_rate: Decimal | None
+
+    is_watchlisted: bool
+
+
+@dataclass(slots=True)
 class ExchangeInstrument:
     id: int
     exchange_id: int
@@ -88,7 +105,7 @@ class ExchangeInstrument:
     exchange_symbol: str
     created_at: datetime
     updated_at: datetime
-    is_deleted: bool
+    deleted_at: datetime | None
     is_active: bool
     price_precision: int | None
     qty_precision: int | None
@@ -102,7 +119,6 @@ class ExchangeInstrumentCreate:
     quote_asset_id: int
     exchange_symbol: str
     updated_at: datetime
-    is_deleted: bool
     is_active: bool
     price_precision: int | None = None
     qty_precision: int | None = None
@@ -117,7 +133,7 @@ class Exchange:
     timezone: str
     created_at: datetime
     updated_at: datetime
-    is_deleted: bool
+    deleted_at: datetime | None
     is_active: bool
     country: str | None
     base_url: str | None
@@ -126,11 +142,12 @@ class Exchange:
 @dataclass(slots=True)
 class Instrument:
     id: int
+    name: str
     symbol: str
     asset_type: AssetType
     created_at: datetime
     updated_at: datetime
-    is_deleted: bool
+    deleted_at: datetime | None
     is_active: bool
 
 

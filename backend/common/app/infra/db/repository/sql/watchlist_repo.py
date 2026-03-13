@@ -1,22 +1,38 @@
 from typing import Sequence
-from sqlalchemy import select, func, and_, asc, desc
+from sqlalchemy import delete, select, func, and_, asc, desc
 from sqlalchemy.orm import aliased, Session as DbSession
+from app.domain import WatchlistDTO
 from app.infra.db.model import (
-    WatchlistItemModel, 
-    ExchangeInstrumentModel, 
-    InstrumentModel
+    WatchlistItemModel,
+    ExchangeInstrumentModel,
+    InstrumentModel,
 )
 from ..protocol.watchlist_repo import WatchlistRepo
+
 
 class SqlWatchlistRepo(WatchlistRepo):
     def __init__(self, db: DbSession):
         self._db = db
 
-    def list_items_by_filter(self, *, user_id: int, limit: int, offset: int, is_asc: bool) -> Sequence[WatchlistItemModel]:
+    def add_item(
+        self, *, user_id: int, exchange_instrument_id: int, sort_order: int
+    ) -> WatchlistDTO.WatchlistItem:
+        row = WatchlistItemModel(
+            user_id=user_id,
+            exchange_instrument_id=exchange_instrument_id,
+            sort_order=sort_order,
+        )
+        self._db.add(row)
+        self._db.flush()  # id 채우기
+        return row.to_dto()
+
+    def list_items_by_filter(
+        self, *, user_id: int, limit: int, offset: int, is_asc: bool
+    ) -> Sequence[WatchlistItemModel]:
         order = asc if is_asc else desc
         stmt = (
             select(WatchlistItemModel)
-            .where(and_(WatchlistItemModel.user_id == user_id, WatchlistItemModel.is_deleted.is_(False)))
+            .where(and_(WatchlistItemModel.user_id == user_id))
             .order_by(order(WatchlistItemModel.sort_order), desc(WatchlistItemModel.id))
             .limit(limit)
             .offset(offset)
@@ -24,49 +40,37 @@ class SqlWatchlistRepo(WatchlistRepo):
         return self._db.execute(stmt).scalars().all()
 
     def exists(self, *, user_id: int, exchange_instrument_id: int) -> bool:
-        stmt = (
-            select(func.count(WatchlistItemModel.id))
-            .where(
-                and_(
-                    WatchlistItemModel.user_id == user_id,
-                    WatchlistItemModel.exchange_instrument_id == exchange_instrument_id,
-                    WatchlistItemModel.is_deleted == False,
-                )
-            )
-        )
-        return self._db.execute(stmt).scalar_one() > 0
-
-    def mapping_exists(self, *, exchange_instrument_id: int) -> bool:
-        stmt = select(func.count(ExchangeInstrumentModel.id)).where(
+        stmt = select(func.count(WatchlistItemModel.id)).where(
             and_(
-                ExchangeInstrumentModel.id == exchange_instrument_id,
+                WatchlistItemModel.user_id == user_id,
+                WatchlistItemModel.exchange_instrument_id == exchange_instrument_id,
             )
         )
         return self._db.execute(stmt).scalar_one() > 0
 
     def get_next_sort(self, *, user_id: int) -> int:
         stmt = select(func.coalesce(func.max(WatchlistItemModel.sort_order), 0)).where(
-            and_(WatchlistItemModel.user_id == user_id, WatchlistItemModel.is_deleted.is_(False))
+            and_(WatchlistItemModel.user_id == user_id)
         )
         return int(self._db.execute(stmt).scalar_one()) + 1
-
-    def add_item(self, *, user_id: int, exchange_instrument_id: int, sort_order: int) -> WatchlistItemModel:
-        row = WatchlistItemModel(
-            user_id=user_id,
-            exchange_instrument_id=exchange_instrument_id,
-            sort_order=sort_order,
-            is_deleted=False,
-        )
-        self._db.add(row)
-        self._db.flush()  # id 채우기
-        return row
 
     def get_item_by_filter(self, *, item_id: int, user_id: int) -> WatchlistItemModel:
         stmt = (
             select(WatchlistItemModel)
-            .where(and_(WatchlistItemModel.id == item_id, WatchlistItemModel.user_id == user_id))
+            .where(
+                and_(
+                    WatchlistItemModel.id == item_id,
+                    WatchlistItemModel.user_id == user_id,
+                )
+            )
             .limit(1)
         )
         return self._db.execute(stmt).scalar_one_or_none()
 
-    
+    def delete_item(self, *, user_id: int, exchange_instrument_id: int) -> None:
+        stmt = delete(WatchlistItemModel).where(
+            WatchlistItemModel.user_id == user_id,
+            WatchlistItemModel.exchange_instrument_id == exchange_instrument_id,
+        )
+
+        self._db.execute(stmt)

@@ -11,6 +11,14 @@ SYMBOLS = "symbols"
 EXCHANGES = "exchanges"
 
 
+class MarketSort(str, enum.Enum):
+    VOLUME_DESC = "volume_desc"
+    CHANGE_DESC = "change_desc"
+    CHANGE_ASC = "change_asc"
+    PRICE_DESC = "price_desc"
+    PRICE_ASC = "price_asc"
+
+
 class UseType(str, enum.Enum):
     YES = True
     No = False

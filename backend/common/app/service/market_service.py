@@ -3,7 +3,12 @@ from typing import Any, Callable, Sequence, Iterable
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from app.core.constants import CandleBaseInterval, CandleOutputInterval, ExchangeCode
+from app.core.constants import (
+    CandleBaseInterval,
+    CandleOutputInterval,
+    ExchangeCode,
+    MarketSort,
+)
 from app.core.util.datetime import utcnow, epoch_to_datetime
 from app.domain.shared.uow import UnitOfWork
 from app.domain.shared.errors import ValidationAppError, NotFoundError
@@ -25,9 +30,31 @@ class MarketService:
         self, *, limit: int, offset: int
     ) -> Sequence[MarketDTO.Exchange]:
         with self._uow_factory() as uow:
-            return uow.markets.list_exchange_by_filter(
-                is_active=True, is_deleted=False, limit=limit, offset=offset
+            return uow.markets.list_exchange_by_filter(limit=limit, offset=offset)
+
+    def list_markets_by_filter(
+        self,
+        *,
+        user_id: int,
+        exchange_codes: list[str] | None,
+        search: str | None,
+        watchlist_only: bool,
+        sort: MarketSort,
+        limit: int,
+        offset: int,
+    ):
+        with self._uow_factory() as uow:
+            rows = uow.markets.list_market_by_filter(
+                user_id=user_id,
+                exchange_codes=exchange_codes,
+                search=search,
+                watchlist_only=watchlist_only,
+                sort=sort,
+                limit=limit,
+                offset=offset,
             )
+
+            return rows
 
     def list_exchange_instrument_by_filter(
         self,
@@ -40,7 +67,7 @@ class MarketService:
         with self._uow_factory() as uow:
             rows = uow.markets.list_exchange_instrument_by_filter(
                 exchange_id=exchange_id,
-                is_deleted=False,
+                deleted_is_null=True,
                 is_active=is_active,
                 limit=limit,
                 offset=offset,
@@ -280,7 +307,7 @@ class MarketService:
 
         # 기존 매핑 조회
         blocked = repo.list_exchange_instrument_by_filter(
-            exchange_id=exchange.id, is_deleted=True
+            exchange_id=exchange.id, deleted_is_null=False
         )
         existing = repo.list_exchange_instrument_by_filter(exchange_id=exchange.id)
         blocked_keys = {(m.base_asset_id, m.quote_asset_id) for m in blocked}
@@ -308,7 +335,6 @@ class MarketService:
                     quote_asset_id=quote_id,
                     updated_at=updated_at,
                     is_active=True,
-                    is_deleted=False,
                 )
                 for (base_id, quote_id) in to_insert
             ]
@@ -377,7 +403,7 @@ class MarketService:
 
             for ex in exchanges:
                 markets = uow.markets.list_exchange_instrument_by_filter(
-                    exchange_id=ex.id, is_deleted=False
+                    exchange_id=ex.id
                 )
 
                 for m in markets:

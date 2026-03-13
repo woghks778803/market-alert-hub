@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from pydantic import BaseModel, ConfigDict
 
 _model_cfg = ConfigDict(from_attributes=True, use_enum_values=True)
@@ -19,6 +20,19 @@ class ExchangeRead(BaseModel):
     id: int
     code: str
     name: str
+
+
+class MarketRead(BaseModel):
+    market_id: int
+    symbol: str
+    exchange_code: str
+    base_asset: str
+    quote_asset: str
+    asset_name: str
+    volume: Decimal | None
+    price: Decimal | None
+    change_rate: Decimal | None
+    is_watchlisted: bool
 
 
 class MappingItem(BaseModel):

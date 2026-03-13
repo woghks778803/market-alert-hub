@@ -1,11 +1,11 @@
 from curses import meta
 from datetime import datetime
-from fastapi import Response, APIRouter, Depends, Query, Path, Body, status
-from app.core.constants import CandleBaseInterval, CandleOutputInterval
+from fastapi import Security, Response, APIRouter, Depends, Query, Path, Body, status
+from app.core.constants import CandleBaseInterval, CandleOutputInterval, MarketSort
 from app.service.factory import ServiceFactory
 from app.api.common.envelope import Envelope, ok, no_content
-from app.api.deps import get_services, get_request_meta, RequestMeta
-from app.api.schema import MarketSchema
+from app.api.deps import get_current_user, get_services, get_request_meta, RequestMeta
+from app.api.schema import AuthSchema, MarketSchema
 import app.api.openapi as OpenApi
 
 router = APIRouter(prefix="/markets")
@@ -27,10 +27,46 @@ router = APIRouter(prefix="/markets")
 def list_exchanges(
     limit: int = Query(10, ge=1, le=20),
     offset: int = Query(0, ge=0),
+    user: AuthSchema.CurrentUser = Security(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
     rows = svcs.markets.list_exchange_by_filter(limit=limit, offset=offset)
+    return ok(rows, request_id=meta.request_id)
+
+
+@router.get(
+    "",
+    response_model=Envelope[list[MarketSchema.MarketRead]],
+    summary="마켓(거래소 종목) 목록",
+    responses=OpenApi.combine(
+        OpenApi.OK(
+            Envelope[list[MarketSchema.MarketRead]],
+            description="",
+        ),
+        OpenApi.ERR_409,
+    ),
+)
+def list_markets(
+    limit: int = Query(10, ge=1, le=20),
+    offset: int = Query(0, ge=0),
+    exchange_codes: list[str] | None = Query(None),
+    search: str | None = Query(None),
+    watchlist_only: bool = Query(False),
+    sort: MarketSort = Query(None),
+    user: AuthSchema.CurrentUser = Security(get_current_user),
+    svcs: ServiceFactory = Depends(get_services),
+    meta: RequestMeta = Depends(get_request_meta),
+):
+    rows = svcs.markets.list_markets_by_filter(
+        user_id=user.id,
+        exchange_codes=exchange_codes,
+        search=search,
+        watchlist_only=watchlist_only,
+        sort=sort,
+        limit=limit,
+        offset=offset,
+    )
     return ok(rows, request_id=meta.request_id)
 
 
@@ -50,6 +86,7 @@ def list_exchange_instruments(
     exchange_id: int | None = Query(None, ge=1),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    user: AuthSchema.CurrentUser = Security(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
