@@ -24,12 +24,12 @@ def handle_sync_exchanges(
     run_key = job_config["run_key"]
     redis_key = f"{app_name}:{deploy_env}:{SNAP}:{run_key}"
 
-    r = ctx.redis_client.conn()
-    tmp_key = f"{app_name}:{deploy_env}:{TMP}:{run_key}:{slot}:{interval_sec}"
     total = 0
     offset = 0
-
+    r = ctx.redis_client.conn()
+    tmp_key = f"{app_name}:{deploy_env}:{TMP}:{run_key}:{slot}:{interval_sec}"
     lock_key = f"{app_name}:{deploy_env}:{LOCK}:{run_key}:{slot}:{interval_sec}"
+    meta_key = f"{app_name}:{deploy_env}:{META}:{run_key}"
     token = try_acquire_lock(
         ctx.redis_client, lock_key, ttl_sec=ctx.config.outbox_send_lock_ttl_sec
     )
@@ -59,9 +59,6 @@ def handle_sync_exchanges(
 
             # 파이프라인을 너무 크게 잡지 않도록 배치 단위로 flush
             pipe.execute()
-
-        # metadata(선택)
-        meta_key = f"{app_name}:{deploy_env}:{META}:{run_key}"
 
         pipe = r.pipeline(transaction=False)
         pipe.hset(

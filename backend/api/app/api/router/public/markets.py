@@ -11,27 +11,28 @@ import app.api.openapi as OpenApi
 router = APIRouter(prefix="/markets")
 
 
-# Meta
 @router.get(
-    "/exchanges",
-    response_model=Envelope[list[MarketSchema.ExchangeRead]],
-    summary="거래소 목록",
+    "/{exchange_instrument_id:int}",
+    response_model=Envelope[MarketSchema.MarketRead],
+    summary="마켓 심볼 상세 정보",
     responses=OpenApi.combine(
         OpenApi.OK(
-            Envelope[list[MarketSchema.ExchangeRead]],  #  스키마도 래퍼로
-            description="리스트 조회 성공",
+            Envelope[list[MarketSchema.MarketRead]],  #  스키마도 래퍼로
+            description="마켓 조회 성공",
         ),
         OpenApi.ERR_409,
     ),
 )
-def list_exchanges(
-    limit: int = Query(10, ge=1, le=20),
-    offset: int = Query(0, ge=0),
+def get_market(
+    exchange_instrument_id: int = Path(..., ge=1),
     user: AuthSchema.CurrentUser = Security(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    rows = svcs.markets.list_exchange_by_filter(limit=limit, offset=offset)
+    rows = svcs.markets.get_by_exchange_instrument_id(
+        user_id=user.id,
+        exchange_instrument_id=exchange_instrument_id,
+    )
     return ok(rows, request_id=meta.request_id)
 
 
@@ -58,7 +59,7 @@ def list_markets(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    rows = svcs.markets.list_markets_by_filter(
+    rows = svcs.markets.list_by_filter(
         user_id=user.id,
         exchange_codes=exchange_codes,
         search=search,
@@ -67,6 +68,29 @@ def list_markets(
         limit=limit,
         offset=offset,
     )
+    return ok(rows, request_id=meta.request_id)
+
+
+@router.get(
+    "/exchanges",
+    response_model=Envelope[list[MarketSchema.ExchangeRead]],
+    summary="거래소 목록",
+    responses=OpenApi.combine(
+        OpenApi.OK(
+            Envelope[list[MarketSchema.ExchangeRead]],  #  스키마도 래퍼로
+            description="리스트 조회 성공",
+        ),
+        OpenApi.ERR_409,
+    ),
+)
+def list_exchanges(
+    limit: int = Query(10, ge=1, le=20),
+    offset: int = Query(0, ge=0),
+    user: AuthSchema.CurrentUser = Security(get_current_user),
+    svcs: ServiceFactory = Depends(get_services),
+    meta: RequestMeta = Depends(get_request_meta),
+):
+    rows = svcs.markets.list_exchange_by_filter(limit=limit, offset=offset)
     return ok(rows, request_id=meta.request_id)
 
 

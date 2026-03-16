@@ -8,22 +8,175 @@ from app.infra.db.model import (
     ExchangeModel,
     InstrumentModel,
     ExchangeInstrumentModel,
+    ExchangeInstrumentTickerModel,
     PriceSnapshot1mModel,
     PriceSnapshot1hModel,
     PriceSnapshot1dModel,
     WatchlistItemModel,
 )
-from app.core.util.datetime import utcnow
+from app.core.util.datetime import utcnow, get_days_ago
 from app.core.constants import MarketSort
 from app.domain import MarketDTO
 from datetime import datetime
 from ..protocol.market_repo import MarketRepo
 from app.infra.db.utils import to_row_dict
 
+eit = ExchangeInstrumentTickerModel
+ei = ExchangeInstrumentModel
+e = ExchangeModel
+base = aliased(InstrumentModel)
+quote = aliased(InstrumentModel)
+wi = WatchlistItemModel
+ps1m = PriceSnapshot1mModel
+ps1h = PriceSnapshot1hModel
+ps1d = PriceSnapshot1dModel
+
 
 class SqlMarketRepo(MarketRepo):
     def __init__(self, db: DbSession):
         self._db = db
+
+    def _base_market_query(self): ...
+
+    def list_ticker_stats_from_snapshots(
+        self, is_active: bool, deleted_is_null: bool = True
+    ) -> list[MarketDTO.ExchangeInstrumentTickerCreate]:
+        ps_agg = aliased(ps1m)
+        ps_open = aliased(ps1m)
+        ps_close = aliased(ps1m)
+
+        latest_1d = (
+            select(
+                ps_agg.exchange_instrument_id.label("ei_id"),
+                func.min(ps_agg.ts_open).label("open_24h"),
+                func.max(ps_agg.ts_open).label("close_24h"),
+                func.max(ps_agg.high).label("high_24h"),
+                func.min(ps_agg.low).label("low_24h"),
+                func.sum(ps_agg.volume).label("volume_24h"),
+            )
+            .join(
+                ei,
+                ei.id == ps_agg.exchange_instrument_id,
+            )
+            .where(
+                ps_agg.ts_open >= get_days_ago(utcnow(), 1),
+            )
+        )
+
+        if is_active:
+            latest_1d = latest_1d.where(ei.is_active == is_active)
+        if deleted_is_null:
+            latest_1d = latest_1d.where(ei.deleted_at.is_(None))
+
+        latest_1d = latest_1d.group_by(ps_agg.exchange_instrument_id).subquery()
+
+        # select에 등장한 첫 selectable을 기준으로 FROM
+        stmt = (
+            select(
+                latest_1d.c.ei_id,
+                ps_close.close.label("last_price"),
+                latest_1d.c.high_24h,
+                latest_1d.c.low_24h,
+                latest_1d.c.volume_24h,
+                (ps_close.close - ps_open.open).label("price_change_24h"),
+                (
+                    (ps_close.close - ps_open.open) / func.nullif(ps_open.open, 0) * 100
+                ).label("price_change_rate_24h"),
+            )
+            .select_from(latest_1d)
+            .join(
+                ps_open,
+                and_(
+                    ps_open.exchange_instrument_id == latest_1d.c.ei_id,
+                    ps_open.ts_open == latest_1d.c.open_24h,
+                ),
+            )
+            .join(
+                ps_close,
+                and_(
+                    ps_close.exchange_instrument_id == latest_1d.c.ei_id,
+                    ps_close.ts_open == latest_1d.c.close_24h,
+                ),
+            )
+        )
+
+        rows = self._db.execute(stmt).all()
+        return [
+            MarketDTO.ExchangeInstrumentTickerCreate(
+                exchange_instrument_id=row.ei_id,
+                last_price=row.last_price,
+                high_24h=row.high_24h,
+                low_24h=row.low_24h,
+                volume_24h=row.volume_24h,
+                price_change_24h=row.price_change_24h,
+                price_change_rate_24h=row.price_change_rate_24h,
+            )
+            for row in rows
+        ]
+
+    def get_by_filter(
+        self,
+        user_id: int,
+        exchange_instrument_id: int,
+        is_active: bool = True,
+        deleted_is_null: bool = True,
+    ) -> MarketDTO.Market | None:
+
+        stmt = (
+            select(
+                ei.id,
+                ei.exchange_symbol.label("exchange_symbol"),
+                e.code.label("exchange_code"),
+                base.symbol.label("base_asset"),
+                quote.symbol.label("quote_asset"),
+                base.name.label("asset_name"),
+                eit.last_price,
+                eit.high_24h,
+                eit.low_24h,
+                eit.volume_24h,
+                eit.price_change_24h,
+                eit.price_change_rate_24h,
+                wi.id.label("watchlist_id"),
+            )
+            .join(e, ei.exchange_id == e.id)
+            .join(base, ei.base_asset_id == base.id)
+            .join(quote, ei.quote_asset_id == quote.id)
+            .outerjoin(eit, eit.exchange_instrument_id == ei.id)
+            .outerjoin(
+                wi,
+                and_(
+                    wi.exchange_instrument_id == ei.id,
+                    wi.user_id == user_id,
+                ),
+            )
+            .where(ei.is_active == is_active, ei.id == exchange_instrument_id)
+        )
+
+        if deleted_is_null:
+            stmt = stmt.where(ei.deleted_at.is_(None))
+
+        row = self._db.execute(stmt).one_or_none()
+
+        if row is None:
+            return None
+
+        return MarketDTO.Market(
+            id=row.id,
+            symbol=row.exchange_symbol,
+            exchange_code=row.exchange_code,
+            base_asset=row.base_asset,  # base asset symbol
+            quote_asset=row.quote_asset,
+            asset_name=row.asset_name,
+            high_24h=row.high_24h if row.high_24h else None,
+            low_24h=row.low_24h if row.low_24h else None,
+            volume_24h=row.volume_24h if row.volume_24h else None,
+            last_price=row.last_price if row.last_price else None,
+            price_change_24h=row.price_change_24h if row.price_change_24h else None,
+            price_change_rate_24h=(
+                row.price_change_rate_24h if row.price_change_rate_24h else None
+            ),
+            is_watchlisted=row.watchlist_id is not None,
+        )
 
     def get_exchange_by_filter(
         self,
@@ -32,7 +185,6 @@ class SqlMarketRepo(MarketRepo):
         is_active: bool = True,
         deleted_is_null: bool = True,
     ) -> MarketDTO.Exchange | None:
-        e = ExchangeModel
         stmt = select(e).where(e.is_active.is_(is_active))
         if deleted_is_null:
             stmt = stmt.where(e.deleted_at.is_(None))
@@ -46,14 +198,13 @@ class SqlMarketRepo(MarketRepo):
             return None
         return exchange.to_dto()
 
-    def get_by_exchange_instrument_filter(
+    def get_exchange_instrument_by_filter(
         self,
         *,
         exchange_instrument_id: int,
         is_active: bool = True,
         deleted_is_null: bool = True,
     ) -> MarketDTO.ExchangeInstrument | None:
-        ei = ExchangeInstrumentModel
         stmt = select(ei).where(
             and_(
                 ei.is_active.is_(is_active),
@@ -75,26 +226,25 @@ class SqlMarketRepo(MarketRepo):
         """
         exchange_instrument_id별로 가장 최신(최대 ts_open) 1분봉을 bulk로 조회해서 dict로 반환.
         """
-        ps_1m = PriceSnapshot1mModel
         ids = [int(x) for x in exchange_instrument_ids]
         if not ids:
             return {}
 
         subq = (
             select(
-                ps_1m.exchange_instrument_id,
-                func.max(ps_1m.ts_open).label("max_ts_open"),
+                ps1m.exchange_instrument_id,
+                func.max(ps1m.ts_open).label("max_ts_open"),
             )
-            .where(ps_1m.exchange_instrument_id.in_(ids))
-            .group_by(ps_1m.exchange_instrument_id)
+            .where(ps1m.exchange_instrument_id.in_(ids))
+            .group_by(ps1m.exchange_instrument_id)
             .subquery()
         )
 
-        stmt = select(ps_1m).join(
+        stmt = select(ps1m).join(
             subq,
             and_(
-                ps_1m.exchange_instrument_id == subq.c.exchange_instrument_id,
-                ps_1m.ts_open == subq.c.max_ts_open,
+                ps1m.exchange_instrument_id == subq.c.exchange_instrument_id,
+                ps1m.ts_open == subq.c.max_ts_open,
             ),
         )
 
@@ -131,10 +281,9 @@ class SqlMarketRepo(MarketRepo):
             stmt = stmt.where(ExchangeModel.deleted_at.is_(None))
 
         rows = self._db.execute(stmt).scalars().all()
-
         return [row.to_dto() for row in rows]
 
-    def list_market_by_filter(
+    def list_by_filter(
         self,
         *,
         user_id: int,
@@ -145,84 +294,29 @@ class SqlMarketRepo(MarketRepo):
         limit: int,
         offset: int,
     ) -> Sequence[MarketDTO.Market]:
-        ei = ExchangeInstrumentModel
-        e = ExchangeModel
-        base = aliased(InstrumentModel)
-        quote = aliased(InstrumentModel)
-        wi = WatchlistItemModel
-        ps1m = PriceSnapshot1mModel
-        ps1d = PriceSnapshot1dModel
-
-        latest_1d = (
-            select(
-                ps1d.exchange_instrument_id.label("ei_id"),
-                func.max(ps1d.ts_open).label("max_ts"),
-            )
-            .group_by(ps1d.exchange_instrument_id)
-            .subquery()
-        )
-
-        price_1d = (
-            select(
-                ps1d.exchange_instrument_id.label("ei_id"),
-                ps1d.close.label("prev_close"),
-                ps1d.volume.label("volume"),
-            ).join(
-                latest_1d,
-                and_(
-                    ps1d.exchange_instrument_id == latest_1d.c.ei_id,
-                    ps1d.ts_open == latest_1d.c.max_ts,
-                ),
-            )
-        ).subquery()
-
-        latest_1m = (
-            select(
-                ps1m.exchange_instrument_id.label("ei_id"),
-                func.max(ps1m.ts_open).label("max_ts"),
-            )
-            .group_by(ps1m.exchange_instrument_id)
-            .subquery()
-        )
-
-        price_1m = (
-            select(
-                ps1m.exchange_instrument_id.label("ei_id"),
-                ps1m.close.label("price"),
-            ).join(
-                latest_1m,
-                and_(
-                    ps1m.exchange_instrument_id == latest_1m.c.ei_id,
-                    ps1m.ts_open == latest_1m.c.max_ts,
-                ),
-            )
-        ).subquery()
-
-        change_rate_expr = (
-            (price_1m.c.price - price_1d.c.prev_close) / price_1d.c.prev_close * 100
-        )
 
         stmt = (
             select(
-                ei.id.label("market_id"),
+                ei.id,
                 ei.exchange_symbol.label("exchange_symbol"),
                 e.code.label("exchange_code"),
                 base.symbol.label("base_asset"),
                 quote.symbol.label("quote_asset"),
                 base.name.label("asset_name"),
                 wi.id.label("watchlist_id"),
-                price_1d.c.prev_close.label("prev_close"),
-                price_1d.c.volume.label("volume"),
-                price_1m.c.price.label("price"),
-                change_rate_expr.label("change_rate"),
+                eit.last_price,
+                eit.high_24h,
+                eit.low_24h,
+                eit.volume_24h,
+                eit.price_change_24h,
+                eit.price_change_rate_24h,
             )
             .join(e, ei.exchange_id == e.id)
             .join(base, ei.base_asset_id == base.id)
             .join(quote, ei.quote_asset_id == quote.id)
         )
 
-        stmt = stmt.join(price_1m, price_1m.c.ei_id == ei.id)
-        stmt = stmt.join(price_1d, price_1d.c.ei_id == ei.id)
+        stmt = stmt.outerjoin(eit, eit.exchange_instrument_id == ei.id)
 
         conditions = []
 
@@ -265,37 +359,42 @@ class SqlMarketRepo(MarketRepo):
 
         # 정렬
         if sort == MarketSort.VOLUME_DESC:
-            stmt = stmt.order_by(desc(price_1d.c.volume))
+            stmt = stmt.order_by(desc(eit.volume_24h))
 
         elif sort == MarketSort.CHANGE_DESC:
-            stmt = stmt.order_by(desc(change_rate_expr))
+            stmt = stmt.order_by(desc(eit.price_change_rate_24h))
 
         elif sort == MarketSort.CHANGE_ASC:
-            stmt = stmt.order_by(asc(change_rate_expr))
+            stmt = stmt.order_by(asc(eit.price_change_rate_24h))
 
         elif sort == MarketSort.PRICE_DESC:
-            stmt = stmt.order_by(desc(price_1m.c.price))
+            stmt = stmt.order_by(desc(eit.last_price))
 
         elif sort == MarketSort.PRICE_ASC:
-            stmt = stmt.order_by(asc(price_1m.c.price))
+            stmt = stmt.order_by(asc(eit.last_price))
 
         else:
-            stmt = stmt.order_by(desc(price_1d.c.volume))
+            stmt = stmt.order_by(desc(eit.volume_24h))
 
         stmt = stmt.limit(limit).offset(offset)
         rows = self._db.execute(stmt).all()
 
         return [
             MarketDTO.Market(
-                market_id=row.market_id,
+                id=row.id,
                 symbol=row.exchange_symbol,
                 exchange_code=row.exchange_code,
                 base_asset=row.base_asset,  # base asset symbol
                 quote_asset=row.quote_asset,
                 asset_name=row.asset_name,
-                volume=row.volume if row.volume else None,
-                price=row.price if row.price else None,
-                change_rate=row.change_rate if row.change_rate else None,
+                high_24h=row.high_24h if row.high_24h else None,
+                low_24h=row.low_24h if row.low_24h else None,
+                volume_24h=row.volume_24h if row.volume_24h else None,
+                last_price=row.last_price if row.last_price else None,
+                price_change_24h=row.price_change_24h if row.price_change_24h else None,
+                price_change_rate_24h=(
+                    row.price_change_rate_24h if row.price_change_rate_24h else None
+                ),
                 is_watchlisted=row.watchlist_id is not None,
             )
             for row in rows
@@ -335,10 +434,6 @@ class SqlMarketRepo(MarketRepo):
         limit: int = 200,
         offset: int = 0,
     ) -> list[MarketDTO.MappingItem]:
-        ei = ExchangeInstrumentModel
-        e = ExchangeModel
-        b = aliased(InstrumentModel)
-        q = aliased(InstrumentModel)
 
         stmt = (
             select(
@@ -346,15 +441,15 @@ class SqlMarketRepo(MarketRepo):
                 ei.exchange_symbol.label("exchange_symbol"),
                 ei.base_asset_id,
                 ei.quote_asset_id,
-                b.symbol.label("base_symbol"),
-                q.symbol.label("quote_symbol"),
+                base.symbol.label("base_symbol"),
+                quote.symbol.label("quote_symbol"),
                 e.id.label("exchange_id"),
                 e.name.label("exchange_name"),
             )
             .select_from(ExchangeInstrumentModel)
             .join(e, ei.exchange)
-            .join(b, ei.base_asset)
-            .join(q, ei.quote_asset)
+            .join(base, ei.base_asset)
+            .join(quote, ei.quote_asset)
             .order_by(asc(ei.exchange_symbol))
             .limit(limit)
             .offset(offset)
@@ -364,8 +459,8 @@ class SqlMarketRepo(MarketRepo):
             stmt = stmt.where(
                 and_(
                     ei.deleted_at.is_(None),
-                    b.deleted_at.is_(None),
-                    q.deleted_at.is_(None),
+                    base.deleted_at.is_(None),
+                    quote.deleted_at.is_(None),
                 )
             )
         if is_active is not None:
@@ -380,8 +475,6 @@ class SqlMarketRepo(MarketRepo):
     def list_mappings_exchange_id(
         self, *, exchange_id: int | None = None
     ) -> list[MarketDTO.MappingItem]:
-        ei = ExchangeInstrumentModel
-
         stmt = select(
             ei.id.label("id"), ei.exchange_id, ei.base_asset_id, ei.quote_asset_id
         )
@@ -501,24 +594,22 @@ class SqlMarketRepo(MarketRepo):
         start_dt: datetime,
         end_dt: datetime,
     ) -> list[MarketDTO.PriceSnapshotCreate]:
-        PS1m = PriceSnapshot1mModel
-
         agg_sq = (
             select(
-                PS1m.exchange_instrument_id.label("exchange_instrument_id"),
-                func.max(PS1m.high).label("high"),
-                func.min(PS1m.low).label("low"),
-                func.sum(PS1m.volume).label("volume"),
-                func.min(PS1m.ts_open).label("ts_open_min"),
-                func.max(PS1m.ts_open).label("ts_open_max"),
+                ps1m.exchange_instrument_id.label("exchange_instrument_id"),
+                func.max(ps1m.high).label("high"),
+                func.min(ps1m.low).label("low"),
+                func.sum(ps1m.volume).label("volume"),
+                func.min(ps1m.ts_open).label("ts_open_min"),
+                func.max(ps1m.ts_open).label("ts_open_max"),
             )
-            .where(PS1m.ts_open >= start_dt, PS1m.ts_open < end_dt)
-            .group_by(PS1m.exchange_instrument_id)
+            .where(ps1m.ts_open >= start_dt, ps1m.ts_open < end_dt)
+            .group_by(ps1m.exchange_instrument_id)
             .subquery("agg")
         )
 
-        ps_open = aliased(PS1m, name="ps_open")
-        ps_close = aliased(PS1m, name="ps_close")
+        ps_open = aliased(ps1m, name="ps_open")
+        ps_close = aliased(ps1m, name="ps_close")
 
         stmt = (
             select(
@@ -563,24 +654,22 @@ class SqlMarketRepo(MarketRepo):
         start_dt: datetime,
         end_dt: datetime,
     ) -> list[MarketDTO.PriceSnapshotCreate]:
-        PS1h = PriceSnapshot1hModel
-
         agg_sq = (
             select(
-                PS1h.exchange_instrument_id.label("exchange_instrument_id"),
-                func.max(PS1h.high).label("high"),
-                func.min(PS1h.low).label("low"),
-                func.sum(PS1h.volume).label("volume"),
-                func.min(PS1h.ts_open).label("ts_open_min"),
-                func.max(PS1h.ts_open).label("ts_open_max"),
+                ps1h.exchange_instrument_id.label("exchange_instrument_id"),
+                func.max(ps1h.high).label("high"),
+                func.min(ps1h.low).label("low"),
+                func.sum(ps1h.volume).label("volume"),
+                func.min(ps1h.ts_open).label("ts_open_min"),
+                func.max(ps1h.ts_open).label("ts_open_max"),
             )
-            .where(PS1h.ts_open >= start_dt, PS1h.ts_open < end_dt)
-            .group_by(PS1h.exchange_instrument_id)
+            .where(ps1h.ts_open >= start_dt, ps1h.ts_open < end_dt)
+            .group_by(ps1h.exchange_instrument_id)
             .subquery("agg")
         )
 
-        ps_open = aliased(PS1h, name="ps_open")
-        ps_close = aliased(PS1h, name="ps_close")
+        ps_open = aliased(ps1h, name="ps_open")
+        ps_close = aliased(ps1h, name="ps_close")
 
         stmt = (
             select(
@@ -644,6 +733,29 @@ class SqlMarketRepo(MarketRepo):
         ]
         self._db.add_all(rows)
 
+    def upsert_exchange_instrument_tickers(
+        self,
+        rows: list[MarketDTO.ExchangeInstrumentTickerCreate],
+        *,
+        chunk_size: int = 1000,
+    ) -> None:
+        for i in range(0, len(rows), chunk_size):
+            chunk = rows[i : i + chunk_size]
+            values = [to_row_dict(x) for x in chunk]
+
+            stmt = mysql_insert(eit).values(values)
+            stmt = stmt.on_duplicate_key_update(
+                last_price=stmt.inserted.last_price,
+                high_24h=stmt.inserted.high_24h,
+                low_24h=stmt.inserted.low_24h,
+                volume_24h=stmt.inserted.volume_24h,
+                price_change_24h=stmt.inserted.price_change_24h,
+                price_change_rate_24h=stmt.inserted.price_change_rate_24h,
+                updated_at=func.utc_timestamp(),
+            )
+
+            self._db.execute(stmt)
+
     def upsert_exchange_instruments_by_pairs(
         self,
         exchange_id: int,
@@ -654,7 +766,7 @@ class SqlMarketRepo(MarketRepo):
         if not pairs:
             return 0
         total = 0
-        ei = ExchangeInstrumentModel
+
         # MySQL 튜플 IN은 너무 길면 부담이라 배치로 끊는 게 안전
         CHUNK = 1000
 
@@ -805,8 +917,6 @@ class SqlMarketRepo(MarketRepo):
 
     def get_symbol(self, exchange_instrument_id: int) -> MarketDTO.MappingItem:
         ei = ExchangeInstrumentModel
-        b = aliased(InstrumentModel)
-        q = aliased(InstrumentModel)
 
         stmt = (
             select(
@@ -814,12 +924,12 @@ class SqlMarketRepo(MarketRepo):
                 ei.base_asset_id,
                 ei.quote_asset_id,
                 ei.exchange_symbol.label("exchange_symbol"),
-                b.symbol.label("base_symbol"),
-                q.symbol.label("quote_symbol"),
+                base.symbol.label("base_symbol"),
+                quote.symbol.label("quote_symbol"),
             )
             .select_from(ExchangeInstrumentModel)
-            .join(b, ei.base_asset)
-            .join(q, ei.quote_asset)
+            .join(base, ei.base_asset)
+            .join(quote, ei.quote_asset)
             .limit(1)
         )
 

@@ -360,6 +360,7 @@ def build_scheduler_config_bag() -> CoreDTO.SchedulerConfigBag:
         # exchange=settings.SCHEDULER_EXCHANGE,
         cleanup_interval_sec=settings.SCHEDULER_CLEANUP_INTERVAL_SEC,
         sync_interval_sec=settings.SCHEDULER_SYNC_INTERVAL_SEC,
+        tickers_interval_sec=settings.SCHEDULER_TICKERS_INTERVAL_SEC,
         trig_interval_sec=settings.SCHEDULER_TRIG_INTERVAL_SEC,
         snapshot_intervals_sec=settings.SCHEDULER_SNAPSHOT_INTERVALS,
         restart_base_backoff_sec=settings.SCHEDULER_RESTART_BASE_BACKOFF_SEC,

@@ -27,11 +27,10 @@ def handle_sync_symbols(
 
     total = 0
     offset = 0
-
     r = ctx.redis_client.conn()
     tmp_key = f"{app_name}:{deploy_env}:{TMP}:{run_key}:{slot}:{interval_sec}"
-    meta_key = f"{app_name}:{deploy_env}:{META}:{run_key}"
     lock_key = f"{app_name}:{deploy_env}:{LOCK}:{run_key}:{slot}:{interval_sec}"
+    meta_key = f"{app_name}:{deploy_env}:{META}:{run_key}"
     token = try_acquire_lock(
         ctx.redis_client, lock_key, ttl_sec=ctx.config.outbox_send_lock_ttl_sec
     )

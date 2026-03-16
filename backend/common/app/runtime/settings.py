@@ -152,7 +152,8 @@ class Settings(BaseSettings):
     # Schedule interval
     SCHEDULER_CLEANUP_INTERVAL_SEC: int = 86400
     SCHEDULER_SYNC_INTERVAL_SEC: int = 1800  # 30분
-    SCHEDULER_TRIG_INTERVAL_SEC: int = 5  # 1초
+    SCHEDULER_TICKERS_INTERVAL_SEC: int = 60  # 1분
+    SCHEDULER_TRIG_INTERVAL_SEC: int = 3  # 3초
     SCHEDULER_SNAPSHOT_INTERVALS: list[int] = Field(
         default_factory=lambda: [60, 3600, 86400]
     )
@@ -194,6 +195,9 @@ class Settings(BaseSettings):
         event_type dict로 묶음
         """
         return {
+            OutboxEventType.SYNC_TICKERS.value: {
+                "run_key": OutboxEventType.SYNC_TICKERS.value,
+            },
             OutboxEventType.CLEANUP_DELETED_USERS.value: {
                 "run_key": OutboxEventType.CLEANUP_DELETED_USERS.value,
             },

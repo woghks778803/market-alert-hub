@@ -40,12 +40,12 @@ class WatchlistService:
     ) -> WatchlistDTO.WatchlistItemRead:
         with self._uow_factory() as uow:
 
-            if not uow.markets.get_by_exchange_instrument_filter(
+            if not uow.markets.get_exchange_instrument_by_filter(
                 exchange_instrument_id=exchange_instrument_id
             ):
                 raise NotFoundError("Market not found", target="market")
 
-            if uow.watchlists.exists(
+            if uow.watchlists.get_item_by_filter(
                 user_id=user_id, exchange_instrument_id=exchange_instrument_id
             ):
                 raise ConflictError("Already in watchlist", target="watchlist")
@@ -62,6 +62,7 @@ class WatchlistService:
             )
 
             uow.commit()
+
             return WatchlistDTO.WatchlistItemRead(
                 id=row.id,
                 exchange_instrument_id=row.exchange_instrument_id,

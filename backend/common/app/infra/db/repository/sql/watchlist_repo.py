@@ -28,7 +28,7 @@ class SqlWatchlistRepo(WatchlistRepo):
 
     def list_items_by_filter(
         self, *, user_id: int, limit: int, offset: int, is_asc: bool
-    ) -> Sequence[WatchlistItemModel]:
+    ) -> Sequence[WatchlistDTO.WatchlistItem]:
         order = asc if is_asc else desc
         stmt = (
             select(WatchlistItemModel)
@@ -37,35 +37,27 @@ class SqlWatchlistRepo(WatchlistRepo):
             .limit(limit)
             .offset(offset)
         )
-        return self._db.execute(stmt).scalars().all()
+        rows = self._db.execute(stmt).scalars().all()
+        return [row.to_dto() for row in rows]
 
-    def exists(self, *, user_id: int, exchange_instrument_id: int) -> bool:
+    def exists(
+        self, *, user_id: int, exchange_instrument_id: int
+    ) -> WatchlistDTO.WatchlistItem | None:
         stmt = select(func.count(WatchlistItemModel.id)).where(
             and_(
                 WatchlistItemModel.user_id == user_id,
                 WatchlistItemModel.exchange_instrument_id == exchange_instrument_id,
             )
         )
-        return self._db.execute(stmt).scalar_one() > 0
+
+        model = self._db.execute(stmt).scalar_one_or_none()
+        return model.to_dto() if model else None
 
     def get_next_sort(self, *, user_id: int) -> int:
         stmt = select(func.coalesce(func.max(WatchlistItemModel.sort_order), 0)).where(
             and_(WatchlistItemModel.user_id == user_id)
         )
         return int(self._db.execute(stmt).scalar_one()) + 1
-
-    def get_item_by_filter(self, *, item_id: int, user_id: int) -> WatchlistItemModel:
-        stmt = (
-            select(WatchlistItemModel)
-            .where(
-                and_(
-                    WatchlistItemModel.id == item_id,
-                    WatchlistItemModel.user_id == user_id,
-                )
-            )
-            .limit(1)
-        )
-        return self._db.execute(stmt).scalar_one_or_none()
 
     def delete_item(self, *, user_id: int, exchange_instrument_id: int) -> None:
         stmt = delete(WatchlistItemModel).where(

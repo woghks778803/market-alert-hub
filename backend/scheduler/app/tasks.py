@@ -7,6 +7,7 @@ from app.handlers import (
     handle_trigger_alerts,
     handle_sync_symbols,
     handle_persist_snapshots,
+    handle_sync_tickers,
 )
 
 
@@ -58,6 +59,11 @@ def build_default_tasks(config):
             OutboxEventType.SYNC_SYMBOLS,
             config.sync_interval_sec,
             handle_sync_symbols,
+        ),
+        IntervalTask(
+            OutboxEventType.SYNC_TICKERS,
+            config.tickers_interval_sec,
+            handle_sync_tickers,
         ),
         # IntervalTask(
         #     OutboxEventType.TRIGGER_ALERTS,

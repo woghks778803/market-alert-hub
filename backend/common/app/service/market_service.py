@@ -26,13 +26,26 @@ class MarketService:
         self._upbit_symbol = upbit_symbol
 
     # Meta
+    def get_by_exchange_instrument_id(
+        self, user_id: int, exchange_instrument_id: int
+    ) -> MarketDTO.Market:
+        with self._uow_factory() as uow:
+            result = uow.markets.get_by_filter(
+                user_id=user_id, exchange_instrument_id=exchange_instrument_id
+            )
+
+            if result is None:
+                raise NotFoundError(message="Not found Market", target="market")
+
+            return result
+
     def list_exchange_by_filter(
         self, *, limit: int, offset: int
     ) -> Sequence[MarketDTO.Exchange]:
         with self._uow_factory() as uow:
             return uow.markets.list_exchange_by_filter(limit=limit, offset=offset)
 
-    def list_markets_by_filter(
+    def list_by_filter(
         self,
         *,
         user_id: int,
@@ -42,9 +55,9 @@ class MarketService:
         sort: MarketSort,
         limit: int,
         offset: int,
-    ):
+    ) -> Sequence[MarketDTO.Market]:
         with self._uow_factory() as uow:
-            rows = uow.markets.list_market_by_filter(
+            rows = uow.markets.list_by_filter(
                 user_id=user_id,
                 exchange_codes=exchange_codes,
                 search=search,
@@ -140,6 +153,17 @@ class MarketService:
             return rows
 
     # ---------------------------------------------------------------------------------------------------------------
+
+    def sync_exchange_instruments_tickers(self):
+        # 심볼별 집계 데이터 조회
+        with self._uow_factory() as uow:
+            tickers = uow.markets.list_ticker_stats_from_snapshots(
+                is_active=True, deleted_is_null=True
+            )
+
+            uow.markets.upsert_exchange_instrument_tickers(tickers)
+            uow.commit()
+            return len(tickers)
 
     def normalize_empty_snapshots_1m(
         self, no_tick_payloads: list[dict[str, Any]], bucket_start_epoch: int
@@ -449,7 +473,7 @@ class MarketService:
 
         with self._uow_factory() as uow:
             # exchange_instrument_id 유효성 검사
-            exchange_instrument = uow.markets.get_by_exchange_instrument_filter(
+            exchange_instrument = uow.markets.get_exchange_instrument_by_filter(
                 exchange_instrument_id=item.exchange_instrument_id
             )
             if exchange_instrument is None:

@@ -70,6 +70,7 @@ def get_current_user(
     svcs: ServiceFactory = Depends(get_services),
     token: str = Depends(get_current_token),
 ):
+
     try:
         payload = svcs.jwt.decode_token(token)
     except ExpiredSignatureError:
@@ -82,7 +83,6 @@ def get_current_user(
         role = UserRole(payload["role"])
     except (KeyError, ValueError):
         raise AuthError("Invalid token payload", target="token")
-
     return AuthSchema.CurrentUser(
         id=user_id,
         role=role,

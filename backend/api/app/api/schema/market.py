@@ -23,16 +23,22 @@ class ExchangeRead(BaseModel):
 
 
 class MarketRead(BaseModel):
-    market_id: int
+    id: int
     symbol: str
     exchange_code: str
     base_asset: str
     quote_asset: str
     asset_name: str
-    volume: Decimal | None
-    price: Decimal | None
-    change_rate: Decimal | None
+
     is_watchlisted: bool
+
+    last_price: Decimal | None
+    price_change_24h: Decimal | None
+    price_change_rate_24h: Decimal | None
+
+    high_24h: Decimal | None
+    low_24h: Decimal | None
+    volume_24h: Decimal | None
 
 
 class MappingItem(BaseModel):

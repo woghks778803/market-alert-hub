@@ -81,7 +81,7 @@ class MappingItem:
 
 @dataclass(slots=True)
 class Market:
-    market_id: int
+    id: int
     symbol: str
     exchange_code: str
 
@@ -89,14 +89,41 @@ class Market:
     quote_asset: str
     asset_name: str
 
-    volume: Decimal | None
-    price: Decimal | None
-    change_rate: Decimal | None
+    last_price: Decimal | None
+    price_change_24h: Decimal | None
+    price_change_rate_24h: Decimal | None
+
+    high_24h: Decimal | None
+    low_24h: Decimal | None
+    volume_24h: Decimal | None
 
     is_watchlisted: bool
 
 
 @dataclass(slots=True)
+class ExchangeInstrumentTicker:
+    id: int
+    exchange_instrument_id: int
+    last_price: Decimal
+    high_24h: Decimal
+    low_24h: Decimal
+    volume_24h: Decimal
+    price_change_24h: Decimal
+    price_change_rate_24h: Decimal
+    updated_at: datetime
+
+
+@dataclass(slots=True)
+class ExchangeInstrumentTickerCreate:
+    exchange_instrument_id: int
+    last_price: Decimal
+    high_24h: Decimal
+    low_24h: Decimal
+    volume_24h: Decimal
+    price_change_24h: Decimal
+    price_change_rate_24h: Decimal
+
+
 class ExchangeInstrument:
     id: int
     exchange_id: int

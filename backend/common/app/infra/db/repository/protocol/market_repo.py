@@ -4,9 +4,17 @@ from app.domain import MarketDTO
 
 
 class MarketRepo(Protocol):
-    def add_exchange_instruments(
-        self, exchange_instruments: list[MarketDTO.ExchangeInstrumentCreate]
-    ) -> None: ...
+
+    def list_ticker_stats_from_snapshots(
+        self, is_active: bool, deleted_is_null: bool = True
+    ) -> list[MarketDTO.ExchangeInstrumentTickerCreate]: ...
+    def get_by_filter(
+        self,
+        user_id: int,
+        exchange_instrument_id: int,
+        is_active: bool = True,
+        deleted_is_null: bool = True,
+    ) -> MarketDTO.Market | None: ...
     def get_exchange_by_filter(
         self,
         id: int | None = None,
@@ -18,7 +26,7 @@ class MarketRepo(Protocol):
         self,
         exchange_instrument_ids: list[int],
     ) -> dict[int, MarketDTO.PriceSnapshot]: ...
-    def get_by_exchange_instrument_filter(
+    def get_exchange_instrument_by_filter(
         self,
         *,
         exchange_instrument_id: int,
@@ -33,7 +41,7 @@ class MarketRepo(Protocol):
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[MarketDTO.Exchange]: ...
-    def list_market_by_filter(
+    def list_by_filter(
         self,
         *,
         user_id: int,
@@ -115,6 +123,15 @@ class MarketRepo(Protocol):
         start_dt: datetime,
         end_dt: datetime,
     ) -> list[MarketDTO.PriceSnapshotCreate]: ...
+    def add_exchange_instruments(
+        self, exchange_instruments: list[MarketDTO.ExchangeInstrumentCreate]
+    ) -> None: ...
+    def upsert_exchange_instrument_tickers(
+        self,
+        rows: list[MarketDTO.ExchangeInstrumentTickerCreate],
+        *,
+        chunk_size: int = 1000,
+    ) -> int: ...
     def upsert_exchange_instruments_by_pairs(
         self,
         exchange_id: int,
