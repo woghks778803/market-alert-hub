@@ -46,18 +46,27 @@ def handle_sync_exchanges(ctx, slot, now_epoch, interval_sec):
 
 
 def handle_sync_symbols(ctx, slot, now_epoch, interval_sec):
-    outbox_fingerprint_dict = {
-        "event_type": OutboxEventType.SYNC_SYMBOLS,
-        "aggregate_type": "system",
-        "aggregate_id": 0,
-        "slot": slot,
-    }
-    payload = {
-        "slot": slot,
-        "requested_at_epoch": now_epoch,
-        "interval_sec": interval_sec,
-    }
-    _insert_outbox(ctx, OutboxEventType.SYNC_SYMBOLS, outbox_fingerprint_dict, payload)
+    exchanges = ctx.svcs.markets.list_exchange_by_filter(limit=20, offset=0)
+
+    for ex in exchanges:
+        outbox_fingerprint_dict = {
+            "event_type": OutboxEventType.SYNC_SYMBOLS,
+            "aggregate_type": "exchange",
+            "aggregate_id": ex.id,
+            "slot": slot,
+        }
+        payload = {
+            "slot": slot,
+            "requested_at_epoch": now_epoch,
+            "interval_sec": interval_sec,
+            "exchange": {
+                "id": ex.id,
+                "code": ex.code,
+            },
+        }
+        _insert_outbox(
+            ctx, OutboxEventType.SYNC_SYMBOLS, outbox_fingerprint_dict, payload
+        )
 
 
 def handle_sync_tickers(ctx, slot, now_epoch, interval_sec):

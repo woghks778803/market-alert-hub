@@ -17,20 +17,26 @@ def handle_sync_symbols(
     started_at = utcnow()
     interval_sec = int(require(payload, "interval_sec", target="payload.interval_sec"))
     slot = int(require(payload, "slot", target="payload.slot"))
+    exchange = require(payload, "exchange", target="payload.exchange")
+    ex_code = require(exchange, "code", target="exchange.code")
+
     job_config = ctx.config.worker_jobs[OutboxEventType.SYNC_SYMBOLS.value]
     app_name = ctx.config.app_name
     deploy_env = ctx.config.deploy_env
     batch_size = job_config["batch_size"]
     ttl_sec = job_config["ttl_sec"]
     run_key = job_config["run_key"]
-    redis_key = f"{app_name}:{deploy_env}:{SNAP}:{run_key}"
+    redis_key = f"{app_name}:{deploy_env}:{SNAP}:{run_key}:{ex_code}"
 
     total = 0
     offset = 0
     r = ctx.redis_client.conn()
-    tmp_key = f"{app_name}:{deploy_env}:{TMP}:{run_key}:{slot}:{interval_sec}"
-    lock_key = f"{app_name}:{deploy_env}:{LOCK}:{run_key}:{slot}:{interval_sec}"
-    meta_key = f"{app_name}:{deploy_env}:{META}:{run_key}"
+    tmp_key = f"{app_name}:{deploy_env}:{TMP}:{run_key}:{ex_code}:{slot}:{interval_sec}"
+    lock_key = (
+        f"{app_name}:{deploy_env}:{LOCK}:{run_key}:{ex_code}:{slot}:{interval_sec}"
+    )
+    meta_key = f"{app_name}:{deploy_env}:{META}:{run_key}:{ex_code}"
+
     token = try_acquire_lock(
         ctx.redis_client, lock_key, ttl_sec=ctx.config.outbox_send_lock_ttl_sec
     )
@@ -38,7 +44,7 @@ def handle_sync_symbols(
         raise SkipHandler("locked")
 
     try:
-        exchange_instruments = ctx.svcs.markets.sync_exchange_instruments_from_upbit()
+        exchange_instruments = ctx.svcs.markets.sync_exchange_instruments(code=ex_code)
 
         pipe = r.pipeline(transaction=False)
         pipe.delete(tmp_key)

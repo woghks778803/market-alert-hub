@@ -1,4 +1,3 @@
-# import asyncio
 from typing import Any, AsyncIterator, Callable, Protocol, TypeAlias
 from collections.abc import AsyncIterable, Callable
 

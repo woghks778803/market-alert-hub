@@ -1,0 +1,89 @@
+from dataclasses import dataclass
+from typing import Any
+
+from .shared.errors import (
+    BinanceDecodeError,
+    BinanceHttpError,
+    BinanceRateLimitError,
+)
+from .shared.types import BinanceMarket
+
+from app.infra.external.transport.port.http import SyncHttpTransport
+from app.infra.external.transport.impl.httpx import (
+    HttpxSyncTransport,
+    HttpxTransportConfig,
+)
+
+
+@dataclass(frozen=True)
+class BinanceRestClientConfig:
+    base_url: str = "https://api.binance.com"
+    timeout_sec: float = 10.0
+
+
+class BinanceRestClient:
+    def __init__(
+        self,
+        config: BinanceRestClientConfig | None = None,
+        *,
+        transport: SyncHttpTransport | None = None,
+    ) -> None:
+        self._config = config or BinanceRestClientConfig()
+        self._transport = transport or HttpxSyncTransport(
+            HttpxTransportConfig(
+                base_url=self._config.base_url,
+                timeout_sec=self._config.timeout_sec,
+            )
+        )
+
+    def __enter__(self) -> "BinanceRestClient":
+        enter = getattr(self._transport, "__enter__", None)
+        if callable(enter):
+            enter()
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        self.close()
+
+    def close(self) -> None:
+        self._transport.close()
+
+    def _get_json(self, path: str, *, params: dict[str, Any] | None = None) -> Any:
+        resp = self._transport.get(path, params=params)
+
+        if resp.status_code == 429:
+            raise BinanceRateLimitError(
+                resp.status_code, "Binance rate limited", body=resp.text
+            )
+        if resp.status_code >= 400:
+            raise BinanceHttpError(
+                resp.status_code,
+                f"Binance http error: {resp.status_code}",
+                body=resp.text,
+            )
+
+        try:
+            return resp.json()
+        except Exception as e:
+            raise BinanceDecodeError(f"Failed to decode Binance response: {e}") from e
+
+    def list_markets(self) -> list[BinanceMarket]:
+        data = self._get_json("/api/v3/exchangeInfo")
+        symbols = data.get("symbols") if isinstance(data, dict) else None
+        if not isinstance(symbols, list):
+            raise BinanceDecodeError("Unexpected exchangeInfo payload shape")
+
+        out: list[BinanceMarket] = []
+        for item in symbols:
+            if not isinstance(item, dict):
+                continue
+            sym = item.get("symbol")
+            base = item.get("baseAsset")
+            quote = item.get("quoteAsset")
+            if sym and base and quote:
+                out.append(BinanceMarket(symbol=sym, base_asset=base, quote_asset=quote))
+        return out
+
+
+def get_binance_rest_client(config: BinanceRestClientConfig) -> BinanceRestClient:
+    return BinanceRestClient(config)

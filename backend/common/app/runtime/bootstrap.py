@@ -28,6 +28,7 @@ from app.infra.external.redis.provider.cooldown import RedisCooldown
 from app.infra.external.redis.provider.state import RedisState
 from app.infra.external.redis.provider.active_catalog import RedisActiveMarketCatalog
 from app.infra.external.exchange.upbit.shared.types import UpbitWsSubscribe
+from app.infra.external.exchange.binance.shared.types import BinanceWsSubscribe
 from app.infra.external.exchange.port.ws_client import (
     WsFactoryRegistry,
     WsClient,
@@ -40,11 +41,22 @@ from app.infra.external.exchange.upbit.rest_client import (
     UpbitRestClientConfig,
     get_upbit_rest_client,
 )
+from app.infra.external.exchange.binance.rest_client import (
+    BinanceRestClient,
+    BinanceRestClientConfig,
+    get_binance_rest_client,
+)
 from app.infra.external.exchange.upbit.ws_client import (
     UpbitWsClient,
     UpbitWsClientConfig,
     get_upbit_ws_client,
 )
+from app.infra.external.exchange.binance.ws_client import (
+    BinanceWsClient,
+    BinanceWsClientConfig,
+    get_binance_ws_client,
+)
+from app.infra.external.exchange.binance.provider.symbol import BinanceSymbol
 from app.infra.external.redis.async_redis_client import (
     AsyncRedisClient,
     get_async_redis_client,
@@ -94,6 +106,13 @@ def _resolve_master_key() -> str:
         "Secret master key is not configured. "
         "Set CRYPTO_DATA_ENC_KEY or CRYPTO_DATA_ENC_SECRET_ID."
     )
+
+
+def _build_symbol_provider_registry():
+    return {
+        ExchangeCode.UPBIT.value: providers.upbit_symbol_provider(),
+        ExchangeCode.BINANCE.value: providers.binance_symbol_provider(),
+    }
 
 
 class Providers:
@@ -167,12 +186,12 @@ class Providers:
         return lambda: UpbitSymbol(rest_client=get_upbit_rest_client(config))
 
     @staticmethod
-    def upbit_rest_provider() -> Callable[[], UpbitRestClient]:
-        config = UpbitRestClientConfig(
-            base_url=settings.UPBIT_REST_BASE_URL,
+    def binance_symbol_provider() -> Callable[[], BinanceSymbol]:
+        config = BinanceRestClientConfig(
+            base_url=settings.BINANCE_REST_BASE_URL,
             timeout_sec=settings.HTTP_TIMEOUT_SEC,
         )
-        return lambda: get_upbit_rest_client(config)
+        return lambda: BinanceSymbol(rest_client=get_binance_rest_client(config))
 
     @staticmethod
     def upbit_ws_provider() -> Callable[[], WsClient]:
@@ -182,6 +201,15 @@ class Providers:
             close_timeout_sec=settings.WS_CLOSE_TIMEOUT_SEC,
         )
         return lambda: get_upbit_ws_client(config)
+
+    @staticmethod
+    def binance_ws_provider() -> Callable[[], WsClient]:
+        config = BinanceWsClientConfig(
+            url=settings.BINANCE_WS_URL,
+            ping_interval_sec=settings.WS_PING_INTERVAL_SEC,
+            close_timeout_sec=settings.WS_CLOSE_TIMEOUT_SEC,
+        )
+        return lambda: get_binance_ws_client(config)
 
     @staticmethod
     def state_provider() -> Callable[[], RedisState]:
@@ -398,7 +426,6 @@ def build_collector_config_bag() -> CoreDTO.CollectorConfigBag:
 
 
 def create_service_factory() -> ServiceFactory:
-
     return ServiceFactory(
         uow=providers.uow_provider(settings.SQLALCHEMY_URL),
         state=providers.state_provider(),
@@ -409,7 +436,7 @@ def create_service_factory() -> ServiceFactory:
         hmac_hasher=providers.hmac_hasher_provider(),
         jwt_signer=providers.jwt_signer_provider(),
         secret_crypto=providers.secret_crypto_provider(),
-        upbit_symbol=providers.upbit_symbol_provider(),
+        symbol_providers=_build_symbol_provider_registry(),
         kakao_oauth=providers.kakao_oauth_provider(),
         config=build_service_config_bag(),
     )
@@ -445,11 +472,11 @@ def create_dispatcher_context() -> DispatcherContext:
 
 @lru_cache
 def create_scheduler_context() -> SchedulerContext:
+    config = build_scheduler_config_bag()
     svcs = get_core_services()
     redis = get_redis_client(settings.REDIS_URL)
-    return SchedulerContext(
-        config=build_scheduler_config_bag(), svcs=svcs, redis_client=redis
-    )
+
+    return SchedulerContext(config=config, svcs=svcs, redis_client=redis)
 
 
 @lru_cache
@@ -472,9 +499,13 @@ def create_collector_context() -> CollectorContext:
             is_only_snapshot=False,
             is_only_realtime=False,
         ),
+        ExchangeCode.BINANCE.value: lambda codes: BinanceWsSubscribe(
+            streams=[f"{c.lower()}@ticker" for c in codes if isinstance(c, str)]
+        ),
     }
     ws_facs_register: WsFactoryRegistry = {
         ExchangeCode.UPBIT.value: providers.upbit_ws_provider(),
+        ExchangeCode.BINANCE.value: providers.binance_ws_provider(),
     }
 
     return CollectorContext(

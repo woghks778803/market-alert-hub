@@ -107,7 +107,7 @@ def _build_on_task_error() -> Callable[[str, BaseException], None]:
 
 
 def _build_specs(runtime: Any) -> list[tuple[str, TaskFactory]]:
-    from app.stream_marketdata import run_stream_marketdata_loop
+    from app.stream_marketdata.main import run_stream_marketdata_main_loop
 
     """
     - spec은 거래소 단위
@@ -118,25 +118,36 @@ def _build_specs(runtime: Any) -> list[tuple[str, TaskFactory]]:
     if not cfg.enable_stream:
         return specs
 
-    for exchange_code in runtime.ctx.ws_facs_register.keys():
+    # for exchange_code in runtime.ctx.ws_facs_register.keys():
 
-        def _make_factory(ex_code: str) -> TaskFactory:
-            def task_factory() -> Any:
-                if runtime.stop_event is None:
-                    raise RuntimeError("runtime.stop_event is not bound")
+    #     def _make_factory(ex_code: str) -> TaskFactory:
+    #         def task_factory() -> Any:
+    #             if runtime.stop_event is None:
+    #                 raise RuntimeError("runtime.stop_event is not bound")
 
-                return run_stream_marketdata_loop(
-                    stop_event=runtime.stop_event,
-                    checkpoint_store=runtime.checkpoint_store,
-                    ctx=runtime.ctx,
-                    exchange_code=ex_code,
-                    reconnect_backoff_sec=cfg.stream_reconnect_backoff_sec,
-                    checkpoint_key=f"{cfg.app_name}:{cfg.deploy_env}:{CURSOR}:{ex_code}:ticker",
-                )
+    #             return run_stream_marketdata_loop(
+    #                 stop_event=runtime.stop_event,
+    #                 checkpoint_store=runtime.checkpoint_store,
+    #                 ctx=runtime.ctx,
+    #                 exchange_code=ex_code,
+    #                 reconnect_backoff_sec=cfg.stream_reconnect_backoff_sec,
+    #                 checkpoint_key=f"{cfg.app_name}:{cfg.deploy_env}:{CURSOR}:{ex_code}:ticker",
+    #             )
 
-            return task_factory
+    #         return task_factory
 
-        specs.append((f"market_stream:{exchange_code}", _make_factory(exchange_code)))
+    def _factory() -> Any:
+        if runtime.stop_event is None:
+            raise RuntimeError("runtime.stop_event is not bound")
+
+        return run_stream_marketdata_main_loop(
+            stop_event=runtime.stop_event,
+            checkpoint_store=runtime.checkpoint_store,
+            ctx=runtime.ctx,
+            reconnect_backoff_sec=cfg.stream_reconnect_backoff_sec,
+        )
+
+    specs.append(("market_stream:main", _factory))
 
     return specs
 

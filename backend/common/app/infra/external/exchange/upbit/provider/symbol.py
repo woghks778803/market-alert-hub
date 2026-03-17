@@ -5,7 +5,7 @@ from app.infra.external.exchange.upbit.rest_client import UpbitRestClient
 
 
 @dataclass
-class UpbitSymbol(MarketPort.UpbitSymbol):
+class UpbitSymbol(MarketPort.ExchangeSymbol):
     rest_client: UpbitRestClient
 
     def list_symbols(self) -> list[MarketDTO.SymbolInfo]:
@@ -13,11 +13,19 @@ class UpbitSymbol(MarketPort.UpbitSymbol):
 
         result: list[MarketDTO.SymbolInfo] = []
         for r in rows:
+            try:
+                quote, base = r.market.split("-", 1)
+            except ValueError:
+                continue
+
+            if not quote or not base:
+                continue
+
             result.append(
                 MarketDTO.SymbolInfo(
                     symbol=r.market,
-                    name_kr=r.korean_name,
-                    name_en=r.english_name,
+                    base=base,
+                    quote=quote,
                 )
             )
         return result

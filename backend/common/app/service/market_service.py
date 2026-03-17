@@ -13,6 +13,7 @@ from app.core.util.datetime import utcnow, epoch_to_datetime
 from app.domain.shared.uow import UnitOfWork
 from app.domain.shared.errors import ValidationAppError, NotFoundError
 from app.domain import MarketDTO, MarketRule, MarketPort
+from app.domain.market.dto import SymbolInfo
 
 
 class MarketService:
@@ -20,10 +21,10 @@ class MarketService:
         self,
         *,
         uow_factory: Callable[[], UnitOfWork],
-        upbit_symbol: MarketPort.UpbitSymbol,
+        symbol_providers: dict[str, MarketPort.ExchangeSymbol],
     ) -> None:
         self._uow_factory = uow_factory
-        self._upbit_symbol = upbit_symbol
+        self._symbol_providers = symbol_providers
 
     # Meta
     def get_by_exchange_instrument_id(
@@ -249,20 +250,23 @@ class MarketService:
         )
         return snapshot
 
-    def sync_exchange_instruments_from_upbit(self):
-        raw_symbols = self._upbit_symbol.list_symbols()  # list[MarketDTO.SymbolInfo]
+    def sync_exchange_instruments(self, code: str):
+        raw_symbols = self._symbol_providers[
+            code
+        ].list_symbols()  # list[MarketDTO.SymbolInfo]
 
         normalized = self.normalize_upbit_symbols(raw_symbols)
-
+        print("normalized", code, normalized)
         with self._uow_factory() as uow:
-            active = self.ensure_exchange_instruments_from_upbit(
+            active = self.ensure_exchange_instruments(
                 uow=uow,
+                code=code,
                 symbols=normalized,
             )
             uow.commit()
             return active
 
-    def normalize_upbit_symbols(self, rows: Iterable) -> list:
+    def normalize_upbit_symbols(self, rows: list[SymbolInfo]) -> list:
         """
         입력/출력: MarketDTO.SymbolInfo 그대로.
         - 여기선 필터링/기본 정리만(예: KRW 마켓만, 중복 제거 등)
@@ -271,31 +275,28 @@ class MarketService:
         seen = set()
 
         for r in rows:
-            symbol = getattr(r, "symbol", None)  # "KRW-BTC"
-            if not symbol or symbol in seen:
+            if r.symbol in seen:
                 continue
 
-            parsed = MarketRule.parse_market_symbol(symbol)
-            if parsed is None:
-                continue
+            # parsed = MarketDTO.ParsedMarketSymbol(base=r.base, quote=r.quote)
 
             # 예: KRW 마켓만 사용
             # if parsed.quote != "KRW":
             #     continue
 
-            seen.add(symbol)
+            seen.add(r.symbol)
             result.append(r)
         return result
 
-    def ensure_exchange_instruments_from_upbit(
-        self, *, uow: UnitOfWork, symbols: list[MarketDTO.SymbolInfo]
+    def ensure_exchange_instruments(
+        self, *, uow: UnitOfWork, code: str, symbols: list[MarketDTO.SymbolInfo]
     ):
         """
         DB 반영(멱등 보장):
         - symbols는 MarketDTO.SymbolInfo 리스트
         """
         repo = uow.markets
-        exchange = repo.get_exchange_by_filter(code=ExchangeCode.UPBIT)
+        exchange = repo.get_exchange_by_filter(code=code)
         if not exchange:
             raise NotFoundError("Not found exchange", target="exchange")
 
@@ -309,19 +310,11 @@ class MarketService:
         symbol_by_key = {}
 
         for s in symbols:
-            parsed = MarketRule.parse_market_symbol(
-                s.symbol
-            )  # "KRW-BTC" -> ("KRW", "BTC") (quote, base)
-            if not parsed:
-                continue
-
-            quote, base = parsed.quote, parsed.base
-
-            base_id = instrument_id_by_symbol.get(base)
+            base_id = instrument_id_by_symbol.get(s.base)
             if not base_id:
                 continue
 
-            quote_id = instrument_id_by_symbol.get(quote)
+            quote_id = instrument_id_by_symbol.get(s.quote)
             if not quote_id:
                 continue
 

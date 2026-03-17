@@ -163,6 +163,12 @@ class Settings(BaseSettings):
     WS_PING_INTERVAL_SEC: float = 20.0  # WS ping 간격 (None이면 비활성)
     WS_CLOSE_TIMEOUT_SEC: float = 5.0  # WS close 타임아웃
 
+    # --- Exchange: Binance endpoints (REST/WS) ---
+    BINANCE_REST_BASE_URL: str = "https://api.binance.com"  # 업비트 REST API base url
+    BINANCE_WS_URL: str = (
+        "wss://stream.binance.com:9443/stream"  # 업비트 WebSocket endpoint
+    )
+
     # --- Exchange: Upbit endpoints (REST/WS) ---
     UPBIT_REST_BASE_URL: str = "https://api.upbit.com"  # 업비트 REST API base url
     UPBIT_WS_URL: str = "wss://api.upbit.com/websocket/v1"  # 업비트 WebSocket endpoint
@@ -210,7 +216,7 @@ class Settings(BaseSettings):
                 "ttl_sec": self.SYNC_EXCHANGES_TTL_SEC,
             },
             OutboxEventType.SYNC_SYMBOLS.value: {
-                "run_key": f"{OutboxEventType.SYNC_SYMBOLS.value}:{ExchangeCode.UPBIT.value}",
+                "run_key": SYMBOLS,
                 "batch_size": self.SYNC_SYMBOLS_BATCH_SIZE,
                 "ttl_sec": self.SYNC_SYMBOLS_TTL_SEC,
             },

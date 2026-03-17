@@ -212,5 +212,5 @@ class ParsedMarketSymbol:
 @dataclass(frozen=True)
 class SymbolInfo:
     symbol: str  # 예: "KRW-BTC"
-    name_kr: str
-    name_en: str
+    base: str
+    quote: str

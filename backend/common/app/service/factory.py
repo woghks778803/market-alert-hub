@@ -28,8 +28,8 @@ class ServiceFactory:
         hmac_hasher: Callable[[], CryptoPort.TokenHasher],
         jwt_signer: Callable[[], CryptoPort.TokenSigner],
         secret_crypto: Callable[[], CryptoPort.SecretCrypto],
-        upbit_symbol: Callable[[], MarketPort.UpbitSymbol],
         kakao_oauth: Callable[[], AuthPort.KakaoOAuth],
+        symbol_providers: dict[str, Callable[[], MarketPort.ExchangeSymbol]],
         config: CoreDTO.ServiceConfigBag,
     ) -> None:
         self._uow = uow
@@ -41,9 +41,13 @@ class ServiceFactory:
         self._hmac_hasher = hmac_hasher
         self._jwt_signer = jwt_signer
         self._secret_crypto = secret_crypto
-        self._upbit_symbol = upbit_symbol
         self._kakao_oauth = kakao_oauth
+        self._symbol_providers = symbol_providers
         self._config = config
+
+    @cached_property
+    def symbol_providers(self):
+        return {k: v() for k, v in self._symbol_providers.items()}
 
     @cached_property
     def cooldown(self):
@@ -52,10 +56,6 @@ class ServiceFactory:
     @cached_property
     def state(self):
         return self._state()
-
-    @cached_property
-    def upbit_symbol(self):
-        return self._upbit_symbol()
 
     @cached_property
     def kakao_oauth(self):
@@ -94,7 +94,7 @@ class ServiceFactory:
     def markets(self) -> MarketService:
         return MarketService(
             uow_factory=self._uow,
-            upbit_symbol=self.upbit_symbol,
+            symbol_providers=self.symbol_providers,
         )
 
     @cached_property

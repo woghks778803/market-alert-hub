@@ -182,12 +182,16 @@ async def run_stream_marketdata_loop(
             last_resubscribe_at = time.monotonic()
 
             # 2) subscribe 만들고 스트림 소비
+            if exchange_code == "BINANCE":
+                codes = ["BTCUSDT"]
+
+            print(f"{exchange_code} codes", codes)
             subscribe = subscribe_factory(codes)
             ws = ws_factory()
 
             next_poll_at = time.monotonic() + symbols_poll_sec
             session_stop = False
-
+            print(f"{exchange_code} subscribe", subscribe)
             async for new_cursor, payload in ws.stream_once(
                 subscribe=subscribe,
                 cursor=cursor,
