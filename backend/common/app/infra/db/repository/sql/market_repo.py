@@ -78,9 +78,17 @@ class SqlMarketRepo(MarketRepo):
                 latest_1d.c.high_24h,
                 latest_1d.c.low_24h,
                 latest_1d.c.volume_24h,
-                (ps_close.close - ps_open.open).label("price_change_24h"),
+                # 이건 ps_open.open null 값을 허용하진않지만 안전빵
+                func.coalesce((ps_close.close - ps_open.open), 0).label(
+                    "price_change_24h"
+                ),
                 (
-                    (ps_close.close - ps_open.open) / func.nullif(ps_open.open, 0) * 100
+                    func.coalesce(
+                        (ps_close.close - ps_open.open)
+                        / func.nullif(ps_open.open, 0)
+                        * 100,
+                        0,
+                    )
                 ).label("price_change_rate_24h"),
             )
             .select_from(latest_1d)

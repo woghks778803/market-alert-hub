@@ -48,7 +48,7 @@ class BinanceWsClient(WsClient):
         cursor: WsCursor,
         stop_event: asyncio.Event,
     ) -> WsStream:
-        payload_bytes = json.dumps(subscribe.to_payload()).encode("utf-8")
+        payload = json.dumps(subscribe.to_payload())
 
         conn = await self._transport.connect(
             WsConnectConfig(
@@ -59,10 +59,10 @@ class BinanceWsClient(WsClient):
         )
 
         try:
-            await conn.send(payload_bytes)
+            # binance는 payload str만 허용함
+            await conn.send(payload)
             async for msg in self._iter_messages(conn, stop_event):
                 payload = self._decode_message(msg)
-
                 # 구독 ACK ("result": null) 는 스킵
                 if "result" in payload:
                     continue
@@ -113,15 +113,22 @@ class BinanceWsClient(WsClient):
             raise BinanceDecodeError(f"Failed to decode Binance ws message: {e}") from e
 
     def _normalize_ticker(self, payload: dict[str, Any]) -> dict[str, Any] | None:
-        # 필요한 필드가 없으면 스킵
-        if not {"s", "c", "v", "E"} <= payload.keys():
+        if payload.get("e") != "trade":
+            return None
+
+        try:
+            symbol = payload["s"]  # BTCUSDT
+            price = float(payload["p"])
+            volume = float(payload["q"])
+            timestamp = payload["T"]
+        except (KeyError, ValueError, TypeError):
             return None
 
         return {
-            "symbol": payload.get("s"),
-            "price": payload.get("c"),
-            "volume": payload.get("v"),
-            "timestamp": payload.get("E"),
+            "symbol": symbol,
+            "price": price,
+            "volume": volume,
+            "timestamp": timestamp,
         }
 
     def _derive_cursor(self, payload: dict[str, Any], *, fallback: WsCursor) -> str:

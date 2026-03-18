@@ -2,9 +2,25 @@ import asyncio
 import json
 import time
 from typing import Any, Callable, Mapping
-from app.core.constants import SNAP, STREAM
+from app.core.constants import SNAP, STREAM, TICKERS, ExchangeCode
 
 JsonDict = dict[str, Any]
+
+
+# TODO: 추후 거래소 심볼별 ticker 수 제한을 개발하기전까지 임시
+def resolve_maxlen(exchange_code: str, symbol: str, default: int) -> int:
+    # 핵심 심볼 (고트래픽)
+    if exchange_code == ExchangeCode.BINANCE.value:
+        if symbol in {"BTCUSDT"}:
+            return 5000
+        if symbol in {"ETHUSDT"}:
+            return 3000
+        return default  # 나머지
+
+    if exchange_code == ExchangeCode.UPBIT.value:
+        return default  # 업비트는 캔들이라 낮아도 됨
+
+    return default
 
 
 def _pick_symbol(payload: Any) -> str | None:
@@ -83,14 +99,16 @@ async def upsert_marketdata_and_buffer_5m(
     stream_key_fn: Callable[
         [str, str], str
     ],  # ex) lambda ex,sym: f"{app}:{env}:stream:ticker:{ex}:{sym}"
-    maxlen: int = 600,  # 심볼당 최근 N개(= 5분 근사)
+    maxlen: int = 600,  # 심볼당 최근 N개(= 5분 이상)
     ttl_sec: int = 600,  # stream 키 TTL (여유 있게 10분 추천)
 ) -> None:
     symbol = _pick_symbol(payload)
     if not symbol or not isinstance(payload, dict):
         return
 
+    maxlen = resolve_maxlen(exchange_code=exchange_code, symbol=symbol, default=maxlen)
     snap_key = snap_key_fn(exchange_code)
+    print(f"{exchange_code} {symbol} {snap_key}")
     stream_key = stream_key_fn(exchange_code, symbol)
 
     # 저장 포맷: payload 전체 json(가볍게) + ts(ms)
@@ -138,9 +156,9 @@ async def run_stream_marketdata_loop(
     """
 
     cfg = ctx.config
-    snap_key_fn = lambda ex: f"{cfg.app_name}:{cfg.deploy_env}:{SNAP}:ticker:{ex}"
+    snap_key_fn = lambda ex: f"{cfg.app_name}:{cfg.deploy_env}:{SNAP}:{TICKERS}:{ex}"
     stream_key_fn = (
-        lambda ex, sym: f"{cfg.app_name}:{cfg.deploy_env}:{STREAM}:ticker:{ex}:{sym}"
+        lambda ex, sym: f"{cfg.app_name}:{cfg.deploy_env}:{STREAM}:{TICKERS}:{ex}:{sym}"
     )
     active_catalog = ctx.active_catalog
     redis = ctx.async_redis_client.conn()
@@ -182,16 +200,16 @@ async def run_stream_marketdata_loop(
             last_resubscribe_at = time.monotonic()
 
             # 2) subscribe 만들고 스트림 소비
-            if exchange_code == "BINANCE":
-                codes = ["BTCUSDT"]
+            # if exchange_code == "BINANCE":
+            #     codes = ["BTCUSDT"]
 
-            print(f"{exchange_code} codes", codes)
+            # print(f"{exchange_code} codes", codes)
             subscribe = subscribe_factory(codes)
             ws = ws_factory()
 
             next_poll_at = time.monotonic() + symbols_poll_sec
             session_stop = False
-            print(f"{exchange_code} subscribe", subscribe)
+            # print(f"{exchange_code} subscribe", subscribe)
             async for new_cursor, payload in ws.stream_once(
                 subscribe=subscribe,
                 cursor=cursor,

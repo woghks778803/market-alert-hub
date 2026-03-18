@@ -166,7 +166,7 @@ class Settings(BaseSettings):
     # --- Exchange: Binance endpoints (REST/WS) ---
     BINANCE_REST_BASE_URL: str = "https://api.binance.com"  # 업비트 REST API base url
     BINANCE_WS_URL: str = (
-        "wss://stream.binance.com:9443/stream"  # 업비트 WebSocket endpoint
+        "wss://stream.binance.com:9443/ws"  # 업비트 WebSocket endpoint
     )
 
     # --- Exchange: Upbit endpoints (REST/WS) ---
@@ -211,7 +211,7 @@ class Settings(BaseSettings):
                 "run_key": OutboxEventType.PERSIST_SNAPSHOTS.value,
             },
             OutboxEventType.SYNC_EXCHANGES.value: {
-                "run_key": OutboxEventType.SYNC_EXCHANGES.value,
+                "run_key": SYMBOLS,
                 "batch_size": self.SYNC_EXCHANGES_BATCH_SIZE,
                 "ttl_sec": self.SYNC_EXCHANGES_TTL_SEC,
             },

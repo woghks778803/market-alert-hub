@@ -202,39 +202,46 @@ class MarketService:
 
     def normalize_snapshots_1m(
         self,
+        exchange_code: str,
         payload: dict[str, Any],
         symbol_ticks: list[dict[str, Any]],
         bucket_start_epoch: int,
-    ) -> MarketDTO.PriceSnapshotCreate:
+    ) -> MarketDTO.PriceSnapshotCreate | None:
         symbol = MarketDTO.MappingItem.from_dict(payload)
         ts_open: datetime = epoch_to_datetime(bucket_start_epoch)
         first = symbol_ticks[0]
         last = symbol_ticks[-1]
 
-        # open/close
-        open_p = first.get("opening_price", first.get("trade_price"))
-        close_p = last.get("trade_price", last.get("opening_price"))
-
         # high/low/volume
         high_p: Decimal | None = None
         low_p: Decimal | None = None
         vol_sum = Decimal("0")
+        prev_v = None
 
         for t in symbol_ticks:
-            hp = t.get("high_price", t.get("trade_price"))
-            lp = t.get("low_price", t.get("trade_price"))
-            if hp is not None:
-                d = Decimal(str(hp))
-                high_p = d if high_p is None else max(high_p, d)
-            if lp is not None:
-                d = Decimal(str(lp))
-                low_p = d if low_p is None else min(low_p, d)
+            p = Decimal(str(t["price"]))
 
-            vol = t.get("candle_acc_trade_volume") or 0
-            vol_sum += Decimal(str(vol))
+            high_p = p if high_p is None else max(high_p, p)
+            low_p = p if low_p is None else min(low_p, p)
 
-        open_d = Decimal(str(open_p or 0))
-        close_d = Decimal(str(close_p or 0))
+            curr_v = Decimal(str(t["volume"]))
+
+            if exchange_code == ExchangeCode.BINANCE.value:
+                if prev_v is not None:
+                    delta = curr_v - prev_v
+                    if delta < 0:
+                        delta = curr_v
+                    vol_sum += delta
+            elif exchange_code == ExchangeCode.UPBIT.value:
+                vol_sum += curr_v
+            else:
+                return None
+
+            prev_v = curr_v
+
+        # open/close
+        open_d = Decimal(str(first["price"]))
+        close_d = Decimal(str(last["price"]))
         high_d = high_p if high_p is not None else open_d
         low_d = low_p if low_p is not None else open_d
 

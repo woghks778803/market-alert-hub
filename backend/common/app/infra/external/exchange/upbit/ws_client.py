@@ -68,7 +68,11 @@ class UpbitWsClient(WsClient):
                 payload = self._decode_message(msg)
                 new_cursor = self._derive_cursor(payload, fallback=cursor)
 
-                yield (new_cursor, payload)
+                normalized = self._normalize_ticker(payload)
+                if normalized is None:
+                    continue
+
+                yield (new_cursor, normalized)
 
         except asyncio.CancelledError:
             raise
@@ -120,6 +124,25 @@ class UpbitWsClient(WsClient):
             raise
         except Exception as e:
             raise UpbitDecodeError(f"Failed to decode Upbit ws message: {e}") from e
+
+    def _normalize_ticker(self, payload: dict[str, Any]) -> dict[str, Any] | None:
+        if payload.get("type") != "candle.1s":
+            return None
+
+        try:
+            symbol = payload["code"]  # KRW-BTC
+            price = float(payload["trade_price"])  # 현재가
+            volume = float(payload["candle_acc_trade_volume"])  # 누적 거래량
+            ts = int(payload["timestamp"])  # ms timestamp
+        except (KeyError, ValueError, TypeError):
+            return None
+
+        return {
+            "symbol": symbol,
+            "price": price,
+            "volume": volume,
+            "timestamp": ts,
+        }
 
     def _derive_cursor(self, payload: dict[str, Any], *, fallback: str | None) -> str:
         for key in ("seq", "timestamp", "trade_id", "tms"):

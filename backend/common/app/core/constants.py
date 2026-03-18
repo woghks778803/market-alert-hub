@@ -7,6 +7,7 @@ META = "meta"
 LOCK = "lock"
 CURSOR = "cursor"
 
+TICKERS = "tickers"
 SYMBOLS = "symbols"
 EXCHANGES = "exchanges"
 

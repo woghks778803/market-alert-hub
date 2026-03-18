@@ -14,14 +14,14 @@ class BinanceMarket:
 
 # ---------- WS ----------
 
-BinanceWsChannel = Literal["ticker"]
+BinanceWsChannel = Literal["trade"]
 
 
 @dataclass(frozen=True)
 class BinanceWsSubscribe:
     """
     Binance는 SUBSCRIBE 메시지로 여러 스트림을 한 번에 등록한다.
-    streams 예: ["btcusdt@ticker", "ethusdt@ticker"]
+    streams 예: ["btcusdt@trade", "ethusdt@trade"]
     """
 
     streams: list[str]

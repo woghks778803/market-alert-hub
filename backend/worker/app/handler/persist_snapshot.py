@@ -1,14 +1,23 @@
 import logging
 from typing import Any, Mapping
 
-from app.core.constants import OutboxEventType, SNAP, META, TMP, LOCK, STREAM
+from app.core.constants import (
+    OutboxEventType,
+    SNAP,
+    SYMBOLS,
+    EXCHANGES,
+    META,
+    TMP,
+    LOCK,
+    STREAM,
+)
 from app.runtime.app_context import WorkerContext
 from app.util.utils import (
     require,
     try_acquire_lock,
     release_lock,
     load_snap_json_map,
-    load_ticker_1s_ticks,
+    load_ticker_ticks,
 )
 from app.exception_handlers import (
     RetryHandler,
@@ -73,20 +82,20 @@ def handle_persist_snapshots(
         if interval_sec == 60:
             exchanges = load_snap_json_map(
                 ctx.redis_client,
-                f"{app_name}:{deploy_env}:{SNAP}:{OutboxEventType.SYNC_EXCHANGES.value}",
+                f"{app_name}:{deploy_env}:{SNAP}:{EXCHANGES}",
             )
 
             for exchange_code, exchange_data in exchanges.items():
                 symbols = load_snap_json_map(
                     ctx.redis_client,
-                    f"{app_name}:{deploy_env}:{SNAP}:{OutboxEventType.SYNC_SYMBOLS.value}:{exchange_code}",
+                    f"{app_name}:{deploy_env}:{SNAP}:{SYMBOLS}:{exchange_code}",
                 )
                 upsert_snapshots_1m = []
                 no_tick_payloads = []
                 for symbol, payload in symbols.items():
                     key = f"{app_name}:{deploy_env}:{STREAM}:ticker:{exchange_code}:{symbol}"
 
-                    symbol_ticks = load_ticker_1s_ticks(
+                    symbol_ticks = load_ticker_ticks(
                         ctx.redis_client,
                         key=key,
                         bucket_start_epoch=bucket_start_epoch,
@@ -96,9 +105,12 @@ def handle_persist_snapshots(
                     # print(payload)
                     # print(symbol_ticks)
 
+                    # xrange는 지연으로 값 정렬이 꼬일수있음
+                    symbol_ticks.sort(key=lambda x: x["timestamp"])
                     if symbol_ticks:
                         upsert_snapshots_1m.append(
                             ctx.svcs.markets.normalize_snapshots_1m(
+                                exchange_code,
                                 payload,
                                 symbol_ticks,
                                 bucket_start_epoch=bucket_start_epoch,

@@ -500,7 +500,7 @@ def create_collector_context() -> CollectorContext:
             is_only_realtime=False,
         ),
         ExchangeCode.BINANCE.value: lambda codes: BinanceWsSubscribe(
-            streams=[f"{c.lower()}@ticker" for c in codes if isinstance(c, str)]
+            streams=[f"{c.lower()}@trade" for c in codes if isinstance(c, str)]
         ),
     }
     ws_facs_register: WsFactoryRegistry = {

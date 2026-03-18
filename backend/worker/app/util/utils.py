@@ -96,7 +96,7 @@ def load_snap_json_map(redis_client: RedisClientLike, key: str) -> dict[str, dic
     return out
 
 
-def load_ticker_1s_ticks(
+def load_ticker_ticks(
     redis_client: RedisClientLike,
     *,
     key: str,
