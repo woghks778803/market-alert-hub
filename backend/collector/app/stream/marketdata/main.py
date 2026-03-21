@@ -1,6 +1,7 @@
 import asyncio
 from typing import Any
 from .exchange import run_stream_marketdata_loop
+from app.core.constants import CURSOR, TICKERS
 
 
 async def run_stream_marketdata_main_loop(
@@ -33,7 +34,7 @@ async def run_stream_marketdata_main_loop(
                         ctx=ctx,
                         exchange_code=code,
                         reconnect_backoff_sec=reconnect_backoff_sec,
-                        checkpoint_key=f"{ctx.config.app_name}:{ctx.config.deploy_env}:CURSOR:{code}:ticker",
+                        checkpoint_key=f"{ctx.config.app_name}:{ctx.config.deploy_env}:{CURSOR}:{code}:{TICKERS}",
                     )
                 )
                 tasks[code] = task

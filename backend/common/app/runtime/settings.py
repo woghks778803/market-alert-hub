@@ -132,11 +132,25 @@ class Settings(BaseSettings):
     COLLECTOR_RESTART_JITTER_RATIO: float = 0.2
 
     COLLECTOR_CHECKPOINT_BACKEND: str = "redis"  # memory|file|redis
-    COLLECTOR_CHECKPOINT_KEY_PREFIX: str = "collector:checkpoint:"
+    COLLECTOR_CHECKPOINT_KEY_PREFIX: str = "collector:checkpoint"
     COLLECTOR_CHECKPOINT_FILE_PATH: str = "/tmp/collector_checkpoint.json"
 
     COLLECTOR_ENABLE_BACKFILL: bool = False
     COLLECTOR_BACKFILL_LOOKBACK_MINUTES: int = 60
+
+    # --- Stream Processor ---
+    STREAM_PROCESSOR_LOG_LEVEL: str = Field(default="INFO")
+
+    STREAM_PROCESSOR_ENABLE_STREAM: bool = False
+    STREAM_PROCESSOR_STREAM_RECONNECT_BACKOFF_SEC: float = 3.0
+
+    STREAM_PROCESSOR_RESTART_BASE_BACKOFF_SEC: float = 2.0
+    STREAM_PROCESSOR_RESTART_MAX_BACKOFF_SEC: float = 30.0
+    STREAM_PROCESSOR_RESTART_JITTER_RATIO: float = 0.2
+
+    STREAM_PROCESSOR_CHECKPOINT_BACKEND: str = "redis"  # memory|file|redis
+    STREAM_PROCESSOR_CHECKPOINT_KEY_PREFIX: str = "stream_processor:checkpoint"
+    STREAM_PROCESSOR_CHECKPOINT_FILE_PATH: str = "/tmp/stream_processor_checkpoint.json"
 
     # --- Scheduler ---
     SCHEDULER_LOG_LEVEL: str = Field(default="INFO")

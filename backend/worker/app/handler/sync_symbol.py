@@ -98,7 +98,7 @@ def handle_sync_symbols(
 def _exchange_instrument_to_payload(row: Any) -> dict[str, Any]:
     """
     DTO/엔티티/ORM 어떤 형태든 duck-typing으로 Redis snapshot에 넣을 payload로 변환.
-    (MappingItem 기준 필드)
+    (MarketSimple 기준 필드)
     """
     return {
         "id": row.id,

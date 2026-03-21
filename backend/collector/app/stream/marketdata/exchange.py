@@ -95,10 +95,12 @@ async def upsert_marketdata_and_buffer_5m(
     exchange_code: str,
     *,
     redis: Any,  # redis.asyncio.Redis (duck-typing)
-    snap_key_fn: Callable[[str], str],  # ex) lambda ex: f"{app}:{env}:snap:ticker:{ex}"
+    snap_key_fn: Callable[
+        [str], str
+    ],  # ex) lambda ex: f"{app}:{env}:snap:tickers:{ex}"
     stream_key_fn: Callable[
         [str, str], str
-    ],  # ex) lambda ex,sym: f"{app}:{env}:stream:ticker:{ex}:{sym}"
+    ],  # ex) lambda ex,sym: f"{app}:{env}:stream:tickers:{ex}:{sym}"
     maxlen: int = 600,  # 심볼당 최근 N개(= 5분 이상)
     ttl_sec: int = 600,  # stream 키 TTL (여유 있게 10분 추천)
 ) -> None:
@@ -121,8 +123,8 @@ async def upsert_marketdata_and_buffer_5m(
     # Stream 엔트리는 너무 큰 필드명/구조 피하고 최소화
     pipe.xadd(stream_key, {"ts": ts_ms, "p": payload_json})
 
-    # print(f"[stream_marketdata] upsert snap {snap_key} [{symbol}]")
-    # print(f"[stream_marketdata] upsert stream {stream_key} [{symbol}]")
+    # print(f"[stream_marketdata] upsert snap {snap_key} [{exchange_code} {symbol}]")
+    # print(f"[stream_marketdata] upsert stream {stream_key} [{exchange_code} {symbol}]")
     # print(payload_json)
 
     # 최근 N개 유지(근사) - redis-py 시그니처 차이 대비
@@ -169,6 +171,14 @@ async def run_stream_marketdata_loop(
     last_codes: list[str] = []
     last_resubscribe_at = 0.0
 
+    # TODO: 추후 redis로 처리해서 누락율을 확인해야함
+    metrics = {
+        "total": 0,
+        "success": 0,
+        "fail": 0,
+        "skip": 0,
+    }
+
     attempt = 0
     while not stop_event.is_set():
         try:
@@ -198,10 +208,6 @@ async def run_stream_marketdata_loop(
             last_codes = codes
             last_resubscribe_at = time.monotonic()
 
-            # 2) subscribe 만들고 스트림 소비
-            # if exchange_code == "BINANCE":
-            #     codes = ["BTCUSDT"]
-
             # print(f"{exchange_code} codes", codes)
             subscribe = subscribe_factory(codes)
             ws = ws_factory()
@@ -217,28 +223,39 @@ async def run_stream_marketdata_loop(
                 if stop_event.is_set():
                     break
 
-                await upsert_marketdata_and_buffer_5m(
-                    payload,
-                    exchange_code,
-                    redis=redis,
-                    snap_key_fn=snap_key_fn,
-                    stream_key_fn=stream_key_fn,
-                )
+                metrics["total"] += 1
 
-                # cursor 저장
-                if new_cursor is not None and new_cursor != cursor:
-                    cursor = new_cursor
-                    await _ckpt_set(checkpoint_store, checkpoint_key, new_cursor)
+                if payload["status"] == "fail":
+                    metrics["fail"] += 1
 
-                # 3) 메시지 소비 중 주기적으로 codes 변경 감지 → 바뀌면 break 후 재구독
-                now = time.monotonic()
-                if now >= next_poll_at:
-                    next_poll_at = now + symbols_poll_sec
-                    new_codes = await _fetch_codes(active_catalog, exchange_code)
-                    if new_codes != last_codes:
-                        last_codes = new_codes
-                        session_stop = True
-                        break
+                elif payload["status"] == "skip":
+                    metrics["skip"] += 1
+
+                elif payload["status"] == "success":
+                    metrics["success"] += 1
+
+                    await upsert_marketdata_and_buffer_5m(
+                        payload["data"],
+                        exchange_code,
+                        redis=redis,
+                        snap_key_fn=snap_key_fn,
+                        stream_key_fn=stream_key_fn,
+                    )
+
+                    # cursor 저장
+                    if new_cursor is not None and new_cursor != cursor:
+                        cursor = new_cursor
+                        await _ckpt_set(checkpoint_store, checkpoint_key, new_cursor)
+
+                    # 3) 메시지 소비 중 주기적으로 codes 변경 감지 → 바뀌면 break 후 재구독
+                    now = time.monotonic()
+                    if now >= next_poll_at:
+                        next_poll_at = now + symbols_poll_sec
+                        new_codes = await _fetch_codes(active_catalog, exchange_code)
+                        if new_codes != last_codes:
+                            last_codes = new_codes
+                            session_stop = True
+                            break
 
             if session_stop:
                 # 바로 다음 루프에서 재구독 진행

@@ -1,6 +1,6 @@
 import json
 from typing import Any, Callable, Mapping
-
+from app.infra.external.redis.async_redis_client import AsyncRedisClient
 from app.infra.external.redis.port.active_catalog import ActiveMarketCatalog, JsonDict
 
 
@@ -36,7 +36,7 @@ class RedisActiveMarketCatalog(ActiveMarketCatalog):
 
     def __init__(
         self,
-        redis: Any,
+        redis: AsyncRedisClient,
         *,
         exchanges_snap_key: str,
         exchanges_meta_key: str,

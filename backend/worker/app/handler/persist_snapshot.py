@@ -6,6 +6,7 @@ from app.core.constants import (
     SNAP,
     SYMBOLS,
     EXCHANGES,
+    TICKERS,
     META,
     TMP,
     LOCK,
@@ -93,7 +94,7 @@ def handle_persist_snapshots(
                 upsert_snapshots_1m = []
                 no_tick_payloads = []
                 for symbol, payload in symbols.items():
-                    key = f"{app_name}:{deploy_env}:{STREAM}:ticker:{exchange_code}:{symbol}"
+                    key = f"{app_name}:{deploy_env}:{STREAM}:{TICKERS}:{exchange_code}:{symbol}"
 
                     symbol_ticks = load_ticker_ticks(
                         ctx.redis_client,

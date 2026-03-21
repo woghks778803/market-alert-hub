@@ -36,8 +36,6 @@ class SqlMarketRepo(MarketRepo):
     def __init__(self, db: DbSession):
         self._db = db
 
-    def _base_market_query(self): ...
-
     def list_ticker_stats_from_snapshots(
         self, is_active: bool, deleted_is_null: bool = True
     ) -> list[MarketDTO.ExchangeInstrumentTickerCreate]:
@@ -424,7 +422,7 @@ class SqlMarketRepo(MarketRepo):
         )
 
         if deleted_is_null:
-            stmt = stmt.where(ExchangeModel.deleted_at.is_(None))
+            stmt = stmt.where(InstrumentModel.deleted_at.is_(None))
 
         if is_active is not None:
             stmt = stmt.where(InstrumentModel.is_active.is_(is_active))
@@ -436,12 +434,13 @@ class SqlMarketRepo(MarketRepo):
     def list_exchange_instrument_by_filter(
         self,
         *,
+        exchange_instrument_ids: set[int] | None = None,
         exchange_id: int | None = None,
         is_active: bool | None = None,
         deleted_is_null: bool = True,
         limit: int = 200,
         offset: int = 0,
-    ) -> list[MarketDTO.MappingItem]:
+    ) -> list[MarketDTO.MarketSimple]:
 
         stmt = (
             select(
@@ -453,8 +452,9 @@ class SqlMarketRepo(MarketRepo):
                 quote.symbol.label("quote_symbol"),
                 e.id.label("exchange_id"),
                 e.name.label("exchange_name"),
+                e.code.label("exchange_code"),
             )
-            .select_from(ExchangeInstrumentModel)
+            .select_from(ei)
             .join(e, ei.exchange)
             .join(base, ei.base_asset)
             .join(quote, ei.quote_asset)
@@ -475,23 +475,12 @@ class SqlMarketRepo(MarketRepo):
             stmt = stmt.where(ei.is_active == is_active)
         if exchange_id is not None:
             stmt = stmt.where(ei.exchange_id == exchange_id)
+        if exchange_instrument_ids is not None:
+            stmt = stmt.where(ei.id.in_(exchange_instrument_ids))
 
         rows = self._db.execute(stmt).mappings().all()
 
-        return [MarketDTO.MappingItem(**row) for row in rows]
-
-    def list_mappings_exchange_id(
-        self, *, exchange_id: int | None = None
-    ) -> list[MarketDTO.MappingItem]:
-        stmt = select(
-            ei.id.label("id"), ei.exchange_id, ei.base_asset_id, ei.quote_asset_id
-        )
-        if exchange_id is not None:
-            stmt = stmt.where(ei.exchange_id == exchange_id)
-
-        rows = self._db.execute(stmt).mappings().all()
-
-        return [MarketDTO.MappingItem(**row) for row in rows]
+        return [MarketDTO.MarketSimple(**row) for row in rows]
 
     # 공통 빌더
     def _list_snapshot_by_filter(
@@ -922,26 +911,3 @@ class SqlMarketRepo(MarketRepo):
 
         stmt = insert(Model)
         self._db.execute(stmt, chunk)
-
-    def get_symbol(self, exchange_instrument_id: int) -> MarketDTO.MappingItem:
-        ei = ExchangeInstrumentModel
-
-        stmt = (
-            select(
-                ei.id.label("id"),
-                ei.base_asset_id,
-                ei.quote_asset_id,
-                ei.exchange_symbol.label("exchange_symbol"),
-                base.symbol.label("base_symbol"),
-                quote.symbol.label("quote_symbol"),
-            )
-            .select_from(ExchangeInstrumentModel)
-            .join(base, ei.base_asset)
-            .join(quote, ei.quote_asset)
-            .limit(1)
-        )
-
-        stmt = stmt.where(ei.id == exchange_instrument_id)
-
-        row = self._db.execute(stmt).mappings().one()
-        return MarketDTO.MappingItem(**row)

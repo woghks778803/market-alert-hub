@@ -107,7 +107,7 @@ def load_ticker_ticks(
     """
     Redis Stream(1초틱)에서 버킷 범위 [start, end) 데이터를 읽어온다.
 
-    stream key: {app}:{env}:stream:ticker:{EXCHANGE}:{SYMBOL}
+    stream key: {app}:{env}:stream:tickers:{EXCHANGE}:{SYMBOL}
     stream item fields(예시):
       - b"ts": b"1769..." (ms)
       - b"p" : b'{"type":"candle.1s", ...}'  (json payload)

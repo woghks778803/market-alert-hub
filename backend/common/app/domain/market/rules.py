@@ -9,6 +9,28 @@ import app.domain.market.dto as MarketDTO
 Interval = Literal["1m", "5m", "15m", "1h", "4h", "1d", "1w", "1M"]
 
 
+def compose_snapshot_publish_data(
+    market_simples: list[MarketDTO.MarketSimple],
+    snapshots: list[MarketDTO.PriceSnapshotCreate],
+) -> list:
+    snapshot_map = {s.exchange_instrument_id: s for s in snapshots}
+    merged = [
+        {
+            # "ts_open": s.ts_open,
+            "open": str(s.open),
+            "close": str(s.close),
+            "high": str(s.high),
+            "low": str(s.low),
+            "volume": str(s.volume),
+            "exchange_code": m.exchange_code,
+            "exchange_symbol": m.exchange_symbol,
+        }
+        for m in market_simples
+        if (s := snapshot_map.get(m.id)) is not None
+    ]
+    return merged
+
+
 def parse_market_symbol(symbol: str) -> MarketDTO.ParsedMarketSymbol | None:
     # "KRW-BTC" 형태 파싱 (업비트 스펙 기반)
     try:

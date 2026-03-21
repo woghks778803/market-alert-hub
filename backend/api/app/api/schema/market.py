@@ -41,12 +41,6 @@ class MarketRead(BaseModel):
     volume_24h: Decimal | None
 
 
-class MappingItem(BaseModel):
-    exchange_id: int
-    base_asset_id: int
-    quote_asset_id: int
-
-
 class CandleBase(BaseModel):
     model_config = _model_cfg
     exchange_instrument_id: int

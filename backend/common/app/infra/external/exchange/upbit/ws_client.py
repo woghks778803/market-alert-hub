@@ -1,6 +1,7 @@
 import asyncio
 import json
 import uuid
+from decimal import Decimal
 from dataclasses import dataclass
 from typing import Any, AsyncIterator, AsyncIterable
 
@@ -69,9 +70,7 @@ class UpbitWsClient(WsClient):
                 new_cursor = self._derive_cursor(payload, fallback=cursor)
 
                 normalized = self._normalize_ticker(payload)
-                if normalized is None:
-                    continue
-
+                # print("upbit normalized", normalized)
                 yield (new_cursor, normalized)
 
         except asyncio.CancelledError:
@@ -106,6 +105,13 @@ class UpbitWsClient(WsClient):
             for t in pending:
                 t.cancel()
 
+            # 첫 task cancel 중 다른 task await 방지
+            for t in pending:
+                try:
+                    await t
+                except asyncio.CancelledError:
+                    pass
+
             if stop_task in done:
                 # 종료 신호 우선
                 return
@@ -125,23 +131,36 @@ class UpbitWsClient(WsClient):
         except Exception as e:
             raise UpbitDecodeError(f"Failed to decode Upbit ws message: {e}") from e
 
-    def _normalize_ticker(self, payload: dict[str, Any]) -> dict[str, Any] | None:
+    def _normalize_ticker(self, payload: dict[str, Any]) -> dict[str, Any]:
         if payload.get("type") != "candle.1s":
-            return None
+            return {
+                "status": "skip",
+                "reason": "skip_event",
+            }
 
         try:
             symbol = payload["code"]  # KRW-BTC
-            price = float(payload["trade_price"])  # 현재가
-            volume = float(payload["candle_acc_trade_volume"])  # 누적 거래량
-            ts = int(payload["timestamp"])  # ms timestamp
+            # NOTE: Decimal 연산 처리 지연
+            # price = Decimal(str(payload["trade_price"]))  # 현재가
+            # volume = Decimal(str(payload["candle_acc_trade_volume"]))  # 누적 거래량
+            price = float(payload["trade_price"])
+            volume = float(payload["candle_acc_trade_volume"])
+            timestamp = int(payload["timestamp"])  # ms timestamp
         except (KeyError, ValueError, TypeError):
-            return None
+            return {
+                "status": "fail",
+                "reason": "parse_error",
+                "raw": payload,
+            }
 
         return {
-            "symbol": symbol,
-            "price": price,
-            "volume": volume,
-            "timestamp": ts,
+            "status": "success",
+            "data": {
+                "symbol": symbol,
+                "price": price,
+                "volume": volume,
+                "timestamp": timestamp,
+            },
         }
 
     def _derive_cursor(self, payload: dict[str, Any], *, fallback: str | None) -> str:

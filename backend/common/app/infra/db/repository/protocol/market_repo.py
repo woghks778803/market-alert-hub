@@ -4,7 +4,6 @@ from app.domain import MarketDTO
 
 
 class MarketRepo(Protocol):
-
     def list_ticker_stats_from_snapshots(
         self, is_active: bool, deleted_is_null: bool = True
     ) -> list[MarketDTO.ExchangeInstrumentTickerCreate]: ...
@@ -63,15 +62,13 @@ class MarketRepo(Protocol):
     def list_exchange_instrument_by_filter(
         self,
         *,
+        exchange_instrument_ids: set[int] | None = None,
         exchange_id: int | None = None,
         is_active: bool | None = None,
         deleted_is_null: bool = True,
         limit: int = 200,
         offset: int = 0,
-    ) -> list[MarketDTO.MappingItem]: ...
-    def list_mappings_exchange_id(
-        self, *, exchange_id: int | None = None
-    ) -> list[MarketDTO.MappingItem]: ...
+    ) -> list[MarketDTO.MarketSimple]: ...
     def _list_snapshot_by_filter(
         self,
         model,
@@ -173,5 +170,3 @@ class MarketRepo(Protocol):
     ) -> None: ...
 
     def seed_snapshots(self, *, interval: str, chunk: list): ...
-
-    def get_symbol(self, exchange_instrument_id: int) -> MarketDTO.MappingItem: ...

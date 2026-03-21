@@ -18,13 +18,14 @@ class CandleBase:
 
 
 @dataclass(slots=True)
-class MappingItem:
+class MarketSimple:
     id: int
     base_asset_id: int
     quote_asset_id: int
 
     exchange_id: int | None = None
     exchange_name: str | None = None
+    exchange_code: str | None = None
     exchange_symbol: str | None = None
     base_symbol: str | None = None
     quote_symbol: str | None = None
@@ -33,12 +34,12 @@ class MappingItem:
     def _req_int(d: Mapping[str, Any], key: str) -> int:
         v = d.get(key)
         if v is None:
-            raise ValidationAppError(f"MappingItem.{key} is required")
+            raise ValidationAppError(f"MarketSimple.{key} is required")
         try:
             return int(v)
         except Exception as e:
             raise ValidationAppError(
-                f"MappingItem.{key} must be int-like: {v!r}"
+                f"MarketSimple.{key} must be int-like: {v!r}"
             ) from e
 
     @staticmethod
@@ -50,7 +51,7 @@ class MappingItem:
             return int(v)
         except Exception as e:
             raise ValidationAppError(
-                f"MappingItem.{key} must be int-like: {v!r}"
+                f"MarketSimple.{key} must be int-like: {v!r}"
             ) from e
 
     @staticmethod
@@ -66,7 +67,7 @@ class MappingItem:
         return s or None
 
     @classmethod
-    def from_dict(cls, d: Mapping[str, Any]) -> "MappingItem":
+    def from_dict(cls, d: Mapping[str, Any]) -> "MarketSimple":
         return cls(
             id=cls._req_int(d, "id"),
             base_asset_id=cls._req_int(d, "base_asset_id"),

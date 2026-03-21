@@ -121,27 +121,6 @@ def list_exchange_instruments(
     return ok(rows, request_id=meta.request_id)
 
 
-@router.get(
-    "/mappings",
-    response_model=Envelope[list[MarketSchema.MappingItem]],
-    summary="거래소-종목 매핑(선택)",
-    responses=OpenApi.combine(
-        OpenApi.OK(
-            Envelope[list[MarketSchema.MappingItem]],
-            description="리스트 조회 성공",
-        ),
-        OpenApi.ERR_409,
-    ),
-)
-def list_mappings(
-    exchange_id: int | None = Query(None, ge=1),
-    svcs: ServiceFactory = Depends(get_services),
-    meta: RequestMeta = Depends(get_request_meta),
-):
-    rows = svcs.markets.list_mappings_exchange_id(exchange_id=exchange_id)
-    return ok(rows, request_id=meta.request_id)
-
-
 # Prices
 @router.get(
     "/candles",

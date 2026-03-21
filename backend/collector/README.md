@@ -26,8 +26,8 @@
 1) 런타임이 `ws_facs_register`와 `subscribe_facs_register`에 등록된 거래소별로 시장 스트림 태스크를 생성.
 2) 각 태스크(`run_stream_marketdata_loop`)는 ActiveMarketCatalog에서 심볼 스냅샷을 주기적으로 읽어 현재 구독 목록을 유지.
 3) 거래소 WS로부터 받은 메시지를 `upsert_marketdata_and_buffer_5m`에서 처리:
-   - 해시 스냅샷 키: `{app}:{env}:snap:ticker:{exchange}`에 심볼별 최신 payload 저장.
-   - 스트림 키: `{app}:{env}:stream:ticker:{exchange}:{symbol}`에 ts/payload를 추가, 최대 길이/TTL 관리.
+   - 해시 스냅샷 키: `{app}:{env}:snap:tickers:{exchange}`에 심볼별 최신 payload 저장.
+   - 스트림 키: `{app}:{env}:stream:tickers:{exchange}:{symbol}`에 ts/payload를 추가, 최대 길이/TTL 관리.
 4) 커서(체크포인트)를 저장해 재구독 시 이어서 처리.
 5) 에러 발생 시 지정된 백오프 정책으로 재연결하며, stop_event 설정 시 태스크를 정리.
 

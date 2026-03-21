@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 from app.core.constants import (
+    CandleInterval,
     CandleBaseInterval,
     CandleOutputInterval,
     ExchangeCode,
@@ -22,9 +23,11 @@ class MarketService:
         *,
         uow_factory: Callable[[], UnitOfWork],
         symbol_providers: dict[str, MarketPort.ExchangeSymbol],
+        snapshot_publisher: MarketPort.MarketSnapshotPublish,
     ) -> None:
         self._uow_factory = uow_factory
         self._symbol_providers = symbol_providers
+        self._snapshot_publisher = snapshot_publisher
 
     # Meta
     def get_by_exchange_instrument_id(
@@ -77,7 +80,7 @@ class MarketService:
         is_active: bool | None = None,
         limit: int,
         offset: int,
-    ) -> list[MarketDTO.MappingItem]:
+    ) -> list[MarketDTO.MarketSimple]:
         with self._uow_factory() as uow:
             rows = uow.markets.list_exchange_instrument_by_filter(
                 exchange_id=exchange_id,
@@ -87,12 +90,6 @@ class MarketService:
                 offset=offset,
             )
             return rows
-
-    def list_mappings_exchange_id(
-        self, *, exchange_id: int | None
-    ) -> list[MarketDTO.MappingItem]:
-        with self._uow_factory() as uow:
-            return uow.markets.list_mappings_exchange_id(exchange_id=exchange_id)
 
     def list_candles_by_filter(
         self,
@@ -171,7 +168,9 @@ class MarketService:
     ) -> list[MarketDTO.PriceSnapshotCreate]:
         ts_open = epoch_to_datetime(bucket_start_epoch)
         now = utcnow()
-        no_tick_symbols = [MarketDTO.MappingItem.from_dict(m) for m in no_tick_payloads]
+        no_tick_symbols = [
+            MarketDTO.MarketSimple.from_dict(m) for m in no_tick_payloads
+        ]
         ids = [s.id for s in no_tick_symbols]
 
         with self._uow_factory() as uow:
@@ -207,7 +206,7 @@ class MarketService:
         symbol_ticks: list[dict[str, Any]],
         bucket_start_epoch: int,
     ) -> MarketDTO.PriceSnapshotCreate | None:
-        symbol = MarketDTO.MappingItem.from_dict(payload)
+        symbol = MarketDTO.MarketSimple.from_dict(payload)
         ts_open: datetime = epoch_to_datetime(bucket_start_epoch)
         first = symbol_ticks[0]
         last = symbol_ticks[-1]
@@ -263,7 +262,6 @@ class MarketService:
         ].list_symbols()  # list[MarketDTO.SymbolInfo]
 
         normalized = self.normalize_upbit_symbols(raw_symbols)
-        print("normalized", code, normalized)
         with self._uow_factory() as uow:
             active = self.ensure_exchange_instruments(
                 uow=uow,
@@ -503,10 +501,21 @@ class MarketService:
             return 0
 
         with self._uow_factory() as uow:
-            uow.markets.upsert_snapshots_1m(snapshots)
+            ids = {s.exchange_instrument_id for s in snapshots}
+            market_simples = uow.markets.list_exchange_instrument_by_filter(
+                exchange_instrument_ids=ids
+            )
 
+            uow.markets.upsert_snapshots_1m(snapshots)
             uow.commit()
-            return len(snapshots)
+
+        self._snapshot_publisher.publish(
+            MarketRule.compose_snapshot_publish_data(
+                market_simples=market_simples, snapshots=snapshots
+            ),
+            type=CandleInterval.MIN_1.value,
+        )
+        return len(snapshots)
 
     def ensure_snapshots_1h(
         self,
@@ -521,8 +530,20 @@ class MarketService:
                 start_dt=start_dt, end_dt=end_dt
             )
 
+            ids = {s.exchange_instrument_id for s in snapshots}
+            market_simples = uow.markets.list_exchange_instrument_by_filter(
+                exchange_instrument_ids=ids
+            )
+
             uow.markets.upsert_snapshots_1h(snapshots)
             uow.commit()
+
+        self._snapshot_publisher.publish(
+            MarketRule.compose_snapshot_publish_data(
+                market_simples=market_simples, snapshots=snapshots
+            ),
+            type=CandleInterval.HOUR_1.value,
+        )
         return len(snapshots)
 
     def ensure_snapshots_1d(
@@ -538,6 +559,18 @@ class MarketService:
                 start_dt=start_dt, end_dt=end_dt
             )
 
+            ids = {s.exchange_instrument_id for s in snapshots}
+            market_simples = uow.markets.list_exchange_instrument_by_filter(
+                exchange_instrument_ids=ids
+            )
+
             uow.markets.upsert_snapshots_1d(snapshots)
             uow.commit()
-        return 0
+
+        self._snapshot_publisher.publish(
+            MarketRule.compose_snapshot_publish_data(
+                market_simples=market_simples, snapshots=snapshots
+            ),
+            type=CandleInterval.DAY_1.value,
+        )
+        return len(snapshots)

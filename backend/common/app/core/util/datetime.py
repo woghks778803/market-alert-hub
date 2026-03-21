@@ -16,6 +16,11 @@ def datetime_to_epoch_ms(dt: datetime) -> int:
     return int(dt.timestamp() * 1000)
 
 
+def datetime_to_epoch_sec(dt: datetime) -> int:
+    dt = ensure_utc(dt)
+    return int(dt.timestamp())
+
+
 def ensure_utc(dt: datetime) -> datetime:
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)

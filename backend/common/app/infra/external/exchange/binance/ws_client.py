@@ -1,6 +1,7 @@
 import asyncio
 import json
 import uuid
+from decimal import Decimal
 from dataclasses import dataclass
 from typing import Any, AsyncIterator
 
@@ -68,9 +69,7 @@ class BinanceWsClient(WsClient):
                     continue
 
                 normalized = self._normalize_ticker(payload)
-                if normalized is None:
-                    continue
-
+                # print("binance normalized", normalized)
                 new_cursor = self._derive_cursor(payload, fallback=cursor)
                 yield (new_cursor, normalized)
 
@@ -112,23 +111,35 @@ class BinanceWsClient(WsClient):
         except Exception as e:
             raise BinanceDecodeError(f"Failed to decode Binance ws message: {e}") from e
 
-    def _normalize_ticker(self, payload: dict[str, Any]) -> dict[str, Any] | None:
+    def _normalize_ticker(self, payload: dict[str, Any]) -> dict[str, Any]:
         if payload.get("e") != "trade":
-            return None
+            return {
+                "status": "skip",
+                "reason": "skip_event",
+            }
 
         try:
             symbol = payload["s"]  # BTCUSDT
+            # price = Decimal(str(payload["p"]))
+            # volume = Decimal(str(payload["q"]))
             price = float(payload["p"])
             volume = float(payload["q"])
             timestamp = payload["T"]
         except (KeyError, ValueError, TypeError):
-            return None
+            return {
+                "status": "fail",
+                "reason": "parse_error",
+                "raw": payload,
+            }
 
         return {
-            "symbol": symbol,
-            "price": price,
-            "volume": volume,
-            "timestamp": timestamp,
+            "status": "success",
+            "data": {
+                "symbol": symbol,
+                "price": price,
+                "volume": volume,
+                "timestamp": timestamp,
+            },
         }
 
     def _derive_cursor(self, payload: dict[str, Any], *, fallback: WsCursor) -> str:
