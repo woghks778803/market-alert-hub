@@ -7,7 +7,14 @@ META = "meta"
 LOCK = "lock"
 CURSOR = "cursor"
 
+TICKER = "ticker"
 TICKERS = "tickers"
+
+COOLDOWN = "cooldown"
+PUBLISH = "publish"
+STATE = "state"
+
+
 SYMBOLS = "symbols"
 EXCHANGES = "exchanges"
 
@@ -54,6 +61,13 @@ class DeploymentEnvironment(str, enum.Enum):
     DEV = "dev"
     STAGE = "stage"
     PROD = "prod"
+
+
+class CandleInterval(str, enum.Enum):
+    SEC_1 = "1s"
+    MIN_1 = "1m"
+    HOUR_1 = "1h"
+    DAY_1 = "1d"
 
 
 class CandleBaseInterval(str, enum.Enum):

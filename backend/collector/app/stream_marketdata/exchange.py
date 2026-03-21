@@ -108,7 +108,6 @@ async def upsert_marketdata_and_buffer_5m(
 
     maxlen = resolve_maxlen(exchange_code=exchange_code, symbol=symbol, default=maxlen)
     snap_key = snap_key_fn(exchange_code)
-    print(f"{exchange_code} {symbol} {snap_key}")
     stream_key = stream_key_fn(exchange_code, symbol)
 
     # 저장 포맷: payload 전체 json(가볍게) + ts(ms)

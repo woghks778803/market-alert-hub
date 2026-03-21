@@ -24,24 +24,9 @@ class RequestMeta:
     timestamp: datetime
 
 
-@dataclass(frozen=True)
-class ApiRuntime:
-    svcs: ServiceFactory
-    config: CoreDTO.ApiConfigBag
-
-
-@lru_cache(maxsize=1)
+@lru_cache(maxsize=1)  # 의미 없지만 실수 방지를 위한 보호막
 def get_app_context() -> ApiContext:
     return create_api_context()
-
-
-def build_api_runtime() -> ApiRuntime:
-    ctx = get_app_context()
-
-    return ApiRuntime(
-        svcs=ctx.svcs,
-        config=ctx.config,
-    )
 
 
 def get_request_meta(request: Request) -> RequestMeta:

@@ -66,10 +66,42 @@ class AsyncRedisClient:
         except RedisError as e:
             log.exception("redis delete failed: key=%s", key)
             raise
-    
+
+    async def xread(
+        self,
+        streams: dict[str, str],
+        *,
+        count: int | None = None,
+        block: int | None = None,
+    ):
+        try:
+            return await self._client.xread(
+                streams=streams,
+                count=count,
+                block=block,
+            )
+        except RedisError:
+            log.exception("redis xread failed: streams=%s", streams)
+            raise
+
+    async def hset(self, key: str, mapping: dict):
+        try:
+            return await self._client.hset(name=key, mapping=mapping)
+        except RedisError:
+            log.exception("redis hset failed: key=%s", key)
+            raise
+
+    async def hgetall(self, key: str) -> dict[bytes, bytes]:
+        try:
+            result = await self._client.hgetall(name=key)
+            return result or {}
+        except RedisError as e:
+            log.exception("redis hgetall failed: key=%s", key)
+            raise
+
     def conn(self) -> AsyncRedis:
         return self._client
-    
+
     async def aclose(self) -> None:
         """
         프로세스 종료 시 close 호출하면 커넥션 정리 가능.

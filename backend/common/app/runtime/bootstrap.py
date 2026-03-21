@@ -1,5 +1,14 @@
 from .settings import settings
-from app.core.constants import ExchangeCode, SNAP, META, SYMBOLS, EXCHANGES
+from app.core.constants import (
+    ExchangeCode,
+    CandleInterval,
+    SNAP,
+    META,
+    TICKER,
+    PUBLISH,
+    SYMBOLS,
+    EXCHANGES,
+)
 from app.core import dto as CoreDTO
 from app.service.factory import ServiceFactory
 from app.runtime.app_context import (
@@ -8,6 +17,7 @@ from app.runtime.app_context import (
     DispatcherContext,
     SchedulerContext,
     CollectorContext,
+    StreamProcessorContext,
 )
 
 # from app.infra.external.rq.queue_factory import RqQueueFactory, RqQueueConfig
@@ -24,9 +34,13 @@ from app.infra.external.oauth.kakao.rest_client import (
     get_kakao_rest_client,
 )
 
+from app.infra.external.redis.provider.snapshot_publish import (
+    RedisMarketSnapshotPublish,
+)
 from app.infra.external.redis.provider.cooldown import RedisCooldown
 from app.infra.external.redis.provider.state import RedisState
 from app.infra.external.redis.provider.active_catalog import RedisActiveMarketCatalog
+from app.infra.external.redis.provider.candle_store import RedisCandleStore
 from app.infra.external.exchange.upbit.shared.types import UpbitWsSubscribe
 from app.infra.external.exchange.binance.shared.types import BinanceWsSubscribe
 from app.infra.external.exchange.port.ws_client import (
@@ -210,6 +224,12 @@ class Providers:
             close_timeout_sec=settings.WS_CLOSE_TIMEOUT_SEC,
         )
         return lambda: get_binance_ws_client(config)
+
+    @staticmethod
+    def snapshot_publisher_provider() -> Callable[[], RedisMarketSnapshotPublish]:
+        return lambda: RedisMarketSnapshotPublish(
+            redis=get_redis_client(settings.REDIS_URL)
+        )
 
     @staticmethod
     def state_provider() -> Callable[[], RedisState]:
@@ -409,9 +429,6 @@ def build_collector_config_bag() -> CoreDTO.CollectorConfigBag:
         sample_rate=settings.SAMPLE_RATE,
         traces_sample_rate=settings.TRACES_SAMPLE_RATE,
         redis_url=settings.REDIS_URL,
-        # exchange=settings.COLLECTOR_EXCHANGE,
-        # enable_catalog_sync=settings.COLLECTOR_ENABLE_CATALOG_SYNC,
-        # catalog_sync_interval_sec=settings.COLLECTOR_CATALOG_SYNC_INTERVAL_SEC,
         enable_stream=settings.COLLECTOR_ENABLE_STREAM,
         stream_reconnect_backoff_sec=settings.COLLECTOR_STREAM_RECONNECT_BACKOFF_SEC,
         restart_base_backoff_sec=settings.COLLECTOR_RESTART_BASE_BACKOFF_SEC,
@@ -425,9 +442,29 @@ def build_collector_config_bag() -> CoreDTO.CollectorConfigBag:
     )
 
 
+def build_stream_processor_config_bag() -> CoreDTO.StreamProcessorConfigBag:
+    return CoreDTO.StreamProcessorConfigBag(
+        app_name=settings.APP_NAME,
+        deploy_env=settings.DEPLOY_ENV,
+        log_level=settings.STREAM_PROCESSOR_LOG_LEVEL or settings.LOG_LEVEL,
+        sentry_dsn=settings.SENTRY_DSN,
+        sample_rate=settings.SAMPLE_RATE,
+        traces_sample_rate=settings.TRACES_SAMPLE_RATE,
+        enable_stream=settings.STREAM_PROCESSOR_ENABLE_STREAM,
+        stream_reconnect_backoff_sec=settings.STREAM_PROCESSOR_STREAM_RECONNECT_BACKOFF_SEC,
+        restart_base_backoff_sec=settings.STREAM_PROCESSOR_RESTART_BASE_BACKOFF_SEC,
+        restart_max_backoff_sec=settings.STREAM_PROCESSOR_RESTART_MAX_BACKOFF_SEC,
+        restart_jitter_ratio=settings.STREAM_PROCESSOR_RESTART_JITTER_RATIO,
+        checkpoint_backend=settings.STREAM_PROCESSOR_CHECKPOINT_BACKEND,
+        checkpoint_key_prefix=settings.STREAM_PROCESSOR_CHECKPOINT_KEY_PREFIX,
+        checkpoint_file_path=settings.STREAM_PROCESSOR_CHECKPOINT_FILE_PATH,
+    )
+
+
 def create_service_factory() -> ServiceFactory:
     return ServiceFactory(
         uow=providers.uow_provider(settings.SQLALCHEMY_URL),
+        snapshot_publisher=providers.snapshot_publisher_provider(),
         state=providers.state_provider(),
         cooldown=providers.cooldown_provider(),
         email_client=providers.email_client_provider(),
@@ -485,7 +522,7 @@ def create_collector_context() -> CollectorContext:
     async_redis = get_async_redis_client(settings.REDIS_URL)
 
     active_catalog = RedisActiveMarketCatalog(
-        async_redis.conn(),
+        async_redis,
         exchanges_snap_key=f"{config.app_name}:{config.deploy_env}:{SNAP}:{EXCHANGES}",
         exchanges_meta_key=f"{config.app_name}:{config.deploy_env}:{META}:{EXCHANGES}",
         symbols_snap_key_fn=lambda ex: f"{config.app_name}:{config.deploy_env}:{SNAP}:{SYMBOLS}:{ex}",
@@ -514,6 +551,32 @@ def create_collector_context() -> CollectorContext:
         ws_facs_register=ws_facs_register,
         async_redis_client=async_redis,
         active_catalog=active_catalog,
+    )
+
+
+@lru_cache
+def create_stream_processor_context() -> StreamProcessorContext:
+    config = build_stream_processor_config_bag()
+    async_redis = get_async_redis_client(settings.REDIS_URL)
+
+    active_catalog = RedisActiveMarketCatalog(
+        async_redis,
+        exchanges_snap_key=f"{config.app_name}:{config.deploy_env}:{SNAP}:{EXCHANGES}",
+        exchanges_meta_key=f"{config.app_name}:{config.deploy_env}:{META}:{EXCHANGES}",
+        symbols_snap_key_fn=lambda ex: f"{config.app_name}:{config.deploy_env}:{SNAP}:{SYMBOLS}:{ex}",
+        symbols_meta_key_fn=lambda ex: f"{config.app_name}:{config.deploy_env}:{META}:{SYMBOLS}:{ex}",
+    )
+
+    candle_store = RedisCandleStore(
+        async_redis,
+        symbols_1s_key_fn=lambda ex, symbol: f"{PUBLISH}:{CandleInterval.SEC_1.value}:{ex}:{symbol}",
+    )
+
+    return StreamProcessorContext(
+        config=config,
+        active_catalog=active_catalog,
+        candle_store=candle_store,
+        async_redis_client=async_redis,
     )
 
 

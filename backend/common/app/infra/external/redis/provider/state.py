@@ -1,6 +1,7 @@
 import json
 import secrets
 
+from app.core.constants import STATE
 from app.core.util.datetime import utcnow
 from app.domain import AuthPort
 from app.infra.external.redis.redis_client import RedisClient
@@ -20,7 +21,7 @@ class RedisState(AuthPort.AuthState):
         """
 
         state = secrets.token_urlsafe(32)
-        redis_key = f"state:{key}:{state}"
+        redis_key = f"{STATE}:{key}:{state}"
 
         value_dict = {
             **data,
@@ -41,7 +42,7 @@ class RedisState(AuthPort.AuthState):
         state 조회 + 삭제 (one-time token)
         """
 
-        redis_key = f"state:{key}:{state}"
+        redis_key = f"{STATE}:{key}:{state}"
 
         pipe = self._redis.pipeline()
         pipe.get(redis_key)

@@ -130,7 +130,6 @@ services:
     entrypoint: [ "sh", "/app/entrypoint.sh" ]
     # CMD는 Dockerfile 기본값
     depends_on:
-      db: { condition: service_healthy }
       redis: { condition: service_healthy }
     env_file:
       - ./env/common.env
@@ -139,8 +138,24 @@ services:
     networks: [ mahnet ]
     cpus: 0.80
     mem_limit: 768m
-    # cpus: 0.50
-    # mem_limit: 512m
+
+  stream_processor:
+    build: ../../backend/stream_processor
+    container_name: mah_stream_processor
+    working_dir: /app
+    volumes:
+      - ../../backend/stream_processor:/app:cached
+      - ../../backend/common:/app/common:cached
+    entrypoint: [ "sh", "/app/entrypoint.sh" ]
+    depends_on:
+      redis: { condition: service_healthy }
+    env_file:
+      - ./env/common.env
+      - ./env/stream_processor.env
+    restart: unless-stopped
+    networks: [ mahnet ]
+    cpus: 0.50
+    mem_limit: 512m
 
   db:
     image: mysql:8.4

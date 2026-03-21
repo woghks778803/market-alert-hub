@@ -46,6 +46,13 @@ class ApiConfigBag:
 
 
 @dataclass(frozen=True)
+class WsConfigBag:
+    app_name: str
+    deploy_env: str
+    log_level: str
+
+
+@dataclass(frozen=True)
 class WorkerConfigBag:
     app_name: str
     deploy_env: str
@@ -122,9 +129,6 @@ class CollectorConfigBag:
 
     redis_url: str
 
-    # exchange
-    # exchange: str
-
     # 1) catalog sync
     # enable_catalog_sync: bool
     # catalog_sync_interval_sec: int
@@ -146,6 +150,28 @@ class CollectorConfigBag:
     # (optional) backfill
     enable_backfill: bool
     backfill_lookback_minutes: int
+
+
+@dataclass(frozen=True)
+class StreamProcessorConfigBag:
+    # 공통
+    app_name: str
+    deploy_env: str
+    log_level: str
+    sentry_dsn: str
+    sample_rate: float
+    traces_sample_rate: float
+
+    enable_stream: bool
+    stream_reconnect_backoff_sec: float
+
+    restart_base_backoff_sec: float
+    restart_max_backoff_sec: float
+    restart_jitter_ratio: float
+
+    checkpoint_backend: str  # memory | file | redis
+    checkpoint_key_prefix: str
+    checkpoint_file_path: str
 
 
 # 페이징/정렬 -------------------------------------------------------------------
