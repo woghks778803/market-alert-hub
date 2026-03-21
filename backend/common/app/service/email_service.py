@@ -39,7 +39,7 @@ class EmailService:
     #         {"user_name": user_name, "dashboard_link": dashboard_link},
     #     )
     #     return self.client().send(
-    #         subject="[PricePing] 회원가입을 환영합니다",
+    #         subject="[AlertPing] 회원가입을 환영합니다",
     #         html_body=html,
     #         to=to,
     #     )
@@ -71,7 +71,7 @@ class EmailService:
         )
 
         return self.client().send(
-            subject="[PricePing] 회원가입을 환영합니다",
+            subject="[AlertPing] 회원가입을 환영합니다",
             html_body=html,
             to=to,
         )
@@ -102,7 +102,7 @@ class EmailService:
         )
 
         return self.client().send(
-            subject="[PricePing] 비밀번호 재설정 안내드립니다",
+            subject="[AlertPing] 비밀번호 재설정 안내드립니다",
             html_body=html,
             to=to,
         )

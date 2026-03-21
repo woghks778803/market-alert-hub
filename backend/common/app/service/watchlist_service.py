@@ -8,33 +8,6 @@ class WatchlistService:
     def __init__(self, *, uow_factory: Callable[[], UnitOfWork]):
         self._uow_factory = uow_factory
 
-    def list_items_by_filter(
-        self, *, user_id: int, limit: int, offset: int, is_asc: bool
-    ) -> List[WatchlistDTO.WatchlistItemRead]:
-        with self._uow_factory() as uow:
-            rows = uow.watchlists.list_items_by_filter(
-                user_id=user_id, limit=limit, offset=offset, is_asc=is_asc
-            )
-            result: List[WatchlistDTO.WatchlistItemRead] = []
-            for row in rows:
-
-                symbols = uow.markets.get_symbol(row.exchange_instrument_id)
-                if (
-                    symbols.base_symbol is None
-                    or symbols.quote_symbol is None
-                    or symbols.exchange_symbol is None
-                ):
-                    raise ValidationAppError("Mapping not found", target="symbols")
-
-                result.append(
-                    WatchlistDTO.WatchlistItemRead(
-                        id=row.id,
-                        exchange_instrument_id=row.exchange_instrument_id,
-                        sort_order=row.sort_order,
-                    )
-                )
-            return result
-
     def create_item(
         self, *, user_id: int, exchange_instrument_id: int, sort_order: int | None
     ) -> WatchlistDTO.WatchlistItemRead:

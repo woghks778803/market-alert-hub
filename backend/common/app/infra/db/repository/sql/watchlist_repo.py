@@ -26,20 +26,6 @@ class SqlWatchlistRepo(WatchlistRepo):
         self._db.flush()  # id 채우기
         return row.to_dto()
 
-    def list_items_by_filter(
-        self, *, user_id: int, limit: int, offset: int, is_asc: bool
-    ) -> Sequence[WatchlistDTO.WatchlistItem]:
-        order = asc if is_asc else desc
-        stmt = (
-            select(WatchlistItemModel)
-            .where(and_(WatchlistItemModel.user_id == user_id))
-            .order_by(order(WatchlistItemModel.sort_order), desc(WatchlistItemModel.id))
-            .limit(limit)
-            .offset(offset)
-        )
-        rows = self._db.execute(stmt).scalars().all()
-        return [row.to_dto() for row in rows]
-
     def exists(
         self, *, user_id: int, exchange_instrument_id: int
     ) -> WatchlistDTO.WatchlistItem | None:

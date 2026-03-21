@@ -10,26 +10,6 @@ import app.api.openapi as OpenApi
 router = APIRouter(prefix="/watchlists")
 
 
-@router.get(
-    "",
-    response_model=Envelope[list[WatchlistItemRead]],
-    summary="내 관심종목 목록",
-    responses=OpenApi.combine(OpenApi.OK(Envelope[list[WatchlistItemRead]])),
-)
-def list_items(
-    limit: int = Query(100, ge=1, le=500),
-    offset: int = Query(0, ge=0),
-    order: str = Query("asc", pattern="^(asc|desc)$"),
-    user: AuthDTO.AuthUser = Depends(get_current_user),
-    svcs: ServiceFactory = Depends(get_services),
-    meta: RequestMeta = Depends(get_request_meta),
-):
-    rows = svcs.watchlists.list_items_by_filter(
-        user_id=user.id, limit=limit, offset=offset, is_asc=(order == "asc")
-    )
-    return ok(rows, request_id=meta.request_id)
-
-
 @router.post(
     "",
     response_model=Envelope[WatchlistItemRead],

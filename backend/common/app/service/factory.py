@@ -15,11 +15,14 @@ from .email_service import EmailService
 from .outbox_service import OutboxService
 
 
+# TODO: 추후 구현체와 인터페이스 분리 후 deps, wiring, router 영역에서 분리 필요
+# TODO: 서비스가 20개 이상으로 증가할 경우 서비스 팩토리를 각 서비스의 팩토리로 분리 필요
 class ServiceFactory:
     def __init__(
         self,
         *,
         uow: Callable[[], UnitOfWork],
+        snapshot_publisher: Callable[[], MarketPort.MarketSnapshotPublish],
         state: Callable[[], AuthPort.AuthState],
         cooldown: Callable[[], ThrottlePort.Cooldown],
         email_client: Callable[[], EmailPort.EmailClient],
@@ -33,6 +36,7 @@ class ServiceFactory:
         config: CoreDTO.ServiceConfigBag,
     ) -> None:
         self._uow = uow
+        self._snapshot_publisher = snapshot_publisher
         self._state = state
         self._cooldown = cooldown
         self._email_client = email_client
@@ -48,6 +52,10 @@ class ServiceFactory:
     @cached_property
     def symbol_providers(self):
         return {k: v() for k, v in self._symbol_providers.items()}
+
+    @cached_property
+    def snapshot_publisher(self):
+        return self._snapshot_publisher()
 
     @cached_property
     def cooldown(self):
@@ -95,6 +103,7 @@ class ServiceFactory:
         return MarketService(
             uow_factory=self._uow,
             symbol_providers=self.symbol_providers,
+            snapshot_publisher=self.snapshot_publisher,
         )
 
     @cached_property
