@@ -15,7 +15,7 @@ class RedisCandleStore(CandleStore):
 
     async def write_1s(self, state: dict) -> None:
         key = self._symbols_1s_key_fn(state["exchange_code"], state["exchange_symbol"])
-        print("write_1s state", state, key)
+        # print("write_1s state", state, key)
 
         await self._redis.hset(
             key,
@@ -27,6 +27,7 @@ class RedisCandleStore(CandleStore):
                 "low": str(state["low"]),
                 "close": str(state["close"]),
                 "volume": str(state["volume"]),
+                "ts_open": state["ts_open"],
             },
         )
 
@@ -45,4 +46,5 @@ class RedisCandleStore(CandleStore):
             "low": float(raw.get(b"low", 0)),
             "close": float(raw.get(b"close", 0)),
             "volume": float(raw.get(b"volume", 0)),
+            "ts_open": int(raw.get(b"ts_open", 0)),
         }

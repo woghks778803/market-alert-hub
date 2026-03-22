@@ -16,7 +16,7 @@ def compose_snapshot_publish_data(
     snapshot_map = {s.exchange_instrument_id: s for s in snapshots}
     merged = [
         {
-            # "ts_open": s.ts_open,
+            "ts_open": int(s.ts_open.timestamp()),
             "open": str(s.open),
             "close": str(s.close),
             "high": str(s.high),

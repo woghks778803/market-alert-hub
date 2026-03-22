@@ -13,6 +13,7 @@ from app.core import dto as CoreDTO
 from app.service.factory import ServiceFactory
 from app.runtime.app_context import (
     WorkerContext,
+    WsContext,
     ApiContext,
     DispatcherContext,
     SchedulerContext,
@@ -350,6 +351,14 @@ def build_service_config_bag() -> CoreDTO.ServiceConfigBag:
     )
 
 
+def build_ws_config_bag() -> CoreDTO.WsConfigBag:
+    return CoreDTO.WsConfigBag(
+        app_name=settings.APP_NAME,
+        deploy_env=settings.DEPLOY_ENV,
+        log_level=settings.API_LOG_LEVEL or settings.LOG_LEVEL,
+    )
+
+
 def build_api_config_bag() -> CoreDTO.ApiConfigBag:
     return CoreDTO.ApiConfigBag(
         app_name=settings.APP_NAME,
@@ -481,6 +490,21 @@ def create_service_factory() -> ServiceFactory:
 
 def get_core_services() -> ServiceFactory:
     return create_service_factory()
+
+
+@lru_cache
+def create_ws_context() -> WsContext:
+    config = build_ws_config_bag()
+    async_redis = get_async_redis_client(settings.REDIS_URL)
+    candle_store = RedisCandleStore(
+        async_redis,
+        symbols_1s_key_fn=lambda ex, symbol: f"{PUBLISH}:{CandleInterval.SEC_1.value}:{ex}:{symbol}",
+    )
+    return WsContext(
+        config=config,
+        candle_store=candle_store,
+        async_redis_client=async_redis,
+    )
 
 
 @lru_cache

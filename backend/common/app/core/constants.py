@@ -14,7 +14,6 @@ COOLDOWN = "cooldown"
 PUBLISH = "publish"
 STATE = "state"
 
-
 SYMBOLS = "symbols"
 EXCHANGES = "exchanges"
 

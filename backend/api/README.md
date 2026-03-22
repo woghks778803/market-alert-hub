@@ -21,7 +21,13 @@
   - `common/envelope.py` : 공통 응답 래퍼(success/error/meta)
   - `openapi/` : 응답 스펙 조각, 결합 유틸
   - `schema/` : Pydantic 요청/응답 스키마 (Auth, User, Market 등)
-  - `realtime/` : 실시간 관련 훅(현재 비어 있음)
+- `ws/` : WS 레이어
+  - `consumers/` : Redis stream consumer (background loop)
+  - `handlers.py` : client message 처리 (subscribe/unsubscribe)
+  - `hub.py` : connection + subscription 관리 (in-memory)
+  - `protocols.py` : websocket message schema / validation
+  - `auth.py` : websocket 인증 처리
+  - `throttle.py` : rate limit / 보호 로직 (optional)
 - `main.py` : 앱 생성과 미들웨어/라우터 부착.
 
 ## 3. routing

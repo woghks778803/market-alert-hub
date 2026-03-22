@@ -10,6 +10,8 @@ from app.api.deps import get_app_context
 from app.api.middleware import RequestIdMiddleware
 from app.api.exception_handlers import unified_exception_handler
 from app.api.router import api
+from app.ws.router import ws
+from app.ws.hub import Hub
 
 ctx = get_app_context()
 
@@ -73,6 +75,9 @@ def create_app() -> FastAPI:
         },
     )
 
+    # 앱 전역 싱글톤 저장소 - 하나만 있어야 함
+    app.state.ws_hub = Hub()
+
     sentry_sdk.init(
         dsn=ctx.config.sentry_dsn,
         integrations=[FastApiIntegration()],
@@ -108,6 +113,7 @@ def create_app() -> FastAPI:
 
     # --- Routers ---
     app.include_router(api)
+    app.include_router(ws)
 
     # --- OpenAPI(Security) ---
     _install_openapi_with_bearer(app)

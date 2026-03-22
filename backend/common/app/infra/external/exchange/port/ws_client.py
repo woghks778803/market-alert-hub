@@ -6,8 +6,6 @@ WsCursor: TypeAlias = str | None
 # (new_cursor, payload)
 WsStreamItem: TypeAlias = tuple[WsCursor, WsPayload]
 WsStream = AsyncIterable[WsStreamItem]
-StreamFactory = Callable[[str | None, Any], WsStream]
-StreamFactoryRegistry = dict[str, StreamFactory]
 
 
 class WsClient(Protocol):

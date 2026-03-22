@@ -58,9 +58,9 @@ async def run_ticker_1s_loop(
                     symbol = payload.get("symbol")
                     price = Decimal(str(payload.get("price", 0)))
                     volume = Decimal(str(payload.get("volume", 0)))
-                    ts = int(payload.get("timestamp", time.time() * 1000))
+                    ts_open = int(payload.get("timestamp", time.time() * 1000))
 
-                    sec = ts // 1000
+                    sec = ts_open // 1000
 
                     key = f"{ex}:{symbol}"
                     # print("key", key)
@@ -79,6 +79,7 @@ async def run_ticker_1s_loop(
                             "low": price,
                             "close": price,
                             "volume": volume,
+                            "ts_open": ts_open,
                         }
                         buckets[key] = state
                     else:
