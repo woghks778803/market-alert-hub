@@ -30,7 +30,9 @@ services:
   #   networks: [ mahnet ]
 
   api:
-    build: ../../backend/api
+    build:
+      context: ../../backend
+      dockerfile: api/Dockerfile
     container_name: mah_api
     working_dir: /app
     volumes:
@@ -51,7 +53,9 @@ services:
     mem_limit: 1g
 
   worker:
-    build: ../../backend/worker
+    build:
+      context: ../../backend
+      dockerfile: worker/Dockerfile
     container_name: mah_worker
     working_dir: /app
     volumes:
@@ -73,7 +77,9 @@ services:
     mem_limit: 768m
 
   dispatcher:
-    build: ../../backend/dispatcher
+    build:
+      context: ../../backend
+      dockerfile: dispatcher/Dockerfile
     container_name: mah_dispatcher
     working_dir: /app
     volumes:
@@ -97,7 +103,9 @@ services:
     # mem_limit: 512m
 
   scheduler:
-    build: ../../backend/scheduler
+    build:
+      context: ../../backend
+      dockerfile: scheduler/Dockerfile
     container_name: mah_scheduler
     working_dir: /app
     volumes:
@@ -121,7 +129,9 @@ services:
     # mem_limit: 512m
 
   collector:
-    build: ../../backend/collector
+    build:
+      context: ../../backend
+      dockerfile: collector/Dockerfile
     container_name: mah_collector
     working_dir: /app
     volumes:
@@ -140,7 +150,9 @@ services:
     mem_limit: 768m
 
   stream_processor:
-    build: ../../backend/stream_processor
+    build:
+      context: ../../backend
+      dockerfile: stream_processor/Dockerfile
     container_name: mah_stream_processor
     working_dir: /app
     volumes:

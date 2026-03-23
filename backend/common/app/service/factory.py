@@ -15,7 +15,6 @@ from .email_service import EmailService
 from .outbox_service import OutboxService
 
 
-# TODO: 추후 구현체와 인터페이스 분리 후 deps, wiring, router 영역에서 분리 필요
 # TODO: 서비스가 20개 이상으로 증가할 경우 서비스 팩토리를 각 서비스의 팩토리로 분리 필요
 class ServiceFactory:
     def __init__(

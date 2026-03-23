@@ -14,10 +14,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # 의존성 먼저 복사 → 설치 (캐시 활용)
-COPY requirements.txt /app/requirements.txt
+COPY common/requirements.txt /app/requirements.txt
 RUN pip install --upgrade pip && pip install -r /app/requirements.txt
 
-COPY . /app
+COPY ./api /app
 
 EXPOSE 8000
 
