@@ -12,13 +12,14 @@ async def run_stream_marketdata_main_loop(
     reconnect_backoff_sec: int,
 ):
     tasks: dict[str, asyncio.Task] = {}
-
-    catalog = ctx.active_catalog  # RedisActiveMarketCatalog
+    cfg = ctx.config
+    key_prefix = f"{cfg.app_name}:{cfg.deploy_env}"
+    catalog = ctx.facade.active_catalog  # RedisActiveMarketCatalog
     ws_factory = ctx.ws_facs_register
 
     try:
         while not stop_event.is_set():
-            exchanges = await catalog.get_exchanges_snap()
+            exchanges = await catalog.get_exchanges_snap(key_prefix)
             active_codes = set(exchanges.keys())
             current_codes = set(tasks.keys())
 
@@ -34,7 +35,7 @@ async def run_stream_marketdata_main_loop(
                         ctx=ctx,
                         exchange_code=code,
                         reconnect_backoff_sec=reconnect_backoff_sec,
-                        checkpoint_key=f"{ctx.config.app_name}:{ctx.config.deploy_env}:{CURSOR}:{code}:{TICKERS}",
+                        checkpoint_key=f"{key_prefix}:{CURSOR}:{code}:{TICKERS}",
                     )
                 )
                 tasks[code] = task

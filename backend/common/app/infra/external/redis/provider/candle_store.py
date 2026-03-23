@@ -1,6 +1,6 @@
 from typing import Callable
 from app.infra.external.redis.async_redis_client import AsyncRedisClient
-from app.infra.external.redis.port.candle_store import CandleStore
+from app.facade.ports import CandleStore
 
 
 class RedisCandleStore(CandleStore):

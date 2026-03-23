@@ -6,7 +6,7 @@ from app.ws.deps import get_hub, get_app_context
 from app.ws.handlers import handle_message
 from app.ws.hub import Hub
 
-router = APIRouter()
+router = APIRouter(prefix="/ws")
 
 
 @router.websocket("")

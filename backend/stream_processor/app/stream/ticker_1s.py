@@ -10,10 +10,12 @@ async def run_ticker_1s_loop(
     ctx,
     market_refresh_sec: float = 10.0,
 ):
-    catalog = ctx.active_catalog  # RedisActiveMarketCatalog
-    candle = ctx.candle_store
+    cfg = ctx.config
+    catalog = ctx.facade.active_catalog
+    candle = ctx.facade.candle_store
     redis = ctx.async_redis_client
     last_id = "$"  # 최신부터 시작
+    key_prefix = f"{cfg.app_name}:{cfg.deploy_env}"
 
     buckets = {}  # symbol → state
     symbols_cache = {}
@@ -22,17 +24,16 @@ async def run_ticker_1s_loop(
     while not stop_event.is_set():
         now = datetime_to_epoch_sec(utcnow())
         if (now - last_refresh) > market_refresh_sec:
-            exchanges = await catalog.get_exchanges_snap()
+            exchanges = await catalog.get_exchanges_snap(key_prefix)
             symbols_cache = {
-                ex: list((await catalog.get_symbols_snap(ex)).keys())
+                ex: list((await catalog.get_symbols_snap(key_prefix, ex)).keys())
                 for ex in exchanges.keys()
             }
             last_refresh = now
 
         for ex, symbols in symbols_cache.items():
             streams = {
-                f"{ctx.config.app_name}:{ctx.config.deploy_env}:{STREAM}:{TICKERS}:{ex}:{s}": last_id
-                for s in symbols
+                f"{key_prefix}:{STREAM}:{TICKERS}:{ex}:{s}": last_id for s in symbols
             }
 
             # print("run_ticker_1s_loop streams", streams)

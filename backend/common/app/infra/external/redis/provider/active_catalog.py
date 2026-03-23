@@ -1,7 +1,7 @@
 import json
 from typing import Any, Callable, Mapping
 from app.infra.external.redis.async_redis_client import AsyncRedisClient
-from app.infra.external.redis.port.active_catalog import ActiveMarketCatalog, JsonDict
+from app.facade.ports import ActiveMarketCatalog, JsonDict
 
 
 def _to_str(v: Any) -> str:
@@ -49,22 +49,30 @@ class RedisActiveMarketCatalog(ActiveMarketCatalog):
         self._sym_snap_key_fn = symbols_snap_key_fn
         self._sym_meta_key_fn = symbols_meta_key_fn
 
-    async def get_exchanges_snap(self) -> Mapping[str, JsonDict]:
-        raw: dict[Any, Any] = await self._redis.hgetall(self._ex_snap_key) or {}
+    async def get_exchanges_snap(self, key_prefix: str) -> Mapping[str, JsonDict]:
+        raw: dict[Any, Any] = (
+            await self._redis.hgetall(f"{key_prefix}:{self._ex_snap_key}") or {}
+        )
         # field: exchange_code, value: json
         return {_to_str(k): _loads_json(v) for k, v in raw.items() if k}
 
-    async def get_exchanges_meta(self) -> Mapping[str, str]:
-        raw: dict[Any, Any] = await self._redis.hgetall(self._ex_meta_key) or {}
+    async def get_exchanges_meta(self, key_prefix: str) -> Mapping[str, str]:
+        raw: dict[Any, Any] = (
+            await self._redis.hgetall(f"{key_prefix}:{self._ex_meta_key}") or {}
+        )
         return {_to_str(k): _to_str(v) for k, v in raw.items() if k}
 
-    async def get_symbols_snap(self, exchange_code: str) -> Mapping[str, JsonDict]:
+    async def get_symbols_snap(
+        self, key_prefix: str, exchange_code: str
+    ) -> Mapping[str, JsonDict]:
         key = self._sym_snap_key_fn(exchange_code)
-        raw: dict[Any, Any] = await self._redis.hgetall(key) or {}
+        raw: dict[Any, Any] = await self._redis.hgetall(f"{key_prefix}:{key}") or {}
         # field: exchange_symbol, value: json
         return {_to_str(k): _loads_json(v) for k, v in raw.items() if k}
 
-    async def get_symbols_meta(self, exchange_code: str) -> Mapping[str, str]:
+    async def get_symbols_meta(
+        self, key_prefix: str, exchange_code: str
+    ) -> Mapping[str, str]:
         key = self._sym_meta_key_fn(exchange_code)
-        raw: dict[Any, Any] = await self._redis.hgetall(key) or {}
+        raw: dict[Any, Any] = await self._redis.hgetall(f"{key_prefix}:{key}") or {}
         return {_to_str(k): _to_str(v) for k, v in raw.items() if k}

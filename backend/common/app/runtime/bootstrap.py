@@ -11,6 +11,7 @@ from app.core.constants import (
 )
 from app.core import dto as CoreDTO
 from app.service.factory import ServiceFactory
+from app.facade.container import FacadeContainer
 from app.runtime.app_context import (
     WorkerContext,
     WsContext,
@@ -135,6 +136,27 @@ class Providers:
     - provider는 객체 lifecycle을 관리하지 않는다.
     - 객체 생성/캐싱 책임은 factory, wiring에 있다.
     """
+
+    @staticmethod
+    def active_catalog_provider(
+        async_redis_client: AsyncRedisClient,
+    ) -> Callable[[], RedisActiveMarketCatalog]:
+        return lambda: RedisActiveMarketCatalog(
+            async_redis_client,
+            exchanges_snap_key=f"{SNAP}:{EXCHANGES}",
+            exchanges_meta_key=f"{META}:{EXCHANGES}",
+            symbols_snap_key_fn=lambda ex: f"{SNAP}:{SYMBOLS}:{ex}",
+            symbols_meta_key_fn=lambda ex: f"{META}:{SYMBOLS}:{ex}",
+        )
+
+    @staticmethod
+    def candle_store_provider(
+        async_redis_client: AsyncRedisClient,
+    ) -> Callable[[], RedisCandleStore]:
+        return lambda: RedisCandleStore(
+            async_redis_client,
+            symbols_1s_key_fn=lambda ex, symbol: f"{PUBLISH}:{CandleInterval.SEC_1.value}:{ex}:{symbol}",
+        )
 
     @staticmethod
     def kakao_oauth_provider() -> Callable[[], KakaoOAuth]:
@@ -492,18 +514,28 @@ def get_core_services() -> ServiceFactory:
     return create_service_factory()
 
 
+def create_facade_container() -> FacadeContainer:
+    async_redis = get_async_redis_client(settings.REDIS_URL)
+
+    return FacadeContainer(
+        candle_store=providers.candle_store_provider(async_redis_client=async_redis),
+        active_catalog=providers.active_catalog_provider(
+            async_redis_client=async_redis
+        ),
+    )
+
+
+def get_core_facade() -> FacadeContainer:
+    return create_facade_container()
+
+
 @lru_cache
 def create_ws_context() -> WsContext:
-    config = build_ws_config_bag()
-    async_redis = get_async_redis_client(settings.REDIS_URL)
-    candle_store = RedisCandleStore(
-        async_redis,
-        symbols_1s_key_fn=lambda ex, symbol: f"{PUBLISH}:{CandleInterval.SEC_1.value}:{ex}:{symbol}",
-    )
+    facade = get_core_facade()
+
     return WsContext(
-        config=config,
-        candle_store=candle_store,
-        async_redis_client=async_redis,
+        config=build_ws_config_bag(),
+        facade=facade,
     )
 
 
@@ -543,15 +575,8 @@ def create_scheduler_context() -> SchedulerContext:
 @lru_cache
 def create_collector_context() -> CollectorContext:
     config = build_collector_config_bag()
+    facade = get_core_facade()
     async_redis = get_async_redis_client(settings.REDIS_URL)
-
-    active_catalog = RedisActiveMarketCatalog(
-        async_redis,
-        exchanges_snap_key=f"{config.app_name}:{config.deploy_env}:{SNAP}:{EXCHANGES}",
-        exchanges_meta_key=f"{config.app_name}:{config.deploy_env}:{META}:{EXCHANGES}",
-        symbols_snap_key_fn=lambda ex: f"{config.app_name}:{config.deploy_env}:{SNAP}:{SYMBOLS}:{ex}",
-        symbols_meta_key_fn=lambda ex: f"{config.app_name}:{config.deploy_env}:{META}:{SYMBOLS}:{ex}",
-    )
 
     subscribe_facs_register: SubscribeFactoryRegistry = {
         ExchangeCode.UPBIT.value: lambda codes: UpbitWsSubscribe(
@@ -574,32 +599,19 @@ def create_collector_context() -> CollectorContext:
         subscribe_facs_register=subscribe_facs_register,
         ws_facs_register=ws_facs_register,
         async_redis_client=async_redis,
-        active_catalog=active_catalog,
+        facade=facade,
     )
 
 
 @lru_cache
 def create_stream_processor_context() -> StreamProcessorContext:
     config = build_stream_processor_config_bag()
+    facade = get_core_facade()
     async_redis = get_async_redis_client(settings.REDIS_URL)
-
-    active_catalog = RedisActiveMarketCatalog(
-        async_redis,
-        exchanges_snap_key=f"{config.app_name}:{config.deploy_env}:{SNAP}:{EXCHANGES}",
-        exchanges_meta_key=f"{config.app_name}:{config.deploy_env}:{META}:{EXCHANGES}",
-        symbols_snap_key_fn=lambda ex: f"{config.app_name}:{config.deploy_env}:{SNAP}:{SYMBOLS}:{ex}",
-        symbols_meta_key_fn=lambda ex: f"{config.app_name}:{config.deploy_env}:{META}:{SYMBOLS}:{ex}",
-    )
-
-    candle_store = RedisCandleStore(
-        async_redis,
-        symbols_1s_key_fn=lambda ex, symbol: f"{PUBLISH}:{CandleInterval.SEC_1.value}:{ex}:{symbol}",
-    )
 
     return StreamProcessorContext(
         config=config,
-        active_catalog=active_catalog,
-        candle_store=candle_store,
+        facade=facade,
         async_redis_client=async_redis,
     )
 

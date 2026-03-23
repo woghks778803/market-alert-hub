@@ -1,12 +1,11 @@
 from dataclasses import dataclass
 from app.service.factory import ServiceFactory
+from app.facade.container import FacadeContainer
 from app.core import dto as CoreDTO
 
 from app.infra.external.redis.redis_client import RedisClient
 from app.infra.external.redis.async_redis_client import AsyncRedisClient
 
-from app.infra.external.redis.port.active_catalog import ActiveMarketCatalog
-from app.infra.external.redis.port.candle_store import CandleStore
 from app.infra.external.exchange.port.ws_client import (
     WsFactoryRegistry,
 )
@@ -16,8 +15,7 @@ from app.infra.external.exchange.port.subscribe import SubscribeFactoryRegistry
 @dataclass(frozen=True)
 class WsContext:
     config: CoreDTO.WsConfigBag
-    candle_store: CandleStore
-    async_redis_client: AsyncRedisClient
+    facade: FacadeContainer
 
 
 @dataclass(frozen=True)
@@ -50,15 +48,14 @@ class WorkerContext:
 @dataclass(frozen=True)
 class CollectorContext:
     config: CoreDTO.CollectorConfigBag
+    facade: FacadeContainer
     subscribe_facs_register: SubscribeFactoryRegistry
     ws_facs_register: WsFactoryRegistry
-    active_catalog: ActiveMarketCatalog
     async_redis_client: AsyncRedisClient
 
 
 @dataclass(frozen=True)
 class StreamProcessorContext:
     config: CoreDTO.StreamProcessorConfigBag
-    active_catalog: ActiveMarketCatalog
-    candle_store: CandleStore
+    facade: FacadeContainer
     async_redis_client: AsyncRedisClient
