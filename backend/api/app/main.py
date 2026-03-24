@@ -1,19 +1,23 @@
+import asyncio, logging, sentry_sdk
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
-import logging
-import sentry_sdk
+
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from app.core.constants import DeploymentEnvironment
 from app.core.logging import setup_logging
-from app.api.deps import get_app_context
+
+from app.api.deps import get_api_context
 from app.api.middleware import RequestIdMiddleware
 from app.api.exception_handlers import unified_exception_handler
 from app.api.router import api
+from app.ws.deps import get_ws_context
 from app.ws.router import ws
 from app.ws.hub import Hub
+from app.ws.consumers.candle_consumer import run_candle_consumer
 
-ctx = get_app_context()
+api_ctx = get_api_context()
+ws_ctx = get_ws_context()
 
 
 def _install_openapi_with_bearer(app: FastAPI) -> None:
@@ -55,7 +59,7 @@ def _install_openapi_with_bearer(app: FastAPI) -> None:
 
 
 def create_app() -> FastAPI:
-    if ctx.config.deploy_env == DeploymentEnvironment.PROD:
+    if api_ctx.config.deploy_env == DeploymentEnvironment.PROD:
         setup_logging(level=logging.INFO, service="api")
     else:
         setup_logging(level=logging.DEBUG, service="api")
@@ -77,13 +81,14 @@ def create_app() -> FastAPI:
 
     # 앱 전역 싱글톤 저장소 - 하나만 있어야 함
     app.state.ws_hub = Hub()
+    app.state.ws_facade = ws_ctx.facade
 
     sentry_sdk.init(
-        dsn=ctx.config.sentry_dsn,
+        dsn=api_ctx.config.sentry_dsn,
         integrations=[FastApiIntegration()],
-        environment=ctx.config.deploy_env,
-        sample_rate=ctx.config.sample_rate,
-        traces_sample_rate=ctx.config.traces_sample_rate,
+        environment=api_ctx.config.deploy_env,
+        sample_rate=api_ctx.config.sample_rate,
+        traces_sample_rate=api_ctx.config.traces_sample_rate,
         send_default_pii=True,
         # enable_logs=True,
     )
@@ -96,7 +101,7 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestIdMiddleware)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=ctx.config.cors_allow_origins,  # TODO: 배포 시 도메인으로 제한
+        allow_origins=api_ctx.config.cors_allow_origins,  # TODO: 배포 시 도메인으로 제한
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -114,6 +119,10 @@ def create_app() -> FastAPI:
     # --- Routers ---
     app.include_router(api)
     app.include_router(ws)
+
+    @app.on_event("startup")
+    async def startup():
+        asyncio.create_task(run_candle_consumer(app))
 
     # --- OpenAPI(Security) ---
     _install_openapi_with_bearer(app)

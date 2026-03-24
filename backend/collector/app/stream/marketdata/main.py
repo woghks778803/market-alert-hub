@@ -19,7 +19,7 @@ async def run_stream_marketdata_main_loop(
 
     try:
         while not stop_event.is_set():
-            exchanges = await catalog.get_exchanges_snap(key_prefix)
+            exchanges = await catalog.get_exchanges_snap()
             active_codes = set(exchanges.keys())
             current_codes = set(tasks.keys())
 

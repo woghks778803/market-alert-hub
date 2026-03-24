@@ -13,10 +13,10 @@ from app.core.error.error_model import (
 )
 from app.core.util.trace import get_trace_id
 from app.domain.shared.errors import AppError, AuthError
-from app.api.deps import get_app_context
+from app.api.deps import get_api_context
 from app.api.common.envelope import fail, ErrorBody
 
-ctx = get_app_context()
+ctx = get_api_context()
 log = logging.getLogger(__name__)
 
 

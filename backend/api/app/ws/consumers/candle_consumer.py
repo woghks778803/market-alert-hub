@@ -1,46 +1,77 @@
-import asyncio
 import json
-import os
 from typing import Any, Dict
 
-import redis.asyncio as redis
+from app.core.constants import CANDLE, CandleInterval
+from app.facade.container import FacadeContainer
+from app.ws.hub import Hub
+from app.ws.protocols import WsMessageType
 
-from app.ws.hub.manager import Hub
+
+async def run_candle_consumer(app):
+    hub: Hub = app.state.ws_hub
+    facade: FacadeContainer = app.state.ws_facade
+
+    pubsub = await facade.candle_store.subscribe_1s(type=CandleInterval.SEC_1.value)
+
+    async for msg in pubsub.listen():
+        if msg["type"] != WsMessageType.PMESSAGE.value:
+            continue
+
+        channel = msg["channel"]
+        data = msg["data"]
+        if not data:
+            continue
+
+        if isinstance(channel, bytes):
+            channel = channel.decode()
+        if isinstance(data, bytes):
+            data = data.decode()
+
+        try:
+            payload = json.loads(data)
+        except Exception:
+            continue
+
+        channel = channel.split(f"{CANDLE}:{CandleInterval.SEC_1.value}:")[-1]
+
+        await hub.broadcast(channel, payload)
 
 
-async def run_redis_consumer(
-    hub: Hub,
-    *,
-    redis_url: str | None = None,
-    stream_key: str | None = None,
-    block_ms: int = 1000,
-) -> None:
-    url = redis_url or os.getenv("REDIS_URL", "redis://localhost:6379/0")
-    key = stream_key or os.getenv(
-        "TICK_STREAM_KEY", "market-alert-hub:local:stream:tickers:BINANCE:BTCUSDT"
-    )
-    r = redis.from_url(url)
-    last_id = "0-0"
-    candles: Dict[str, Dict[str, Any]] = {}
+# async def run_candle_consumer(
+#     hub: Hub,
+#     *,
+#     redis_url: str | None = None,
+#     stream_key: str | None = None,
+#     block_ms: int = 1000,
+# ) -> None:
+#     url = redis_url or os.getenv("REDIS_URL", "redis://localhost:6379/0")
+#     key = stream_key or os.getenv(
+#         "TICK_STREAM_KEY", "market-alert-hub:local:stream:tickers:BINANCE:BTCUSDT"
+#     )
+#     r = redis.from_url(url)
+#     last_id = "0-0"
+#     candles: Dict[str, Dict[str, Any]] = {}
 
-    try:
-        while True:
-            resp = await r.xread(streams={key: last_id}, count=100, block=block_ms)
-            if not resp:
-                await asyncio.sleep(0)
-                continue
+#     try:
+#         while True:
+#             resp = await r.xread(streams={key: last_id}, count=100, block=block_ms)
+#             if not resp:
+#                 await asyncio.sleep(0)
+#                 continue
 
-            for _, entries in resp:
-                for entry_id, fields in entries:
-                    last_id = entry_id.decode() if isinstance(entry_id, bytes) else entry_id
-                    payload = _decode_payload(fields)
-                    if not payload:
-                        continue
-                    await _handle_tick(payload, candles, hub)
-    except asyncio.CancelledError:
-        raise
-    finally:
-        await r.close()
+#             for _, entries in resp:
+#                 for entry_id, fields in entries:
+#                     last_id = (
+#                         entry_id.decode() if isinstance(entry_id, bytes) else entry_id
+#                     )
+#                     payload = _decode_payload(fields)
+#                     if not payload:
+#                         continue
+#                     await _handle_tick(payload, candles, hub)
+#     except asyncio.CancelledError:
+#         raise
+#     finally:
+#         await r.close()
 
 
 def _decode_payload(fields: dict) -> dict[str, Any] | None:

@@ -5,7 +5,7 @@ from app.core.constants import (
     SNAP,
     META,
     TICKER,
-    PUBLISH,
+    CANDLE,
     SYMBOLS,
     EXCHANGES,
 )
@@ -139,14 +139,15 @@ class Providers:
 
     @staticmethod
     def active_catalog_provider(
+        prefix: str,
         async_redis_client: AsyncRedisClient,
     ) -> Callable[[], RedisActiveMarketCatalog]:
         return lambda: RedisActiveMarketCatalog(
             async_redis_client,
-            exchanges_snap_key=f"{SNAP}:{EXCHANGES}",
-            exchanges_meta_key=f"{META}:{EXCHANGES}",
-            symbols_snap_key_fn=lambda ex: f"{SNAP}:{SYMBOLS}:{ex}",
-            symbols_meta_key_fn=lambda ex: f"{META}:{SYMBOLS}:{ex}",
+            exchanges_snap_key=f"{prefix}:{SNAP}:{EXCHANGES}",
+            exchanges_meta_key=f"{prefix}:{META}:{EXCHANGES}",
+            symbols_snap_key_fn=lambda ex: f"{prefix}:{SNAP}:{SYMBOLS}:{ex}",
+            symbols_meta_key_fn=lambda ex: f"{prefix}:{META}:{SYMBOLS}:{ex}",
         )
 
     @staticmethod
@@ -155,7 +156,7 @@ class Providers:
     ) -> Callable[[], RedisCandleStore]:
         return lambda: RedisCandleStore(
             async_redis_client,
-            symbols_1s_key_fn=lambda ex, symbol: f"{PUBLISH}:{CandleInterval.SEC_1.value}:{ex}:{symbol}",
+            symbols_1s_key_fn=lambda ex, symbol: f"{CANDLE}:{CandleInterval.SEC_1.value}:{ex}:{symbol}",
         )
 
     @staticmethod
@@ -492,7 +493,7 @@ def build_stream_processor_config_bag() -> CoreDTO.StreamProcessorConfigBag:
     )
 
 
-def create_service_factory() -> ServiceFactory:
+def create_service_factory(prefix: str) -> ServiceFactory:
     return ServiceFactory(
         uow=providers.uow_provider(settings.SQLALCHEMY_URL),
         snapshot_publisher=providers.snapshot_publisher_provider(),
@@ -510,72 +511,64 @@ def create_service_factory() -> ServiceFactory:
     )
 
 
-def get_core_services() -> ServiceFactory:
-    return create_service_factory()
-
-
-def create_facade_container() -> FacadeContainer:
+def create_facade_container(prefix: str) -> FacadeContainer:
     async_redis = get_async_redis_client(settings.REDIS_URL)
 
     return FacadeContainer(
         candle_store=providers.candle_store_provider(async_redis_client=async_redis),
         active_catalog=providers.active_catalog_provider(
-            async_redis_client=async_redis
+            prefix=prefix, async_redis_client=async_redis
         ),
     )
 
 
-def get_core_facade() -> FacadeContainer:
-    return create_facade_container()
-
-
 @lru_cache
 def create_ws_context() -> WsContext:
-    facade = get_core_facade()
+    cfg = build_ws_config_bag()
+    facade = create_facade_container(prefix=f"{cfg.app_name}:{cfg.deploy_env}")
 
     return WsContext(
-        config=build_ws_config_bag(),
+        config=cfg,
         facade=facade,
     )
 
 
 @lru_cache
 def create_api_context() -> ApiContext:
-    svcs = get_core_services()
-    return ApiContext(config=build_api_config_bag(), svcs=svcs)
+    cfg = build_api_config_bag()
+    svcs = create_service_factory(prefix=f"{cfg.app_name}:{cfg.deploy_env}")
+    return ApiContext(config=cfg, svcs=svcs)
 
 
 @lru_cache
 def create_worker_context() -> WorkerContext:
-    svcs = get_core_services()
+    cfg = build_worker_config_bag()
+    svcs = create_service_factory(prefix=f"{cfg.app_name}:{cfg.deploy_env}")
     redis = get_redis_client(settings.REDIS_URL)
-    return WorkerContext(
-        config=build_worker_config_bag(), svcs=svcs, redis_client=redis
-    )
+    return WorkerContext(config=cfg, svcs=svcs, redis_client=redis)
 
 
 @lru_cache
 def create_dispatcher_context() -> DispatcherContext:
-    svcs = get_core_services()
+    cfg = build_dispatcher_config_bag()
+    svcs = create_service_factory(prefix=f"{cfg.app_name}:{cfg.deploy_env}")
     redis = get_redis_client(settings.REDIS_URL)
-    return DispatcherContext(
-        config=build_dispatcher_config_bag(), svcs=svcs, redis_client=redis
-    )
+    return DispatcherContext(config=cfg, svcs=svcs, redis_client=redis)
 
 
 @lru_cache
 def create_scheduler_context() -> SchedulerContext:
-    config = build_scheduler_config_bag()
-    svcs = get_core_services()
+    cfg = build_scheduler_config_bag()
+    svcs = create_service_factory(prefix=f"{cfg.app_name}:{cfg.deploy_env}")
     redis = get_redis_client(settings.REDIS_URL)
 
-    return SchedulerContext(config=config, svcs=svcs, redis_client=redis)
+    return SchedulerContext(config=cfg, svcs=svcs, redis_client=redis)
 
 
 @lru_cache
 def create_collector_context() -> CollectorContext:
-    config = build_collector_config_bag()
-    facade = get_core_facade()
+    cfg = build_collector_config_bag()
+    facade = create_facade_container(prefix=f"{cfg.app_name}:{cfg.deploy_env}")
     async_redis = get_async_redis_client(settings.REDIS_URL)
 
     subscribe_facs_register: SubscribeFactoryRegistry = {
@@ -595,7 +588,7 @@ def create_collector_context() -> CollectorContext:
     }
 
     return CollectorContext(
-        config=config,
+        config=cfg,
         subscribe_facs_register=subscribe_facs_register,
         ws_facs_register=ws_facs_register,
         async_redis_client=async_redis,
@@ -605,12 +598,12 @@ def create_collector_context() -> CollectorContext:
 
 @lru_cache
 def create_stream_processor_context() -> StreamProcessorContext:
-    config = build_stream_processor_config_bag()
-    facade = get_core_facade()
+    cfg = build_stream_processor_config_bag()
+    facade = create_facade_container(prefix=f"{cfg.app_name}:{cfg.deploy_env}")
     async_redis = get_async_redis_client(settings.REDIS_URL)
 
     return StreamProcessorContext(
-        config=config,
+        config=cfg,
         facade=facade,
         async_redis_client=async_redis,
     )

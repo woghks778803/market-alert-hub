@@ -99,6 +99,29 @@ class AsyncRedisClient:
             log.exception("redis hgetall failed: key=%s", key)
             raise
 
+    async def publish(self, channel: str, message: str) -> int:
+        try:
+            return await self._client.publish(channel, message)
+        except RedisError:
+            log.exception("redis publish failed: channel=%s", channel)
+            raise
+
+    async def pubsub(self):
+        try:
+            return self._client.pubsub()
+        except RedisError:
+            log.exception("redis pubsub create failed")
+            raise
+
+    async def psubscribe(self, *patterns: str):
+        try:
+            pubsub = self._client.pubsub()
+            await pubsub.psubscribe(*patterns)
+            return pubsub
+        except RedisError:
+            log.exception("redis psubscribe failed: patterns=%s", patterns)
+            raise
+
     def conn(self) -> AsyncRedis:
         return self._client
 

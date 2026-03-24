@@ -76,16 +76,12 @@ async def _ckpt_set(store: Any, key: str, value: str) -> None:
     await _maybe_await(v)
 
 
-async def _fetch_codes(
-    key_prefix: str, active_catalog: Any, exchange_code: str
-) -> list[str]:
+async def _fetch_codes(active_catalog: Any, exchange_code: str) -> list[str]:
     """
     active_catalog.get_symbols_snap(exchange_code) -> Mapping[str, JsonDict]
     (field=exchange_symbol, value=payload)
     """
-    snap = await _maybe_await(
-        active_catalog.get_symbols_snap(key_prefix, exchange_code)
-    )
+    snap = await _maybe_await(active_catalog.get_symbols_snap(exchange_code))
     if not snap:
         return []
     keys = list(getattr(snap, "keys", lambda: [])())
@@ -186,7 +182,7 @@ async def run_stream_marketdata_loop(
     while not stop_event.is_set():
         try:
             # 1) 현재 codes 확보
-            codes = await _fetch_codes(key_prefix, active_catalog, exchange_code)
+            codes = await _fetch_codes(active_catalog, exchange_code)
             # print(f"[stream_marketdata] fetched codes for {exchange_code}: {codes}")
 
             # codes가 비면 차트 수집은 대기
@@ -254,9 +250,7 @@ async def run_stream_marketdata_loop(
                     now = time.monotonic()
                     if now >= next_poll_at:
                         next_poll_at = now + symbols_poll_sec
-                        new_codes = await _fetch_codes(
-                            key_prefix, active_catalog, exchange_code
-                        )
+                        new_codes = await _fetch_codes(active_catalog, exchange_code)
                         if new_codes != last_codes:
                             last_codes = new_codes
                             session_stop = True

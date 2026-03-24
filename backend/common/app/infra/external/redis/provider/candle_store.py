@@ -1,4 +1,6 @@
+import json
 from typing import Callable
+from app.core.constants import CANDLE
 from app.infra.external.redis.async_redis_client import AsyncRedisClient
 from app.facade.ports import CandleStore
 
@@ -16,20 +18,23 @@ class RedisCandleStore(CandleStore):
     async def write_1s(self, state: dict) -> None:
         key = self._symbols_1s_key_fn(state["exchange_code"], state["exchange_symbol"])
         # print("write_1s state", state, key)
+        payload = {
+            "exchange_code": state["exchange_code"],
+            "exchange_symbol": state["exchange_symbol"],
+            "open": str(state["open"]),
+            "high": str(state["high"]),
+            "low": str(state["low"]),
+            "close": str(state["close"]),
+            "volume": str(state["volume"]),
+            "ts_open": state["ts_open"],
+        }
 
         await self._redis.hset(
             key,
-            mapping={
-                "exchange_code": state["exchange_code"],
-                "exchange_symbol": state["exchange_symbol"],
-                "open": str(state["open"]),
-                "high": str(state["high"]),
-                "low": str(state["low"]),
-                "close": str(state["close"]),
-                "volume": str(state["volume"]),
-                "ts_open": state["ts_open"],
-            },
+            mapping=payload,
         )
+
+        await self._redis.publish(key, json.dumps(payload))
 
     async def get_1s(self, exchange: str, symbol: str) -> dict | None:
         key = self._symbols_1s_key_fn(exchange, symbol)
@@ -48,3 +53,7 @@ class RedisCandleStore(CandleStore):
             "volume": float(raw.get(b"volume", 0)),
             "ts_open": int(raw.get(b"ts_open", 0)),
         }
+
+    async def subscribe_1s(self, type: str):
+        pubsub = await self._redis.psubscribe(f"{CANDLE}:{type}:*")
+        return pubsub

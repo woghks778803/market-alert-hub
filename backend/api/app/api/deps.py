@@ -25,7 +25,7 @@ class RequestMeta:
 
 
 @lru_cache(maxsize=1)  # 의미 없지만 실수 방지를 위한 보호막
-def get_app_context() -> ApiContext:
+def get_api_context() -> ApiContext:
     return create_api_context()
 
 
@@ -35,7 +35,7 @@ def get_request_meta(request: Request) -> RequestMeta:
 
 
 def get_services(
-    ctx: ApiContext = Depends(get_app_context),
+    ctx: ApiContext = Depends(get_api_context),
 ):
     return ctx.svcs
 

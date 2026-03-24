@@ -1,4 +1,5 @@
-from app.core.constants import PUBLISH
+import json
+from app.core.constants import CANDLE
 from app.domain import MarketPort
 from app.infra.external.redis.redis_client import RedisClient
 
@@ -13,9 +14,12 @@ class RedisMarketSnapshotPublish(MarketPort.MarketSnapshotPublish):
         pipe = self._redis.pipeline()
 
         for p in payloads:
+            key = f"{CANDLE}:{type}:{p['exchange_code']}:{p['exchange_symbol']}"
             pipe.hset(
-                f"{PUBLISH}:{type}:{p['exchange_code']}:{p['exchange_symbol']}",
+                key,
                 mapping=p,
             )
+
+            pipe.publish(key, json.dumps(p))
 
         pipe.execute()

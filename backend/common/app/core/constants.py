@@ -7,6 +7,7 @@ META = "meta"
 LOCK = "lock"
 CURSOR = "cursor"
 
+CANDLE = "candle"
 TICKER = "ticker"
 TICKERS = "tickers"
 

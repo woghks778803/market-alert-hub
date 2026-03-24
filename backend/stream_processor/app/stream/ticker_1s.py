@@ -24,9 +24,9 @@ async def run_ticker_1s_loop(
     while not stop_event.is_set():
         now = datetime_to_epoch_sec(utcnow())
         if (now - last_refresh) > market_refresh_sec:
-            exchanges = await catalog.get_exchanges_snap(key_prefix)
+            exchanges = await catalog.get_exchanges_snap()
             symbols_cache = {
-                ex: list((await catalog.get_symbols_snap(key_prefix, ex)).keys())
+                ex: list((await catalog.get_symbols_snap(ex)).keys())
                 for ex in exchanges.keys()
             }
             last_refresh = now

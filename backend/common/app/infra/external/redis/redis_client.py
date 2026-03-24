@@ -82,6 +82,20 @@ class RedisClient:
             log.exception("redis delete failed: key=%s", key)
             raise
 
+    def hset(self, key: str, mapping: dict) -> int:
+        try:
+            return cast(int, self._client.hset(name=key, mapping=mapping))
+        except RedisError:
+            log.exception("redis hset failed: key=%s", key)
+            raise
+
+    def publish(self, channel: str, message: str) -> int:
+        try:
+            return cast(int, self._client.publish(channel, message))
+        except RedisError:
+            log.exception("redis publish failed: channel=%s", channel)
+            raise
+
     def conn(self) -> SyncRedis:
         return self._client
 
