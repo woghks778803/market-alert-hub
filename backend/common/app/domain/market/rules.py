@@ -2,6 +2,7 @@ from typing import Literal
 from random import Random
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, ROUND_DOWN, ROUND_HALF_UP
+from app.core.util.datetime import utcnow
 from app.core.constants import CandleBaseInterval, CandleOutputInterval
 from app.domain.shared.errors import ValidationAppError
 import app.domain.market.dto as MarketDTO
@@ -9,14 +10,14 @@ import app.domain.market.dto as MarketDTO
 Interval = Literal["1m", "5m", "15m", "1h", "4h", "1d", "1w", "1M"]
 
 
-def compose_snapshot_publish_data(
+def compose_candle_snapshot_data(
     market_simples: list[MarketDTO.MarketSimple],
     snapshots: list[MarketDTO.PriceSnapshotCreate],
 ) -> list:
     snapshot_map = {s.exchange_instrument_id: s for s in snapshots}
     merged = [
         {
-            "ts_open": int(s.ts_open.timestamp()),
+            "ts_open": int(s.ts_open.timestamp() * 1000),
             "open": str(s.open),
             "close": str(s.close),
             "high": str(s.high),
@@ -28,6 +29,32 @@ def compose_snapshot_publish_data(
         for m in market_simples
         if (s := snapshot_map.get(m.id)) is not None
     ]
+    return merged
+
+
+def compose_ticker_snapshot_data(
+    market_simples: list[MarketDTO.MarketSimple],
+    snapshots: list[MarketDTO.ExchangeInstrumentTickerCreate],
+) -> list:
+    snapshot_map = {s.exchange_instrument_id: s for s in snapshots}
+
+    merged = [
+        {
+            "ts": int(utcnow().timestamp() * 1000),
+            "price": str(s.close_price),
+            "open": str(s.open_price),
+            "high": str(s.high_24h),
+            "low": str(s.low_24h),
+            "volume": str(s.volume_24h),
+            "price_change": str(s.price_change_24h),
+            "change_rate": str(s.price_change_rate_24h),
+            "exchange_code": m.exchange_code,
+            "exchange_symbol": m.exchange_symbol,
+        }
+        for m in market_simples
+        if (s := snapshot_map.get(m.id)) is not None
+    ]
+
     return merged
 
 

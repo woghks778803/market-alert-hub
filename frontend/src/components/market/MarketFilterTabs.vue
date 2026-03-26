@@ -9,10 +9,10 @@
     >
       <v-chip
         v-for="tab in tabs"
-        :key="tab.value"
-        :value="tab.value"
+        :key="tab.code"
+        :value="tab.code"
       >
-        {{ tab.label }}
+        {{ tab.name }}
       </v-chip>
     </v-chip-group>
 
@@ -20,38 +20,47 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue"
+import { ref, computed } from "vue"
+import type { ExchangeDto } from "@/services/market.types"
+
+const props = defineProps<{
+  exchangeTabs: ExchangeDto[],
+}>()
+
+const emit = defineEmits<{
+  (e: "change", value: string[]): void
+}>()
+
 const selected = ref<string[]>(["all"])
 
 const systemTabs = [
-  { label: "전체", value: "all" },
-  { label: "즐겨찾기", value: "favorite" },
+  { name: "전체", code: "all" },
+  { name: "즐겨찾기", code: "watchlist" },
 ]
 
-const exchangeTabs = [
-  { label: "UPBIT", value: "upbit" },
-  { label: "BITHUMB", value: "bithumb" },
-  { label: "BINANCE", value: "binance" },
-]
-
-const tabs = [...systemTabs, ...exchangeTabs]
+const tabs = computed(() => [...systemTabs, ...props.exchangeTabs])
 
 function onUpdate(val: string[]) {
-  console.log("val", val)
-
+  // console.log("val", val)
+  
   // 마지막 선택값
   const last = val[val.length - 1]
+  let next: string[]
 
   if (last === "all") {
-    selected.value = ["all"]
-    return
+    next = ["all"]
+  }else{
+    next = val.filter(v => v !== "all")
   }
 
-  // 거래소 선택하면 all 제거
-  selected.value = val.filter(v => v !== "all")
+  if (next.length == 0){
+    next = ["all"]
+  }
 
-  console.log("selected", selected.value)
+  selected.value = next
+  emit("change", next)
 
+  // console.log("selected", selected.value)
 }
 </script>
 

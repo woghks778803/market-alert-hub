@@ -4,7 +4,7 @@
 
     <MarketItem
       v-for="item in items"
-      :key="item.symbol"
+      :key="item.id"
       :item="item"
     />
 
@@ -14,8 +14,10 @@
 
 
 <script setup lang="ts">
+import type { MarketDto } from "@/services/market.types"
 import MarketItem from '@/components/market/MarketItem.vue'
-defineProps({
-  items: Array
-})
+// <{}>() 타입 문법
+defineProps<{
+  items: MarketDto[],
+}>()
 </script>

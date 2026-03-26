@@ -13,6 +13,11 @@ export const http: AxiosInstance = axios.create({
     baseURL: resolveBaseURL(),
     timeout: 15_000,
     withCredentials: true, // 쿠키 전송 허용 
+    paramsSerializer: {
+        indexes: null,
+        // 기본: exchange_codes[]=BINANCE&exchange_codes[]=UPBIT (PHP 스타일)
+        // 변경: exchange_codes=BINANCE&exchange_codes=UPBIT (FastAPI 호환)
+    },
     headers: {
         "Content-Type": "application/json",
     },
@@ -41,17 +46,23 @@ function processQueue(token: string | null) {
 }
 
 async function refreshAccessToken(): Promise<string> {
-    const { data } = await axios.post(
-        `${resolveBaseURL()}/auth/reissue`,
-        {},
-        { withCredentials: true }
-    )
+    try {
+        const { data } = await axios.post(
+            `${resolveBaseURL()}/auth/reissue`,
+            {},
+            { withCredentials: true }
+        )
 
-    const newToken = data?.data?.access_token
-    if (!newToken) throw new Error("invalid_refresh_response")
+        const newToken = data?.data?.access_token
+        if (!newToken) throw new Error("invalid_refresh_response")
 
-    localStorage.setItem(ACCESS_TOKEN_KEY, newToken)
-    return newToken
+        localStorage.setItem(ACCESS_TOKEN_KEY, newToken)
+        return newToken
+    } catch (err: any) {
+        localStorage.removeItem(ACCESS_TOKEN_KEY)
+
+        throw err
+    }
 }
 
 // --- Response: keep minimal (no auto-redirect yet) ---

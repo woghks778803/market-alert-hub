@@ -81,9 +81,9 @@ router.beforeEach(async (to, _from, next) => {
   const authState = getAuthState(token)
   console.log("Global Guard:", { to: to.fullPath, authState, allows, hasToken: Boolean(token) })
 
-  if (token && isTokenExpired(token)) {
-    // authStore.clearToken()
-  }
+  // if (token && isTokenExpired(token)) {
+  // authStore.clearToken()
+  // }
 
   if (!allows || allows.length === 0) {
     return next()

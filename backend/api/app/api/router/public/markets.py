@@ -49,9 +49,9 @@ def get_market(
     ),
 )
 def list_markets(
-    limit: int = Query(10, ge=1, le=20),
+    limit: int = Query(100, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    exchange_codes: list[str] | None = Query(None),
+    exchange_codes: list[str] | None = Query(default=[]),
     search: str | None = Query(None),
     watchlist_only: bool = Query(False),
     sort: MarketSort = Query(None),

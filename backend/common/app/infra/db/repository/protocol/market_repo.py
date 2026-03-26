@@ -48,6 +48,7 @@ class MarketRepo(Protocol):
         search: str | None,
         watchlist_only: bool,
         sort: str,
+        is_active: bool | None = None,
         limit: int,
         offset: int,
     ) -> Sequence[MarketDTO.Market]: ...

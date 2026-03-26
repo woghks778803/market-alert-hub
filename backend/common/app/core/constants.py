@@ -19,17 +19,10 @@ SYMBOLS = "symbols"
 EXCHANGES = "exchanges"
 
 
-class MarketSort(str, enum.Enum):
-    VOLUME_DESC = "volume_desc"
-    CHANGE_DESC = "change_desc"
-    CHANGE_ASC = "change_asc"
-    PRICE_DESC = "price_desc"
-    PRICE_ASC = "price_asc"
-
-
-class UseType(str, enum.Enum):
-    YES = True
-    No = False
+class BaseQuote(str, enum.Enum):
+    USDT = "USDT"
+    BTC = "BTC"
+    KRW = "KRW"
 
 
 class ExchangeCode(str, enum.Enum):
@@ -40,6 +33,14 @@ class ExchangeCode(str, enum.Enum):
 
 class OAutheCode(str, enum.Enum):
     KAKAO = "KAKAO"
+
+
+class MarketSort(str, enum.Enum):
+    VOLUME_DESC = "volume_desc"
+    CHANGE_DESC = "change_desc"
+    CHANGE_ASC = "change_asc"
+    PRICE_DESC = "price_desc"
+    PRICE_ASC = "price_asc"
 
 
 class OutboxEventType(str, enum.Enum):
@@ -61,6 +62,10 @@ class DeploymentEnvironment(str, enum.Enum):
     DEV = "dev"
     STAGE = "stage"
     PROD = "prod"
+
+
+class TickerInterval(str, enum.Enum):
+    HOUR_24 = "24h"
 
 
 class CandleInterval(str, enum.Enum):

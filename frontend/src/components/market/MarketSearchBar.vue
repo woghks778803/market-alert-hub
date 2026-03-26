@@ -6,11 +6,21 @@
     density="comfortable"
     hide-details
     class="mk-search"
+    :v-model="search"
+    @update:modelValue="onInput"
   />
 </template>
 
 <script setup lang="ts">
-</script>
+const props = defineProps<{
+  search: string
+}>()
 
-<style scoped>
-</style>
+const emit = defineEmits<{
+  (e: "search", value: string): void
+}>()
+
+function onInput(v: string) {
+  emit("search", v)
+}
+</script>

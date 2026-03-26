@@ -32,7 +32,9 @@ class MarketRead(BaseModel):
 
     is_watchlisted: bool
 
-    last_price: Decimal | None
+    # Pydantic Decimal은 JSON으로 나갈 때 기본적으로 string으로 직렬화된다
+    open_price: Decimal | None
+    close_price: Decimal | None
     price_change_24h: Decimal | None
     price_change_rate_24h: Decimal | None
 

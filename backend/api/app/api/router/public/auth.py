@@ -51,16 +51,6 @@ def reissue_token(
     ua = request.headers.get("user-agent")
     token_out = svcs.auths.reissue_token(refresh_token=refresh_token, ip=ip, ua=ua)
 
-    # response.set_cookie(
-    #     key="refresh_token",
-    #     value=token_out.refresh_token,
-    #     httponly=True,
-    #     secure=False,
-    #     samesite="lax",
-    #     max_age=svcs._config.refresh_token_minutes * 60,
-    #     path="/",
-    # )
-
     return created(
         AuthSchema.TokenOut(
             access_token=token_out.access_token,

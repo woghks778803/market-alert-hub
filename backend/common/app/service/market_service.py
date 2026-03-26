@@ -4,11 +4,13 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 from app.core.constants import (
+    TickerInterval,
     CandleInterval,
     CandleBaseInterval,
     CandleOutputInterval,
     ExchangeCode,
     MarketSort,
+    BaseQuote,
 )
 from app.core.util.datetime import utcnow, epoch_to_datetime
 from app.domain.shared.uow import UnitOfWork
@@ -67,6 +69,7 @@ class MarketService:
                 search=search,
                 watchlist_only=watchlist_only,
                 sort=sort,
+                is_active=True,
                 limit=limit,
                 offset=offset,
             )
@@ -155,13 +158,55 @@ class MarketService:
     def sync_exchange_instruments_tickers(self):
         # 심볼별 집계 데이터 조회
         with self._uow_factory() as uow:
-            tickers = uow.markets.list_ticker_stats_from_snapshots(
+            snapshots = uow.markets.list_ticker_stats_from_snapshots(
                 is_active=True, deleted_is_null=True
             )
 
-            uow.markets.upsert_exchange_instrument_tickers(tickers)
+            ids = {s.exchange_instrument_id for s in snapshots}
+            market_simples = uow.markets.list_exchange_instrument_by_filter(
+                exchange_instrument_ids=ids
+            )
+
+            uow.markets.upsert_exchange_instrument_tickers(snapshots)
             uow.commit()
-            return len(tickers)
+
+        # btc_krw_symbol = None
+        # btc_usdt_symbol = None
+
+        # for m in market_simples:
+        #     if (
+        #         m.base_symbol == BaseQuote.BTC
+        #         and m.quote_symbol == BaseQuote.KRW
+        #         and m.exchange_code == ExchangeCode.UPBIT
+        #     ):
+        #         btc_krw_symbol = (m.exchange_code, m.exchange_symbol)
+
+        #     elif (
+        #         m.base_symbol == BaseQuote.BTC
+        #         and m.quote_symbol == BaseQuote.USDT
+        #         and m.exchange_code == ExchangeCode.BINANCE
+        #     ):
+        #         btc_usdt_symbol = (m.exchange_code, m.exchange_symbol)
+
+        # btc_krw = None
+        # btc_usdt = None
+
+        # if btc_krw_symbol:
+        #     data = self._candle_store.get_1s(*btc_krw_symbol)
+        #     btc_krw = data["close"] if data else None
+
+        # if btc_usdt_symbol:
+        #     data = self._candle_store.get_1s(*btc_usdt_symbol)
+        #     btc_usdt = data["close"] if data else None
+
+        self._snapshot_publisher.ticker_publish(
+            MarketRule.compose_ticker_snapshot_data(
+                market_simples=market_simples, snapshots=snapshots
+            ),
+            type=TickerInterval.HOUR_24.value,
+        )
+
+        return len(snapshots)
 
     def normalize_empty_snapshots_1m(
         self, no_tick_payloads: list[dict[str, Any]], bucket_start_epoch: int
@@ -509,8 +554,8 @@ class MarketService:
             uow.markets.upsert_snapshots_1m(snapshots)
             uow.commit()
 
-        self._snapshot_publisher.publish(
-            MarketRule.compose_snapshot_publish_data(
+        self._snapshot_publisher.candle_publish(
+            MarketRule.compose_candle_snapshot_data(
                 market_simples=market_simples, snapshots=snapshots
             ),
             type=CandleInterval.MIN_1.value,
@@ -538,8 +583,8 @@ class MarketService:
             uow.markets.upsert_snapshots_1h(snapshots)
             uow.commit()
 
-        self._snapshot_publisher.publish(
-            MarketRule.compose_snapshot_publish_data(
+        self._snapshot_publisher.candle_publish(
+            MarketRule.compose_candle_snapshot_data(
                 market_simples=market_simples, snapshots=snapshots
             ),
             type=CandleInterval.HOUR_1.value,
@@ -567,8 +612,8 @@ class MarketService:
             uow.markets.upsert_snapshots_1d(snapshots)
             uow.commit()
 
-        self._snapshot_publisher.publish(
-            MarketRule.compose_snapshot_publish_data(
+        self._snapshot_publisher.candle_publish(
+            MarketRule.compose_candle_snapshot_data(
                 market_simples=market_simples, snapshots=snapshots
             ),
             type=CandleInterval.DAY_1.value,

@@ -72,7 +72,8 @@ class SqlMarketRepo(MarketRepo):
         stmt = (
             select(
                 latest_1d.c.ei_id,
-                ps_close.close.label("last_price"),
+                ps_open.open.label("open_price"),
+                ps_close.close.label("close_price"),
                 latest_1d.c.high_24h,
                 latest_1d.c.low_24h,
                 latest_1d.c.volume_24h,
@@ -110,7 +111,8 @@ class SqlMarketRepo(MarketRepo):
         return [
             MarketDTO.ExchangeInstrumentTickerCreate(
                 exchange_instrument_id=row.ei_id,
-                last_price=row.last_price,
+                open_price=row.open_price,
+                close_price=row.close_price,
                 high_24h=row.high_24h,
                 low_24h=row.low_24h,
                 volume_24h=row.volume_24h,
@@ -136,7 +138,8 @@ class SqlMarketRepo(MarketRepo):
                 base.symbol.label("base_asset"),
                 quote.symbol.label("quote_asset"),
                 base.name.label("asset_name"),
-                eit.last_price,
+                eit.open_price,
+                eit.close_price,
                 eit.high_24h,
                 eit.low_24h,
                 eit.volume_24h,
@@ -176,7 +179,8 @@ class SqlMarketRepo(MarketRepo):
             high_24h=row.high_24h if row.high_24h else None,
             low_24h=row.low_24h if row.low_24h else None,
             volume_24h=row.volume_24h if row.volume_24h else None,
-            last_price=row.last_price if row.last_price else None,
+            open_price=row.open_price if row.open_price else None,
+            close_price=row.close_price if row.close_price else None,
             price_change_24h=row.price_change_24h if row.price_change_24h else None,
             price_change_rate_24h=(
                 row.price_change_rate_24h if row.price_change_rate_24h else None
@@ -297,10 +301,10 @@ class SqlMarketRepo(MarketRepo):
         search: str | None,
         watchlist_only: bool,
         sort: str,
+        is_active: bool | None = None,
         limit: int,
         offset: int,
     ) -> Sequence[MarketDTO.Market]:
-
         stmt = (
             select(
                 ei.id,
@@ -310,7 +314,8 @@ class SqlMarketRepo(MarketRepo):
                 quote.symbol.label("quote_asset"),
                 base.name.label("asset_name"),
                 wi.id.label("watchlist_id"),
-                eit.last_price,
+                eit.open_price,
+                eit.close_price,
                 eit.high_24h,
                 eit.low_24h,
                 eit.volume_24h,
@@ -325,6 +330,9 @@ class SqlMarketRepo(MarketRepo):
         stmt = stmt.outerjoin(eit, eit.exchange_instrument_id == ei.id)
 
         conditions = []
+
+        if is_active is not None:
+            stmt = stmt.where(ei.is_active.is_(is_active))
 
         # 거래소 필터
         if exchange_codes:
@@ -374,10 +382,10 @@ class SqlMarketRepo(MarketRepo):
             stmt = stmt.order_by(asc(eit.price_change_rate_24h))
 
         elif sort == MarketSort.PRICE_DESC:
-            stmt = stmt.order_by(desc(eit.last_price))
+            stmt = stmt.order_by(desc(eit.close_price))
 
         elif sort == MarketSort.PRICE_ASC:
-            stmt = stmt.order_by(asc(eit.last_price))
+            stmt = stmt.order_by(asc(eit.close_price))
 
         else:
             stmt = stmt.order_by(desc(eit.volume_24h))
@@ -393,13 +401,18 @@ class SqlMarketRepo(MarketRepo):
                 base_asset=row.base_asset,  # base asset symbol
                 quote_asset=row.quote_asset,
                 asset_name=row.asset_name,
-                high_24h=row.high_24h if row.high_24h else None,
-                low_24h=row.low_24h if row.low_24h else None,
-                volume_24h=row.volume_24h if row.volume_24h else None,
-                last_price=row.last_price if row.last_price else None,
-                price_change_24h=row.price_change_24h if row.price_change_24h else None,
+                high_24h=row.high_24h if row.high_24h is not None else None,
+                low_24h=row.low_24h if row.low_24h is not None else None,
+                volume_24h=row.volume_24h if row.volume_24h is not None else None,
+                open_price=row.open_price if row.open_price is not None else None,
+                close_price=row.close_price if row.close_price is not None else None,
+                price_change_24h=(
+                    row.price_change_24h if row.price_change_24h is not None else None
+                ),
                 price_change_rate_24h=(
-                    row.price_change_rate_24h if row.price_change_rate_24h else None
+                    row.price_change_rate_24h
+                    if row.price_change_rate_24h is not None
+                    else None
                 ),
                 is_watchlisted=row.watchlist_id is not None,
             )
@@ -742,7 +755,8 @@ class SqlMarketRepo(MarketRepo):
 
             stmt = mysql_insert(eit).values(values)
             stmt = stmt.on_duplicate_key_update(
-                last_price=stmt.inserted.last_price,
+                open_price=stmt.inserted.open_price,
+                close_price=stmt.inserted.close_price,
                 high_24h=stmt.inserted.high_24h,
                 low_24h=stmt.inserted.low_24h,
                 volume_24h=stmt.inserted.volume_24h,

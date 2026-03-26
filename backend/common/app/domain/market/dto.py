@@ -90,7 +90,8 @@ class Market:
     quote_asset: str
     asset_name: str
 
-    last_price: Decimal | None
+    open_price: Decimal | None
+    close_price: Decimal | None
     price_change_24h: Decimal | None
     price_change_rate_24h: Decimal | None
 
@@ -105,7 +106,8 @@ class Market:
 class ExchangeInstrumentTicker:
     id: int
     exchange_instrument_id: int
-    last_price: Decimal
+    open_price: Decimal
+    close_price: Decimal
     high_24h: Decimal
     low_24h: Decimal
     volume_24h: Decimal
@@ -117,7 +119,8 @@ class ExchangeInstrumentTicker:
 @dataclass(slots=True)
 class ExchangeInstrumentTickerCreate:
     exchange_instrument_id: int
-    last_price: Decimal
+    open_price: Decimal
+    close_price: Decimal
     high_24h: Decimal
     low_24h: Decimal
     volume_24h: Decimal
@@ -125,6 +128,7 @@ class ExchangeInstrumentTickerCreate:
     price_change_rate_24h: Decimal
 
 
+@dataclass(slots=True)
 class ExchangeInstrument:
     id: int
     exchange_id: int

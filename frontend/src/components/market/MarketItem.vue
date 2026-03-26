@@ -14,7 +14,7 @@
           </div>
 
           <div class="mk-exchange">
-            {{ item.exchange }} · {{ item.pair }}
+            {{ item.exchange }} · {{ item.quoteAsset }}
           </div>
 
           <div class="mk-name">
@@ -24,8 +24,9 @@
         </div>
 
         <v-icon
-          :icon="item.favorite ? 'mdi-star' : 'mdi-star-outline'"
-          :color="item.favorite ? 'amber' : 'grey'"
+          :icon="item.isWatchlisted ? 'mdi-star' : 'mdi-star-outline'"
+          :color="item.isWatchlisted ? 'amber' : 'grey'"
+          @click="toggle"
           size="25"
         />
 
@@ -35,20 +36,20 @@
       <div class="mk-row-bottom">
 
         <div class="mk-price">
-          {{ item.price }}
+          {{ formatPrice(item.close_price) }} {{ item.quoteAsset }}
         </div>
 
         <div class="mk-change-block">
 
           <div
             class="mk-change"
-            :class="item.change.includes('-') ? 'mk-change-down' : 'mk-change-up'"
+            :class="item.change && item.change<0 ? 'mk-change-down' : 'mk-change-up'"
           >
-            {{ item.change }}
+            {{ formatChange(item.changeRate) }}%
           </div>
 
           <div class="mk-volume">
-            {{ item.volume }}
+            {{ formatVolume(item.volume) }}
           </div>
 
         </div>
@@ -62,7 +63,17 @@
 </template>
 
 <script setup lang="ts">
-defineProps({
-  item: Object
-})
+import {formatChange, formatPrice, formatVolume} from "@/utils/format"
+import type { MarketDto } from "@/services/market.types"
+import { useMarketStore } from "@/stores/market.store"
+
+const props = defineProps<{
+  item: MarketDto
+}>()
+
+const marketStore = useMarketStore()
+
+async function toggle() {
+  await marketStore.toggleWatchlist(props.item)
+}
 </script>

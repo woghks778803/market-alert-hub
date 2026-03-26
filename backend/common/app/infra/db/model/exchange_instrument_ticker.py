@@ -20,7 +20,8 @@ class ExchangeInstrumentTicker(Base):
         index=True,
     )
 
-    last_price: Mapped[Decimal] = mapped_column(DECIMAL(32, 16), nullable=False)
+    open_price: Mapped[Decimal] = mapped_column(DECIMAL(32, 16), nullable=False)
+    close_price: Mapped[Decimal] = mapped_column(DECIMAL(32, 16), nullable=False)
 
     high_24h: Mapped[Decimal] = mapped_column(DECIMAL(32, 16), nullable=False)
     low_24h: Mapped[Decimal] = mapped_column(DECIMAL(32, 16), nullable=False)
@@ -50,7 +51,8 @@ class ExchangeInstrumentTicker(Base):
         return MarketDTO.ExchangeInstrumentTicker(
             id=self.id,
             exchange_instrument_id=self.exchange_instrument_id,
-            last_price=self.last_price,
+            open_price=self.open_price,
+            close_price=self.close_price,
             high_24h=self.high_24h,
             low_24h=self.low_24h,
             volume_24h=self.volume_24h,
