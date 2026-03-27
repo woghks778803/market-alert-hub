@@ -25,10 +25,12 @@ class MarketService:
         *,
         uow_factory: Callable[[], UnitOfWork],
         symbol_providers: dict[str, MarketPort.ExchangeSymbol],
+        candle_store: MarketPort.CandleStore,
         snapshot_publisher: MarketPort.MarketSnapshotPublish,
     ) -> None:
         self._uow_factory = uow_factory
         self._symbol_providers = symbol_providers
+        self._candle_store = candle_store
         self._snapshot_publisher = snapshot_publisher
 
     # Meta
@@ -167,41 +169,97 @@ class MarketService:
                 exchange_instrument_ids=ids
             )
 
+            # 🔥 market lookup map
+            market_map = {m.id: m for m in market_simples}
+
+            # 🔥 BTC 기준값 찾기
+            btc_krw_symbol = None
+            btc_usdt_symbol = None
+            eth_btc_symbol = None
+
+            for m in market_simples:
+                if (
+                    m.base_symbol == BaseQuote.BTC.value
+                    and m.quote_symbol == BaseQuote.KRW.value
+                    and m.exchange_code == ExchangeCode.UPBIT.value
+                    and m.exchange_symbol
+                ):
+                    btc_krw_symbol = (m.exchange_code, m.exchange_symbol)
+
+                elif (
+                    m.base_symbol == BaseQuote.BTC.value
+                    and m.quote_symbol == BaseQuote.USDT.value
+                    and m.exchange_code == ExchangeCode.BINANCE.value
+                    and m.exchange_symbol
+                ):
+                    btc_usdt_symbol = (m.exchange_code, m.exchange_symbol)
+
+                elif (
+                    m.base_symbol == BaseQuote.ETH.value
+                    and m.quote_symbol == BaseQuote.BTC.value
+                    and m.exchange_code == ExchangeCode.BINANCE.value
+                    and m.exchange_symbol
+                ):
+                    eth_btc_symbol = (m.exchange_code, m.exchange_symbol)
+
+            btc_krw = None
+            btc_usdt = None
+            eth_btc = None
+
+            if btc_krw_symbol:
+                exchange, symbol = btc_krw_symbol
+                data = self._candle_store.get_1s(exchange, symbol)
+                btc_krw = Decimal(str(data["close"])) if data else None
+
+            if btc_usdt_symbol:
+                exchange, symbol = btc_usdt_symbol
+                data = self._candle_store.get_1s(exchange, symbol)
+                btc_usdt = Decimal(str(data["close"])) if data else None
+
+            if eth_btc_symbol:
+                exchange, symbol = eth_btc_symbol
+                data = self._candle_store.get_1s(exchange, symbol)
+                eth_btc = Decimal(str(data["close"])) if data else None
+
+            # 🔥 normalized 계산
+            for s in snapshots:
+                m = market_map.get(s.exchange_instrument_id)
+                if not m:
+                    continue
+
+                price = s.close_price
+                volume = s.volume_24h
+
+                normalized_price = None
+                normalized_volume = None
+
+                if m.quote_symbol == BaseQuote.KRW.value:
+                    normalized_price = price
+
+                elif m.quote_symbol == BaseQuote.BTC.value and btc_krw:
+                    normalized_price = price * btc_krw
+
+                elif m.quote_symbol == BaseQuote.USDT.value and btc_krw and btc_usdt:
+                    normalized_price = price * (btc_krw / btc_usdt)
+
+                elif m.quote_symbol == BaseQuote.ETH.value and eth_btc and btc_krw:
+                    # ETH → BTC → KRW
+                    normalized_price = price * eth_btc * btc_krw
+
+                if normalized_price is not None:
+                    normalized_volume = normalized_price * volume
+
+                # 🔥 snapshots에 주입
+                s.normalized_price = normalized_price or Decimal("0")
+                s.normalized_volume = normalized_volume or Decimal("0")
+
             uow.markets.upsert_exchange_instrument_tickers(snapshots)
             uow.commit()
 
-        # btc_krw_symbol = None
-        # btc_usdt_symbol = None
-
-        # for m in market_simples:
-        #     if (
-        #         m.base_symbol == BaseQuote.BTC
-        #         and m.quote_symbol == BaseQuote.KRW
-        #         and m.exchange_code == ExchangeCode.UPBIT
-        #     ):
-        #         btc_krw_symbol = (m.exchange_code, m.exchange_symbol)
-
-        #     elif (
-        #         m.base_symbol == BaseQuote.BTC
-        #         and m.quote_symbol == BaseQuote.USDT
-        #         and m.exchange_code == ExchangeCode.BINANCE
-        #     ):
-        #         btc_usdt_symbol = (m.exchange_code, m.exchange_symbol)
-
-        # btc_krw = None
-        # btc_usdt = None
-
-        # if btc_krw_symbol:
-        #     data = self._candle_store.get_1s(*btc_krw_symbol)
-        #     btc_krw = data["close"] if data else None
-
-        # if btc_usdt_symbol:
-        #     data = self._candle_store.get_1s(*btc_usdt_symbol)
-        #     btc_usdt = data["close"] if data else None
-
         self._snapshot_publisher.ticker_publish(
             MarketRule.compose_ticker_snapshot_data(
-                market_simples=market_simples, snapshots=snapshots
+                market_simples=market_simples,
+                snapshots=snapshots,
             ),
             type=TickerInterval.HOUR_24.value,
         )

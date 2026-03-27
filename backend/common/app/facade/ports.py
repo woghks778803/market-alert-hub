@@ -4,13 +4,17 @@ JsonDict = dict[str, Any]
 
 
 class ActiveMarketCatalog(Protocol):
-    async def get_exchanges_snap(self) -> Mapping[str, JsonDict]: ...
+    async def get_exchanges_snap(self) -> Mapping[str, JsonDict]:
+        raise NotImplementedError
 
-    async def get_exchanges_meta(self) -> Mapping[str, str]: ...
+    async def get_exchanges_meta(self) -> Mapping[str, str]:
+        raise NotImplementedError
 
-    async def get_symbols_snap(self, exchange_code: str) -> Mapping[str, JsonDict]: ...
+    async def get_symbols_snap(self, exchange_code: str) -> Mapping[str, JsonDict]:
+        raise NotImplementedError
 
-    async def get_symbols_meta(self, exchange_code: str) -> Mapping[str, str]: ...
+    async def get_symbols_meta(self, exchange_code: str) -> Mapping[str, str]:
+        raise NotImplementedError
 
 
 class CandleStore(Protocol):
@@ -20,4 +24,5 @@ class CandleStore(Protocol):
     async def get_1s(self, exchange: str, symbol: str) -> dict | None:
         raise NotImplementedError
 
-    async def subscribe_1s(self, type: str): ...
+    async def subscribe_1s(self, type: str):
+        raise NotImplementedError

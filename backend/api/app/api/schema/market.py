@@ -38,6 +38,9 @@ class MarketRead(BaseModel):
     price_change_24h: Decimal | None
     price_change_rate_24h: Decimal | None
 
+    normalized_price: Decimal | None
+    normalized_volume: Decimal | None
+
     high_24h: Decimal | None
     low_24h: Decimal | None
     volume_24h: Decimal | None

@@ -145,6 +145,8 @@ class SqlMarketRepo(MarketRepo):
                 eit.volume_24h,
                 eit.price_change_24h,
                 eit.price_change_rate_24h,
+                eit.normalized_price,
+                eit.normalized_volume,
                 wi.id.label("watchlist_id"),
             )
             .join(e, ei.exchange_id == e.id)
@@ -184,6 +186,10 @@ class SqlMarketRepo(MarketRepo):
             price_change_24h=row.price_change_24h if row.price_change_24h else None,
             price_change_rate_24h=(
                 row.price_change_rate_24h if row.price_change_rate_24h else None
+            ),
+            normalized_price=(row.normalized_price if row.normalized_price else None),
+            normalized_volume=(
+                row.normalized_volume if row.normalized_volume else None
             ),
             is_watchlisted=row.watchlist_id is not None,
         )
@@ -321,6 +327,8 @@ class SqlMarketRepo(MarketRepo):
                 eit.volume_24h,
                 eit.price_change_24h,
                 eit.price_change_rate_24h,
+                eit.normalized_price,
+                eit.normalized_volume,
             )
             .join(e, ei.exchange_id == e.id)
             .join(base, ei.base_asset_id == base.id)
@@ -373,7 +381,7 @@ class SqlMarketRepo(MarketRepo):
 
         # 정렬
         if sort == MarketSort.VOLUME_DESC:
-            stmt = stmt.order_by(desc(eit.volume_24h))
+            stmt = stmt.order_by(desc(eit.normalized_volume))
 
         elif sort == MarketSort.CHANGE_DESC:
             stmt = stmt.order_by(desc(eit.price_change_rate_24h))
@@ -382,13 +390,13 @@ class SqlMarketRepo(MarketRepo):
             stmt = stmt.order_by(asc(eit.price_change_rate_24h))
 
         elif sort == MarketSort.PRICE_DESC:
-            stmt = stmt.order_by(desc(eit.close_price))
+            stmt = stmt.order_by(desc(eit.normalized_price))
 
         elif sort == MarketSort.PRICE_ASC:
-            stmt = stmt.order_by(asc(eit.close_price))
+            stmt = stmt.order_by(asc(eit.normalized_price))
 
         else:
-            stmt = stmt.order_by(desc(eit.volume_24h))
+            stmt = stmt.order_by(desc(eit.normalized_volume))
 
         stmt = stmt.limit(limit).offset(offset)
         rows = self._db.execute(stmt).all()
@@ -413,6 +421,12 @@ class SqlMarketRepo(MarketRepo):
                     row.price_change_rate_24h
                     if row.price_change_rate_24h is not None
                     else None
+                ),
+                normalized_price=(
+                    row.normalized_price if row.normalized_price is not None else None
+                ),
+                normalized_volume=(
+                    row.normalized_volume if row.normalized_volume is not None else None
                 ),
                 is_watchlisted=row.watchlist_id is not None,
             )
@@ -762,6 +776,8 @@ class SqlMarketRepo(MarketRepo):
                 volume_24h=stmt.inserted.volume_24h,
                 price_change_24h=stmt.inserted.price_change_24h,
                 price_change_rate_24h=stmt.inserted.price_change_rate_24h,
+                normalized_price=stmt.inserted.normalized_price,
+                normalized_volume=stmt.inserted.normalized_volume,
                 updated_at=func.utc_timestamp(),
             )
 

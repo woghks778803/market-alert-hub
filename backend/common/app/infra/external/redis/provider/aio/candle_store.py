@@ -1,14 +1,14 @@
 import json
 from typing import Callable
 from app.core.constants import CANDLE
-from app.infra.external.redis.async_redis_client import AsyncRedisClient
+from app.infra.external.redis.async_redis_client import RedisClientAsync
 from app.facade.ports import CandleStore
 
 
 class RedisCandleStore(CandleStore):
     def __init__(
         self,
-        redis: AsyncRedisClient,
+        redis: RedisClientAsync,
         *,
         symbols_1s_key_fn: Callable[[str, str], str],
     ):

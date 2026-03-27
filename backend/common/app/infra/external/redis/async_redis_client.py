@@ -8,7 +8,7 @@ log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
-class AsyncRedisClientConfig:
+class RedisClientAsyncConfig:
     # 연결/응답 타임아웃 (초)
     connect_timeout: float = 1.5
     socket_timeout: float = 2.5
@@ -20,11 +20,11 @@ class AsyncRedisClientConfig:
     retry_on_timeout: bool = True
 
 
-class AsyncRedisClient:
+class RedisClientAsync:
     def __init__(
-        self, redis_url: str, *, cfg: AsyncRedisClientConfig | None = None
+        self, redis_url: str, *, cfg: RedisClientAsyncConfig | None = None
     ) -> None:
-        self._cfg = cfg or AsyncRedisClientConfig()
+        self._cfg = cfg or RedisClientAsyncConfig()
         self._client: AsyncRedis = AsyncRedis.from_url(
             redis_url,
             decode_responses=False,
@@ -138,5 +138,5 @@ class AsyncRedisClient:
 
 
 @lru_cache
-def get_async_redis_client(redis_url: str) -> AsyncRedisClient:
-    return AsyncRedisClient(redis_url)
+def get_async_redis_client(redis_url: str) -> RedisClientAsync:
+    return RedisClientAsync(redis_url)

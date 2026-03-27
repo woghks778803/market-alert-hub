@@ -1,4 +1,4 @@
-from typing import Callable, Any
+from typing import Callable
 from functools import cached_property
 
 from app.core import dto as CoreDTO
@@ -21,6 +21,7 @@ class ServiceFactory:
         self,
         *,
         uow: Callable[[], UnitOfWork],
+        candle_store: Callable[[], MarketPort.CandleStore],
         snapshot_publisher: Callable[[], MarketPort.MarketSnapshotPublish],
         state: Callable[[], AuthPort.AuthState],
         cooldown: Callable[[], ThrottlePort.Cooldown],
@@ -35,6 +36,7 @@ class ServiceFactory:
         config: CoreDTO.ServiceConfigBag,
     ) -> None:
         self._uow = uow
+        self._candle_store = candle_store
         self._snapshot_publisher = snapshot_publisher
         self._state = state
         self._cooldown = cooldown
@@ -51,6 +53,10 @@ class ServiceFactory:
     @cached_property
     def symbol_providers(self):
         return {k: v() for k, v in self._symbol_providers.items()}
+
+    @cached_property
+    def candle_store(self):
+        return self._candle_store()
 
     @cached_property
     def snapshot_publisher(self):
@@ -102,6 +108,7 @@ class ServiceFactory:
         return MarketService(
             uow_factory=self._uow,
             symbol_providers=self.symbol_providers,
+            candle_store=self.candle_store,
             snapshot_publisher=self.snapshot_publisher,
         )
 

@@ -4,7 +4,7 @@ from app.facade.container import FacadeContainer
 from app.core import dto as CoreDTO
 
 from app.infra.external.redis.redis_client import RedisClient
-from app.infra.external.redis.async_redis_client import AsyncRedisClient
+from app.infra.external.redis.async_redis_client import RedisClientAsync
 
 from app.infra.external.exchange.port.ws_client import (
     WsFactoryRegistry,
@@ -51,11 +51,11 @@ class CollectorContext:
     facade: FacadeContainer
     subscribe_facs_register: SubscribeFactoryRegistry
     ws_facs_register: WsFactoryRegistry
-    async_redis_client: AsyncRedisClient
+    async_redis_client: RedisClientAsync
 
 
 @dataclass(frozen=True)
 class StreamProcessorContext:
     config: CoreDTO.StreamProcessorConfigBag
     facade: FacadeContainer
-    async_redis_client: AsyncRedisClient
+    async_redis_client: RedisClientAsync

@@ -22,6 +22,7 @@ EXCHANGES = "exchanges"
 class BaseQuote(str, enum.Enum):
     USDT = "USDT"
     BTC = "BTC"
+    ETH = "ETH"
     KRW = "KRW"
 
 

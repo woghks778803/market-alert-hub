@@ -36,13 +36,16 @@ from app.infra.external.oauth.kakao.rest_client import (
     get_kakao_rest_client,
 )
 
-from app.infra.external.redis.provider.snapshot_publish import (
+from app.infra.external.redis.provider import (
+    RedisActiveMarketCatalogAsync,
+    RedisCandleStoreAsync,
+    RedisCandleStoreSync,
+    RedisCooldown,
     RedisMarketSnapshotPublish,
+    RedisState,
 )
-from app.infra.external.redis.provider.cooldown import RedisCooldown
-from app.infra.external.redis.provider.state import RedisState
-from app.infra.external.redis.provider.active_catalog import RedisActiveMarketCatalog
-from app.infra.external.redis.provider.candle_store import RedisCandleStore
+
+
 from app.infra.external.exchange.upbit.shared.types import UpbitWsSubscribe
 from app.infra.external.exchange.binance.shared.types import BinanceWsSubscribe
 from app.infra.external.exchange.port.ws_client import (
@@ -74,7 +77,7 @@ from app.infra.external.exchange.binance.ws_client import (
 )
 from app.infra.external.exchange.binance.provider.symbol import BinanceSymbol
 from app.infra.external.redis.async_redis_client import (
-    AsyncRedisClient,
+    RedisClientAsync,
     get_async_redis_client,
 )
 from app.infra.external.redis.redis_client import RedisClient, get_redis_client
@@ -140,9 +143,9 @@ class Providers:
     @staticmethod
     def active_catalog_provider(
         prefix: str,
-        async_redis_client: AsyncRedisClient,
-    ) -> Callable[[], RedisActiveMarketCatalog]:
-        return lambda: RedisActiveMarketCatalog(
+        async_redis_client: RedisClientAsync,
+    ) -> Callable[[], RedisActiveMarketCatalogAsync]:
+        return lambda: RedisActiveMarketCatalogAsync(
             async_redis_client,
             exchanges_snap_key=f"{prefix}:{SNAP}:{EXCHANGES}",
             exchanges_meta_key=f"{prefix}:{META}:{EXCHANGES}",
@@ -151,11 +154,18 @@ class Providers:
         )
 
     @staticmethod
-    def candle_store_provider(
-        async_redis_client: AsyncRedisClient,
-    ) -> Callable[[], RedisCandleStore]:
-        return lambda: RedisCandleStore(
+    def candle_store_async_provider(
+        async_redis_client: RedisClientAsync,
+    ) -> Callable[[], RedisCandleStoreAsync]:
+        return lambda: RedisCandleStoreAsync(
             async_redis_client,
+            symbols_1s_key_fn=lambda ex, symbol: f"{CANDLE}:{CandleInterval.SEC_1.value}:{ex}:{symbol}",
+        )
+
+    @staticmethod
+    def candle_store_sync_provider() -> Callable[[], RedisCandleStoreSync]:
+        return lambda: RedisCandleStoreSync(
+            redis=get_redis_client(settings.REDIS_URL),
             symbols_1s_key_fn=lambda ex, symbol: f"{CANDLE}:{CandleInterval.SEC_1.value}:{ex}:{symbol}",
         )
 
@@ -496,6 +506,7 @@ def build_stream_processor_config_bag() -> CoreDTO.StreamProcessorConfigBag:
 def create_service_factory(prefix: str) -> ServiceFactory:
     return ServiceFactory(
         uow=providers.uow_provider(settings.SQLALCHEMY_URL),
+        candle_store=providers.candle_store_sync_provider(),
         snapshot_publisher=providers.snapshot_publisher_provider(),
         state=providers.state_provider(),
         cooldown=providers.cooldown_provider(),
@@ -515,7 +526,9 @@ def create_facade_container(prefix: str) -> FacadeContainer:
     async_redis = get_async_redis_client(settings.REDIS_URL)
 
     return FacadeContainer(
-        candle_store=providers.candle_store_provider(async_redis_client=async_redis),
+        candle_store=providers.candle_store_async_provider(
+            async_redis_client=async_redis
+        ),
         active_catalog=providers.active_catalog_provider(
             prefix=prefix, async_redis_client=async_redis
         ),

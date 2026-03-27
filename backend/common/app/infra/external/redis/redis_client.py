@@ -89,6 +89,13 @@ class RedisClient:
             log.exception("redis hset failed: key=%s", key)
             raise
 
+    def hgetall(self, key: str) -> dict[bytes, bytes]:
+        try:
+            return cast(dict, self._client.hgetall(name=key))
+        except RedisError:
+            log.exception("redis hgetall failed: key=%s", key)
+            raise
+
     def publish(self, channel: str, message: str) -> int:
         try:
             return cast(int, self._client.publish(channel, message))

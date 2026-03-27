@@ -33,6 +33,9 @@ class ExchangeInstrumentTicker(Base):
         DECIMAL(32, 16), nullable=False
     )
 
+    normalized_price: Mapped[Decimal] = mapped_column(DECIMAL(32, 16), nullable=False)
+    normalized_volume: Mapped[Decimal] = mapped_column(DECIMAL(32, 16), nullable=False)
+
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=utcnow,
@@ -58,5 +61,7 @@ class ExchangeInstrumentTicker(Base):
             volume_24h=self.volume_24h,
             price_change_24h=self.price_change_24h,
             price_change_rate_24h=self.price_change_rate_24h,
+            normalized_price=self.normalized_price,
+            normalized_volume=self.normalized_volume,
             updated_at=self.updated_at,
         )
