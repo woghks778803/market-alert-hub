@@ -5,18 +5,18 @@ class WsMessageType(str, enum.Enum):
     # client → server
     SUBSCRIBE_LIST = "SUBSCRIBE_LIST"
     UNSUBSCRIBE_LIST = "UNSUBSCRIBE_LIST"
-    SUBSCRIBE = "subscribe"
-    UNSUBSCRIBE = "unsubscribe"
+    SUBSCRIBE = "SUBSCRIBE"
+    UNSUBSCRIBE = "UNSUBSCRIBE"
 
     PMESSAGE = "pmessage"
     MESSAGE = "message"
 
-    INIT = "INIT"
-
     # server → client
+    INIT = "init"
+    PONG = "pong"
     TICKER = "ticker"
     CANDLE = "candle"
-    SNAPSHOT = "SNAPSHOT"
+    SNAPSHOT = "snapshot"
 
     # error
     ERROR = "error"

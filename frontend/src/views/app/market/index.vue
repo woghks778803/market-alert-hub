@@ -35,7 +35,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from "vue"
+import { onMounted, onUnmounted, onDeactivated } from "vue"
 import { storeToRefs } from "pinia"
 
 import MarketSearchBar from "@/components/market/MarketSearchBar.vue"
@@ -48,11 +48,22 @@ import { MarketSortLabel, MarketSort } from "@/services/market.types"
 const marketStore = useMarketStore()
 const { markets, exchanges, openSort, search } = storeToRefs(marketStore)
 
-onMounted(() => {
+onMounted(async () => {
   marketStore.resetMarket()
-  marketStore.fetchExchanges()
-  marketStore.fetchMarkets()
+  await marketStore.fetchExchanges()
+  await marketStore.fetchMarkets()
+
+  marketStore.subscribeMarkets()
+  marketStore.initWs()
 })
+
+onUnmounted(cleanup)
+onDeactivated(cleanup)
+
+function cleanup() {
+  marketStore.unsubscribeMarkets()
+  marketStore.cleanupWs()
+}
 
 function selectSort(sort: MarketSort) {
   marketStore.setSort(sort)

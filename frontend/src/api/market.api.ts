@@ -26,6 +26,9 @@ export type MarketInfo = {
     high_24h: string | null
     low_24h: string | null
     volume_24h: string | null
+
+    normalized_price: string | null
+    normalized_volume: string | null
 }
 
 export type MarketListRequest = {
@@ -43,9 +46,17 @@ export type ExchangeListRequest = {
 export const marketApi = {
 
     // GET /markets/{exchange_instrument_id}
-    async getMarket(id: number) {
+    // async getMarket(id: number) {
+    //     const { data } = await http.get<Envelope<MarketInfo>>(
+    //         `/markets/${id}`
+    //     );
+    //     return data;
+    // },
+
+    // GET /markets/{exchange_code}/{symbol}
+    async getMarket(exchange_code: string, symbol: string) {
         const { data } = await http.get<Envelope<MarketInfo>>(
-            `/markets/${id}`
+            `/markets/${exchange_code}/${symbol}`
         );
         return data;
     },

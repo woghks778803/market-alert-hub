@@ -10,7 +10,9 @@ class MarketRepo(Protocol):
     def get_by_filter(
         self,
         user_id: int,
-        exchange_instrument_id: int,
+        exchange_instrument_id: int | None = None,
+        exchange_code: str | None = None,
+        exchange_symbol: str | None = None,
         is_active: bool = True,
         deleted_is_null: bool = True,
     ) -> MarketDTO.Market | None: ...

@@ -1,25 +1,24 @@
-import asyncio, json
-from typing import Any, Dict
+import json, asyncio
 
-from app.core.constants import CandleInterval, CANDLE
+from app.core.constants import TickerInterval, TICKER
 from app.facade.container import FacadeContainer
 from app.ws.stores import MarketStore
 from app.ws.protocols import WsMessageType
 
 
-async def run_candle_consumer(app):
+async def run_ticker_consumer(app):
     store: MarketStore = app.state.market_store
     facade: FacadeContainer = app.state.ws_facade
 
-    pubsub = await facade.candle_store.subscribe(type=CandleInterval.SEC_1.value)
+    pubsub = await facade.ticker_store.subscribe(type=TickerInterval.HOUR_24.value)
 
     while True:
         msg = await pubsub.get_message(ignore_subscribe_messages=True)
 
         if not msg:
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.5)
             continue
-
+        # async for msg in pubsub.listen():
         if msg["type"] != WsMessageType.PMESSAGE.value:
             continue
 
@@ -39,13 +38,17 @@ async def run_candle_consumer(app):
             continue
 
         # BINANCE:BTCUSDT
-        key = channel.split(f"{CANDLE}:{CandleInterval.SEC_1.value}:")[-1]
+        key = channel.split(f"{TICKER}:{TickerInterval.HOUR_24.value}:")[-1]
 
-        store.update_candle(
+        store.update_ticker(
             key,
             {
-                "type": CANDLE,
+                "type": TICKER,
                 "channel": key,
                 "data": payload,
             },
         )
+        # await hub.broadcast(
+        #     channel,
+        #     {"type": TICKER, "channel": channel, "data": payload},
+        # )

@@ -47,6 +47,21 @@ class MarketService:
 
             return result
 
+    def get_by_exchange_symbol(
+        self, user_id: int, exchange_code: str, exchange_symbol: str
+    ) -> MarketDTO.Market:
+        with self._uow_factory() as uow:
+            result = uow.markets.get_by_filter(
+                user_id=user_id,
+                exchange_code=exchange_code,
+                exchange_symbol=exchange_symbol,
+            )
+
+            if result is None:
+                raise NotFoundError(message="Not found Market", target="market")
+
+            return result
+
     def list_exchange_by_filter(
         self, *, limit: int, offset: int
     ) -> Sequence[MarketDTO.Exchange]:

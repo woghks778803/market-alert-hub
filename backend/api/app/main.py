@@ -13,8 +13,19 @@ from app.api.exception_handlers import unified_exception_handler
 from app.api.router import api
 from app.ws.deps import get_ws_context
 from app.ws.router import ws
+from app.ws.stores import MarketStore
 from app.ws.hub import Hub
+
+from app.ws.broadcasters.candle_broadcaster import (
+    run_candle_broadcaster,
+    run_candle_list_broadcaster,
+)
+from app.ws.broadcasters.ticker_broadcaster import (
+    run_ticker_broadcaster,
+    run_ticker_list_broadcaster,
+)
 from app.ws.consumers.candle_consumer import run_candle_consumer
+from app.ws.consumers.ticker_consumer import run_ticker_consumer
 
 api_ctx = get_api_context()
 ws_ctx = get_ws_context()
@@ -82,6 +93,7 @@ def create_app() -> FastAPI:
     # 앱 전역 싱글톤 저장소 - 하나만 있어야 함
     app.state.ws_hub = Hub()
     app.state.ws_facade = ws_ctx.facade
+    app.state.market_store = MarketStore()
 
     sentry_sdk.init(
         dsn=api_ctx.config.sentry_dsn,
@@ -123,6 +135,11 @@ def create_app() -> FastAPI:
     @app.on_event("startup")
     async def startup():
         asyncio.create_task(run_candle_consumer(app))
+        asyncio.create_task(run_ticker_consumer(app))
+        asyncio.create_task(run_candle_broadcaster(app))
+        asyncio.create_task(run_ticker_broadcaster(app))
+        asyncio.create_task(run_candle_list_broadcaster(app))
+        asyncio.create_task(run_ticker_list_broadcaster(app))
 
     # --- OpenAPI(Security) ---
     _install_openapi_with_bearer(app)

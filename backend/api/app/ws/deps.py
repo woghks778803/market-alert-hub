@@ -1,6 +1,6 @@
 from functools import lru_cache
 from dataclasses import dataclass
-from fastapi import Depends, Request
+from fastapi import Depends, WebSocket
 
 from app.facade.container import FacadeContainer
 from app.runtime.app_context import WsContext
@@ -15,9 +15,9 @@ def get_ws_context() -> WsContext:
     return create_ws_context()
 
 
-def get_facade(request: Request) -> FacadeContainer:
-    return request.app.state.ws_facade
+def get_facade(ws: WebSocket) -> FacadeContainer:
+    return ws.app.state.ws_facade
 
 
-def get_hub(request: Request) -> Hub:
-    return request.app.state.ws_hub
+def get_hub(ws: WebSocket) -> Hub:
+    return ws.app.state.ws_hub

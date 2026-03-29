@@ -38,6 +38,7 @@ from app.infra.external.oauth.kakao.rest_client import (
 
 from app.infra.external.redis.provider import (
     RedisActiveMarketCatalogAsync,
+    RedisTickerStoreAsync,
     RedisCandleStoreAsync,
     RedisCandleStoreSync,
     RedisCooldown,
@@ -151,6 +152,14 @@ class Providers:
             exchanges_meta_key=f"{prefix}:{META}:{EXCHANGES}",
             symbols_snap_key_fn=lambda ex: f"{prefix}:{SNAP}:{SYMBOLS}:{ex}",
             symbols_meta_key_fn=lambda ex: f"{prefix}:{META}:{SYMBOLS}:{ex}",
+        )
+
+    @staticmethod
+    def ticker_store_async_provider(
+        async_redis_client: RedisClientAsync,
+    ) -> Callable[[], RedisTickerStoreAsync]:
+        return lambda: RedisTickerStoreAsync(
+            async_redis_client,
         )
 
     @staticmethod
@@ -527,6 +536,9 @@ def create_facade_container(prefix: str) -> FacadeContainer:
 
     return FacadeContainer(
         candle_store=providers.candle_store_async_provider(
+            async_redis_client=async_redis
+        ),
+        ticker_store=providers.ticker_store_async_provider(
             async_redis_client=async_redis
         ),
         active_catalog=providers.active_catalog_provider(

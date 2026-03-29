@@ -9,14 +9,17 @@ export type MarketDto = {
 
     isWatchlisted: boolean
 
-    open_price: number | null
-    close_price: number | null
+    openPrice: number | null
+    closePrice: number | null
     change: number | null
     changeRate: number | null
 
     high: number | null
     low: number | null
     volume: number | null
+
+    normalizedPrice: number | null
+    normalizedVolume: number | null
 }
 
 export type ExchangeDto = {
@@ -34,7 +37,7 @@ export enum MarketSort {
 }
 
 export const MarketSortLabel: Record<MarketSort, string> = {
-    [MarketSort.VOLUME_DESC]: "거래량 높은순",
+    [MarketSort.VOLUME_DESC]: "거래대금 높은순",
     [MarketSort.CHANGE_DESC]: "상승률 높은순",
     [MarketSort.CHANGE_ASC]: "상승률 낮은순",
     [MarketSort.PRICE_DESC]: "가격 높은순",

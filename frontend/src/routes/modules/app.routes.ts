@@ -22,7 +22,7 @@ export const appRoutes: RouteRecordRaw[] = [
         path: "market", name: "Markets", component: MarketView, meta: { title: "마켓", allows: ["verified"], showBack: false },
     },
     {
-        path: "market//:exchange/:symbol", name: "SymbolDetail", component: SymbolDetailView,
+        path: "market/:exchange/:symbol", name: "SymbolDetail", component: SymbolDetailView,
         meta: {
             title: (route: RouteLocationNormalizedLoaded) => `${route.params.symbol}/${route.params.exchange}`,
             allows: ["verified"]

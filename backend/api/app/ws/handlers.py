@@ -6,60 +6,75 @@ from app.ws.protocols import WsMessageType
 
 
 async def handle_message(
-    hub: Hub, facade: FacadeContainer, conn_id: str, ws: WebSocket, data: dict
+    hub: Hub,
+    facade: FacadeContainer,
+    conn_id: str,
+    ws: WebSocket,
+    data: dict,
 ) -> None:
     msg_type = data.get("type")
     if not msg_type:
         return
 
-    if msg_type == WsMessageType.SUBSCRIBE_LIST:
-        symbols = data.get("symbols", [])
+    # -------------------------
+    # SUBSCRIBE LIST
+    # -------------------------
+    if msg_type == WsMessageType.SUBSCRIBE_LIST.value:
+        channels = data.get("channels", [])
 
-        if not symbols:
+        if not channels:
             await ws.send_json(
-                {"type": WsMessageType.ERROR.value, "message": "symbols required"}
+                {
+                    "type": WsMessageType.ERROR.value,
+                    "message": "channels required",
+                }
             )
             return
 
-        for item in symbols:
-            exchange = item.get("exchange")
-            symbol = item.get("symbol")
-
-            if not exchange or not symbol:
-                continue
-
-            key = f"{exchange}:{symbol}"
-
-            await hub.subscribe(conn_id, key)
-
-            # ✅ snapshot 1회
-            snapshot = await facade.candle_store.get_1s(exchange, symbol)
-
-            if snapshot is None:
-                continue
-
-            await ws.send_json(
-                {
-                    "type": WsMessageType.SNAPSHOT.value,
-                    "exchange": exchange,
-                    "symbol": symbol,
-                    "data": snapshot,
-                }
-            )
+        for channel in channels:
+            await hub.subscribe(conn_id, channel)
 
         return
 
-    if msg_type == WsMessageType.UNSUBSCRIBE_LIST:
-        symbols = data.get("symbols", [])
+    # -------------------------
+    # UNSUBSCRIBE LIST
+    # -------------------------
+    if msg_type == WsMessageType.UNSUBSCRIBE_LIST.value:
+        channels = data.get("channels", [])
 
-        for item in symbols:
-            exchange = item.get("exchange")
-            symbol = item.get("symbol")
+        if not channels:
+            return
 
-            if not exchange or not symbol:
-                continue
-
-            key = f"{exchange}:{symbol}"
-            await hub.unsubscribe(conn_id, key)
+        for channel in channels:
+            await hub.unsubscribe(conn_id, channel)
 
         return
+
+    # -------------------------
+    # SUBSCRIBE (single)
+    # -------------------------
+    if msg_type == WsMessageType.SUBSCRIBE.value:
+        channel = data.get("channel")
+        if not channel:
+            return
+
+        await hub.subscribe(conn_id, channel)
+        return
+
+    # -------------------------
+    # UNSUBSCRIBE (single)
+    # -------------------------
+    if msg_type == WsMessageType.UNSUBSCRIBE.value:
+        channel = data.get("channel")
+        if not channel:
+            return
+
+        await hub.unsubscribe(conn_id, channel)
+        return
+
+    # -------------------------
+    # PING (optional)
+    # -------------------------
+    # if msg_type == WsMessageType.PING.value:
+    #     await ws.send_json({"type": WsMessageType.PONG.value})
+    #     return

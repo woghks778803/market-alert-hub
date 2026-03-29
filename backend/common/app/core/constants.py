@@ -1,5 +1,12 @@
 import enum
 
+"""
+공통 상수 정의
+Outbox / 내부 이벤트 - 대문자
+Exchange / Symbol - 대문자 유지
+외부 통신 - 소문자
+"""
+
 TMP = "tmp"
 SNAP = "snap"
 STREAM = "stream"
@@ -19,6 +26,7 @@ SYMBOLS = "symbols"
 EXCHANGES = "exchanges"
 
 
+# 거래소 표준 대문자 유지
 class BaseQuote(str, enum.Enum):
     USDT = "USDT"
     BTC = "BTC"

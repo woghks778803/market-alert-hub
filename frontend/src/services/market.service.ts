@@ -5,8 +5,8 @@ import {
 import { toMarketDto, toExchangeDto } from "./market.mapper"
 import type { MarketDto, ExchangeDto } from "./market.types"
 
-export async function getMarket(id: number): Promise<MarketDto> {
-    const env = await marketApi.getMarket(id)
+export async function getMarket(exchange_code: string, symbol: string): Promise<MarketDto> {
+    const env = await marketApi.getMarket(exchange_code, symbol)
 
     if (!env.success || !env.data) {
         throw env.error ?? new Error("invalid_market_response")

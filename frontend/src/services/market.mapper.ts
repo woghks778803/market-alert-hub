@@ -13,14 +13,17 @@ export function toMarketDto(data: MarketInfo): MarketDto {
 
         isWatchlisted: data.is_watchlisted,
 
-        open_price: data.open_price == null ? null : Number(data.open_price),
-        close_price: data.close_price == null ? null : Number(data.close_price),
+        openPrice: data.open_price == null ? null : Number(data.open_price),
+        closePrice: data.close_price == null ? null : Number(data.close_price),
         change: data.price_change_24h == null ? null : Number(data.price_change_24h),
         changeRate: data.price_change_rate_24h == null ? null : Number(data.price_change_rate_24h),
 
         high: data.high_24h == null ? null : Number(data.high_24h),
         low: data.low_24h == null ? null : Number(data.low_24h),
         volume: data.volume_24h == null ? null : Number(data.volume_24h),
+
+        normalizedPrice: data.normalized_price == null ? null : Number(data.normalized_price),
+        normalizedVolume: data.normalized_volume == null ? null : Number(data.normalized_volume),
     }
 }
 

@@ -47,7 +47,7 @@ def compose_ticker_snapshot_data(
             "low": str(s.low_24h),
             "volume": str(s.volume_24h),
             "price_change": str(s.price_change_24h),
-            "change_rate": str(s.price_change_rate_24h),
+            "price_change_rate": str(s.price_change_rate_24h),
             "normalized_price": str(s.normalized_price),
             "normalized_volume": str(s.normalized_volume),
             "exchange_code": m.exchange_code,

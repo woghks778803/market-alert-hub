@@ -54,6 +54,6 @@ class RedisCandleStore(CandleStore):
             "ts_open": int(raw.get(b"ts_open", 0)),
         }
 
-    async def subscribe_1s(self, type: str):
+    async def subscribe(self, type: str):
         pubsub = await self._redis.psubscribe(f"{CANDLE}:{type}:*")
         return pubsub

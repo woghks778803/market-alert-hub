@@ -1,6 +1,6 @@
 <template>
   <v-container class="app-container">
-    <SymbolSummaryCard :symbol="symbol" />
+    <SymbolSummaryCard v-if="market" :market="market" />
 
     <SymbolChartCard />
 
@@ -19,13 +19,15 @@
 
       <v-col cols="12">
         <v-btn
+          v-if="market"
           block
           size="large"
           variant="outlined"
           class="sd-favorite-btn"
-          prepend-icon="mdi-star"
+          :prepend-icon="market.isWatchlisted ? 'mdi-star' : 'mdi-star-outline'"
+          @click.stop="toggle"
         >
-          관심 해제
+          {{ market.isWatchlisted ? '관심 해제' : '관심 등록' }}
         </v-btn>
       </v-col>
     </v-row>
@@ -34,17 +36,39 @@
 </template>
 
 <script setup lang="ts">
+import { useRoute } from "vue-router"
+import { onMounted, onUnmounted, onDeactivated } from "vue"
+import { storeToRefs } from "pinia"
 import SymbolSummaryCard from "@/components/market/SymbolSummaryCard.vue"
 import SymbolChartCard from "@/components/market/SymbolChartCard.vue"
+import { useMarketStore } from "@/stores/market.store"
 
-const symbol = {
-  symbol: "BTC/USDT",
-  name: "Bitcoin",
-  exchange: "UPBIT",
-  price: "₩58,420,000",
-  change: "+2.35%",
-  high: "₩59,200,000",
-  low: "₩56,800,000",
-  volume: "₩1.2T",
+const route = useRoute()
+const marketStore = useMarketStore()
+const { market } = storeToRefs(marketStore)
+
+onMounted(async () => {
+  marketStore.resetMarket()
+
+  const exchange_code = route.params.exchange as string
+  const symbol = route.params.symbol as string
+  await marketStore.fetchMarket(exchange_code, symbol)
+
+  marketStore.subscribeMarket()
+  marketStore.initWs()
+})
+
+onUnmounted(cleanup)
+onDeactivated(cleanup)
+
+function cleanup() {
+  marketStore.unsubscribeMarket()
+  marketStore.cleanupWs()
 }
+
+async function toggle() {
+  if (!market.value) return
+  await marketStore.toggleWatchlist(market.value)
+}
+
 </script>

@@ -125,10 +125,14 @@ class SqlMarketRepo(MarketRepo):
     def get_by_filter(
         self,
         user_id: int,
-        exchange_instrument_id: int,
+        exchange_instrument_id: int | None = None,
+        exchange_code: str | None = None,
+        exchange_symbol: str | None = None,
         is_active: bool = True,
         deleted_is_null: bool = True,
     ) -> MarketDTO.Market | None:
+        if exchange_instrument_id is None and not (exchange_code and exchange_symbol):
+            return None
 
         stmt = (
             select(
@@ -160,8 +164,18 @@ class SqlMarketRepo(MarketRepo):
                     wi.user_id == user_id,
                 ),
             )
-            .where(ei.is_active == is_active, ei.id == exchange_instrument_id)
+            .where(ei.is_active == is_active)
         )
+
+        if exchange_instrument_id is not None:
+            stmt = stmt.where(ei.id == exchange_instrument_id)
+        elif exchange_code is not None and exchange_symbol is not None:
+            stmt = stmt.where(
+                and_(
+                    e.code == exchange_code,
+                    ei.exchange_symbol == exchange_symbol,
+                )
+            )
 
         if deleted_is_null:
             stmt = stmt.where(ei.deleted_at.is_(None))
@@ -178,18 +192,24 @@ class SqlMarketRepo(MarketRepo):
             base_asset=row.base_asset,  # base asset symbol
             quote_asset=row.quote_asset,
             asset_name=row.asset_name,
-            high_24h=row.high_24h if row.high_24h else None,
-            low_24h=row.low_24h if row.low_24h else None,
-            volume_24h=row.volume_24h if row.volume_24h else None,
-            open_price=row.open_price if row.open_price else None,
-            close_price=row.close_price if row.close_price else None,
-            price_change_24h=row.price_change_24h if row.price_change_24h else None,
-            price_change_rate_24h=(
-                row.price_change_rate_24h if row.price_change_rate_24h else None
+            high_24h=row.high_24h if row.high_24h is not None else None,
+            low_24h=row.low_24h if row.low_24h is not None else None,
+            volume_24h=row.volume_24h if row.volume_24h is not None else None,
+            open_price=row.open_price if row.open_price is not None else None,
+            close_price=row.close_price if row.close_price is not None else None,
+            price_change_24h=(
+                row.price_change_24h if row.price_change_24h is not None else None
             ),
-            normalized_price=(row.normalized_price if row.normalized_price else None),
+            price_change_rate_24h=(
+                row.price_change_rate_24h
+                if row.price_change_rate_24h is not None
+                else None
+            ),
+            normalized_price=(
+                row.normalized_price if row.normalized_price is not None else None
+            ),
             normalized_volume=(
-                row.normalized_volume if row.normalized_volume else None
+                row.normalized_volume if row.normalized_volume is not None else None
             ),
             is_watchlisted=row.watchlist_id is not None,
         )

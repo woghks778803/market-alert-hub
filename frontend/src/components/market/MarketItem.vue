@@ -1,6 +1,6 @@
 <template>
 
-  <v-card class="mk-card">
+  <v-card class="mk-card" @click="goDetail" tabindex="0">
 
     <v-card-text>
 
@@ -26,7 +26,7 @@
         <v-icon
           :icon="item.isWatchlisted ? 'mdi-star' : 'mdi-star-outline'"
           :color="item.isWatchlisted ? 'amber' : 'grey'"
-          @click="toggle"
+          @click.stop="toggle"
           size="25"
         />
 
@@ -36,7 +36,7 @@
       <div class="mk-row-bottom">
 
         <div class="mk-price">
-          {{ formatPrice(item.close_price) }} {{ item.quoteAsset }}
+          {{ formatPrice(item.closePrice) }} {{ item.quoteAsset }}
         </div>
 
         <div class="mk-change-block">
@@ -49,7 +49,8 @@
           </div>
 
           <div class="mk-volume">
-            {{ formatVolume(item.volume) }}
+            <div>거래량 {{ formatVolume(item.volume) }} </div>
+            <div>거래대금(원) {{ formatVolume(item.normalizedVolume) }}</div>
           </div>
 
         </div>
@@ -67,13 +68,24 @@ import {formatChange, formatPrice, formatVolume} from "@/utils/format"
 import type { MarketDto } from "@/services/market.types"
 import { useMarketStore } from "@/stores/market.store"
 
+const marketStore = useMarketStore()
 const props = defineProps<{
   item: MarketDto
 }>()
 
-const marketStore = useMarketStore()
+const emit = defineEmits<{
+  (e: 'select', payload: { exchange: string; symbol: string }): void
+}>()
 
-async function toggle() {
+function goDetail() {
+  emit('select', {
+    exchange: props.item.exchange,
+    symbol: props.item.symbol,
+  })
+}
+
+async function toggle(e: MouseEvent) {
+  // e.stopPropagation()
   await marketStore.toggleWatchlist(props.item)
 }
 </script>

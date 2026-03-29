@@ -1,4 +1,3 @@
-from curses import meta
 from datetime import datetime
 from fastapi import Security, Response, APIRouter, Depends, Query, Path, Body, status
 from app.core.constants import CandleBaseInterval, CandleOutputInterval, MarketSort
@@ -11,27 +10,54 @@ import app.api.openapi as OpenApi
 router = APIRouter(prefix="/markets")
 
 
+# @router.get(
+#     "/{exchange_instrument_id:int}",
+#     response_model=Envelope[MarketSchema.MarketRead],
+#     summary="마켓 심볼 상세 정보",
+#     responses=OpenApi.combine(
+#         OpenApi.OK(
+#             Envelope[MarketSchema.MarketRead],  #  스키마도 래퍼로
+#             description="마켓 조회 성공",
+#         ),
+#         OpenApi.ERR_409,
+#     ),
+# )
+# def get_market(
+#     exchange_instrument_id: int = Path(..., ge=1),
+#     user: AuthSchema.CurrentUser = Security(get_current_user),
+#     svcs: ServiceFactory = Depends(get_services),
+#     meta: RequestMeta = Depends(get_request_meta),
+# ):
+#     rows = svcs.markets.get_by_exchange_instrument_id(
+#         user_id=user.id,
+#         exchange_instrument_id=exchange_instrument_id,
+#     )
+#     return ok(rows, request_id=meta.request_id)
+
+
 @router.get(
-    "/{exchange_instrument_id:int}",
+    "/{exchange_code:str}/{exchange_symbol:str}",
     response_model=Envelope[MarketSchema.MarketRead],
     summary="마켓 심볼 상세 정보",
     responses=OpenApi.combine(
         OpenApi.OK(
-            Envelope[list[MarketSchema.MarketRead]],  #  스키마도 래퍼로
+            Envelope[MarketSchema.MarketRead],  #  스키마도 래퍼로
             description="마켓 조회 성공",
         ),
         OpenApi.ERR_409,
     ),
 )
 def get_market(
-    exchange_instrument_id: int = Path(..., ge=1),
+    exchange_code: str = Path(...),
+    exchange_symbol: str = Path(...),
     user: AuthSchema.CurrentUser = Security(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    rows = svcs.markets.get_by_exchange_instrument_id(
+    rows = svcs.markets.get_by_exchange_symbol(
         user_id=user.id,
-        exchange_instrument_id=exchange_instrument_id,
+        exchange_code=exchange_code,
+        exchange_symbol=exchange_symbol,
     )
     return ok(rows, request_id=meta.request_id)
 

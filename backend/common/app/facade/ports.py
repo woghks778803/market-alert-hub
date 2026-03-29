@@ -24,5 +24,10 @@ class CandleStore(Protocol):
     async def get_1s(self, exchange: str, symbol: str) -> dict | None:
         raise NotImplementedError
 
-    async def subscribe_1s(self, type: str):
+    async def subscribe(self, type: str):
+        raise NotImplementedError
+
+
+class TickerStore(Protocol):
+    async def subscribe(self, type: str):
         raise NotImplementedError
