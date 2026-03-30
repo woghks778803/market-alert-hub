@@ -46,9 +46,9 @@ class MarketRead(BaseModel):
     volume_24h: Decimal | None
 
 
-class CandleBase(BaseModel):
+class CandleRead(BaseModel):
     model_config = _model_cfg
-    exchange_instrument_id: int
+    id: int
     ts_open: datetime
     open: float
     high: float

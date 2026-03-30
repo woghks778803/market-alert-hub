@@ -14,7 +14,7 @@ class WsClient {
     }
 
     connect() {
-        console.log("this.isConnected", this.isConnected)
+        // console.log("this.isConnected", this.isConnected)
         if (this.isConnected) return
         this.ws = new WebSocket(this.url)
 

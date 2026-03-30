@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 
 from sentry_sdk.integrations.fastapi import FastApiIntegration
-from app.core.constants import DeploymentEnvironment
+from app.core.constants import DeploymentEnvironment, CandleInterval
 from app.core.logging import setup_logging
 
 from app.api.deps import get_api_context
@@ -94,6 +94,7 @@ def create_app() -> FastAPI:
     app.state.ws_hub = Hub()
     app.state.ws_facade = ws_ctx.facade
     app.state.market_store = MarketStore()
+    app.state.candle_queue = asyncio.Queue()
 
     sentry_sdk.init(
         dsn=api_ctx.config.sentry_dsn,
@@ -134,7 +135,11 @@ def create_app() -> FastAPI:
 
     @app.on_event("startup")
     async def startup():
-        asyncio.create_task(run_candle_consumer(app))
+        asyncio.create_task(run_candle_consumer(app, interval=CandleInterval.SEC_1))
+        asyncio.create_task(run_candle_consumer(app, interval=CandleInterval.MIN_1))
+        asyncio.create_task(run_candle_consumer(app, interval=CandleInterval.HOUR_1))
+        asyncio.create_task(run_candle_consumer(app, interval=CandleInterval.DAY_1))
+
         asyncio.create_task(run_ticker_consumer(app))
         asyncio.create_task(run_candle_broadcaster(app))
         asyncio.create_task(run_ticker_broadcaster(app))

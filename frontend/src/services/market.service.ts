@@ -1,9 +1,9 @@
 import {
     marketApi,
-    type MarketListRequest, type ExchangeListRequest
+    type MarketListRequest, type ExchangeListRequest, type CandlesListRequest
 } from "@/api/market.api"
-import { toMarketDto, toExchangeDto } from "./market.mapper"
-import type { MarketDto, ExchangeDto } from "./market.types"
+import { toMarketDto, toExchangeDto, toCandleDto } from "./market.mapper"
+import type { MarketDto, ExchangeDto, CandleDto } from "./market.types"
 
 export async function getMarket(exchange_code: string, symbol: string): Promise<MarketDto> {
     const env = await marketApi.getMarket(exchange_code, symbol)
@@ -33,4 +33,14 @@ export async function getExchanges(payload: ExchangeListRequest): Promise<Exchan
     }
 
     return env.data.map(toExchangeDto)
+}
+
+export async function getCandles(payload: CandlesListRequest): Promise<CandleDto[]> {
+    const env = await marketApi.getCandles(payload)
+
+    if (!env.success || !env.data) {
+        throw env.error ?? new Error("invalid_candle_list_response")
+    }
+
+    return env.data.map(toCandleDto)
 }

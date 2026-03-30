@@ -121,7 +121,7 @@ class MarketService:
         end: datetime | None,
         limit: int | None,
         asc_order: bool,
-    ) -> list[MarketDTO.CandleBase]:
+    ) -> list[MarketDTO.MarketCandle]:
         # cursor 검색 우선
         if cursor is not None:
             start, end = None, None
@@ -568,7 +568,7 @@ class MarketService:
         return result
 
     def ensure_snapshot(
-        self, *, base: CandleBaseInterval, item: MarketDTO.CandleBase
+        self, *, base: CandleBaseInterval, item: MarketDTO.MarketCandle
     ) -> dict:
         """
         내부 writer용 단일 캔들 저장. 항상 UPSERT.
@@ -577,7 +577,7 @@ class MarketService:
         ts = MarketRule.align_utc(item.ts_open, base, ("base", "ts_open"))
 
         row = MarketDTO.PriceSnapshotCreate(
-            exchange_instrument_id=item.exchange_instrument_id,
+            exchange_instrument_id=item.id,
             ts_open=ts,
             open=MarketRule.dec(item.open),
             high=MarketRule.dec(item.high),
@@ -590,7 +590,7 @@ class MarketService:
         with self._uow_factory() as uow:
             # exchange_instrument_id 유효성 검사
             exchange_instrument = uow.markets.get_exchange_instrument_by_filter(
-                exchange_instrument_id=item.exchange_instrument_id
+                exchange_instrument_id=item.id
             )
             if exchange_instrument is None:
                 raise NotFoundError(

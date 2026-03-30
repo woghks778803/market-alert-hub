@@ -37,14 +37,11 @@ async def run_ticker_consumer(app):
         except Exception:
             continue
 
-        # BINANCE:BTCUSDT
-        key = channel.split(f"{TICKER}:{TickerInterval.HOUR_24.value}:")[-1]
-
         store.update_ticker(
-            key,
+            channel,
             {
-                "type": TICKER,
-                "channel": key,
+                "type": f"{TICKER}",
+                "channel": channel,
                 "data": payload,
             },
         )

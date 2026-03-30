@@ -91,7 +91,7 @@ class MarketRepo(Protocol):
         end: datetime | None,
         limit: int | None,
         asc_order: bool,
-    ) -> list[MarketDTO.CandleBase]: ...
+    ) -> list[MarketDTO.MarketCandle]: ...
     def list_snapshot_1h_by_filter(
         self,
         *,
@@ -101,7 +101,7 @@ class MarketRepo(Protocol):
         end: datetime | None,
         limit: int | None,
         asc_order: bool,
-    ) -> list[MarketDTO.CandleBase]: ...
+    ) -> list[MarketDTO.MarketCandle]: ...
     def list_snapshot_1d_by_filter(
         self,
         *,
@@ -111,7 +111,7 @@ class MarketRepo(Protocol):
         end: datetime | None,
         limit: int | None,
         asc_order: bool,
-    ) -> list[MarketDTO.CandleBase]: ...
+    ) -> list[MarketDTO.MarketCandle]: ...
 
     def list_snapshot_1h_agg(
         self,

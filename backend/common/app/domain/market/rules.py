@@ -155,16 +155,16 @@ def _floor(ts: datetime, out: Interval) -> datetime:
 
 
 def aggregate(
-    rows: list[MarketDTO.CandleBase], to: Interval, *, asc: bool = True
-) -> list[MarketDTO.CandleBase]:
+    rows: list[MarketDTO.MarketCandle], to: Interval, *, asc: bool = True
+) -> list[MarketDTO.MarketCandle]:
     # rows: 1m/1h/1d 원시 캔들. 속성: exi_id, ts_open, open/high/low/close/volume 가정
     buckets: dict[tuple[int, datetime], dict] = {}
     for r in rows:
-        key = (r.exchange_instrument_id, _floor(r.ts_open, to))
+        key = (r.id, _floor(r.ts_open, to))
         b = buckets.get(key)
         if b is None:
             buckets[key] = {
-                "exi": r.exchange_instrument_id,
+                "exi": r.id,
                 "ts": key[1],
                 "high": r.high,
                 "low": r.low,
@@ -189,8 +189,8 @@ def aggregate(
     out = []
     for b in buckets.values():
         out.append(
-            MarketDTO.CandleBase(
-                exchange_instrument_id=b["exi"],
+            MarketDTO.MarketCandle(
+                id=b["exi"],
                 ts_open=b["ts"],
                 open=float(b["_first_open"]),
                 high=float(b["high"]),

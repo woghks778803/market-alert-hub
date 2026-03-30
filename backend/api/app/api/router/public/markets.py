@@ -1,6 +1,6 @@
 from datetime import datetime
 from fastapi import Security, Response, APIRouter, Depends, Query, Path, Body, status
-from app.core.constants import CandleBaseInterval, CandleOutputInterval, MarketSort
+from app.core.constants import CandleInterval, CandleOutputInterval, MarketSort
 from app.service.factory import ServiceFactory
 from app.api.common.envelope import Envelope, ok, no_content
 from app.api.deps import get_current_user, get_services, get_request_meta, RequestMeta
@@ -150,12 +150,12 @@ def list_exchange_instruments(
 # Prices
 @router.get(
     "/candles",
-    response_model=Envelope[list[MarketSchema.CandleBase]],
+    response_model=Envelope[list[MarketSchema.CandleRead]],
     summary="캔들 조회",
     description="cursor > start, end 우선 (같이 값이 들어갈 경우 start, end는 무시됩니다)",
     responses=OpenApi.combine(
         OpenApi.OK(
-            Envelope[list[MarketSchema.CandleBase]],
+            Envelope[list[MarketSchema.CandleRead]],
             description="리스트 조회 성공",
         ),
         OpenApi.ERR_409,
@@ -184,26 +184,6 @@ def list_candles(
     return ok(rows, request_id=meta.request_id)
 
 
-@router.get(
-    "/stream/candles",
-    response_model=Envelope[list[MarketSchema.CandleBase]],
-    summary="실시간 캔들 조회",
-    description="cursor > start, end 우선 (같이 값이 들어갈 경우 start, end는 무시됩니다)",
-    responses=OpenApi.combine(
-        OpenApi.OK(
-            Envelope[list[MarketSchema.CandleBase]],
-            description="리스트 조회 성공",
-        ),
-        OpenApi.ERR_409,
-    ),
-)
-def stream_candles(
-    svcs: ServiceFactory = Depends(get_services),
-    meta: RequestMeta = Depends(get_request_meta),
-):
-    return ok({}, request_id=meta.request_id)
-
-
 # @router.post(
 #     "/candles/{base}",
 #     status_code=status.HTTP_201_CREATED,
@@ -219,8 +199,8 @@ def stream_candles(
 # )
 # def post_candles(
 #     response: Response,
-#     base: CandleBaseInterval = Path(..., description="기준 간격: 1m / 1h / 1d"),
-#     payload: MarketSchema.CandleBase = Body(
+#     base: CandleReadInterval = Path(..., description="기준 간격: 1m / 1h / 1d"),
+#     payload: MarketSchema.CandleRead = Body(
 #         ...,
 #         example={
 #             "exchange_instrument_id": 101,
@@ -235,6 +215,6 @@ def stream_candles(
 #     svcs: ServiceFactory = Depends(get_services),
 #     meta: RequestMeta = Depends(get_request_meta),
 # ):
-#     item = MarketDTO.CandleBase(**payload.model_dump())
+#     item = MarketDTO.CandleRead(**payload.model_dump())
 #     result = svcs.markets.ensure_snapshot(base=base, item=item)
 #     return created(result, response=response, request_id=meta.request_id)

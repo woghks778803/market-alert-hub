@@ -28,12 +28,38 @@ export type ExchangeDto = {
     name: string
 }
 
+export type CandleDto = {
+    id: number
+    tsOpen: number   // epoch ms
+    open: number
+    high: number
+    low: number
+    close: number
+    volume: number
+}
+
 export enum MarketSort {
     VOLUME_DESC = "volume_desc",
     CHANGE_DESC = "change_desc",
     CHANGE_ASC = "change_asc",
     PRICE_DESC = "price_desc",
     PRICE_ASC = "price_asc",
+}
+
+export enum CandleInterval {
+    SEC_1 = "1s",
+    MIN_1 = "1m",
+    HOUR_1 = "1h",
+    DAY_1 = "1d",
+}
+
+export enum TickerInterval {
+    HOUR_24 = "24h",
+}
+
+export enum WsChannelType {
+    CANDLE = "candle",
+    TICKER = "ticker",
 }
 
 export const MarketSortLabel: Record<MarketSort, string> = {

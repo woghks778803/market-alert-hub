@@ -2,7 +2,7 @@
   <v-container class="app-container">
     <SymbolSummaryCard v-if="market" :market="market" />
 
-    <SymbolChartCard />
+    <SymbolChartCard :market="market" :lastCandleUpdate="lastCandleUpdate" />
 
     <v-row class="sd-actions mt-4">
       <v-col cols="12">
@@ -42,10 +42,11 @@ import { storeToRefs } from "pinia"
 import SymbolSummaryCard from "@/components/market/SymbolSummaryCard.vue"
 import SymbolChartCard from "@/components/market/SymbolChartCard.vue"
 import { useMarketStore } from "@/stores/market.store"
+import { WsChannelType, CandleInterval, TickerInterval } from "@/services/market.types"
 
 const route = useRoute()
 const marketStore = useMarketStore()
-const { market } = storeToRefs(marketStore)
+const { market, lastCandleUpdate, currentInterval } = storeToRefs(marketStore)
 
 onMounted(async () => {
   marketStore.resetMarket()
@@ -54,7 +55,12 @@ onMounted(async () => {
   const symbol = route.params.symbol as string
   await marketStore.fetchMarket(exchange_code, symbol)
 
-  marketStore.subscribeMarket()
+  // 차트용
+  marketStore.subscribeMarket(WsChannelType.CANDLE, CandleInterval.SEC_1)
+  // 상세용 ticker
+  marketStore.subscribeMarket(WsChannelType.TICKER, TickerInterval.HOUR_24)
+  // 타임프레임 확정 캔들
+  marketStore.subscribeMarket(WsChannelType.CANDLE, currentInterval.value)
   marketStore.initWs()
 })
 
@@ -62,7 +68,9 @@ onUnmounted(cleanup)
 onDeactivated(cleanup)
 
 function cleanup() {
-  marketStore.unsubscribeMarket()
+  marketStore.unsubscribeMarket(WsChannelType.TICKER, TickerInterval.HOUR_24)
+  marketStore.unsubscribeMarket(WsChannelType.CANDLE, CandleInterval.SEC_1)
+  marketStore.unsubscribeMarket(WsChannelType.CANDLE, currentInterval.value)
   marketStore.cleanupWs()
 }
 

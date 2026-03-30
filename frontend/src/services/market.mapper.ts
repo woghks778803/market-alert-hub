@@ -1,5 +1,5 @@
 import type { MarketInfo, ExchangeInfo } from "@/api/market.api"
-import type { MarketDto, ExchangeDto } from "@/services/market.types"
+import type { MarketDto, ExchangeDto, CandleDto } from "@/services/market.types"
 
 export function toMarketDto(data: MarketInfo): MarketDto {
     return {
@@ -32,5 +32,19 @@ export function toExchangeDto(data: ExchangeInfo): ExchangeDto {
         id: data.id,
         code: data.code,
         name: data.name
+    }
+}
+export function toCandleDto(data: any): CandleDto {
+    return {
+        id: data.id,
+
+        tsOpen: new Date(data.ts_open).getTime(),
+
+        open: Number(data.open),
+        high: Number(data.high),
+        low: Number(data.low),
+        close: Number(data.close),
+
+        volume: data.volume == null ? 0 : Number(data.volume),
     }
 }

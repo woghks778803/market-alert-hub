@@ -540,7 +540,7 @@ class SqlMarketRepo(MarketRepo):
         end: datetime | None,
         limit: int,
         asc_order: bool,
-    ) -> list[MarketDTO.CandleBase]:
+    ) -> list[MarketDTO.MarketCandle]:
         wheres = [
             model.exchange_instrument_id == exchange_instrument_id,
         ]
@@ -559,8 +559,8 @@ class SqlMarketRepo(MarketRepo):
         rows = self._db.execute(stmt).scalars().all()
 
         return [
-            MarketDTO.CandleBase(
-                exchange_instrument_id=row.exchange_instrument_id,
+            MarketDTO.MarketCandle(
+                id=row.exchange_instrument_id,
                 ts_open=row.ts_open,
                 open=float(row.open),
                 high=float(row.high),
@@ -581,7 +581,7 @@ class SqlMarketRepo(MarketRepo):
         end: datetime | None,
         limit: int,
         asc_order: bool,
-    ) -> list[MarketDTO.CandleBase]:
+    ) -> list[MarketDTO.MarketCandle]:
         return self._list_snapshot_by_filter(
             PriceSnapshot1mModel,
             exchange_instrument_id=exchange_instrument_id,
@@ -601,7 +601,7 @@ class SqlMarketRepo(MarketRepo):
         end: datetime | None,
         limit: int,
         asc_order: bool,
-    ) -> list[MarketDTO.CandleBase]:
+    ) -> list[MarketDTO.MarketCandle]:
         return self._list_snapshot_by_filter(
             PriceSnapshot1hModel,
             exchange_instrument_id=exchange_instrument_id,
@@ -621,7 +621,7 @@ class SqlMarketRepo(MarketRepo):
         end: datetime | None,
         limit: int,
         asc_order: bool,
-    ) -> list[MarketDTO.CandleBase]:
+    ) -> list[MarketDTO.MarketCandle]:
         return self._list_snapshot_by_filter(
             PriceSnapshot1dModel,
             exchange_instrument_id=exchange_instrument_id,

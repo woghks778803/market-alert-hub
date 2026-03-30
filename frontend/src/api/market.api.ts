@@ -1,6 +1,16 @@
 import { http } from "./http"
 import type { Envelope } from "./types"
 
+export type CandleInfo = {
+    id: number
+    ts_open: number   // datetime → epoch(ms)
+    open: number
+    high: number
+    low: number
+    close: number
+    volume: number
+}
+
 export type ExchangeInfo = {
     id: number
     code: string
@@ -43,6 +53,19 @@ export type ExchangeListRequest = {
     offset?: number
 }
 
+export type CandlesListRequest = {
+    exchange_instrument_id: number
+
+    output?: string
+
+    cursor?: string   // ISO8601
+    start?: string    // ISO8601
+    end?: string      // ISO8601
+
+    limit?: number
+    order?: "asc" | "desc"
+}
+
 export const marketApi = {
 
     // GET /markets/{exchange_instrument_id}
@@ -74,6 +97,15 @@ export const marketApi = {
     async getExchanges(params?: ExchangeListRequest) {
         const { data } = await http.get<Envelope<ExchangeInfo[]>>(
             '/markets/exchanges',
+            { params }
+        );
+        return data;
+    },
+
+    // GET /markets/candles
+    async getCandles(params?: CandlesListRequest) {
+        const { data } = await http.get<Envelope<CandleInfo[]>>(
+            '/markets/candles',
             { params }
         );
         return data;

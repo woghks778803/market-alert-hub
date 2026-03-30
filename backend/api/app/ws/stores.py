@@ -9,8 +9,11 @@ class MarketStore:
     def update_candle(self, key, value):
         self._candle_data[key] = value
 
-    def candle_list_snapshot(self):
-        return list(self._candle_data.values())
+    def candle_list_snapshot(self, interval):
+        return [
+            v for k, v in self._candle_data.items()
+            if f":{interval}:" in k
+        ]
 
     def candle_snapshot(self, key):
         return self._candle_data.get(key)

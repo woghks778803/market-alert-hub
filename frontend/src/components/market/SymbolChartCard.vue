@@ -38,17 +38,29 @@
 
 <script setup lang="ts">
 import TimeframeTabs from "./TimeframeTabs.vue"
-import { ref, onMounted, onBeforeUnmount, nextTick } from "vue"
+import { ref, onMounted, onBeforeUnmount, nextTick, watch } from "vue"
 import { createChart, type IChartApi, type ISeriesApi, type UTCTimestamp  } from "lightweight-charts"
+import { useMarketStore } from "@/stores/market.store"
+import type { MarketDto, CandleDto } from "@/services/market.types"
 
+const marketStore = useMarketStore()
 const chartContainer = ref(null)
 const chartMounted = ref(false)
 
 let chart: IChartApi | null = null
 let candleSeries: ISeriesApi<"Candlestick">
 
+const props = defineProps<{
+  market: MarketDto | null,
+  lastCandleUpdate: CandleDto | null
+}>()
+
 onMounted(() => {
   initChart()
+})
+
+onBeforeUnmount(() => {
+  cleanup()
 })
 
 function cleanup() {
@@ -82,12 +94,6 @@ const initChart = async () => {
       wickDownColor: '#ef5350',
     })
 
-    candleSeries.setData([
-      { time: 1710000000 as UTCTimestamp, open: 58000, high: 58200, low: 57900, close: 58100 },
-      { time: 1710000600 as UTCTimestamp, open: 58100, high: 58300, low: 58000, close: 58250 },
-      { time: 1710001200 as UTCTimestamp, open: 58250, high: 58400, low: 58100, close: 58300 },
-      { time: 1710001800 as UTCTimestamp, open: 58400, high: 58300, low: 58100, close: 58300 },
-    ])
   } catch (error) {
     cleanup()
 
@@ -97,7 +103,47 @@ const initChart = async () => {
   }
 }
 
-onBeforeUnmount(() => {
-  cleanup()
-})
+watch(
+  () => props.market,
+  async (m) => {
+    if (!m || !candleSeries) return
+    console.log("Market changed, updating chart data for:", m)
+    const candles = await marketStore.fetchCandles()
+
+    if(!candles || candles.length === 0) {
+      console.warn("No candles data available for market:", m)
+      return
+    }
+
+    const sorted = candles.map((c) => ({
+      time: (new Date(c.tsOpen).getTime() / 1000) as UTCTimestamp,
+      open: Number(c.open),
+      high: Number(c.high),
+      low: Number(c.low),
+      close: Number(c.close),
+    })).reverse() 
+
+    candleSeries.setData(
+      sorted
+    )
+  },
+  { immediate: true }
+)
+
+watch(
+  () => props.lastCandleUpdate,
+  (c) => {
+    if (!c || !candleSeries) return
+    // console.log("lastCandleUpdate changed, updating chart data for:", c, candleSeries)
+
+    candleSeries.update({
+      time: c.tsOpen as UTCTimestamp,
+      open: Number(c.open),
+      high: Number(c.high),
+      low: Number(c.low),
+      close: Number(c.close),
+    })
+  }
+)
+
 </script>

@@ -7,8 +7,8 @@ from app.domain.shared.errors import ValidationAppError
 
 
 @dataclass(slots=True, frozen=True)
-class CandleBase:
-    exchange_instrument_id: int
+class MarketCandle:
+    id: int
     ts_open: datetime
     open: float
     high: float

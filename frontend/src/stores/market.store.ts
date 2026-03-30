@@ -1,17 +1,19 @@
 import { defineStore } from "pinia"
 import { ref, computed } from "vue"
 import { marketWs } from "@/services/ws/market.ws"
-import { getMarket, getMarkets, getExchanges } from "@/services/market.service"
+import { getMarket, getMarkets, getExchanges, getCandles } from "@/services/market.service"
 import { createWatchlist, removeWatchlist } from "@/services/watchlist.service"
-import type { MarketDto, ExchangeDto } from "@/services/market.types"
-import { MarketSort, MarketSortLabel } from "@/services/market.types"
+import type { MarketDto, ExchangeDto, CandleDto } from "@/services/market.types"
+import { MarketSort, CandleInterval, TickerInterval, WsChannelType, MarketSortLabel } from "@/services/market.types"
 
 export const useMarketStore = defineStore("market", () => {
+    const lastCandleUpdate = ref<CandleDto | null>(null)
     const market = ref<MarketDto | null>(null)
     const markets = ref<MarketDto[]>([])
     const exchanges = ref<ExchangeDto[]>([])
     const search = ref("")
     const openSort = ref(false)
+    const currentInterval = ref<CandleInterval>(CandleInterval.MIN_1)
 
     const query = ref({
         search: "",
@@ -42,8 +44,24 @@ export const useMarketStore = defineStore("market", () => {
         exchanges.value = await getExchanges({})
     }
 
+    async function fetchCandles() {
+        if (!market.value) return
+
+        return await getCandles({
+            exchange_instrument_id: market.value.id,
+
+            output: currentInterval.value, // string 처리했으니까 그대로
+
+            limit: 500,
+            order: "desc",
+        })
+    }
+
     function resetMarket() {
+        lastCandleUpdate.value = null
         market.value = null
+        markets.value = []
+        exchanges.value = []
     }
 
     async function toggleWatchlist(item: MarketDto) {
@@ -90,19 +108,27 @@ export const useMarketStore = defineStore("market", () => {
     }
 
     // key 생성
-    function buildMarketKey() {
-        return market.value ? `${market.value.exchange}:${market.value.symbol}` : null
+    function buildMarketKey(
+        channelType: WsChannelType,
+        interval: CandleInterval | TickerInterval = CandleInterval.SEC_1): string | null {
+        return market.value ? `${channelType}:${interval}:${market.value.exchange}:${market.value.symbol}` : null
     }
 
     // 구독
-    function subscribeMarket() {
-        const key = buildMarketKey()
+    function subscribeMarket(
+        channelType: WsChannelType,
+        interval: CandleInterval | TickerInterval
+    ) {
+        const key = buildMarketKey(channelType, interval)
         if (key) {
             marketWs.subscribe(key)
         }
     }
-    function unsubscribeMarket() {
-        const key = buildMarketKey()
+    function unsubscribeMarket(
+        channelType: WsChannelType,
+        interval: CandleInterval | TickerInterval
+    ) {
+        const key = buildMarketKey(channelType, interval)
         if (key) {
             marketWs.unSubscribe(key)
         }
@@ -132,9 +158,9 @@ export const useMarketStore = defineStore("market", () => {
     }
 
     const tickerHandler = (type: string, data: any) => {
-        if (type === "ticker" || type === "ticker_list") {
+        if (type === "ticker") {
             applyTicker(data)
-        } else if (type === "candle_list") {
+        } else if (type === "ticker_list") {
             applyTickers(data)
         }
     }
@@ -187,12 +213,57 @@ export const useMarketStore = defineStore("market", () => {
     }
 
     function applyCandle(payload: any) {
-        // console.log("applyCandle", payload)
         if (payload.type !== "candle") return
+
         const d = payload.data
         if (!market.value) return
-
         market.value.closePrice = Number(d.close)
+
+        const price = Number(d.close)
+        const rawTime = Number(d.ts_open) / 1000
+
+        if (!isFinite(price) || !isFinite(rawTime)) return
+
+        const candleTime = Math.floor(rawTime / 60) * 60
+
+        // 🔥 최초
+        if (!lastCandleUpdate.value) {
+            lastCandleUpdate.value = {
+                id: market.value.id,
+                tsOpen: candleTime,
+                open: price,
+                high: price,
+                low: price,
+                close: price,
+                volume: Number(d.volume) || 0,
+            }
+            return
+        }
+
+        const prev = lastCandleUpdate.value
+
+        // 🔥 같은 분 → 누적
+        if (prev.tsOpen === candleTime) {
+            lastCandleUpdate.value = {
+                ...prev,
+                high: Math.max(prev.high, price),
+                low: Math.min(prev.low, price),
+                close: price,
+                volume: prev.volume + (Number(d.volume) || 0),
+            }
+            return
+        }
+
+        // 🔥 새로운 분 → 새 캔들
+        lastCandleUpdate.value = {
+            id: market.value.id,
+            tsOpen: candleTime,
+            open: price,
+            high: price,
+            low: price,
+            close: price,
+            volume: Number(d.volume) || 0,
+        }
     }
 
     function applyCandles(payload: any) {
@@ -213,7 +284,20 @@ export const useMarketStore = defineStore("market", () => {
         }
     }
 
+    function changeInterval(next: CandleInterval) {
+        if (currentInterval.value === next) return
+
+        // 기존 해제
+        unsubscribeMarket(WsChannelType.CANDLE, currentInterval.value)
+        // 변경
+        currentInterval.value = next
+        // 새 구독
+        subscribeMarket(WsChannelType.CANDLE, currentInterval.value)
+    }
+
     return {
+        lastCandleUpdate,
+        currentInterval,
         market,
         markets,
         exchanges,
@@ -225,6 +309,7 @@ export const useMarketStore = defineStore("market", () => {
         fetchMarket,
         fetchMarkets,
         fetchExchanges,
+        fetchCandles,
 
         currentSortLabel,
         resetMarket,
