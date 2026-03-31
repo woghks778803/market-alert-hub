@@ -4,7 +4,7 @@
     <v-chip-group
       selected-class="mk-tab-active"
       multiple
-      v-model="selected"
+      :model-value="currentSystemTab"
       @update:modelValue="onUpdate"
     >
       <v-chip
@@ -20,8 +20,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue"
+import { computed } from "vue"
+import { storeToRefs } from "pinia"
 import type { ExchangeDto } from "@/services/market.types"
+import { useMarketStore } from "@/stores/market.store"
+
+const marketStore = useMarketStore()
+const { currentSystemTab } = storeToRefs(marketStore)
 
 const props = defineProps<{
   exchangeTabs: ExchangeDto[],
@@ -31,8 +36,6 @@ const emit = defineEmits<{
   (e: "change", value: string[]): void
 }>()
 
-const selected = ref<string[]>(["all"])
-
 const systemTabs = [
   { name: "전체", code: "all" },
   { name: "즐겨찾기", code: "watchlist" },
@@ -41,28 +44,6 @@ const systemTabs = [
 const tabs = computed(() => [...systemTabs, ...props.exchangeTabs])
 
 function onUpdate(val: string[]) {
-  // console.log("val", val)
-  
-  // 마지막 선택값
-  const last = val[val.length - 1]
-  let next: string[]
-
-  if (last === "all") {
-    next = ["all"]
-  }else{
-    next = val.filter(v => v !== "all")
-  }
-
-  if (next.length == 0){
-    next = ["all"]
-  }
-
-  selected.value = next
-  emit("change", next)
-
-  // console.log("selected", selected.value)
+  emit("change", val)
 }
 </script>
-
-<style scoped>
-</style>

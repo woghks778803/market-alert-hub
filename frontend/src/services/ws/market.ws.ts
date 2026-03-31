@@ -40,6 +40,7 @@ class MarketWs {
     // }
 
     subscribe(key: string) {
+        if (this.subscriptions.has(key)) return
         this.subscriptions.add(key)
         wsClient.send({
             type: "SUBSCRIBE",
@@ -48,6 +49,7 @@ class MarketWs {
     }
 
     unSubscribe(key: string) {
+        if (!this.subscriptions.has(key)) return
         this.subscriptions.delete(key)
         wsClient.send({
             type: "UNSUBSCRIBE",

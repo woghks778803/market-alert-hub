@@ -1,6 +1,6 @@
 <template>
 
-  <v-card class="mk-card" @click="goDetail" tabindex="0">
+  <v-card class="mk-card" :class="{ flash }" @click="goDetail" tabindex="0">
 
     <v-card-text>
 
@@ -64,10 +64,12 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch } from "vue"
 import {formatChange, formatPrice, formatVolume} from "@/utils/format"
 import type { MarketDto } from "@/services/market.types"
 import { useMarketStore } from "@/stores/market.store"
 
+const flash = ref(false)
 const marketStore = useMarketStore()
 const props = defineProps<{
   item: MarketDto
@@ -87,5 +89,29 @@ function goDetail() {
 async function toggle(e: MouseEvent) {
   // e.stopPropagation()
   await marketStore.toggleWatchlist(props.item)
+}
+
+watch(
+  () => [
+    props.item.closePrice, 
+    props.item.changeRate, 
+    props.item.change, 
+    props.item.volume, 
+    props.item.normalizedVolume, 
+    props.item.normalizedPrice
+  ],
+  (newVal, oldVal) => {
+    if (oldVal === undefined) return
+    if (newVal === oldVal) return
+    triggerFlash()
+  }
+)
+
+function triggerFlash() {
+  flash.value = true
+
+  setTimeout(() => {
+    flash.value = false
+  }, 500)
 }
 </script>

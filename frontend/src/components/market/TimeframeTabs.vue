@@ -4,7 +4,7 @@
 
     <v-chip-group
       selected-class="mk-tab-active"
-      v-model="selected"
+      :model-value="currentTimeframe"
       @update:modelValue="onUpdate"
     >
       <v-chip
@@ -21,20 +21,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue"
-const selected = ref<string>("1m")
+import { storeToRefs } from "pinia"
+import type { ChartTimeframe } from "@/services/market.types"
+import { useMarketStore } from "@/stores/market.store"
+
+const marketStore = useMarketStore()
+const { currentTimeframe } = storeToRefs(marketStore)
 
 const tabs = [
   { label: "1m", value: "1m" },
-  { label: "5m", value: "5m" },
-  { label: "15m", value: "15m" },
   { label: "1h", value: "1h" },
-  { label: "4h", value: "4h" },
   { label: "1d", value: "1d" },
 ]
 
-function onUpdate(val: string[]) {
-  console.log("val", val)
-  console.log("selected", selected.value)
+async function onUpdate(val: ChartTimeframe) {
+  await marketStore.changeTimeFrame(val)
 }
 </script>

@@ -1,5 +1,5 @@
-import type { MarketInfo, ExchangeInfo } from "@/api/market.api"
-import type { MarketDto, ExchangeDto, CandleDto } from "@/services/market.types"
+import type { MarketInfo, ExchangeInfo, MarketListRequest, ExchangeListRequest, CandlesListRequest } from "@/api/market.api"
+import type { MarketDto, ExchangeDto, CandleDto, MarketListQuery, ExchangeListQuery, CandlesListQuery } from "@/services/market.types"
 
 export function toMarketDto(data: MarketInfo): MarketDto {
     return {
@@ -48,3 +48,35 @@ export function toCandleDto(data: any): CandleDto {
         volume: data.volume == null ? 0 : Number(data.volume),
     }
 }
+
+export function toMarketListRequest(q: MarketListQuery): MarketListRequest {
+    return {
+        search: q.search,
+        exchange_codes: q.exchangeCodes,
+        watchlist_only: q.watchlistOnly,
+        sort: q.sort,
+    }
+}
+
+export function toExchangeListRequest(q: ExchangeListQuery): ExchangeListRequest {
+    return {
+        limit: q.limit,
+        offset: q.offset,
+    }
+}
+
+export function toCandlesListRequest(q: CandlesListQuery): CandlesListRequest {
+    return {
+        exchange_instrument_id: q.exchangeInstrumentId,
+
+        output: q.output,
+
+        cursor: q.cursor,
+        start: q.start,
+        end: q.end,
+
+        limit: q.limit,
+        order: q.order,
+    }
+}
+

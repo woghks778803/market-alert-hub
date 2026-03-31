@@ -3,69 +3,72 @@ import { ref, computed } from "vue"
 import { marketWs } from "@/services/ws/market.ws"
 import { getMarket, getMarkets, getExchanges, getCandles } from "@/services/market.service"
 import { createWatchlist, removeWatchlist } from "@/services/watchlist.service"
-import type { MarketDto, ExchangeDto, CandleDto } from "@/services/market.types"
-import { MarketSort, CandleInterval, TickerInterval, WsChannelType, MarketSortLabel } from "@/services/market.types"
+import type { MarketDto, ExchangeDto, CandleDto, MarketListQuery, ExchangeListQuery, CandlesListQuery } from "@/services/market.types"
+import { MarketSort, ChartTimeframe, CandleInterval, TickerInterval, WsChannelType, MarketSortLabel, CANDLES_LIMIT, TIMEFRAME_SECONDS } from "@/services/market.types"
 
 export const useMarketStore = defineStore("market", () => {
-    const lastCandleUpdate = ref<CandleDto | null>(null)
+    let searchTimer: any
+    const currentCandle = ref<CandleDto | null>(null)
+    const candles = ref<CandleDto[]>([])
+
     const market = ref<MarketDto | null>(null)
     const markets = ref<MarketDto[]>([])
     const exchanges = ref<ExchangeDto[]>([])
-    const search = ref("")
-    const openSort = ref(false)
-    const currentInterval = ref<CandleInterval>(CandleInterval.MIN_1)
 
-    const query = ref({
+
+    const openSort = ref(false)
+    const currentTimeframe = ref<ChartTimeframe>(ChartTimeframe.MIN_1)
+    const currentSystemTab = ref<string[]>(["all"])
+
+    const marketListQuery = ref<MarketListQuery>({
         search: "",
-        exchange_codes: [] as string[],
-        watchlist_only: false,
-        sort: "volume_desc" as MarketSort,
+        exchangeCodes: [] as string[],
+        watchlistOnly: false,
+        sort: MarketSort.VOLUME_DESC,
     })
+
+    const exchangeListQuery = ref<ExchangeListQuery>({})
+
+    // Partial 모든 필드를 선택(optional)
+    const candlesListQuery = ref<Partial<CandlesListQuery>>({})
 
 
     const currentSortLabel = computed(() => {
-        return MarketSortLabel[query.value.sort]
+        return MarketSortLabel[marketListQuery.value.sort ?? MarketSort.VOLUME_DESC]
     })
 
     async function fetchMarket(exchange_code: string, symbol: string) {
+        console.log("Fetching market for:", exchange_code, symbol)
         market.value = await getMarket(exchange_code, symbol)
     }
 
     async function fetchMarkets() {
-        markets.value = await getMarkets({
-            search: query.value.search,
-            exchange_codes: query.value.exchange_codes,
-            watchlist_only: query.value.watchlist_only,
-            sort: query.value.sort,
-        })
+        markets.value = await getMarkets(marketListQuery.value)
     }
 
     async function fetchExchanges() {
-        exchanges.value = await getExchanges({})
+        exchanges.value = await getExchanges(exchangeListQuery.value)
     }
 
     async function fetchCandles() {
+        // console.log("Fetching candles for market:", market.value)
         if (!market.value) return
+        if (candles.value.length >= CANDLES_LIMIT) return
 
-        return await getCandles({
-            exchange_instrument_id: market.value.id,
+        candlesListQuery.value.exchangeInstrumentId = market.value.id
+        candlesListQuery.value.output = currentTimeframe.value
+        candlesListQuery.value.limit = 500
+        candlesListQuery.value.order = "desc"
 
-            output: currentInterval.value, // string 처리했으니까 그대로
+        const data = await getCandles(candlesListQuery.value as CandlesListQuery)
 
-            limit: 500,
-            order: "desc",
-        })
-    }
+        if (data.length === 0) return
 
-    function resetMarket() {
-        lastCandleUpdate.value = null
-        market.value = null
-        markets.value = []
-        exchanges.value = []
+        candles.value.unshift(...data.reverse())
+        console.log("Fetched candles:", data.length, "Total candles:", candles.value.length)
     }
 
     async function toggleWatchlist(item: MarketDto) {
-        console.log(item)
         if (item.isWatchlisted) {
             await removeWatchlist(item.id)
             item.isWatchlisted = false
@@ -75,58 +78,71 @@ export const useMarketStore = defineStore("market", () => {
         }
     }
 
-    let timer: any
-
     function setSearch(value: string) {
-        clearTimeout(timer)
-        timer = setTimeout(() => {
-            query.value.search = value
+        clearTimeout(searchTimer)
+
+        searchTimer = setTimeout(() => {
+            console.log(marketListQuery)
+            marketListQuery.value.search = value
             fetchMarkets()
         }, 300)
     }
 
-    function setExchange(codes: string[]) {
-        const isAll = codes.includes("all")
-        const isWatchlist = codes.includes("watchlist")
+    function setMarketFilter(codes: string[]) {
+        // console.log(codes)
 
-        if (isAll) {
-            query.value.exchange_codes = []
+        // 마지막 선택값
+        const last = codes[codes.length - 1]
+        let next: string[]
+
+        if (last === "all") {
+            next = ["all"]
         } else {
-            query.value.exchange_codes = codes.filter(
-                v => v !== "watchlist"
-            )
+            next = codes.filter(v => v !== "all")
         }
 
-        query.value.watchlist_only = isWatchlist
+        if (codes.length == 0) {
+            next = ["all"]
+        }
 
+        currentSystemTab.value = next
+
+        const isAll = currentSystemTab.value.includes("all")
+        const isWatchlist = currentSystemTab.value.includes("watchlist")
+
+        marketListQuery.value.exchangeCodes = isAll ? [] : currentSystemTab.value.filter(v => v !== "watchlist")
+        marketListQuery.value.watchlistOnly = isWatchlist
+
+        // console.log(marketListQuery.value)
         fetchMarkets()
     }
 
     function setSort(sort: MarketSort) {
-        query.value.sort = sort
+        marketListQuery.value.sort = sort
         fetchMarkets()
     }
 
     // key 생성
     function buildMarketKey(
         channelType: WsChannelType,
-        interval: CandleInterval | TickerInterval = CandleInterval.SEC_1): string | null {
+        interval: CandleInterval | TickerInterval | ChartTimeframe): string | null {
         return market.value ? `${channelType}:${interval}:${market.value.exchange}:${market.value.symbol}` : null
     }
 
     // 구독
     function subscribeMarket(
         channelType: WsChannelType,
-        interval: CandleInterval | TickerInterval
+        interval: CandleInterval | TickerInterval | ChartTimeframe
     ) {
         const key = buildMarketKey(channelType, interval)
         if (key) {
             marketWs.subscribe(key)
         }
     }
+
     function unsubscribeMarket(
         channelType: WsChannelType,
-        interval: CandleInterval | TickerInterval
+        interval: CandleInterval | TickerInterval | ChartTimeframe
     ) {
         const key = buildMarketKey(channelType, interval)
         if (key) {
@@ -213,6 +229,7 @@ export const useMarketStore = defineStore("market", () => {
     }
 
     function applyCandle(payload: any) {
+        // console.log("applyCandle", payload)
         if (payload.type !== "candle") return
 
         const d = payload.data
@@ -223,12 +240,12 @@ export const useMarketStore = defineStore("market", () => {
         const rawTime = Number(d.ts_open) / 1000
 
         if (!isFinite(price) || !isFinite(rawTime)) return
-
-        const candleTime = Math.floor(rawTime / 60) * 60
+        const intervalSec = TIMEFRAME_SECONDS[currentTimeframe.value]
+        const candleTime = Math.floor(rawTime / intervalSec) * intervalSec
 
         // 🔥 최초
-        if (!lastCandleUpdate.value) {
-            lastCandleUpdate.value = {
+        if (!currentCandle.value) {
+            currentCandle.value = {
                 id: market.value.id,
                 tsOpen: candleTime,
                 open: price,
@@ -240,11 +257,11 @@ export const useMarketStore = defineStore("market", () => {
             return
         }
 
-        const prev = lastCandleUpdate.value
+        const prev = currentCandle.value
 
         // 🔥 같은 분 → 누적
         if (prev.tsOpen === candleTime) {
-            lastCandleUpdate.value = {
+            currentCandle.value = {
                 ...prev,
                 high: Math.max(prev.high, price),
                 low: Math.min(prev.low, price),
@@ -255,7 +272,7 @@ export const useMarketStore = defineStore("market", () => {
         }
 
         // 🔥 새로운 분 → 새 캔들
-        lastCandleUpdate.value = {
+        currentCandle.value = {
             id: market.value.id,
             tsOpen: candleTime,
             open: price,
@@ -284,26 +301,52 @@ export const useMarketStore = defineStore("market", () => {
         }
     }
 
-    function changeInterval(next: CandleInterval) {
-        if (currentInterval.value === next) return
+    async function changeTimeFrame(next: ChartTimeframe) {
+        if (currentTimeframe.value === next) return
 
         // 기존 해제
-        unsubscribeMarket(WsChannelType.CANDLE, currentInterval.value)
+        // unsubscribeMarket(WsChannelType.CANDLE, currentTimeframe.value)
+
+        clearCandles()
         // 변경
-        currentInterval.value = next
+        currentTimeframe.value = next
+
+        await fetchCandles()
+
+        console.log(candles.value)
+
         // 새 구독
-        subscribeMarket(WsChannelType.CANDLE, currentInterval.value)
+        // subscribeMarket(WsChannelType.CANDLE, currentTimeframe.value)
+    }
+
+    function clearCandles() {
+        candles.value = []
+        currentCandle.value = null
+    }
+
+    function resetMarket() {
+        clearCandles()
+        market.value = null
+        markets.value = []
+        exchanges.value = []
+        currentTimeframe.value = ChartTimeframe.MIN_1
+        candlesListQuery.value = {}
+        // console.log("Market reset, clearing candles", candles.value)
     }
 
     return {
-        lastCandleUpdate,
-        currentInterval,
+        currentCandle,
+        currentSortLabel,
+        currentTimeframe,
+        currentSystemTab,
+        candles,
         market,
         markets,
         exchanges,
-        query,
 
-        search,
+        marketListQuery,
+        candlesListQuery,
+
         openSort,
 
         fetchMarket,
@@ -311,12 +354,12 @@ export const useMarketStore = defineStore("market", () => {
         fetchExchanges,
         fetchCandles,
 
-        currentSortLabel,
         resetMarket,
         toggleWatchlist,
+        changeTimeFrame,
 
         setSearch,
-        setExchange,
+        setMarketFilter,
         setSort,
 
         subscribeMarket,

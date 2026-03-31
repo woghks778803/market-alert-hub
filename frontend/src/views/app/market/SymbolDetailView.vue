@@ -2,7 +2,7 @@
   <v-container class="app-container">
     <SymbolSummaryCard v-if="market" :market="market" />
 
-    <SymbolChartCard :market="market" :lastCandleUpdate="lastCandleUpdate" />
+    <SymbolChartCard :market="market" />
 
     <v-row class="sd-actions mt-4">
       <v-col cols="12">
@@ -37,7 +37,7 @@
 
 <script setup lang="ts">
 import { useRoute } from "vue-router"
-import { onMounted, onUnmounted, onDeactivated } from "vue"
+import { onMounted, onUnmounted, onDeactivated, watch } from "vue"
 import { storeToRefs } from "pinia"
 import SymbolSummaryCard from "@/components/market/SymbolSummaryCard.vue"
 import SymbolChartCard from "@/components/market/SymbolChartCard.vue"
@@ -46,7 +46,7 @@ import { WsChannelType, CandleInterval, TickerInterval } from "@/services/market
 
 const route = useRoute()
 const marketStore = useMarketStore()
-const { market, lastCandleUpdate, currentInterval } = storeToRefs(marketStore)
+const { market, currentTimeframe } = storeToRefs(marketStore)
 
 onMounted(async () => {
   marketStore.resetMarket()
@@ -55,12 +55,6 @@ onMounted(async () => {
   const symbol = route.params.symbol as string
   await marketStore.fetchMarket(exchange_code, symbol)
 
-  // 차트용
-  marketStore.subscribeMarket(WsChannelType.CANDLE, CandleInterval.SEC_1)
-  // 상세용 ticker
-  marketStore.subscribeMarket(WsChannelType.TICKER, TickerInterval.HOUR_24)
-  // 타임프레임 확정 캔들
-  marketStore.subscribeMarket(WsChannelType.CANDLE, currentInterval.value)
   marketStore.initWs()
 })
 
@@ -70,13 +64,28 @@ onDeactivated(cleanup)
 function cleanup() {
   marketStore.unsubscribeMarket(WsChannelType.TICKER, TickerInterval.HOUR_24)
   marketStore.unsubscribeMarket(WsChannelType.CANDLE, CandleInterval.SEC_1)
-  marketStore.unsubscribeMarket(WsChannelType.CANDLE, currentInterval.value)
+  // marketStore.unsubscribeMarket(WsChannelType.CANDLE, currentTimeframe.value)
   marketStore.cleanupWs()
+  marketStore.resetMarket()
 }
 
 async function toggle() {
   if (!market.value) return
   await marketStore.toggleWatchlist(market.value)
 }
+
+watch(
+  () => market.value,
+  async (m) => {
+    if (!m) return
+    // 차트용
+    marketStore.subscribeMarket(WsChannelType.CANDLE, CandleInterval.SEC_1)
+    // 상세용 ticker
+    marketStore.subscribeMarket(WsChannelType.TICKER, TickerInterval.HOUR_24)
+    // 타임프레임 확정 캔들 (현재 TradingView Lightweight Charts는 과거 데이터 수정을 지원하지 않고 확장만 가능, 확정 캔들을 받을 필요가 없음)
+    // marketStore.subscribeMarket(WsChannelType.CANDLE, currentTimeframe.value)
+  },
+  { immediate: true }
+)
 
 </script>

@@ -1,9 +1,9 @@
 import {
     marketApi,
-    type MarketListRequest, type ExchangeListRequest, type CandlesListRequest
 } from "@/api/market.api"
-import { toMarketDto, toExchangeDto, toCandleDto } from "./market.mapper"
-import type { MarketDto, ExchangeDto, CandleDto } from "./market.types"
+
+import { toMarketDto, toExchangeDto, toCandleDto, toMarketListRequest, toCandlesListRequest, toExchangeListRequest } from "./market.mapper"
+import type { MarketDto, ExchangeDto, CandleDto, MarketListQuery, ExchangeListQuery, CandlesListQuery } from "./market.types"
 
 export async function getMarket(exchange_code: string, symbol: string): Promise<MarketDto> {
     const env = await marketApi.getMarket(exchange_code, symbol)
@@ -15,8 +15,8 @@ export async function getMarket(exchange_code: string, symbol: string): Promise<
     return toMarketDto(env.data)
 }
 
-export async function getMarkets(payload: MarketListRequest): Promise<MarketDto[]> {
-    const env = await marketApi.getMarkets(payload)
+export async function getMarkets(payload: MarketListQuery): Promise<MarketDto[]> {
+    const env = await marketApi.getMarkets(toMarketListRequest(payload))
 
     if (!env.success || !env.data) {
         throw env.error ?? new Error("invalid_market_list_response")
@@ -25,8 +25,8 @@ export async function getMarkets(payload: MarketListRequest): Promise<MarketDto[
     return env.data.map(toMarketDto)
 }
 
-export async function getExchanges(payload: ExchangeListRequest): Promise<ExchangeDto[]> {
-    const env = await marketApi.getExchanges(payload)
+export async function getExchanges(payload: ExchangeListQuery): Promise<ExchangeDto[]> {
+    const env = await marketApi.getExchanges(toExchangeListRequest(payload))
 
     if (!env.success || !env.data) {
         throw env.error ?? new Error("invalid_exchange_list_response")
@@ -35,8 +35,8 @@ export async function getExchanges(payload: ExchangeListRequest): Promise<Exchan
     return env.data.map(toExchangeDto)
 }
 
-export async function getCandles(payload: CandlesListRequest): Promise<CandleDto[]> {
-    const env = await marketApi.getCandles(payload)
+export async function getCandles(payload: CandlesListQuery): Promise<CandleDto[]> {
+    const env = await marketApi.getCandles(toCandlesListRequest(payload))
 
     if (!env.success || !env.data) {
         throw env.error ?? new Error("invalid_candle_list_response")

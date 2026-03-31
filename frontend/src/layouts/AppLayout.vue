@@ -4,7 +4,7 @@
       v-if="showBack"
       icon="mdi-arrow-left"
       variant="text"
-      @click="router.back()"
+      @click="goBack"
     />
     <v-app-bar-title>{{ title }}</v-app-bar-title>
 
@@ -19,23 +19,25 @@
     </v-container>
   </v-main>
 
-  <v-bottom-navigation v-model="active" grow mandatory height="64">
-    <v-btn value="home" :to="{ name: 'Home' }">
+  <v-bottom-navigation 
+    :model-value="activeTab" 
+    grow mandatory height="64">
+    <v-btn value="home" @click="handleTabClick">
       <v-icon icon="mdi-home-outline" />
       <span>홈</span>
     </v-btn>
 
-    <v-btn value="market" :to="{ name: 'Markets' }">
+    <v-btn value="market" @click="handleTabClick">
       <v-icon icon="mdi-format-list-bulleted" />
       <span>마켓</span>
     </v-btn>
 
-    <v-btn value="alerts" :to="{ name: 'Alerts' }">
+    <v-btn value="alert" @click="handleTabClick">
       <v-icon icon="mdi-bell-outline" />
       <span>알림</span>
     </v-btn>
 
-    <v-btn value="settings" :to="{ name: 'Settings' }">
+    <v-btn value="setting" @click="handleTabClick">
       <v-icon icon="mdi-cog-outline" />
       <span>설정</span>
     </v-btn>
@@ -43,54 +45,56 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue"
+import { computed } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
 const route = useRoute()
-const active = ref<"home" | "market" | "alerts" | "settings">("home")
 const router = useRouter()
-
 const showBack = computed(() => route.meta.showBack === true)
+const activeTab = computed(() => {
+  const matched = [...route.matched].reverse().find(r => r.meta?.tab);
+  return (matched?.meta?.tab as string) || 'home';
+});
+
+const handleTabClick = (e: any) => {
+  const btn = (e.currentTarget as HTMLElement);
+  const tabValue = btn.getAttribute('value');
+
+  if (!tabValue) return;
+
+  const routeNames: Record<string, string> = {
+    home: 'Home',
+    market: 'Markets',
+    alert: 'Rules',
+    setting: 'Settings'
+  };
+
+  const targetName = routeNames[tabValue];
+  if (targetName) {
+    // 동일 라우터로 이동시 컴포넌트 재사용(Component Reuse)
+    // console.log("Navigating to:", targetName);
+    router.push({ name: targetName }).catch(() => {});
+  }
+};
+
 const title = computed(() => {
   const t = route.meta.title
   return typeof t === "function" ? t(route) : t ?? ""
 })
 
-const mapNameToTab = (name: string | symbol | undefined) => {
-  if (!name || typeof name !== "string") return "home"
-
-  switch (name) {
-    case "Home":
-      return "home"
-
-    case "Market":
-    case "SymbolSelect":
-      return "market"
-
-    case "Alerts":
-    case "AlertRules":
-    case "AlertLogs":
-    case "AlertChannels":
-      return "alerts"
-
-    case "Settings":
-    case "Profile":
-    case "Security":
-      return "settings"
-
-    default:
-      return "home"
+const goBack = () => {
+  if (window.history.state?.back) {
+    router.back()
+    return
+  }
+  
+  const fallback = route.meta.fallback
+  if (fallback) {
+    router.push(fallback)
+  } else {
+    router.push({ name: 'Home' })
   }
 }
-
-watch(
-  () => route.name,
-  (name) => {
-    active.value = mapNameToTab(name) as any
-  },
-  { immediate: true }
-)
-
 
 </script>
 

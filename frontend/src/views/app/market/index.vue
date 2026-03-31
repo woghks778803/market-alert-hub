@@ -1,8 +1,8 @@
 <template>
   <v-container class="app-container">
-    <MarketSearchBar :search="search" @search="marketStore.setSearch" />
+    <MarketSearchBar @search="marketStore.setSearch" />
 
-    <MarketFilterTabs :exchangeTabs="exchanges" @change="marketStore.setExchange" />
+    <MarketFilterTabs :exchangeTabs="exchanges" @change="marketStore.setMarketFilter" />
 
     <div class="mk-header">
 
@@ -46,7 +46,7 @@ import { useMarketStore } from "@/stores/market.store"
 import { MarketSortLabel, MarketSort } from "@/services/market.types"
 
 const marketStore = useMarketStore()
-const { markets, exchanges, openSort, search } = storeToRefs(marketStore)
+const { markets, exchanges, openSort } = storeToRefs(marketStore)
 
 onMounted(async () => {
   marketStore.resetMarket()

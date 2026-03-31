@@ -84,6 +84,7 @@ class CandleInterval(str, enum.Enum):
     DAY_1 = "1d"
 
 
+# TODO: CandleBaseInterval과 CandleOutputInterval는 차트용 타임프레임으로 추후 변경 필요. 현재는 1m, 1h, 1d만 지원하지만, 향후 5m, 15m, 4h 등 추가될 수 있음
 class CandleBaseInterval(str, enum.Enum):
     MIN_1 = "1m"
     HOUR_1 = "1h"

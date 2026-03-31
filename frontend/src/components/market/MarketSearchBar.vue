@@ -6,15 +6,17 @@
     density="comfortable"
     hide-details
     class="mk-search"
-    :v-model="search"
+    :model-value="marketListQuery.search"
     @update:modelValue="onInput"
   />
 </template>
 
 <script setup lang="ts">
-const props = defineProps<{
-  search: string
-}>()
+import { storeToRefs } from "pinia"
+import { useMarketStore } from "@/stores/market.store"
+
+const marketStore = useMarketStore()
+const { marketListQuery } = storeToRefs(marketStore)
 
 const emit = defineEmits<{
   (e: "search", value: string): void

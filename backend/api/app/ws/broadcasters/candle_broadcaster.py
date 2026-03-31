@@ -33,7 +33,7 @@ async def run_candle_broadcaster(app):
     store: MarketStore = app.state.market_store
 
     while True:
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.5)
 
         key = await queue.get()
 
