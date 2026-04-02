@@ -1,5 +1,5 @@
 <template>
-  <CenterCardShell center>
+  <AppCenterCard center>
     <template v-if="viewMode === 'default'">
       <div class="auth-head">
         <div class="auth-head__title">비밀번호 설정</div>
@@ -64,8 +64,8 @@
           size="large"
           color="primary"
           variant="flat"
-          :loading="submitting"
-          :disabled="!canSubmit"
+          :loading="loading"
+          :disabled="!canSubmit || !isReady"
           type="submit"
         >
           비밀번호 변경
@@ -121,18 +121,19 @@
       </button>
     </template>
     
-  </CenterCardShell>
+  </AppCenterCard>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted } from "vue"
-import CenterCardShell from "@/components/CenterCardShell.vue"
+import AppCenterCard from "@/components/common/AppCenterCard.vue"
 import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth.store";
 import { useResetPasswordForm } from "@/composables/auth/useResetPasswordForm";
+import { useAsyncAction } from "@/composables/common/useAsyncAction";
 import { useMode } from "@/composables/common/useMode"
-import { mapCommonError } from "@/api/error/errorMapper"
-import { mapResetPasswordError } from "./resetPasswordErrorMapper"
+import { mapCommonError } from "@/composables/error/error.mapper"
+import { mapResetPasswordError } from "@/composables/error/resetPasswordError.mapper"
 
 const router = useRouter();
 const route = useRoute();
@@ -149,13 +150,13 @@ const {
   fieldErrors,
   errorMessage,
   
-  submitting,
   canSubmit,
-  submit,
+  handleSubmit,
 
   onInputChanged,
   onBlurValidate,
 } = useResetPasswordForm();
+const { run, loading, isReady } = useAsyncAction()
 
 const viewMode = computed(() => mode.value)
 
@@ -171,7 +172,7 @@ onMounted(async () => {
     if (!token) {
       throw new Error("invalid_verify_token")
     }
-    await authStore.verifyPasswordResetAction({ token })
+    await authStore.verifyPasswordReset({ token })
 
     console.log("verify success")
   } catch (err: any) {
@@ -186,12 +187,14 @@ async function onSubmit() {
       throw new Error("invalid_verify_token")
     }
 
-    await submit(async () => {
-      await authStore.resetPasswordAction({
-        token: token,
-        new_password: password.value,
+    await handleSubmit(async () => {
+      await run(async () => {
+        await authStore.resetPassword({
+          token: token,
+          newPassword: password.value,
+        });
       });
-    });
+    })
 
     setMode("success")
   } catch (err: any) {

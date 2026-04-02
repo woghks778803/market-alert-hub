@@ -3,8 +3,8 @@
     title="이메일 인증"
     :successMessage="successMessage"
     :errorMessage="errorMessage"
-    :loading="sending"
-    :disabled="!canSend"
+    :loading="loading"
+    :disabled="!canSend || !isReady"
     @submit="onSubmit"
   >
     <template #description>
@@ -45,10 +45,10 @@
 import { useRouter } from "vue-router"
 import AuthFormCard from "@/components/auth/AuthFormCard.vue"
 import { useAuthStore } from "@/stores/auth.store";
-// import { useAsyncAction } from "@/composables/common/useAsyncAction";
+import { useAsyncAction } from "@/composables/common/useAsyncAction";
 import { useEmailActionForm } from "@/composables/auth/useEmailActionForm";
-import { mapCommonError } from "@/api/error/errorMapper"
-import { mapEmailVerifyError } from "./emailVerifyErrorMapper"
+import { mapCommonError } from "@/composables/error/error.mapper"
+import { mapEmailVerifyError } from "@/composables/error/emailVerifyError.mapper"
 
 const router = useRouter()
 const authStore = useAuthStore();
@@ -59,9 +59,8 @@ const {
   errorMessage,
   successMessage,
   
-  sending,
   canSend,
-  send,
+  handleSubmit,
 
   isCooldown,
   cooldownSec,
@@ -69,17 +68,22 @@ const {
   onInputChanged,
   onBlurValidate,
 } = useEmailActionForm();
+const { run, loading, isReady } = useAsyncAction()
 
 async function onSubmit() {
   try {
-    await send(async () => {
-      await authStore.changeEmailAction({ new_email: fields.value.email });
-      router.push({ name: "VerifyEmailSent" }).catch(() => {})
-    });
+    await handleSubmit(async () => {
+      await run(async () => {
+        await authStore.changeEmail({ newEmail: fields.value.email });
+        router.push({ name: "VerifyEmailSent" }).catch(() => {})
+      });
+    })
   } catch (err: any) {
+    
     const apiError = err?.response?.data?.error
 
     const r = mapEmailVerifyError(apiError)
+    console.log("err", r)
     if(r){
       if (r.kind === "cooldown") {
         startCooldown(r.cooldownSec)
@@ -97,7 +101,7 @@ async function onSubmit() {
 }
 
 async function goLogin() {
-  await authStore.logoutAction()
+  await authStore.logout()
   router.push({ name: "Login" }).catch(() => {})
 }
 </script>

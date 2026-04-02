@@ -1,4 +1,3 @@
-// src/composables/auth/useAuthForm.ts
 import { computed, ref } from "vue"
 
 type Validator<TFields, TErrors> = (fields: TFields) => TErrors
@@ -19,7 +18,6 @@ type UseAuthFormOptions<TFields, TErrors> = {
     canSend?: (ctx: {
         fields: TFields
         errors: TErrors
-        sending: boolean
         // 쿨다운 옵션
         isCooldown?: boolean
     }) => boolean
@@ -37,7 +35,6 @@ export function useAuthForm<TFields extends Record<string, any>, TErrors>(
     const fields = ref<TFields>({ ...opts.initialFields })
     const fieldErrors = ref<TErrors>(opts.emptyErrors())
 
-    const sending = ref(false)
     const errorMessage = ref<string | null>(null)
     const successMessage = ref<string | null>(null)
 
@@ -66,17 +63,16 @@ export function useAuthForm<TFields extends Record<string, any>, TErrors>(
             return opts.canSend({
                 fields: fields.value,
                 errors: fieldErrors.value,
-                sending: sending.value,
                 isCooldown,
             })
         }
-        return !sending.value && !isCooldown && !opts.hasAnyError(fieldErrors.value)
+        return !isCooldown && !opts.hasAnyError(fieldErrors.value)
     })
 
     /**
      * onSuccess: 실제 API 호출/비즈니스 로직. 실패 시 throw하면 됨.
      */
-    async function send(onSuccess: () => Promise<void> | void) {
+    async function handleSubmit(onSuccess: () => Promise<void> | void) {
         if (!canSend.value) return
 
         // 항상 최신 상태로 검증
@@ -85,19 +81,13 @@ export function useAuthForm<TFields extends Record<string, any>, TErrors>(
 
         if (!runValidate()) return
 
-        sending.value = true
-        try {
-            await onSuccess()
-        } finally {
-            sending.value = false
-        }
+        await onSuccess()
     }
 
     return {
         // state
         fields,
         fieldErrors,
-        sending,
         errorMessage,
         successMessage,
         canSend,
@@ -106,7 +96,7 @@ export function useAuthForm<TFields extends Record<string, any>, TErrors>(
         runValidate,
         onInputChanged,
         onBlurValidate,
-        send,
+        handleSubmit,
         resetMessages,
     }
 }

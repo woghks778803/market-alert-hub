@@ -17,9 +17,9 @@ let isRestoring = true;
 
 const canProceed = computed(() => agreeService.value && agreePrivacy.value)
 const consentPayload = computed(() => ({
-    agree_service: agreeService.value,
-    agree_privacy: agreePrivacy.value,
-    agree_marketing: agreeMarketing.value,
+    agreeService: agreeService.value,
+    agreePrivacy: agreePrivacy.value,
+    agreeMarketing: agreeMarketing.value,
 }));
 
 console.log("useTermsConsent initialized", {

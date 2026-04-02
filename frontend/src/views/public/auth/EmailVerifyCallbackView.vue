@@ -1,5 +1,5 @@
 <template>
-  <CenterCardShell center>
+  <AppCenterCard center>
 
     <div class="verify-cb-title">이메일 인증</div>
 
@@ -52,13 +52,13 @@
         다시 로그인하기
       </button>
     </template>
-  </CenterCardShell>
+  </AppCenterCard>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted } from "vue"
 import { useRoute, useRouter } from "vue-router"
-import CenterCardShell from "@/components/CenterCardShell.vue"
+import AppCenterCard from "@/components/common/AppCenterCard.vue"
 import { useMode } from "@/composables/common/useMode"
 import { useAuthStore } from "@/stores/auth.store";
 
@@ -71,7 +71,7 @@ const { mode, setMode } = useMode()
 const viewMode = computed(() => mode.value)
 
 async function goLogin() {
-  await authStore.logoutAction()
+  await authStore.logout()
   router.replace({ name: "Login" })
 }
 
@@ -97,34 +97,5 @@ onMounted(async () => {
     setMode("fail")
     return
   }
-  // try {
-  //   const token = readToken()
-  //   if (!token) {
-  //     throw new Error("invalid_verify_token")
-  //   }
-  //   await authStore.verifyEmailAction({ token })
-
-  //   setMode("success")
-  // } catch (err: any) {
-  //   setMode("fail")
-  // } finally {
-  //   await authStore.logoutAction()
-  // }
-
-  // runVerify(async () => {
-  //   const token = readToken()
-  //   if (!token) {
-  //     throw new Error("invalid_verify_token")
-  //   }
-  //   await verifyEmail({ token })
-  // }).then(async (res) => {
-  //   setMode("success")
-  // })
-  // .catch(async (e) => {
-  //   console.error("EmailVerifyCallbackView error", e)
-  //   setMode("fail")
-  // }).finally(async () => {
-  //   await logout()
-  // })
 })
 </script>

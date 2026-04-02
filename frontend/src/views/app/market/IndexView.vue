@@ -30,7 +30,6 @@
     </div>
 
     <MarketList :items="markets"/>
-
   </v-container>
 </template>
 

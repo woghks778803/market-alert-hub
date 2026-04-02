@@ -5,7 +5,7 @@ import AppLayout from "@/layouts/AppLayout.vue"
 
 import { authRoutes } from "@/routes/modules/auth.routes"
 import { legalRoutes } from "@/routes/modules/legal.routes"
-import { infoRoutes } from "@/routes/modules/info.routes"
+import { supportRoutes } from "@/routes/modules/support.routes"
 import { appRoutes } from "@/routes/modules/app.routes"
 import { systemRoutes } from "@/routes/modules/system.routes"
 import { useAuthStore } from "@/stores/auth.store"
@@ -19,21 +19,23 @@ const routes: RouteRecordRaw[] = [
     path: "/auth",
     component: PublicLayout,
     children: authRoutes,
+    meta: { hideHeader: true },
   },
   {
     path: "/legal",
     component: PublicLayout,
     children: legalRoutes,
+    meta: { showBack: true },
   },
   {
-    path: "/info",
+    path: "/support",
     component: PublicLayout,
-    children: infoRoutes,
+    children: supportRoutes,
+    meta: { showBack: true },
   },
   {
     path: "/",
     component: AppLayout,
-    meta: { requiresAuth: true }, // AppLayout 아래는 기본적으로 로그인 필요
     children: appRoutes,
   },
   ...systemRoutes,
@@ -42,6 +44,16 @@ const routes: RouteRecordRaw[] = [
 export const router = createRouter({
   history: createWebHistory(),
   routes,
+
+  scrollBehavior(to, from, savedPosition) {
+    // 뒤로가기/앞으로가기를 눌렀을 때는 원래 위치를 기억
+    if (savedPosition) {
+      return savedPosition
+    } else {
+      // 그 외에 새로운 페이지로 이동할 때는 맨 위
+      return { top: 0 }
+    }
+  },
 })
 
 function getAuthState(token: string | null) {
@@ -70,7 +82,7 @@ router.beforeEach(async (to, _from, next) => {
     authBootstrapped = true
     if (!token) {
       try {
-        token = await authStore.reissueAction()
+        token = await authStore.reissue()
       } catch {
         authStore.clearToken()
         // console.log("token :", token)

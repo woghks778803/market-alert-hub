@@ -1,34 +1,17 @@
-import { computed, ref } from "vue"
-import type { RouteLocationNormalizedLoaded } from "vue-router"
+import { ref } from "vue"
 
-export function useVerifyEmailSent(route: RouteLocationNormalizedLoaded) {
+export function useVerifyEmailSent() {
     const successMessage = ref<string | null>(null)
     const errorMessage = ref<string | null>(null)
-    const sending = ref(false)
 
-    const canResend = computed(() => !sending.value)
-
-    async function send(onResend?: () => Promise<void> | void) {
-        if (!canResend.value) return
-        successMessage.value = null
+    function resetMessages() {
         errorMessage.value = null
-
-        sending.value = true
-        try {
-            // TODO: API 호출은 여기서 붙이면 됨
-            await onResend?.()
-        } finally {
-            sending.value = false
-        }
+        successMessage.value = null
     }
 
     return {
         successMessage,
         errorMessage,
-
-        // resend
-        sending,
-        canResend,
-        send,
+        resetMessages
     }
 }

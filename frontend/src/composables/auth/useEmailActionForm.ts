@@ -24,10 +24,9 @@ export function useEmailActionForm() {
         },
         hasAnyError,
         cooldown: { cooldownSec, isCooldown },
-        canSend: ({ fields, sending, isCooldown }) => {
+        canSend: ({ fields, isCooldown }) => {
             const email = fields.email.trim()
             if (!email) return false
-            if (sending) return false
             if (isCooldown) return false
             return true
         },

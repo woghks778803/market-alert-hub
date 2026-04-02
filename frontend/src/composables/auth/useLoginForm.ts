@@ -15,7 +15,6 @@ function emptyErrors(): FieldErrors {
 
 export function useLoginForm() {
     const errorMessage = ref<string | null>(null);
-    const submitting = ref(false);
     const email = ref("")
     const password = ref("")
     const showPassword = ref(false)
@@ -59,22 +58,17 @@ export function useLoginForm() {
         if (!e) return false
         if (!isEmail(e)) return false
         if (!p) return false
-        return submitting.value === false
+        return true
     })
 
-    async function submit(onSuccess: () => Promise<void> | void) {
+    async function handleSubmit(onSuccess: () => Promise<void> | void) {
         if (!canSubmit.value) return
         fieldErrors.value = emptyErrors();
         errorMessage.value = null;
 
         if (!validate()) return;
 
-        submitting.value = true;
-        try {
-            await onSuccess();
-        } finally {
-            submitting.value = false;
-        }
+        await onSuccess();
     }
 
     return {
@@ -85,12 +79,11 @@ export function useLoginForm() {
         fieldErrors,
         errorMessage,
 
-        canSubmit,
-        submitting,
-        submit,
-
         validate,
         onInputChanged,
         onBlurValidate,
+
+        canSubmit,
+        handleSubmit
     }
 }

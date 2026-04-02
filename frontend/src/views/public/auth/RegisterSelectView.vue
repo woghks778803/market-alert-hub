@@ -1,5 +1,5 @@
 <template>
-  <CenterCardShell center>
+  <AppCenterCard center>
     <div class="auth-title auth-title--lg">회원가입</div>
     <div class="auth-subtitle">가입 방법을 선택하세요</div>
 
@@ -37,12 +37,12 @@
       <span class="auth-bottom__text">이미 계정이 있나요?</span>
       <button class="auth-link" type="button" @click="goLogin">로그인</button>
     </div>
-  </CenterCardShell>
+  </AppCenterCard>
 </template>
 
 <script setup lang="ts">
 import { useRouter } from "vue-router"
-import CenterCardShell from "@/components/CenterCardShell.vue"
+import AppCenterCard from "@/components/common/AppCenterCard.vue"
 
 const router = useRouter()
 

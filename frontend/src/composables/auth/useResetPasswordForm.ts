@@ -1,5 +1,5 @@
-// src/composables/auth/useResetPasswordForm.ts
-import { computed, ref } from "vue";
+import { computed, ref } from "vue"
+import { isStrongPassword } from "@/utils/validate"
 
 type FieldErrors = {
     password: string | null;
@@ -8,15 +8,6 @@ type FieldErrors = {
 
 function emptyErrors(): FieldErrors {
     return { password: null, passwordConfirm: null };
-}
-
-function isStrongPassword(v: string): boolean {
-    const s = v.trim();
-    if (s.length < 8) return false;
-    const hasDigit = /\d/.test(s);
-    const hasLetter = /[A-Za-z]/.test(s);
-    const hasSpecial = /[^A-Za-z0-9]/.test(s);
-    return hasDigit && hasLetter && hasSpecial;
 }
 
 export function useResetPasswordForm() {
@@ -28,7 +19,6 @@ export function useResetPasswordForm() {
 
     const fieldErrors = ref<FieldErrors>(emptyErrors());
     const errorMessage = ref<string | null>(null);
-    const submitting = ref(false);
 
     function validate(): boolean {
         const errs = emptyErrors();
@@ -66,22 +56,17 @@ export function useResetPasswordForm() {
         if (!passwordConfirm.value.trim()) return false;
         if (passwordConfirm.value !== password.value) return false;
         if (!isStrongPassword(password.value)) return false;
-        return submitting.value === false;
+        return true
     });
 
-    async function submit(onSuccess: () => Promise<void> | void) {
+    async function handleSubmit(onSuccess: () => Promise<void> | void) {
         if (!canSubmit.value) return
         fieldErrors.value = emptyErrors();
         errorMessage.value = null;
 
         if (!validate()) return;
 
-        submitting.value = true;
-        try {
-            await onSuccess();
-        } finally {
-            submitting.value = false;
-        }
+        await onSuccess();
     }
 
     return {
@@ -92,9 +77,8 @@ export function useResetPasswordForm() {
 
         fieldErrors,
         errorMessage,
-        submitting,
         canSubmit,
-        submit,
+        handleSubmit,
 
         validate,
         onInputChanged,

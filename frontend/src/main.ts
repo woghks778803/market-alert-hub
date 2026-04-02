@@ -4,6 +4,7 @@ import { router } from "./routes"
 import { vuetify } from "./plugins/vuetify"
 import { createPinia } from "pinia"
 import './styles/main.css'
+import 'vue3-toastify/dist/index.css'
 import { wsClient } from "@/services/ws/ws.client"
 import { marketWs } from "@/services/ws/market.ws"
 

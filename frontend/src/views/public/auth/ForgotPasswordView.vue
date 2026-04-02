@@ -3,8 +3,8 @@
     title="비밀번호 찾기"
     :successMessage="successMessage"
     :errorMessage="errorMessage"
-    :loading="sending"
-    :disabled="!canSend"
+    :loading="loading"
+    :disabled="!canSend || !isReady"
     @submit="onSubmit"
   >
     <template #description>
@@ -46,9 +46,10 @@
 import { useRouter } from "vue-router"
 import AuthFormCard from "@/components/auth/AuthFormCard.vue"
 import { useAuthStore } from "@/stores/auth.store";
+import { useAsyncAction } from "@/composables/common/useAsyncAction";
 import { useEmailActionForm } from "@/composables/auth/useEmailActionForm";
-import { mapCommonError } from "@/api/error/errorMapper"
-import { mapForgotPasswordError } from "./forgotPasswordErrorMapper"
+import { mapCommonError } from "@/composables/error/error.mapper"
+import { mapForgotPasswordError } from "@/composables/error/forgotPasswordError.mapper"
 
 const router = useRouter()
 const authStore = useAuthStore();
@@ -59,9 +60,8 @@ const {
   errorMessage,
   successMessage,
   
-  sending,
   canSend,
-  send,
+  handleSubmit,
 
   isCooldown,
   cooldownSec,
@@ -69,14 +69,16 @@ const {
   onInputChanged,
   onBlurValidate,
 } = useEmailActionForm();
-
+const { run, loading, isReady } = useAsyncAction()
 
 async function onSubmit() {
   try {
-    await send(async () => {
-      await authStore.requestPasswordResetAction({ email: fields.value.email });
-      successMessage.value = "재설정 링크를 전송했습니다. 메일함을 확인해주세요.";
-    });
+    await handleSubmit(async () => {
+      await run(async () => {
+        await authStore.requestPasswordReset({ email: fields.value.email });
+        successMessage.value = "재설정 링크를 전송했습니다. 메일함을 확인해주세요.";
+      });
+    })
   } catch (err: any) {
     console.error(err);
     const apiError = err?.response?.data?.error

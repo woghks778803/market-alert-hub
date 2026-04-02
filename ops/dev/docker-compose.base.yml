@@ -50,7 +50,7 @@ services:
     networks: [ mahnet ]
     # 개발 중 과부하 방지
     cpus: 1
-    mem_limit: 1g
+    mem_limit: 512m
 
   worker:
     build:
@@ -74,7 +74,7 @@ services:
     stdin_open: true
     networks: [ mahnet ]
     cpus: 0.80
-    mem_limit: 768m
+    mem_limit: 384m
 
   dispatcher:
     build:
@@ -98,7 +98,7 @@ services:
     stdin_open: true
     networks: [ mahnet ]
     cpus: 0.80
-    mem_limit: 768m
+    mem_limit: 384m
     # cpus: 0.50
     # mem_limit: 512m
 
@@ -124,7 +124,7 @@ services:
     stdin_open: true
     networks: [ mahnet ]
     cpus: 0.80
-    mem_limit: 768m
+    mem_limit: 384m
     # cpus: 0.50
     # mem_limit: 512m
 
@@ -147,7 +147,7 @@ services:
     restart: unless-stopped
     networks: [ mahnet ]
     cpus: 0.80
-    mem_limit: 768m
+    mem_limit: 512m
 
   stream_processor:
     build:
@@ -189,7 +189,7 @@ services:
       start_period: 10s
     networks: [ mahnet ]
     cpus: 0.80
-    mem_limit: 768m
+    mem_limit: 512m
 
   redis:
     image: redis:7-alpine

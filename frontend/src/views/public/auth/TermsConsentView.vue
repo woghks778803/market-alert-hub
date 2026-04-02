@@ -1,5 +1,5 @@
 <template>
-  <CenterCardShell :center="false">
+  <AppCenterCard :center="false">
     <div class="auth-head">
       <div class="auth-head__title">서비스 이용을 위해<br />약관에 동의해주세요</div>
       <div class="auth-head__desc">안전한 서비스 이용을 위해 필요한 항목입니다</div>
@@ -37,7 +37,7 @@
             <span class="terms-required">(필수)</span> 서비스 이용약관 동의
           </div>
         </div>
-        <v-btn variant="text" class="terms-link" @click="openLegal('terms')">보기</v-btn>
+        <v-btn variant="text" class="terms-link" @click="openLegal('service')">보기</v-btn>
       </div>
 
       <div class="terms-row">
@@ -74,17 +74,13 @@
         <v-btn variant="text" class="terms-link" @click="openLegal('marketing')">보기</v-btn>
       </div>
     </v-card>
-    
-    <div v-if="errorMessage" class="auth-error">
-      {{ errorMessage }}
-    </div>
 
     <v-btn
       block
       size="large"
       class="auth-btn auth-btn--muted"
       color="primary"
-      :disabled="!canProceed || loading"
+      :disabled="!canProceed"
       @click="onNext"
     >
       다음
@@ -96,20 +92,19 @@
       </v-btn>
     </div>
 
-  </CenterCardShell>
+  </AppCenterCard>
 </template>
 
 <script setup lang="ts">
 import { useRoute, useRouter } from "vue-router";
-import CenterCardShell from "@/components/CenterCardShell.vue";
+import AppCenterCard from "@/components/common/AppCenterCard.vue";
 import { useTermsConsent } from "@/composables/auth/useTermsConsent";
-import { useAsyncAction } from "@/composables/common/useAsyncAction";
+import { OAuthCode } from "@/services/auth.types"
 
-type LegalKind = "terms" | "privacy" | "marketing";
+type LegalKind = "service" | "privacy" | "marketing";
 
 const router = useRouter();
 const route = useRoute();
-const { loading, errorMessage } = useAsyncAction()
 const {
   agreeService,
   agreePrivacy,
@@ -123,9 +118,9 @@ const {
 
 function openLegal(kind: LegalKind) {
   const nameMap: Record<LegalKind, string> = {
-    terms: "LegalTerms",
-    privacy: "LegalPrivacy",
-    marketing: "LegalMarketing",
+    service: "TermsService",
+    privacy: "TermsPrivacy",
+    marketing: "TermsMarketing",
   };
 
   const targetName = nameMap[kind];
@@ -147,7 +142,7 @@ async function onNext() {
     return;
   }
 
-  if (source === "kakao") {
+  if (source === OAuthCode.KAKAO) {
     const params = new URLSearchParams({
       provider: source,
       agree_service: String(agreeService.value),

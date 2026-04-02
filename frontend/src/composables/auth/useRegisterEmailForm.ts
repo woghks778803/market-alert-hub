@@ -1,24 +1,5 @@
 import { computed, ref } from "vue"
-import { isEmail, minLength } from "@/utils/validate";
-
-function isStrongPassword(v: string): boolean {
-    const s = v.trim();
-    if (s.length < 8) return false;
-
-    const hasDigit = /\d/.test(s);
-    const hasLetter = /[A-Za-z]/.test(s);
-    const hasSpecial = /[^A-Za-z0-9]/.test(s);
-
-    return hasDigit && hasLetter && hasSpecial;
-}
-
-function isValidNickname(v: string): boolean {
-    const s = v.trim();
-    if (!s) return false;
-    if (s.length < 2) return false;
-    if (s.length > 20) return false;
-    return true;
-}
+import { isEmail, isStrongPassword, isValidNickname, minLength } from "@/utils/validate"
 
 type FieldErrors = {
     email: string | null;
@@ -33,7 +14,6 @@ function emptyErrors(): FieldErrors {
 
 export function useRegisterEmailForm() {
     const errorMessage = ref<string | null>(null);
-    const submitting = ref(false);
 
     const email = ref("")
     const nickname = ref("")
@@ -99,22 +79,17 @@ export function useRegisterEmailForm() {
         if (!pc.trim()) return false;
         if (p !== pc) return false;
 
-        return submitting.value === false;
+        return true
     });
 
-    async function submit(onSuccess: () => Promise<void> | void) {
+    async function handleSubmit(onSuccess: () => Promise<void> | void) {
         if (!canSubmit.value) return
         fieldErrors.value = emptyErrors();
         errorMessage.value = null;
 
         if (!validate()) return;
 
-        submitting.value = true;
-        try {
-            await onSuccess();
-        } finally {
-            submitting.value = false;
-        }
+        await onSuccess();
     }
 
     return {
@@ -129,8 +104,7 @@ export function useRegisterEmailForm() {
         validate,
 
         errorMessage,
-        submitting,
-        submit,
+        handleSubmit,
         canSubmit,
         onInputChanged,
         onBlurValidate,

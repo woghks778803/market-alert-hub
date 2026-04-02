@@ -1,23 +1,12 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
-import type { LoginRequest, RegisterRequest, VerifyTokenRequest, ResetPasswordRequest, ChangeEmailRequest } from "@/api/auth.api";
-import {
-    reissue as reissueService,
-    login as loginService,
-    register as registerService,
-    resendEmailVerification as resendEmailVerificationService,
-    requestPasswordReset as requestPasswordResetService,
-    logout as logoutService,
-    deactivate as deactivateService,
-    verifyEmail as verifyEmailService,
-    verifyPasswordReset as verifyPasswordResetService,
-    resetPassword as resetPasswordService,
-    changeEmail as changeEmailService
-} from "@/services/auth.service";
+import type { TokenDto, ChangeEmailQuery, LoginQuery, RegisterQuery, ResetPasswordQuery, ChangePasswordQuery, VerifyTokenQuery } from "@/services/auth.types"
+import { LS_KEY } from "@/services/auth.types"
+import * as authSevice from "@/services/auth.service";
 
 import { useUserStore } from "@/stores/user.store";
 
-const LS_KEY = "access_token";
+
 
 export const useAuthStore = defineStore("auth", () => {
     const accessToken = ref<string | null>(localStorage.getItem(LS_KEY));
@@ -38,55 +27,73 @@ export const useAuthStore = defineStore("auth", () => {
         localStorage.removeItem(LS_KEY);
     }
 
-    async function reissueAction() {
-        const token = await reissueService();
-        setToken(token);
-        return token;
+
+    /*
+        Action
+    */
+    async function reissue() {
+        const token = await authSevice.reissue();
+        setToken(token.accessToken);
+        return token.accessToken;
     }
 
-    async function loginAction(payload: LoginRequest): Promise<string> {
-        const token = await loginService(payload);
-        setToken(token);
-        return token;
+    async function login(payload: LoginQuery): Promise<string> {
+        const token = await authSevice.login(payload);
+        setToken(token.accessToken);
+        return token.accessToken;
     }
 
-    async function registerAction(payload: RegisterRequest): Promise<string | null> {
-        const token = await registerService(payload);
-        if (token) setToken(token);
-        return token;
+    async function register(payload: RegisterQuery): Promise<string | null> {
+        const token = await authSevice.register(payload);
+        if (token) setToken(token.accessToken);
+        return token.accessToken;
     }
 
-    async function verifyEmailAction(payload: VerifyTokenRequest): Promise<void> {
-        await verifyEmailService(payload);
+    // async function verifyEmail(payload: VerifyTokenQuery): Promise<void> {
+    //     await authSevice.verifyEmail(payload);
+    // }
+
+    async function verifyPasswordReset(payload: VerifyTokenQuery): Promise<void> {
+        await authSevice.verifyPasswordReset(payload);
     }
 
-    async function verifyPasswordResetAction(payload: VerifyTokenRequest): Promise<void> {
-        await verifyPasswordResetService(payload);
+    async function resendEmailVerification(): Promise<void> {
+        await authSevice.resendEmailVerification();
     }
 
-    async function resendEmailVerificationAction(): Promise<void> {
-        await resendEmailVerificationService();
+    async function requestPasswordReset(payload: { email: string }): Promise<void> {
+        await authSevice.requestPasswordReset(payload);
     }
 
-    async function requestPasswordResetAction(payload: { email: string }): Promise<void> {
-        await requestPasswordResetService(payload);
+    async function resetPassword(payload: ResetPasswordQuery): Promise<void> {
+        const userStore = useUserStore()
+
+        await authSevice.resetPassword(payload);
+
+        clearToken();
+        userStore.clearMe()
     }
 
-    async function resetPasswordAction(payload: ResetPasswordRequest): Promise<void> {
-        await resetPasswordService(payload);
+    async function changePassword(payload: ChangePasswordQuery): Promise<void> {
+        const userStore = useUserStore()
+
+        await authSevice.changePassword(payload);
+
+        clearToken();
+        userStore.clearMe()
     }
 
-    async function changeEmailAction(payload: ChangeEmailRequest): Promise<string | null> {
-        const token = await changeEmailService(payload);
-        setToken(token);
-        return token;
+    async function changeEmail(payload: ChangeEmailQuery): Promise<string | null> {
+        const token = await authSevice.changeEmail(payload);
+        setToken(token.accessToken);
+        return token.accessToken;
     }
 
-    async function logoutAction(): Promise<void> {
+    async function logout(): Promise<void> {
         const userStore = useUserStore()
 
         try {
-            await logoutService();
+            await authSevice.logout();
         } catch (_) {
             // 무조건 무시
         } finally {
@@ -95,11 +102,11 @@ export const useAuthStore = defineStore("auth", () => {
         }
     }
 
-    async function deactivateAction(): Promise<void> {
+    async function deactivate(): Promise<void> {
         const userStore = useUserStore()
 
         try {
-            await deactivateService();
+            await authSevice.deactivate();
         } catch (_) {
             // 무조건 무시
         } finally {
@@ -116,16 +123,17 @@ export const useAuthStore = defineStore("auth", () => {
         setToken,
         clearToken,
 
-        reissueAction,
-        loginAction,
-        registerAction,
-        resendEmailVerificationAction,
-        requestPasswordResetAction,
-        resetPasswordAction,
-        changeEmailAction,
-        logoutAction,
-        deactivateAction,
-        verifyEmailAction,
-        verifyPasswordResetAction,
+        reissue,
+        login,
+        register,
+        resendEmailVerification,
+        requestPasswordReset,
+        resetPassword,
+        changePassword,
+        changeEmail,
+        logout,
+        deactivate,
+        // verifyEmail,
+        verifyPasswordReset,
     };
 });

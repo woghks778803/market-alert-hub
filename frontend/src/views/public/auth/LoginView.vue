@@ -1,5 +1,5 @@
 <template>
-  <CenterCardShell>
+  <AppCenterCard>
     <v-alert
       v-if="errorMessage"
       type="error"
@@ -53,8 +53,8 @@
         variant="flat"
         block
         size="large"
-        :loading="submitting"
-        :disabled="!canSubmit"
+        :loading="loading"
+        :disabled="!isReady || !canSubmit"
       >
         로그인
       </v-btn>
@@ -88,17 +88,19 @@
         비밀번호를 잊으셨나요?
       </button>
     </div>
-  </CenterCardShell>
+  </AppCenterCard>
 </template>
 
 <script setup lang="ts">
-import CenterCardShell from "@/components/CenterCardShell.vue"
+import AppCenterCard from "@/components/common/AppCenterCard.vue"
 import { useRoute, useRouter } from "vue-router";
 import { useLoginForm } from "@/composables/auth/useLoginForm";
+import { useAsyncAction } from "@/composables/common/useAsyncAction";
 import { isEmailVerifiedFromToken } from "@/utils/jwt"
 import { useAuthStore } from "@/stores/auth.store";
-import { mapCommonError } from "@/api/error/errorMapper"
-import { mapLoginError } from "./loginErrorMapper"
+import { mapCommonError } from "@/composables/error/error.mapper"
+import { mapLoginError } from "@/composables/error/loginError.mapper"
+import { OAuthCode } from "@/services/auth.types"
 
 const router = useRouter();
 const route = useRoute();
@@ -111,14 +113,13 @@ const {
   fieldErrors,
   errorMessage,
 
-  submitting,
   canSubmit,
-  submit,
+  handleSubmit,
 
   onInputChanged,
   onBlurValidate,
 } = useLoginForm();
-
+const { run, loading, isReady } = useAsyncAction()
 
 
 function getNextPath(): string | null {
@@ -128,23 +129,25 @@ function getNextPath(): string | null {
 
 async function onSubmit() {
   try {
-    await submit(async () => {
-      const token = await authStore.loginAction({
-        email: email.value,
-        password: password.value,
+    await handleSubmit(async () => {
+      await run(async () => {
+        const token = await authStore.login({
+          email: email.value,
+          password: password.value,
+        });
+
+        const next = getNextPath();
+        if (!isEmailVerifiedFromToken(token)) {
+          await router.push({
+            name: "VerifyEmailSent",
+            query: { email: email.value, ...(next ? { next } : {}) },
+          }).catch(() => {});
+          return;
+        }
+
+        if (next) await router.push(next).catch(() => {});
+        else await router.push({ name: "Home" }).catch(() => {});
       });
-
-      const next = getNextPath();
-      if (!isEmailVerifiedFromToken(token)) {
-        await router.push({
-          name: "VerifyEmailSent",
-          query: { email: email.value, ...(next ? { next } : {}) },
-        }).catch(() => {});
-        return;
-      }
-
-      if (next) await router.push(next).catch(() => {});
-      else await router.push({ name: "Home" }).catch(() => {});
     });
   } catch (err: any) {
     console.error("Login error:", err);
@@ -174,7 +177,7 @@ function goForgotPassword() {
 
 function onKakaoLogin() {
   const params = new URLSearchParams({
-    provider: "kakao",
+    provider: OAuthCode.KAKAO,
   })
 
   window.location.href =

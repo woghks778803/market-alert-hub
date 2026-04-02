@@ -1,5 +1,5 @@
 <template>
-  <CenterCardShell :center="true">
+  <AppCenterCard :center="true">
     <template v-if="viewMode === 'default'">
       <div class="verify-cb-icon verify-cb-icon--processing">
         <v-progress-circular indeterminate size="56" width="5" color="primary" />
@@ -29,14 +29,14 @@
   
       <div class="sle-help">문제가 계속 발생하나요?</div>
     </template>
-  </CenterCardShell>
+  </AppCenterCard>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue"
 import { useRoute, useRouter } from "vue-router"
-import CenterCardShell from "@/components/CenterCardShell.vue"
-import { mapOauthError } from "./oauthErrorMapper"
+import AppCenterCard from "@/components/common/AppCenterCard.vue"
+import { mapOauthError } from "@/composables/error/oauthError.mapper"
 import { useMode } from "@/composables/common/useMode"
 import { useAsyncAction } from "@/composables/common/useAsyncAction";
 import { useAuthStore } from "@/stores/auth.store";
@@ -45,14 +45,14 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore();
 const { mode, setMode } = useMode()
-const { run, errorMessage } = useAsyncAction()
+const { run } = useAsyncAction()
 const viewMode = computed(() => mode.value)
+const errorMessage = ref<string | null>(null)
 
 onMounted(() => {
     fetchParam();
 });
 
-// const errorMessage = ref("");
 
 const fetchParam = (async () => {
   const getQueryString = (val: any) => Array.isArray(val) ? val[0] : (val ?? "");
@@ -63,13 +63,13 @@ const fetchParam = (async () => {
     //   ? route.query.target[0] 
     //   : (route.query.target ?? "");
 
-  console.log({code, target})
-
   if (code == "ok") {
     setMode("default")
+    resetMessages()
+    
     try{
       await run(async () => {
-        await authStore.reissueAction()
+        await authStore.reissue()
         await router.replace({ name: "VerifyEmail" })
       })
     } catch (err: any){
@@ -86,6 +86,10 @@ const fetchParam = (async () => {
     }
   }
 })
+
+function resetMessages() {
+  errorMessage.value = null
+}
 
 function retry() {
   router.push({ name: "Login" }).catch(() => {})

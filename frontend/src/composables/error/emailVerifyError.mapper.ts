@@ -26,7 +26,7 @@ export function mapEmailVerifyError(error?: ApiError | null): EmailVerifyErrorRe
     }
 
     // 쿨다운
-    if (error.code === "rate_limited" && error.target === "resend_password_reset") {
+    if (error.code === "rate_limited" && error.target === "resend_email_verification") {
         const sec = pickCooldownSec(error.details)
         if (sec !== null) {
             return { kind: "cooldown", cooldownSec: sec, message: "잠시 후 다시 시도해주세요." }

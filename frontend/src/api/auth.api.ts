@@ -1,6 +1,17 @@
 import { http } from "./http"
 import type { Envelope, SimpleOk } from "./types"
 
+export type TokenInfo = {
+    access_token: string
+    token_type: "bearer" | string
+    // user_id?: number
+}
+
+export type ChangePasswordRequest = {
+    current_password: string,
+    new_password: string,
+}
+
 export type ResetPasswordRequest = {
     token: string,
     new_password: string,
@@ -12,13 +23,6 @@ export type VerifyTokenRequest = {
 
 export type ChangeEmailRequest = {
     new_email: string
-}
-
-export type OauthStartRequest = {
-    provider: string;
-    agree_service: boolean;
-    agree_privacy: boolean;
-    agree_marketing: boolean;
 }
 
 export type LoginRequest = {
@@ -37,23 +41,23 @@ export type RegisterRequest = {
     agree_marketing: boolean;
 }
 
-export type TokenOut = {
-    access_token: string
-    token_type: "bearer" | string
-    // user_id?: number
+export type OauthCallbackRequest = {
+    code?: string;
+    state?: string;
+    provider?: string;
 }
 
 
 export const authApi = {
     // POST /auth/reissue
     async reissue() {
-        const { data } = await http.post<Envelope<TokenOut>>("/auth/reissue");
+        const { data } = await http.post<Envelope<TokenInfo>>("/auth/reissue");
         return data;
     },
 
     // POST /auth/login
     async login(payload: LoginRequest) {
-        const { data } = await http.post<Envelope<TokenOut>>("/auth/login", payload)
+        const { data } = await http.post<Envelope<TokenInfo>>("/auth/login", payload)
         return data
     },
 
@@ -71,7 +75,7 @@ export const authApi = {
 
     // POST /auth/register 
     async register(payload: RegisterRequest) {
-        const { data } = await http.post<Envelope<TokenOut>>("/auth/register", payload);
+        const { data } = await http.post<Envelope<TokenInfo>>("/auth/register", payload);
         return data;
     },
 
@@ -81,15 +85,15 @@ export const authApi = {
         return data;
     },
 
-    // POST /auth/verify-email 
-    async verifyEmail(payload: VerifyTokenRequest) {
-        const { data } = await http.post<Envelope<SimpleOk>>("/auth/verify-email", payload);
-        return data;
-    },
+    // GET /auth/verify-email 
+    // async verifyEmail(params: VerifyTokenRequest) {
+    //     const { data } = await http.get<Envelope<SimpleOk>>("/auth/verify-email", { params });
+    //     return data;
+    // },
 
     // POST /auth/change-email
     async changeEmail(payload: ChangeEmailRequest) {
-        const { data } = await http.post<Envelope<TokenOut>>("/auth/change-email", payload);
+        const { data } = await http.post<Envelope<TokenInfo>>("/auth/change-email", payload);
         return data;
     },
 
@@ -99,8 +103,14 @@ export const authApi = {
         return data;
     },
 
-    // POST /auth/change-password
+    // POST /auth/reset-password
     async resetPassword(payload: ResetPasswordRequest) {
+        const { data } = await http.post<Envelope<SimpleOk>>("/auth/reset-password", payload);
+        return data;
+    },
+
+    // POST /auth/change-password
+    async changePassword(payload: ChangePasswordRequest) {
         const { data } = await http.post<Envelope<SimpleOk>>("/auth/change-password", payload);
         return data;
     },
@@ -112,12 +122,10 @@ export const authApi = {
     },
 
     // GET /auth/oauth/callback
-    async oauthCallback(code: string, state: string) {
-        const { data } = await http.get<Envelope<TokenOut>>(
+    async oauthCallback(params?: OauthCallbackRequest) {
+        const { data } = await http.get<Envelope<TokenInfo>>(
             "/auth/oauth/callback",
-            {
-                params: { code, state, provider: "kakao" }
-            }
+            { params }
         )
         return data
     },

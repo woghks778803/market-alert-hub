@@ -1,71 +1,125 @@
 import {
-    authApi,
-    type RegisterRequest, type LoginRequest, type VerifyTokenRequest, type ResetPasswordRequest, type ChangeEmailRequest
+    authApi
 } from "@/api/auth.api"
 
-export async function verifyEmail(payload: VerifyTokenRequest) {
-    const env = await authApi.verifyEmail(payload)
-    const result = env?.success
-    if (!result) {
-        throw new Error("verify_email_failed")
+import { toTokenDto, toResetPasswordRequest, toChangePasswordRequest, toVerifyTokenRequest, toChangeEmailRequest, toLoginRequest, toRegisterRequest } from "@/services/auth.mapper"
+import type { TokenDto, ChangeEmailQuery, LoginQuery, RegisterQuery, ResetPasswordQuery, ChangePasswordQuery, VerifyTokenQuery } from "@/services/auth.types"
+
+// TODO: ApiError → DomainError 변환 필요
+
+// export async function verifyEmail(payload: VerifyTokenQuery): Promise<void> {
+//     const env = await authApi.verifyEmail(toVerifyTokenRequest(payload))
+
+//     if (!env.success) {
+//         throw env.error ?? new Error("verify_email_failed")
+//     }
+// }
+
+/** verify password reset */
+export async function verifyPasswordReset(payload: VerifyTokenQuery): Promise<void> {
+    const env = await authApi.verifyPasswordReset(toVerifyTokenRequest(payload))
+
+    if (!env.success) {
+        throw env.error ?? new Error("verify_password_reset_failed")
     }
 }
 
-export async function verifyPasswordReset(payload: VerifyTokenRequest) {
-    const env = await authApi.verifyPasswordReset(payload)
-    const result = env?.success
-    if (!result) {
-        throw new Error("verify_password_reset_failed")
+/** resend email */
+export async function resendEmailVerification(): Promise<void> {
+    const env = await authApi.resendEmailVerification()
+
+    if (!env.success) {
+        throw env.error ?? new Error("resend_email_failed")
     }
 }
 
-export async function resendEmailVerification() {
-    await authApi.resendEmailVerification()
+/** request password reset */
+export async function requestPasswordReset(payload: { email: string }): Promise<void> {
+    const env = await authApi.requestPasswordReset(payload)
+
+    if (!env.success) {
+        throw env.error ?? new Error("request_password_reset_failed")
+    }
 }
 
-export async function requestPasswordReset(payload: { email: string }) {
-    await authApi.requestPasswordReset(payload)
+/** reset password */
+export async function resetPassword(payload: ResetPasswordQuery): Promise<void> {
+    const env = await authApi.resetPassword(toResetPasswordRequest(payload))
+
+    if (!env.success) {
+        throw env.error ?? new Error("reset_password_failed")
+    }
 }
 
-export async function resetPassword(payload: ResetPasswordRequest) {
-    await authApi.resetPassword(payload)
+/** reset password */
+export async function changePassword(payload: ChangePasswordQuery): Promise<void> {
+    const env = await authApi.changePassword(toChangePasswordRequest(payload))
+
+    if (!env.success) {
+        throw env.error ?? new Error("change_password_failed")
+    }
 }
 
-export async function logout() {
-    await authApi.logout()
+/** logout */
+export async function logout(): Promise<void> {
+    const env = await authApi.logout()
+
+    if (!env.success) {
+        throw env.error ?? new Error("logout_failed")
+    }
 }
 
-export async function deactivate() {
-    await authApi.deactivate()
+/** deactivate */
+export async function deactivate(): Promise<void> {
+    const env = await authApi.deactivate()
+
+    if (!env.success) {
+        throw env.error ?? new Error("deactivate_failed")
+    }
 }
 
-export async function changeEmail(payload: ChangeEmailRequest) {
-    const env = await authApi.changeEmail(payload)
-    const token = env?.data?.access_token
-    if (!token) throw new Error("invalid_refresh_response")
-    return token
+/** change email */
+export async function changeEmail(payload: ChangeEmailQuery): Promise<TokenDto> {
+    const env = await authApi.changeEmail(toChangeEmailRequest(payload))
+
+    if (!env.success || !env.data) {
+        throw env.error ?? new Error("invalid_change_email_response")
+    }
+
+    return toTokenDto(env.data)
 }
 
-export async function reissue() {
+/** reissue */
+export async function reissue(): Promise<TokenDto> {
     const env = await authApi.reissue()
-    const token = env?.data?.access_token
-    if (!token) throw new Error("invalid_refresh_response")
-    return token
+
+    if (!env.success || !env.data) {
+        throw env.error ?? new Error("invalid_reissue_response")
+    }
+
+    return toTokenDto(env.data)
 }
 
-export async function login(payload: LoginRequest) {
-    const env = await authApi.login(payload)
-    const token = env?.data?.access_token
-    if (!token) throw new Error("invalid_login_response")
-    return token
+/** login */
+export async function login(payload: LoginQuery): Promise<TokenDto> {
+    const env = await authApi.login(toLoginRequest(payload))
+
+    if (!env.success || !env.data) {
+        throw env.error ?? new Error("invalid_login_response")
+    }
+
+    return toTokenDto(env.data)
 }
 
-export async function register(payload: RegisterRequest) {
-    const env = await authApi.register(payload)
-    const token = env?.data?.access_token
-    if (!token) throw new Error("invalid_register_response")
-    return token
-}
+/** register */
+export async function register(payload: RegisterQuery): Promise<TokenDto> {
+    const env = await authApi.register(toRegisterRequest(payload))
 
+    if (!env.success || !env.data) {
+        throw env.error ?? new Error("invalid_register_response")
+    }
+
+    return toTokenDto(env.data)
+}
 
 

@@ -1,5 +1,5 @@
 <template>
-  <CenterCardShell>
+  <AppCenterCard>
     <div class="auth-head">
       <div class="auth-head__title">{{ title }}</div>
       <div class="auth-head__desc">
@@ -34,11 +34,11 @@
     <div class="auth-footer">
       <slot name="footer" />
     </div>
-  </CenterCardShell>
+  </AppCenterCard>
 </template>
 
 <script setup lang="ts">
-import CenterCardShell from "@/components/CenterCardShell.vue"
+import AppCenterCard from "@/components/common/AppCenterCard.vue"
 defineProps<{
   title: string
   successMessage?: string | null

@@ -1,5 +1,5 @@
 <template>
-  <CenterCardShell center>
+  <AppCenterCard center>
     <div class="nf-code">404</div>
 
     <div class="nf-title">페이지를 찾을 수 없어요</div>
@@ -26,12 +26,12 @@
     </button>
 
     <div class="nf-foot">문제가 계속 발생하면 다시 시도해주세요.</div>
-  </CenterCardShell>
+  </AppCenterCard>
 </template>
 
 <script setup lang="ts">
 import { useRouter } from "vue-router"
-import CenterCardShell from "@/components/CenterCardShell.vue"
+import AppCenterCard from "@/components/common/AppCenterCard.vue"
 
 const router = useRouter()
 
@@ -42,7 +42,7 @@ function goHome() {
 
 function goBack() {
   // 히스토리 없을 때를 대비해 홈으로 폴백
-  if (window.history.length > 1) router.back()
+  if (window.history.state?.back) router.back()
   else goHome()
 }
 </script>

@@ -1,5 +1,5 @@
 <template>
-  <CenterCardShell>
+  <AppCenterCard>
     <div class="auth-head">
       <div class="auth-head__title">이메일로 가입</div>
       <div class="auth-head__desc">정보를 입력하면 인증 이메일을 보내드립니다</div>
@@ -93,8 +93,8 @@
         size="large"
         variant="flat"
         color="primary"
-        :disabled="!canSubmit || !canProceed"
-        :loading="submitting"
+        :disabled="!canSubmit || !canProceed || !isReady"
+        :loading="loading"
       >
         인증메일 보내기
       </v-btn>
@@ -104,24 +104,26 @@
       <span class="auth-bottom__text">이미 계정이 있나요?</span>
       <button class="auth-link" type="button" @click="goLogin">로그인</button>
     </div>
-  </CenterCardShell>
+  </AppCenterCard>
 </template>
 
 <script setup lang="ts">
 import { onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import CenterCardShell from "@/components/CenterCardShell.vue"
+import AppCenterCard from "@/components/common/AppCenterCard.vue"
 import { useRegisterEmailForm } from "@/composables/auth/useRegisterEmailForm";
+import { useAsyncAction } from "@/composables/common/useAsyncAction";
 import { useTermsConsent } from "@/composables/auth/useTermsConsent";
 import { useAuthStore } from "@/stores/auth.store";
-import { mapCommonError } from "@/api/error/errorMapper"
-import { mapRegisterError } from "./registerErrorMapper"
+import { mapCommonError } from "@/composables/error/error.mapper"
+import { mapRegisterError } from "@/composables/error/registerError.mapper"
 
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
 
 const { canProceed, consentPayload, resetTermsConsent } = useTermsConsent();
+const { run, loading, isReady } = useAsyncAction()
 const {
   email,
   nickname,
@@ -133,9 +135,8 @@ const {
   fieldErrors,
   errorMessage,
 
-  submitting,
   canSubmit,
-  submit,
+  handleSubmit,
 
   onInputChanged,
   onBlurValidate,
@@ -161,22 +162,23 @@ async function onSubmit() {
   }
 
   try{
-    await submit(async () => {
-      const payload = {
-        email: email.value,
-        nickname: nickname.value,
-        password: password.value,
-        ...consentPayload.value,
-      };
-      await authStore.registerAction(payload)
-    });
+    await handleSubmit(async () => {
+      await run(async () => {
+        const payload = {
+          email: email.value,
+          nickname: nickname.value,
+          password: password.value,
+          ...consentPayload.value,
+        };
+        await authStore.register(payload)
+      });
 
-    resetTermsConsent()
-    await router.push({
-      name: "VerifyEmailSent",
-      query: { email: email.value },
-    }).catch(() => {})
-
+      resetTermsConsent()
+      await router.push({
+        name: "VerifyEmailSent",
+        query: { email: email.value },
+      }).catch(() => {})
+    })
   }catch (err: any) {
     const apiError = err?.response?.data?.error
 

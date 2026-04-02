@@ -1,5 +1,5 @@
 <template>
-  <CenterCardShell center>
+  <AppCenterCard center>
     <div class="verify-title">인증 메일을 보냈어요</div>
 
     <div class="verify-desc">
@@ -22,8 +22,8 @@
       size="large"
       variant="outlined"
       color="primary"
-      :loading="sending"
-      :disabled="!canResend || isCooldown"
+      :loading="loading"
+      :disabled="!isReady || isCooldown"
       @click="onSubmit"
     >
       <template v-if="isCooldown">
@@ -37,34 +37,33 @@
     <button class="auth-link verify-login" type="button" @click="goLogin">
       다른 계정으로 로그인
     </button>
-  </CenterCardShell>
+  </AppCenterCard>
 </template>
 
 <script setup lang="ts">
 import { onMounted } from "vue";
-import CenterCardShell from "@/components/CenterCardShell.vue"
-import { useRouter, useRoute } from "vue-router"
+import AppCenterCard from "@/components/common/AppCenterCard.vue"
+import { useRouter } from "vue-router"
 import { useCooldown } from "@/composables/common/useCooldown"
 import { useUserStore } from "@/stores/user.store";
 import { useAuthStore } from "@/stores/auth.store";
 import { useVerifyEmailSent } from "@/composables/auth/useVerifyEmailSent";
 import { useAsyncAction } from "@/composables/common/useAsyncAction";
-import { mapCommonError } from "@/api/error/errorMapper"
-import { mapVerifyEmailSentError } from "./verifyEmailSentErrorMapper"
+import { mapCommonError } from "@/composables/error/error.mapper"
+import { mapVerifyEmailSentError } from "@/composables/error/verifyEmailSentError.mapper"
 
 const router = useRouter()
-const route = useRoute()
 const userStore = useUserStore();
 const authStore = useAuthStore();
-const { successMessage, errorMessage, canResend, send, sending } = useVerifyEmailSent(route);
-const { run } = useAsyncAction()
+const { successMessage, errorMessage, resetMessages } = useVerifyEmailSent();
+const { run, loading, isReady } = useAsyncAction()
 const { cooldownSec, isCooldown, startCooldown } =
   useCooldown();
 
 onMounted(async () => {
   try{
     await run(async () => {
-      await userStore.fetchMeAction()
+      await userStore.fetchMe()
     })
   } catch (err: any){
     userStore.clearMe()
@@ -72,11 +71,12 @@ onMounted(async () => {
 });
 
 async function onSubmit() {
-  if (isCooldown.value || !canResend.value) return;
+  if (isCooldown.value || !isReady.value) return;
 
+  resetMessages()
   try {
-    await send(async () => {
-      await authStore.resendEmailVerificationAction();
+    await run(async () => {
+      await authStore.resendEmailVerification();
       successMessage.value = "인증 메일이 전송되었습니다. 메일함을 확인해주세요.";
     });
   } catch (err: any) {
@@ -91,7 +91,7 @@ async function onSubmit() {
       }
 
       if (r.kind === "logout") {
-        await authStore.logoutAction()
+        await authStore.logout()
         await router.push({ name: "Login" }).catch(() => {})
         return
       }
@@ -110,7 +110,7 @@ async function onSubmit() {
 }
 
 async function goLogin() {
-  await authStore.logoutAction()
+  await authStore.logout()
   router.push({ name: "Login" }).catch(() => {})
 }
 </script>
