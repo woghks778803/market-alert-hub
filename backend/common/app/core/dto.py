@@ -20,6 +20,10 @@ class ServiceConfigBag:
     oauth_state_sec: int
     # 이메일 재전송 쿨다운 초
     email_resend_cooldown_sec: int
+    # 공지 조회 쿨다운 초
+    notice_view_cooldown_sec: int
+    # ip 요청 쿨다운 초
+    ip_rate_cooldown_sec: int
     # 토큰/세션 등 서비스용 상수
     refresh_token_minutes: int
     access_token_minutes: int

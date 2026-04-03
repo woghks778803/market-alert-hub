@@ -7,7 +7,7 @@ from app.infra.db.repository.protocol.provider_repo import ProviderRepo
 from app.infra.db.repository.protocol.alert_repo import AlertRepo
 from app.infra.db.repository.protocol.user_repo import UserRepo
 from app.infra.db.repository.protocol.outbox_repo import OutboxRepo
-
+from app.infra.db.repository.protocol.support_repo import SupportRepo
 
 @runtime_checkable
 class UnitOfWork(Protocol):
@@ -36,3 +36,5 @@ class UnitOfWork(Protocol):
     def providers(self) -> ProviderRepo: ...
     @property
     def outboxs(self) -> OutboxRepo: ...
+    @property
+    def supports(self) -> SupportRepo: ...

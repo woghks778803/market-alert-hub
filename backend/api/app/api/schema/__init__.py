@@ -6,9 +6,10 @@ from . import market as MarketSchema
 from . import watchlist as WatchlistSchema
 from . import seed as SeedSchema
 from . import channel as ChannelSchema
+from . import support as SupportSchema
 
 __all__ = [
     "UserSchema", "AuthSchema", "ErrorSchema",
     "AlertSchema", "MarketSchema", "WatchlistSchema",
-    "SeedSchema", "ChannelSchema"
+    "SeedSchema", "ChannelSchema", "SupportSchema",
 ]

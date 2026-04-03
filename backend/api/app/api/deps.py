@@ -6,7 +6,6 @@ from fastapi import Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from app.api.schema import AuthSchema
-from app.core import dto as CoreDTO
 from app.core.constants import UserRole
 from app.domain.shared.errors import AuthError, PermissionError
 from app.service.factory import ServiceFactory
@@ -75,6 +74,30 @@ def get_current_user(
         email_verified=payload.get("ev"),
     )
 
+def get_optional_user(
+    svcs: ServiceFactory = Depends(get_services),
+    creds: HTTPAuthorizationCredentials | None = Depends(_bearer),
+) -> AuthSchema.CurrentUser | None:
+
+    if not creds or creds.scheme.lower() != "bearer":
+        return None
+
+    try:
+        payload = svcs.jwt.decode_token(creds.credentials)
+
+        user_id = int(payload["sub"])
+        role = UserRole(payload["role"])
+
+        return AuthSchema.CurrentUser(
+            id=user_id,
+            role=role,
+            email_enrolled=payload.get("ee"),
+            email_verified=payload.get("ev"),
+        )
+
+    except Exception:
+        # raise 하지 말고 None
+        return None
 
 def require_admin(user=Depends(get_current_user)):
     if getattr(user, "role", None) != UserRole.ADMIN:

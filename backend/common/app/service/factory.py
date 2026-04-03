@@ -13,7 +13,7 @@ from .watchlist_service import WatchlistService
 from .channel_service import ChannelService
 from .email_service import EmailService
 from .outbox_service import OutboxService
-
+from .support_service import SupportService
 
 # TODO: 서비스가 20개 이상으로 증가할 경우 서비스 팩토리를 각 서비스의 팩토리로 분리 필요
 class ServiceFactory:
@@ -147,4 +147,12 @@ class ServiceFactory:
         return OutboxService(
             uow_factory=self._uow,
             hmac=self.hmac,
+        )
+
+    @cached_property
+    def supports(self) -> SupportService:
+        return SupportService(
+            uow_factory=self._uow,
+            cooldown=self.cooldown,
+            config=self._config,
         )

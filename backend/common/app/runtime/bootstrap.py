@@ -381,6 +381,8 @@ def build_service_config_bag() -> CoreDTO.ServiceConfigBag:
     return CoreDTO.ServiceConfigBag(
         oauth_state_sec=settings.OAUTH_STATE_TTL_SEC,
         email_resend_cooldown_sec=settings.EMAIL_RESEND_COOLDOWN_SEC,
+        notice_view_cooldown_sec=settings.NOTICE_VIEW_COOLDOWN_SEC,
+        ip_rate_cooldown_sec=settings.IP_RATE_COOLDOWN_SEC,
         access_token_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
         refresh_token_minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES,
         email_token_minutes=settings.EMAIL_TOKEN_EXPIRE_MINUTES,

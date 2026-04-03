@@ -40,9 +40,13 @@ class ExchangeCode(str, enum.Enum):
     BITHUMB = "BITHUMB"
 
 
-class OAutheCode(str, enum.Enum):
+class OAuthCode(str, enum.Enum):
     KAKAO = "KAKAO"
 
+class OAuthResultType(str, enum.Enum):
+    TERMS_REQUIRED = "terms_required"
+    ERROR = "error"
+    SUCCESS = "success"
 
 class MarketSort(str, enum.Enum):
     VOLUME_DESC = "volume_desc"
@@ -158,3 +162,16 @@ class AssetType(str, enum.Enum):
 class AlertScope(str, enum.Enum):
     SINGLE = "single"
     CROSS = "cross"
+
+
+class NoticeCategory(str, enum.Enum):
+    UPDATE = "update"
+    MAINTENANCE = "maintenance"
+    NOTICE = "notice"
+
+
+class FAQCategory(str, enum.Enum):
+    GENERAL = "general"
+    ACCOUNT = "account"
+    PAYMENT = "payment"
+    NOTIFICATION = "notification"

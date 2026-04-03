@@ -63,6 +63,12 @@ class Settings(BaseSettings):
     # --- email ---
     EMAIL_RESEND_COOLDOWN_SEC: int = 60
 
+    # --- notice ---
+    NOTICE_VIEW_COOLDOWN_SEC: int = 86400
+
+    # --- ip ---
+    IP_RATE_COOLDOWN_SEC: int = 600
+
     # --- OAuth ---
     OAUTH_STATE_TTL_SEC: int = 300
 

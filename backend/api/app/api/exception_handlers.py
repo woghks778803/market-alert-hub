@@ -139,7 +139,7 @@ async def unified_exception_handler(request: Request, exc: Exception):
         sentry_sdk.capture_exception(exc)
 
     trace_id = get_trace_id()
-    print(f"unified_exception_handler trace_id={trace_id} exc={exc!r}")
+    # print(f"unified_exception_handler trace_id={trace_id} exc={exc!r}")
     # 1) 예외 타입을 API 맥락에서 해석해 ErrorSpec으로 변환
     if isinstance(exc, RequestValidationError):
         spec = _spec_from_request_validation_error(exc, trace_id)

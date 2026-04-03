@@ -23,6 +23,8 @@ from .watchlist_item import WatchlistItem as WatchlistItemModel
 from .outbox import Outbox as OutboxModel
 from .outbox_attempt import OutboxAttempt as OutboxAttemptModel
 from .email_verification import EmailVerification as EmailVerificationModel
+from .faq import FAQ as FAQModel
+from .notice import Notice as NoticeModel
 
 __all__ = [
     "UserModel",
@@ -48,4 +50,6 @@ __all__ = [
     "WatchlistItemModel",
     "OutboxModel",
     "OutboxAttemptModel",
+    "FAQModel",
+    "NoticeModel",
 ]

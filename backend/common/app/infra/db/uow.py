@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session as DbSession, sessionmaker
 from sqlalchemy.exc import IntegrityError
 from app.domain.shared.uow import UnitOfWork as UnitOfWorkPort
 from app.infra.db.utils import is_mysql_duplicate_key
+
 from app.infra.db.repository.protocol.user_repo import UserRepo
 from app.infra.db.repository.protocol.session_repo import SessionRepo
 from app.infra.db.repository.protocol.alert_repo import AlertRepo
@@ -11,6 +12,7 @@ from app.infra.db.repository.protocol.watchlist_repo import WatchlistRepo
 from app.infra.db.repository.protocol.channel_repo import ChannelRepo
 from app.infra.db.repository.protocol.provider_repo import ProviderRepo
 from app.infra.db.repository.protocol.outbox_repo import OutboxRepo
+from app.infra.db.repository.protocol.support_repo import SupportRepo
 
 from app.infra.db.repository.sql.user_repo import SqlUserRepo
 from app.infra.db.repository.sql.session_repo import SqlSessionRepo
@@ -20,6 +22,7 @@ from app.infra.db.repository.sql.watchlist_repo import SqlWatchlistRepo
 from app.infra.db.repository.sql.channel_repo import SqlChannelRepo
 from app.infra.db.repository.sql.provider_repo import SqlProviderRepo
 from app.infra.db.repository.sql.outbox_repo import SqlOutboxRepo
+from app.infra.db.repository.sql.support_repo import SqlSupportRepo
 
 
 class UnitOfWork(UnitOfWorkPort):
@@ -35,6 +38,7 @@ class UnitOfWork(UnitOfWorkPort):
         self._channels = None
         self._providers = None
         self._outboxs = None
+        self._supports = None
 
         self._done = False
         self._owns = owns_session
@@ -132,3 +136,9 @@ class UnitOfWork(UnitOfWorkPort):
         if self._outboxs is None:
             self._outboxs = SqlOutboxRepo(self.db)
         return self._outboxs
+
+    @property
+    def supports(self) -> SupportRepo:
+        if self._supports is None:
+            self._supports = SqlSupportRepo(self.db)
+        return self._supports
