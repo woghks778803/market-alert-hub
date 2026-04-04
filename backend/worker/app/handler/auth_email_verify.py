@@ -48,7 +48,7 @@ def handle_auth_email_verify(
             user=user_email_info,
             verify_token=verify_token,
         )
-        ctx.svcs.users.set_email_verification_sent(
+        ctx.svcs.users.change_email_verification_sent(
             email_verification_id=email_verification_id
         )
         return ses_result

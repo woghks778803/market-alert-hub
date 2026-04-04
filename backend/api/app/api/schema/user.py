@@ -3,9 +3,14 @@ from pydantic import BaseModel, EmailStr, Field
 from pydantic.config import ConfigDict
 from app.core.constants import UserRole, UserStatus
 
-# 공용: from_attributes=True (Pydantic v2)
 _model_cfg = ConfigDict(from_attributes=True, use_enum_values=True)
 
+class SimpleOk(BaseModel):
+    ok: bool = True
+
+class UserSettingIn(BaseModel):
+    is_marketing: bool | None = None
+    is_quiet_hours: bool | None = None
 
 class UserCreateIn(BaseModel):
     email: EmailStr
@@ -23,11 +28,16 @@ class UserReadPublic(BaseModel):
     email: EmailStr
     nickname: str
     created_at: datetime
+    is_marketing: bool
+    is_quiet_hours: bool
     last_login_at: datetime | None = None
+    provider_code: str | None = None
+    provider_display_name: str | None = None
 
 
 class UserReadAdmin(BaseModel):
     model_config = _model_cfg
+
     id: int
     email: EmailStr
     nickname: str | None = None
@@ -44,14 +54,4 @@ class UserUpdateAdmin(BaseModel):
     )
 
 
-class MeRead(BaseModel):
-    model_config = _model_cfg
-
-    id: int
-    email: EmailStr
-    nickname: str
-    role: UserRole | None = Field(default=None, description="user|admin")
-    status: UserStatus | None = Field(
-        default=None, description="active|suspended|deleted"
-    )
-    last_login_at: datetime | None = None
+    

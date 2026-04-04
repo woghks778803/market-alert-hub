@@ -43,7 +43,7 @@ def handle_auth_password_reset(
             user=user_email_info,
             verify_token=verify_token,
         )
-        ctx.svcs.users.set_password_reset_sent(password_reset_id=password_reset_id)
+        ctx.svcs.users.change_password_reset_sent(password_reset_id=password_reset_id)
         return ses_result
 
     except (TimeoutError, ConnectionError) as e:

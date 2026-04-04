@@ -360,7 +360,7 @@ class SqlMarketRepo(MarketRepo):
         conditions = []
 
         if is_active is not None:
-            stmt = stmt.where(ei.is_active.is_(is_active))
+            conditions.append(ei.is_active.is_(is_active))
 
         # 거래소 필터
         if exchange_codes:

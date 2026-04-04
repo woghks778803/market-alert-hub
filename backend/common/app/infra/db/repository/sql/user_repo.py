@@ -1,6 +1,6 @@
 from typing import Sequence
 from datetime import datetime
-from sqlalchemy import select, update, delete, bindparam, desc, and_
+from sqlalchemy import select, update, delete, bindparam, desc, and_, func
 from sqlalchemy.orm import Session as DbSession
 from app.core.constants import UserStatus
 from app.domain import EmailDTO, UserDTO
@@ -57,6 +57,44 @@ class SqlUserRepo(UserRepo):
         stmt = select(UserModel).where(UserModel.email_fingerprint == email_fingerprint)
         result = self._db.execute(stmt).scalar_one_or_none()
         return result.to_dto() if result is not None else None
+
+    def get_with_provider_by_user_id(
+        self, user_id: int, deleted_is_null: bool = True
+    ) -> UserDTO.UserPublicInfo | None:
+        stmt = (
+            select(
+                UserModel.id,
+                UserModel.nickname,
+                UserModel.email_ciphertext,
+                UserModel.email_nonce,
+                UserModel.created_at,
+                UserModel.last_login_at,
+                UserModel.is_marketing,
+                UserModel.is_quiet_hours,
+                func.coalesce(OauthProviderModel.code, 'email').label('code'),
+                func.coalesce(OauthProviderModel.display_name, '이메일').label('display_name')
+            )
+            .outerjoin(UserOauthAccountModel, UserOauthAccountModel.user_id == UserModel.id)
+            .outerjoin(OauthProviderModel, OauthProviderModel.id == UserOauthAccountModel.oauth_providers_id)
+            .where(UserModel.id == user_id)
+        )
+
+        if deleted_is_null:
+            stmt = stmt.where(UserModel.deleted_at.is_(None))
+
+        row = self._db.execute(stmt).one_or_none()
+        return UserDTO.UserPublicInfo(
+            id=row.id,
+            nickname=row.nickname,
+            email_ciphertext=row.email_ciphertext,
+            email_nonce=row.email_nonce,
+            created_at=row.created_at,
+            last_login_at=row.last_login_at,
+            is_marketing=row.is_marketing,
+            is_quiet_hours=row.is_quiet_hours,
+            provider_code=row.code,
+            provider_display_name=row.display_name,
+        ) if row else None
 
     def get_by_user_id(
         self, user_id: int, deleted_is_null: bool = True
@@ -223,6 +261,28 @@ class SqlUserRepo(UserRepo):
             values[EmailVerificationModel.consumed_at] = updates.consumed_at
         return values
 
+    def update_user_settings(
+        self, 
+        user_id: int,
+        is_marketing: bool | None,
+        is_quiet_hours: bool | None
+    ) -> int:
+        values = {}
+        if is_marketing is not None:
+            values[UserModel.is_marketing] = is_marketing
+        if is_quiet_hours is not None:
+            values[UserModel.is_quiet_hours] = is_quiet_hours
+
+        stmt = (
+            update(UserModel)
+            .where(UserModel.id == user_id)
+            .values(values)
+            .execution_options(synchronize_session=False)
+        )
+        result = self._db.execute(stmt)
+        return int(getattr(result, "rowcount", 0) or 0)
+
+
     def update_oauth_accounts_unlinked_at(
         self, user_id: int, *, unlinked_at: datetime
     ) -> int:
@@ -233,7 +293,7 @@ class SqlUserRepo(UserRepo):
             .values(unlinked_at=unlinked_at)
         )
         result = self._db.execute(stmt)
-        return result.rowcount or 0
+        return int(getattr(result, "rowcount", 0) or 0)
 
     def update_email_verification_by_filter(
         self,

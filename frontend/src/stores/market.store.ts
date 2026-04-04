@@ -82,10 +82,9 @@ export const useMarketStore = defineStore("market", () => {
         clearTimeout(searchTimer)
 
         searchTimer = setTimeout(() => {
-            console.log(marketListQuery)
             marketListQuery.value.search = value
             fetchMarkets()
-        }, 300)
+        }, 500)
     }
 
     function setMarketFilter(codes: string[]) {
@@ -113,7 +112,6 @@ export const useMarketStore = defineStore("market", () => {
         marketListQuery.value.exchangeCodes = isAll ? [] : currentSystemTab.value.filter(v => v !== "watchlist")
         marketListQuery.value.watchlistOnly = isWatchlist
 
-        // console.log(marketListQuery.value)
         fetchMarkets()
     }
 

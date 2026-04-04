@@ -9,7 +9,8 @@ from app.core.constants import (
     OutboxStatus,
     EmailVerificationStatus,
     OutboxEventType,
-    OAutheCode,
+    OAuthCode,
+    OAuthResultType,
 )
 from app.core import dto as CoreDTO
 from app.core.util.trace import get_trace_id
@@ -238,11 +239,11 @@ class AuthService:
             if user:
                 if user.status == UserStatus.DELETED:
                     raise PermissionError(
-                        "user status deleted", target="status.deleted"
+                        "User status deleted", target="status.deleted"
                     )
                 elif user.status == UserStatus.SUSPENDED:
                     raise PermissionError(
-                        "user status suspended", target="status.suspended"
+                        "User status suspended", target="status.suspended"
                     )
 
                 raise ConflictError("email_fingerprint already exists", target="email")
@@ -323,10 +324,10 @@ class AuthService:
                 raise NotFoundError("User not found", target="user")
 
             if user.status == UserStatus.DELETED:
-                raise PermissionError("user status deleted", target="status.deleted")
+                raise PermissionError("User status deleted", target="status.deleted")
             elif user.status == UserStatus.SUSPENDED:
                 raise PermissionError(
-                    "user status suspended", target="status.suspended"
+                    "User status suspended", target="status.suspended"
                 )
 
             if user.password_hash is None or not self._password.verify_password(
@@ -398,7 +399,7 @@ class AuthService:
             )
 
     # 로그아웃 (세션 무효화)
-    def logout(self, *, user_id: int, token: str) -> Dict[str, Any]:
+    def logout(self, *, user_id: int, refresh_token: str) -> Dict[str, Any]:
         now = utcnow()
         with self._uow_factory() as uow:
             user = uow.users.get_by_user_id(user_id)
@@ -406,7 +407,7 @@ class AuthService:
                 raise AuthError("Invalid credentials", target="user")
 
             uow.sessions.update_session_revoke(
-                user_id=user_id, revoked_at=now, token_hash=self._hmac.token_hash(token)
+                user_id=user_id, revoked_at=now, token_hash=self._hmac.token_hash(refresh_token)
             )
             uow.commit()
             return {"ok": True}
@@ -541,7 +542,7 @@ class AuthService:
 
             #  쿨다운 (연타 방지)
             cooldown_sec = self._config.email_resend_cooldown_sec
-            key = f"cooldown:email_verify_resend:{user.id}"
+            key = f"email_verify_resend:{user.id}"
             ok = self._cooldown.acquire(key, cooldown_sec)
             if not ok:
                 remain = self._cooldown.remain(key)  # -2/-1 처리만 조심
@@ -661,7 +662,29 @@ class AuthService:
             uow.commit()
             return {"ok": True}
 
-    def change_password(self, *, token: str, new_password: str):
+    def change_password(self, *, user_id: int, current_password: str, new_password: str):
+        now = utcnow()
+        with self._uow_factory() as uow:
+            user = uow.users.get_by_user_id(user_id)
+            if not user:
+                raise AuthError("Invalid credentials", target="user")
+
+            if user.password_hash is None or not self._password.verify_password(
+                current_password, user.password_hash
+            ):
+                raise PermissionError("Invalid credentials", target="user")
+
+            uow.users.update_user_password_hash(
+                id=user.id, password_hash=self._password.hash_password(new_password)
+            )
+
+            uow.sessions.update_session_revoke(user_id=user_id, revoked_at=now)
+
+            uow.commit()
+
+            return {"ok": True}
+
+    def reset_password(self, *, token: str, new_password: str):
         now = utcnow()
         token_hash = self._hmac.token_hash(token)
         with self._uow_factory() as uow:
@@ -677,7 +700,7 @@ class AuthService:
 
             user = uow.users.get_by_user_id(password_reset.user_id)
             if not user:
-                raise NotFoundError("User not found", target="user_id")
+                raise NotFoundError("User not found", target="user")
 
             uow.users.update_user_password_hash(
                 id=user.id, password_hash=self._password.hash_password(new_password)
@@ -690,6 +713,8 @@ class AuthService:
                 sent_is_null=False,
                 consumed_is_null=True,
             )
+
+            uow.sessions.update_session_revoke(user_id=password_reset.user_id, revoked_at=now)
 
             uow.commit()
 
@@ -751,6 +776,7 @@ class AuthService:
 
             if oauth_provider is None:
                 return AuthDTO.OAuthResult(
+                    result_type=OAuthResultType.ERROR,
                     authorize_path=urlencode(
                         {
                             "source": provider,
@@ -777,12 +803,14 @@ class AuthService:
             )
         except RuntimeError:
             return AuthDTO.OAuthResult(
+                result_type=OAuthResultType.ERROR,
                 authorize_path=urlencode(
                     {"source": provider, "code": "internal_error", "target": "state"}
                 )
             )
 
         return AuthDTO.OAuthResult(
+            result_type=OAuthResultType.SUCCESS,
             authorize_path=self._kakao_oauth.build_authorize_path(state=state)
         )
 
@@ -803,6 +831,7 @@ class AuthService:
 
         if data == None:  # key not exist
             return AuthDTO.OAuthResult(
+                result_type=OAuthResultType.ERROR,
                 authorize_path=urlencode(
                     {
                         "source": None,
@@ -819,6 +848,7 @@ class AuthService:
 
         if error:
             return AuthDTO.OAuthResult(
+                result_type=OAuthResultType.ERROR,
                 authorize_path=urlencode(
                     {
                         "source": provider,
@@ -830,6 +860,7 @@ class AuthService:
 
         if not code or not state:
             return AuthDTO.OAuthResult(
+                result_type=OAuthResultType.ERROR,
                 authorize_path=urlencode(
                     {
                         "source": provider,
@@ -846,6 +877,7 @@ class AuthService:
 
             if oauth_provider is None:
                 return AuthDTO.OAuthResult(
+                    result_type=OAuthResultType.ERROR,
                     authorize_path=urlencode(
                         {
                             "source": provider,
@@ -871,6 +903,7 @@ class AuthService:
 
                 if user is None:
                     return AuthDTO.OAuthResult(
+                        result_type=OAuthResultType.ERROR,
                         authorize_path=urlencode(
                             {
                                 "source": provider,
@@ -879,13 +912,10 @@ class AuthService:
                             }
                         )
                     )
-                    # 데이터 정합성 오류
-                    # raise InternalServerError(
-                    #     "OAuth account linked user not found", target="user"
-                    # )
 
                 if user.status == UserStatus.DELETED:
                     return AuthDTO.OAuthResult(
+                        result_type=OAuthResultType.ERROR,
                         authorize_path=urlencode(
                             {
                                 "source": provider,
@@ -896,6 +926,7 @@ class AuthService:
                     )
                 elif user.status == UserStatus.SUSPENDED:
                     return AuthDTO.OAuthResult(
+                        result_type=OAuthResultType.ERROR,
                         authorize_path=urlencode(
                             {
                                 "source": provider,
@@ -909,11 +940,10 @@ class AuthService:
             else:
                 if not agree_service or not agree_privacy:
                     return AuthDTO.OAuthResult(
+                        result_type=OAuthResultType.TERMS_REQUIRED,
                         authorize_path=urlencode(
                             {
                                 "source": provider,
-                                "code": "validation_error",
-                                "target": "terms",
                             }
                         )
                     )
@@ -954,11 +984,11 @@ class AuthService:
 
         authorize_path = urlencode(
             {
-                "source": provider,
-                "code": "ok",
+                "code": "ok"
             }
         )
         return AuthDTO.OAuthResult(
+            result_type=OAuthResultType.SUCCESS,
             authorize_path=authorize_path,
             refresh_token=refresh_token,
         )
@@ -968,7 +998,7 @@ class AuthService:
         with self._uow_factory() as uow:
             user = uow.users.get_by_user_id(user_id)
             if not user:
-                raise NotFoundError("User not found", target="user_id")
+                raise NotFoundError("User not found", target="user")
 
             # 외부 OAuth 연동 해제
             accounts = uow.users.list_oauth_accounts_by_user(
@@ -981,7 +1011,7 @@ class AuthService:
                     self._kakao_oauth.unlink(int(provider_user_id))
 
                 unlink_map = {
-                    OAutheCode.KAKAO.value: _unlink_kakao,
+                    OAuthCode.KAKAO.value: _unlink_kakao,
                     # 다른 OAuth 프로바이더 추가 시 여기서 매핑
                 }
 

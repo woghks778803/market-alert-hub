@@ -6,10 +6,16 @@ from app.core.constants import UserRole, UserStatus, EmailVerificationStatus
 @dataclass(slots=True)
 class UserPublicInfo:
     id: int
-    email: str | None
+    email_ciphertext: bytes | None
+    email_nonce: bytes | None
     nickname: str
     created_at: datetime
     last_login_at: datetime | None
+    is_marketing: bool
+    is_quiet_hours: bool
+    provider_code: str | None
+    provider_display_name: str | None
+    email: str | None = None
 
 
 @dataclass(slots=True)
@@ -88,6 +94,7 @@ class User:
     is_service: bool
     is_privacy: bool
     is_marketing: bool
+    is_quiet_hours: bool
 
 
 @dataclass(slots=True)

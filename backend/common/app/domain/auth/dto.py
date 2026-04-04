@@ -1,11 +1,12 @@
 from dataclasses import dataclass
 from datetime import datetime
-from app.core.constants import UserRole
+from app.core.constants import UserRole, OAuthResultType
 
 
 @dataclass(slots=True, frozen=True)
 class OAuthResult:
     authorize_path: str
+    result_type: OAuthResultType = OAuthResultType.ERROR
     refresh_token: str | None = None
 
 

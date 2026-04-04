@@ -11,6 +11,7 @@ from fastapi import (
 )
 from fastapi.responses import RedirectResponse
 
+from app.core.constants import OAuthResultType
 from app.service.factory import ServiceFactory
 from app.api.schema import UserSchema, AuthSchema
 from app.api.common.envelope import Envelope, ok, created, no_content
@@ -266,6 +267,36 @@ def change_email(
         request_id=meta.request_id,
     )
 
+@router.post(
+    "/change-password",
+    response_model=Envelope[AuthSchema.SimpleOk],
+    summary="비밀번호 변경",
+    description="현재 비밀번호를 확인한 뒤 새 비밀번호로 변경합니다.",
+    responses=OpenApi.combine(
+        OpenApi.ERR_401,
+        OpenApi.ERR_404,
+    ),
+)
+def change_password(
+    response: Response,
+    refresh_token: str = Cookie(..., alias="refresh_token"),
+    payload: AuthSchema.ChangePasswordIn = Body(
+        ...,
+        example={
+            "current_password": "P@ssw0rd!",
+            "new_password": "N3wP@ss!",
+        },
+    ),
+    user: AuthSchema.CurrentUser = Security(get_current_user),
+    svcs: ServiceFactory = Depends(get_services),
+    meta: RequestMeta = Depends(get_request_meta),
+):
+    result = svcs.auths.change_password(
+        user_id=user.id, current_password=payload.current_password, new_password=payload.new_password
+    )
+    response.delete_cookie("refresh_token", path="/")
+    return ok(result, request_id=meta.request_id)
+
 
 @router.post(
     "/request-password-reset",
@@ -286,12 +317,12 @@ def send_password_reset(
 ):
     ip = request.client.host if request.client else None
     ua = request.headers.get("user-agent")
-    token_out = svcs.auths.send_password_reset(email=payload.email)
-    return ok(token_out, request_id=meta.request_id)
+    result = svcs.auths.send_password_reset(email=payload.email)
+    return ok(result, request_id=meta.request_id)
 
 
 @router.post(
-    "/change-password",
+    "/reset-password",
     response_model=Envelope[AuthSchema.SimpleOk],
     summary="비밀번호 재설정",
     description="비밀번호 재설정 토큰을 사용하여 비밀번호를 재설정합니다.",
@@ -305,9 +336,11 @@ def send_password_reset(
         OpenApi.ERR_404,  # 예: 토큰 또는 사용자 미존재
     ),
 )
-def change_password(
+def reset_password(
     request: Request,
-    payload: AuthSchema.ChangePasswordIn = Body(
+    response: Response,
+    refresh_token: str = Cookie(..., alias="refresh_token"),
+    payload: AuthSchema.ResetPasswordIn = Body(
         ...,
         example={
             "token": "base64url-encoded-token",
@@ -317,11 +350,10 @@ def change_password(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    ip = request.client.host if request.client else None
-    ua = request.headers.get("user-agent")
-    result = svcs.auths.change_password(
+    result = svcs.auths.reset_password(
         token=payload.token, new_password=payload.new_password
     )
+    response.delete_cookie("refresh_token", path="/")
     return ok(result, request_id=meta.request_id)
 
 
@@ -373,7 +405,7 @@ def logout(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),  #
 ):
-    svcs.auths.logout(user_id=user.id, token=refresh_token)
+    svcs.auths.logout(user_id=user.id, refresh_token=refresh_token)
     response.delete_cookie("refresh_token", path="/")
     return ok(AuthSchema.SimpleOk(ok=True), request_id=meta.request_id)
 
@@ -389,15 +421,6 @@ def logout(
     ),
 )
 def oauth_start(
-    # payload: AuthSchema.OAuthStartIn = Body(
-    #     ...,
-    #     example={
-    #         "provider": "kakao",
-    #         "agree_service": True,
-    #         "agree_privacy": True,
-    #         "agree_marketing": False,
-    #     },
-    # ),
     provider: str = Query(..., description="OAuth provider code (e.g., kakao)"),
     agree_service: bool | None = Query(
         None, description="User consent to required service terms (true/false)"
@@ -422,7 +445,7 @@ def oauth_start(
         )
 
         # 실패 케이스 (urlencode 된 값)
-        if oauth_result.authorize_path.startswith("source="):
+        if oauth_result.result_type == OAuthResultType.ERROR:
             fail_url = (
                 f"{svcs._config.public_web_base_url}/auth/oauth/callback?"
                 f"{oauth_result.authorize_path}"
@@ -473,10 +496,21 @@ def oauth_callback(
             ua=ua,
         )
 
-        redirect_url = (
-            f"{svcs._config.public_web_base_url}/auth/oauth/callback?"
-            f"{oauth_result.authorize_path}"
-        )
+        if oauth_result.result_type == OAuthResultType.TERMS_REQUIRED:
+            redirect_url = (
+                f"{svcs._config.public_web_base_url}/auth/signup/terms?"
+                f"{oauth_result.authorize_path}"
+            )
+        elif oauth_result.result_type == OAuthResultType.ERROR:
+            redirect_url = (
+                f"{svcs._config.public_web_base_url}/auth/oauth/callback?"
+                f"{oauth_result.authorize_path}"
+            )
+        elif oauth_result.result_type == OAuthResultType.SUCCESS:
+            redirect_url = (
+                f"{svcs._config.public_web_base_url}/auth/verify-email?"
+                f"{oauth_result.authorize_path}"
+            )
 
         redirect = RedirectResponse(url=redirect_url, status_code=302)
 

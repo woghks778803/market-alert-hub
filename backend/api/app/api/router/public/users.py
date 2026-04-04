@@ -5,6 +5,7 @@ from fastapi import (
     Cookie,
     Response,
     Request,
+    Body
 )
 
 from app.service.factory import ServiceFactory
@@ -41,10 +42,35 @@ router = APIRouter(prefix="/user")
         ),
     ),
 )
-def me(
+def get_me(
     user: AuthSchema.CurrentUser = Security(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
-    meta: RequestMeta = Depends(get_request_meta),  #
+    meta: RequestMeta = Depends(get_request_meta), 
 ):
     u = svcs.users.get_user_public_info(user_id=user.id)
     return ok(UserSchema.UserReadPublic.model_validate(u), request_id=meta.request_id)
+
+
+@router.patch(
+    "/setting",
+    response_model=Envelope[UserSchema.SimpleOk],
+    summary="내 설정 수정",
+    description=""
+)
+def change_user_setting(
+    payload: UserSchema.UserSettingIn = Body(
+        ...,
+        example={
+            "is_marketing": False,
+            "is_quiet_hours": False,
+        },
+    ),
+    user: AuthSchema.CurrentUser = Depends(get_current_user),
+    svcs: ServiceFactory = Depends(get_services),
+    meta: RequestMeta = Depends(get_request_meta),
+):
+    result = svcs.users.change_user_settings(user.id, is_marketing=payload.is_marketing, is_quiet_hours=payload.is_quiet_hours)
+
+    return ok(
+        result, request_id=meta.request_id
+    )

@@ -2,8 +2,8 @@ import {
     marketApi,
 } from "@/api/market.api"
 
-import { toMarketDto, toExchangeDto, toCandleDto, toMarketListRequest, toCandlesListRequest, toExchangeListRequest } from "./market.mapper"
-import type { MarketDto, ExchangeDto, CandleDto, MarketListQuery, ExchangeListQuery, CandlesListQuery } from "./market.types"
+import { toMarketDto, toExchangeDto, toCandleDto, toMarketListRequest, toCandlesListRequest, toExchangeListRequest } from "@/services/market.mapper"
+import type { MarketDto, ExchangeDto, CandleDto, MarketListQuery, ExchangeListQuery, CandlesListQuery } from "@/services/market.types"
 
 export async function getMarket(exchange_code: string, symbol: string): Promise<MarketDto> {
     const env = await marketApi.getMarket(exchange_code, symbol)

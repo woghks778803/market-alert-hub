@@ -1,5 +1,4 @@
 from typing import Protocol
-from app.infra.db.model import UserModel
 from app.domain import EmailDTO, UserDTO, AuthDTO
 from app.core.constants import UserStatus
 from datetime import datetime
@@ -19,6 +18,9 @@ class UserRepo(Protocol):
     def get_user_by_email_fingerprint(
         self, email_fingerprint: bytes
     ) -> UserDTO.User | None: ...
+    def get_with_provider_by_user_id(
+        self, user_id: int, deleted_is_null: bool = True
+    ) -> UserDTO.UserPublicInfo | None: ...
     def get_by_user_id(
         self, user_id: int, deleted_is_null: bool = True
     ) -> UserDTO.User | None: ...
@@ -66,6 +68,12 @@ class UserRepo(Protocol):
         offset: int,
         deleted_is_null: bool | None = None,
     ) -> list[UserDTO.User]: ...
+    def update_user_settings(
+        self, 
+        user_id: int,
+        is_marketing: bool | None,
+        is_quiet_hours: bool | None
+    ) -> int: ...
     def update_oauth_accounts_unlinked_at(
         self, user_id: int, *, unlinked_at: datetime
     ) -> int: ...

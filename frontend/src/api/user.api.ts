@@ -1,5 +1,5 @@
 import { http } from "./http"
-import type { Envelope } from "./types"
+import type { Envelope, SimpleOk } from "./types"
 
 export type UserInfo = {
     id: number
@@ -7,12 +7,27 @@ export type UserInfo = {
     nickname: string
     created_at: string
     last_login_at: string | null
+    is_marketing: boolean
+    is_quiet_hours: boolean
+    provider_code: string | null
+    provider_display_name: string | null
+}
+
+export type ChangeUserSettingRequest = {
+    is_marketing?: boolean
+    is_quiet_hours?: boolean
 }
 
 export const userApi = {
     // GET /user/me
     async getMe() {
         const { data } = await http.get<Envelope<UserInfo>>("/user/me")
+        return data
+    },
+
+    // PATCH /user/setting
+    async changeMeSetting(payload: ChangeUserSettingRequest) {
+        const { data } = await http.patch<Envelope<SimpleOk>>("/user/setting", payload)
         return data
     },
 

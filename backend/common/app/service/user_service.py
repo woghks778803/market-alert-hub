@@ -107,24 +107,24 @@ class UserService:
 
     def get_user_public_info(self, *, user_id: int) -> UserDTO.UserPublicInfo:
         with self._uow_factory() as uow:
-            user = self._ensure_user(uow, user_id)
+            user = uow.users.get_with_provider_by_user_id(user_id=user_id)
 
-            user_info = UserDTO.UserPublicInfo(
-                id=user.id,
-                nickname=user.nickname,
-                email=(
-                    self._secrets.decrypt(
-                        ciphertext=user.email_ciphertext,
-                        nonce=user.email_nonce,
-                    ).decode("utf-8")
-                    if user.email_ciphertext and user.email_nonce
-                    else None
-                ),
-                created_at=user.created_at,
-                last_login_at=user.last_login_at,
+            if not user:
+                raise NotFoundError("User not found", target="User")
+
+            if user.email_ciphertext is None or user.email_nonce is None:
+                raise ValidationAppError("user email is not set", target="user.email")
+
+            user.email=(
+                self._secrets.decrypt(
+                    ciphertext=user.email_ciphertext,
+                    nonce=user.email_nonce,
+                ).decode("utf-8")
+                if user.email_ciphertext and user.email_nonce
+                else None
             )
 
-            return user_info
+            return user
 
     def get_user_email_info(self, *, user_id: int) -> UserDTO.UserEmailInfo:
         with self._uow_factory() as uow:
@@ -204,16 +204,26 @@ class UserService:
         status = self.coerce(status, UserStatus, "status")
 
         with self._uow_factory() as uow:
-            user = self._ensure_user(uow, user_id)
-            if role is not None:
-                user.role = role
-            if status is not None:
-                user.status = status
 
             uow.commit()
             return user
 
-    def set_password_reset_sent(self, *, password_reset_id: int) -> None:
+    def change_user_settings(self, user_id: int, is_marketing: bool | None = None, is_quiet_hours: bool | None = None): 
+        if(is_marketing is None and is_quiet_hours is None):
+            raise ValidationAppError("Invalid user setting", target="user")
+            
+        now = utcnow()
+        with self._uow_factory() as uow:
+            user = uow.users.get_by_user_id(user_id)
+            if not user:
+                raise AuthError("Invalid credentials", target="user")
+
+            uow.users.update_user_settings(user_id, is_marketing, is_quiet_hours)
+            uow.commit()
+
+            return {"ok": True}
+
+    def change_password_reset_sent(self, *, password_reset_id: int) -> None:
         now = utcnow()
 
         with self._uow_factory() as uow:
@@ -226,7 +236,7 @@ class UserService:
             )
             uow.commit()
 
-    def set_email_verification_sent(self, *, email_verification_id: int) -> None:
+    def change_email_verification_sent(self, *, email_verification_id: int) -> None:
         now = utcnow()
         with self._uow_factory() as uow:
             uow.users.update_email_verification_by_filter(

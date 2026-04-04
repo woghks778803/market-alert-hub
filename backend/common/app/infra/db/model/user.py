@@ -75,6 +75,9 @@ class User(Base):
     is_marketing: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("0")
     )
+    is_quiet_hours: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("0")
+    )
 
     __table_args__ = (
         # ciphertext/nonce/key_version는 셋이 함께 NULL이거나 함께 NOT NULL이어야 함
@@ -104,6 +107,7 @@ class User(Base):
             is_service=self.is_service,
             is_privacy=self.is_privacy,
             is_marketing=self.is_marketing,
+            is_quiet_hours=self.is_quiet_hours,
         )
 
     @classmethod

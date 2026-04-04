@@ -1,21 +1,21 @@
 import { userApi } from "@/api/user.api";
+import { toUserDto, toChangeEmailRequest } from "@/services/user.mapper"
+import type { UserDto, ChangeUserSettingQuery } from "@/services/user.types"
 
-export type MeDto = {
-    id: number;
-    email: string;
-};
+export async function getMe(): Promise<UserDto> {
+    const env = await userApi.getMe();
 
-export async function getMe(): Promise<MeDto> {
-    const envelope = await userApi.getMe();
-
-    const data = envelope?.data;
-    if (!data) {
-        throw new Error("invalid_me_response");
+    if (!env.success || !env.data) {
+        throw env.error ?? new Error("invalid_me_response")
     }
-    const meDto: MeDto = {
-        id: data.id,
-        email: data.email,
-    };
 
-    return meDto;
+    return toUserDto(env.data)
+}
+
+export async function changeMeSetting(payload: ChangeUserSettingQuery): Promise<void> {
+    const env = await userApi.changeMeSetting(toChangeEmailRequest(payload));
+
+    if (!env.success) {
+        throw env.error ?? new Error("change_password_failed")
+    }
 }
