@@ -34,7 +34,7 @@ const rules = ref([
     status: "ON",
     condition: "가격이 50,000,000원 이상",
     cooldown: "5m",
-    channels: ["Telegram", "FCM"]
+    channels: ["Email", "FCM"]
   },
   {
     id: 2,
@@ -52,7 +52,7 @@ const rules = ref([
     status: "ON",
     condition: "가격이 50,000,000원 이상",
     cooldown: "5m",
-    channels: ["Telegram", "FCM"]
+    channels: ["Email", "FCM"]
   },
   {
     id: 4,

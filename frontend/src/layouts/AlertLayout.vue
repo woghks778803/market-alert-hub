@@ -8,10 +8,6 @@
         규칙
       </v-tab>
     
-      <v-tab :to="{ name: 'Channels' }">
-        채널
-      </v-tab>
-    
       <v-tab :to="{ name: 'Logs' }">
         기록
       </v-tab>
