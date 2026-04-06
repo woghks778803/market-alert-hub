@@ -87,3 +87,4 @@ class WsClient {
 
 const WS_URL = import.meta.env.VITE_WS_BASE_URL
 export const wsClient = new WsClient(WS_URL)
+// export const wsClient = new WsClient("/ws")

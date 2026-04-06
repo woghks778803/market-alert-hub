@@ -12,11 +12,17 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    // Origin 헤더를 프록시 대상 서버 기준으로 바꿔주는 옵션
     proxy: {
       "/api": { target: "http://localhost:8080", changeOrigin: true },
       "/admin-api": { target: "http://localhost:8080", changeOrigin: true },
+      "/ws": { target: "ws://localhost:8080", changeOrigin: true },
     },
     // WS/파일업로드 이슈 주석 유지
     // watch: { usePolling: true }
+    host: true,
+    allowedHosts: [
+      // 'creole-mace-emporium.ngrok-free.dev'
+    ],
   },
 })

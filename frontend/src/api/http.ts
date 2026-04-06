@@ -11,6 +11,7 @@ function resolveBaseURL() {
 
 export const http: AxiosInstance = axios.create({
     baseURL: resolveBaseURL(),
+    // baseURL: "/api",
     timeout: 15_000,
     withCredentials: true, // 쿠키 전송 허용 
     paramsSerializer: {
