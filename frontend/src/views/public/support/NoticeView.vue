@@ -2,7 +2,7 @@
   <div class="notice-wrapper bg-[#F5F5F7] fill-height">
 
     <!-- 탭 -->
-    <div class="bg-white px-4 py-3">
+    <div class="bg-surface px-4 py-3">
       <v-tabs
         v-model="activeTab"
         color="transparent"
@@ -15,8 +15,8 @@
           :key="key"
           :value="key"
           :class="[
-            'tab-item mr-2 text-caption font-weight-bold',
-            activeTab === key ? 'active-tab' : 'inactive-tab'
+            'notice-tab-item mr-2 text-caption font-weight-bold',
+            activeTab === key ? 'notice-active-tab' : 'notice-inactive-tab'
           ]"
           variant="flat"
           rounded="pill"
@@ -44,10 +44,9 @@
             <div class="d-flex justify-space-between align-center mb-3">
               <v-chip
                 size="x-small"
-                :color="NoticeCategoryLabel[notice.category].bg"
                 :class="[
-                  'font-weight-bold px-3',
-                  NoticeCategoryLabel[notice.category].text
+                  'notice-chip font-weight-bold px-3',
+                  NoticeCategoryLabel[notice.category].bg
                 ]"
                 variant="flat"
                 rounded="lg"

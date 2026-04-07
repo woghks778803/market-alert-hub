@@ -8,8 +8,19 @@ export const vuetify = createVuetify({
             light: {
                 colors: {
                     kakao: '#FEE500',
-                },
+                    background: '#f6f7fb',
+                    surface: '#ffffff',
+                    primary: '#7C4DFF',
+                }
             },
+            dark: {
+                colors: {
+                    kakao: '#FEE500',
+                    background: '#0f172a',
+                    surface: '#111827',
+                    primary: '#8b5cf6',
+                }
+            }
 
         },
     },

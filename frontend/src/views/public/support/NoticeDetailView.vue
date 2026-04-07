@@ -1,40 +1,38 @@
 <template>
-  <div class="notice-detail-wrapper bg-white fill-height">
+  <div class="notice-detail-wrapper bg-surface fill-height">
     <v-container v-if="notice" class="pa-0">
-      <div class="pa-6 pb-4 border-b border-grey-lighten-4">
+      <div class="pa-6 pb-4 border-b border-default">
         <div class="d-flex align-center mb-3">
           <v-chip
             size="x-small"
-            :color="NoticeCategoryLabel[notice.category].bg"
             :class="[
-              'mr-2 font-weight-bold px-3',
-              NoticeCategoryLabel[notice.category].text
+              'notice-chip font-weight-bold px-3',
+              NoticeCategoryLabel[notice.category].bg
             ]"
             variant="flat"
             rounded="lg"
           >
             {{ NoticeCategoryLabel[notice.category].title }}
           </v-chip>
-          <span class="text-caption text-grey-lighten-1">{{ formatDateTime(notice.updatedAt) }} · 조회 {{ notice.viewCount }}</span>
+          <span class="text-caption">{{ formatDateTime(notice.updatedAt) }} · 조회 {{ notice.viewCount }}</span>
         </div>
-        <h1 class="text-h5 font-weight-black text-grey-darken-4 leading-tight">
+        <h1 class="text-h5 font-weight-black text-primary leading-tight">
           {{ notice.title }}
         </h1>
       </div>
 
-      <div class="pa-6 notice-content text-body-1 text-grey-darken-3">
+      <div class="pa-6 notice-content text-body-1">
         <v-sheet
           v-if="notice.summary"
-          color="deep-purple-lighten-5"
+          class="notice-summary pa-4 mb-6"
           rounded="lg"
-          class="pa-4 mb-6 border-s-lg border-deep-purple-accent-2"
         >
-          <p class="text-body-2 text-deep-purple-darken-2 font-weight-medium">
+          <p class="notice-summary-text text-body-2 font-weight-medium">
             {{ notice.summary }}
           </p>
         </v-sheet>
 
-        <div class="whitespace-pre-wrap line-height-relaxed">
+        <div class="notice-body whitespace-pre-wrap line-height-relaxed">
           <div v-html="notice.content"></div>
         </div>
       </div>

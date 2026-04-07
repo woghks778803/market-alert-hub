@@ -1,6 +1,6 @@
 <template>
   <div class="faq-container flex-grow-1 d-flex flex-column">
-    <v-container class="pa-4 bg-white">
+    <v-container class="pa-4 bg-surface">
       <v-text-field
         :model-value="FAQListQuery.search"
         @update:modelValue="supportStore.setSearch"
@@ -29,7 +29,7 @@
             {{ item.question }}
           </v-expansion-panel-title>
 
-          <v-expansion-panel-text class="bg-grey-lighten-5 pt-4">
+          <v-expansion-panel-text class="pt-4">
             <div
               class="faq-content-wrapper text-body-2"
               v-html="item.answer"

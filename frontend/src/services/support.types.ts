@@ -70,7 +70,19 @@ export type NoticeCategoryStyle = {
 }
 
 export const NoticeCategoryLabel: Record<NoticeCategory, NoticeCategoryStyle> = {
-    [NoticeCategory.UPDATE]: { title: "업데이트", bg: "#E3F2FD", text: "text-[#448AFF]" },
-    [NoticeCategory.MAINTENANCE]: { title: "점검", bg: "#FFF3E0", text: "text-[#FFAB40]", },
-    [NoticeCategory.NOTICE]: { title: "안내", bg: "#F5F5F5", text: "text-[#9E9E9E]", },
+    [NoticeCategory.UPDATE]: {
+        title: "업데이트",
+        bg: "update",
+        text: "update",
+    },
+    [NoticeCategory.MAINTENANCE]: {
+        title: "점검",
+        bg: "maintenance",
+        text: "maintenance",
+    },
+    [NoticeCategory.NOTICE]: {
+        title: "안내",
+        bg: "notice",
+        text: "notice",
+    },
 }
