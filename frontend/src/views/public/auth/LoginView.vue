@@ -1,5 +1,8 @@
 <template>
   <AppCenterCard>
+    <div class="auth-logo-wrap">
+      <img :src="Logo" class="auth-logo" />
+    </div>
     <v-alert
       v-if="errorMessage"
       type="error"
@@ -92,6 +95,7 @@
 </template>
 
 <script setup lang="ts">
+import Logo from '@/assets/logo/alertping-logo.svg'
 import AppCenterCard from "@/components/common/AppCenterCard.vue"
 import { useRoute, useRouter } from "vue-router";
 import { useLoginForm } from "@/composables/auth/useLoginForm";
