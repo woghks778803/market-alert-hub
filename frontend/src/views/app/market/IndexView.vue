@@ -1,8 +1,10 @@
 <template>
+  <AppLoading :show="marketAction.loading.value" overlay />
+  
   <v-container class="app-container">
-    <MarketSearchBar @search="marketStore.setSearch" />
+    <MarketSearchBar @search="handleSearch" />
 
-    <MarketFilterTabs :exchangeTabs="exchanges" @change="marketStore.setMarketFilter" />
+    <MarketFilterTabs :exchangeTabs="exchanges" @change="handleFilter" />
 
     <div class="mk-header">
 
@@ -16,7 +18,7 @@
           <v-list-item
             v-for="(label, key) in MarketSortLabel"
             :key="key"
-            @click="selectSort(key)"
+            @click="handleSort(key)"
           >
             {{ label }}
           </v-list-item>
@@ -37,20 +39,26 @@
 import { onMounted, onUnmounted, onDeactivated } from "vue"
 import { storeToRefs } from "pinia"
 
+import AppLoading from "@/components/common/AppLoading.vue"
 import MarketSearchBar from "@/components/market/MarketSearchBar.vue"
 import MarketFilterTabs from "@/components/market/MarketFilterTabs.vue"
 import MarketList from "@/components/market/MarketList.vue"
 
+import { useAsyncAction } from "@/composables/common/useAsyncAction"
 import { useMarketStore } from "@/stores/market.store"
 import { MarketSortLabel, MarketSort } from "@/services/market.types"
 
 const marketStore = useMarketStore()
 const { markets, exchanges, openSort } = storeToRefs(marketStore)
+const marketAction = useAsyncAction()
 
 onMounted(async () => {
   marketStore.resetMarket()
-  await marketStore.fetchExchanges()
-  await marketStore.fetchMarkets()
+
+  marketAction.run(async () => {
+    await marketStore.fetchExchanges()
+    await marketStore.fetchMarkets()
+  })
 
   marketStore.subscribeMarkets()
   marketStore.initWs()
@@ -64,9 +72,24 @@ function cleanup() {
   marketStore.cleanupWs()
 }
 
-function selectSort(sort: MarketSort) {
-  marketStore.setSort(sort)
-  openSort.value = false
+function handleSort(sort: MarketSort) {
+  marketAction.run(() => {
+    marketStore.setSort(sort)
+    openSort.value = false
+  })
 }
 
+const handleSearch = (keyword: string) => {
+  marketAction.run(() => {
+    marketStore.setSearch(keyword)
+  })
+}
+
+const handleFilter = (filter: string[]) => {
+  marketAction.run(() => {
+    marketStore.setMarketFilter(filter)
+  })
+}
+
+// watch( () => marketAction.loading.value, (v) => { console.log('[market loading]', v) } ) 
 </script>

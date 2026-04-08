@@ -38,7 +38,7 @@ export const useMarketStore = defineStore("market", () => {
     })
 
     async function fetchMarket(exchange_code: string, symbol: string) {
-        console.log("Fetching market for:", exchange_code, symbol)
+        // console.log("Fetching market for:", exchange_code, symbol)
         market.value = await getMarket(exchange_code, symbol)
     }
 
@@ -65,7 +65,7 @@ export const useMarketStore = defineStore("market", () => {
         if (data.length === 0) return
 
         candles.value.unshift(...data.reverse())
-        console.log("Fetched candles:", data.length, "Total candles:", candles.value.length)
+        // console.log("Fetched candles:", data.length, "Total candles:", candles.value.length)
     }
 
     async function toggleWatchlist(item: MarketDto) {
@@ -309,9 +309,11 @@ export const useMarketStore = defineStore("market", () => {
         // 변경
         currentTimeframe.value = next
 
+        candlesListQuery.value.cursor = undefined
+
         await fetchCandles()
 
-        console.log(candles.value)
+        // console.log(candles.value)
 
         // 새 구독
         // subscribeMarket(WsChannelType.CANDLE, currentTimeframe.value)

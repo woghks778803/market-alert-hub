@@ -7,11 +7,20 @@
   >
 
     <v-card-text>
-      <div class="sd-chart-title">
-      차트
+      <div class="sd-chart-header">
+
+        <div class="sd-chart-title">
+          차트
+        </div>
+
+        <div class="sd-chart-actions">
+          <v-btn size="x-small" :color="isAutoScale ? 'primary' : 'grey'" @click="toggleAuto">A</v-btn>
+          <v-btn size="x-small" :color="isLogScale ? 'primary' : 'grey'" @click="toggleLog">L</v-btn>
+        </div>
+
       </div>
 
-      <div v-if="chartMounted" ref="chartContainer" class="sd-chart" ></div>
+      <div v-if="chartMounted" ref="chartContainer" class="sd-chart" :class="{ collapsed: props.collapsed }"></div>
 
       <div v-else class="sd-chart-placeholder">
 
@@ -44,20 +53,28 @@ import { createChart, type IChartApi, type ISeriesApi, type UTCTimestamp  } from
 import { useMarketStore } from "@/stores/market.store"
 import type { MarketDto } from "@/services/market.types"
 import  { TIMEFRAME_SECONDS } from "@/services/market.types"
+import { ThemeMode } from "@/composables/common/useAppSettings"
 
 const marketStore = useMarketStore()
-const chartContainer = ref(null)
-const chartMounted = ref(false)
-const isLoading = ref(false)
 const { candles, currentCandle, currentTimeframe, candlesListQuery  } = storeToRefs(marketStore)
+
+const chartContainer = ref<HTMLDivElement | null>(null)
+const chartMounted = ref(false)
+
+const isAutoScale = ref(true)
+const isLogScale = ref(false)
 
 let chart: IChartApi | null = null
 let candleSeries: ISeriesApi<"Candlestick">
+let volumeSeries: ISeriesApi<'Histogram'>
 let chartTimer: any
+let collapsedTimer: any
 
 
 const props = defineProps<{
   market: MarketDto | null,
+  collapsed: boolean,
+  candleRun: <T>(fn: () => Promise<T>) => Promise<T | null | undefined >
 }>()
 
 onMounted(async () => {
@@ -73,9 +90,25 @@ function cleanup() {
   chart = null
 }
 
+function applyPriceScale() {
+  chart?.priceScale('right').applyOptions({
+    autoScale: isAutoScale.value,
+    mode: isLogScale.value ? 1 : 0
+  })
+}
+
+function toggleAuto() {
+  isAutoScale.value = !isAutoScale.value
+  applyPriceScale()
+}
+
+function toggleLog() {
+  isLogScale.value = !isLogScale.value
+  applyPriceScale()
+}
+
 const initChart = async () => {
-  chart?.remove()
-  chart = null
+  cleanup()
 
   // DOM 업데이트를 끝낸 다음에 코드를 실행하게 하는 함수
   chartMounted.value = true
@@ -88,9 +121,17 @@ const initChart = async () => {
 
     // 테스트용 강제 실패
     // throw new Error('TEST_CHART_INIT_ERROR')
+    const isDark = document.documentElement.classList.contains(ThemeMode.DARK)
 
-    chart = createChart(chartContainer.value!)
-
+    chart = createChart(chartContainer.value!, {
+      layout: {
+        background: {
+          color: isDark ? '#0f172a' : '#ffffff',
+        },
+        textColor: isDark ? '#9ca3af' : '#374151',
+      },
+    })
+    
     candleSeries = chart.addCandlestickSeries({
       upColor: '#26a69a',
       downColor: '#ef5350',
@@ -98,6 +139,32 @@ const initChart = async () => {
       borderDownColor: '#ef5350',
       wickUpColor: '#26a69a',
       wickDownColor: '#ef5350',
+    })
+
+    volumeSeries = chart.addHistogramSeries({
+      priceFormat: { type: 'volume' },
+      priceScaleId: 'volume',
+    })
+
+    chart.timeScale().applyOptions({
+      timeVisible: true,
+      secondsVisible: false,
+    })
+
+    chart.priceScale('volume').applyOptions({
+      visible: true,
+      borderVisible: false,
+      scaleMargins: {
+        top: 0.8,   
+        bottom: 0  
+      }
+    })
+
+    chart.priceScale('right').applyOptions({
+      scaleMargins: {
+        top: 0,
+        bottom: 0.2
+      }
     })
 
     chart.timeScale().subscribeVisibleTimeRangeChange((range) => {
@@ -114,16 +181,12 @@ const initChart = async () => {
       if (chartTimer) clearTimeout(chartTimer);
 
       chartTimer = setTimeout(async () => {
-        if (isLoading.value) return
 
         if (from <= oldest + threshold) {
-          isLoading.value = true
-          try{
+          props.candleRun(async () => {
             candlesListQuery.value.cursor = new Date(oldest * 1000).toISOString()
             await marketStore.fetchCandles()
-          } finally {
-            isLoading.value = false
-          }
+          })
         }
 
       }, 300)
@@ -138,11 +201,27 @@ const initChart = async () => {
   }
 }
 
+watch(() => props.collapsed, () => {
+  if (collapsedTimer) clearTimeout(collapsedTimer);
+
+  collapsedTimer = setTimeout(() => { // css transition 동기화
+    if (!chartContainer.value) return
+
+    chart?.resize(
+      chartContainer.value.clientWidth,
+      chartContainer.value.clientHeight
+    )
+  }, 300) 
+})
+
 watch(
   () => props.market,
   async (m) => {
     if (!m) return
-    await marketStore.fetchCandles()
+
+    props.candleRun(async () => {
+      await marketStore.fetchCandles()
+    })
   },
   { immediate: true }
 )
@@ -169,6 +248,14 @@ watch(
     candleSeries.setData(
       sorted
     )
+
+    volumeSeries.setData(
+      candles.value.map(c => ({
+        time: (new Date(c.tsOpen).getTime() / 1000) as UTCTimestamp,
+        value: Number(c.volume),
+        color: Number(c.close) >= Number(c.open) ? '#26a69a' : '#ef5350'
+      }))
+    )
   },
   { immediate: true }
 )
@@ -185,6 +272,12 @@ watch(
       high: Number(c.high),
       low: Number(c.low),
       close: Number(c.close),
+    })
+
+    volumeSeries.update({
+      time: c.tsOpen as UTCTimestamp,
+      value: Number(c.volume),
+      color: Number(c.close) >= Number(c.open) ? '#26a69a' : '#ef5350'
     })
   }
 )

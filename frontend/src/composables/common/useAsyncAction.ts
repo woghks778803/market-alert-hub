@@ -5,7 +5,7 @@ export function useAsyncAction() {
 
     const isReady = computed(() => !loading.value)
 
-    async function run<T>(fn: () => Promise<T>) {
+    async function run<T>(fn: () => T | Promise<T>) {
         if (loading.value) return null
         loading.value = true
         try {

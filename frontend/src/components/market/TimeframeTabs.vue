@@ -3,6 +3,7 @@
 <div class="mk-tabs">
 
     <v-chip-group
+      mandatory
       selected-class="mk-tab-active"
       :model-value="currentTimeframe"
       @update:modelValue="onUpdate"
