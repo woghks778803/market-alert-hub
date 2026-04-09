@@ -7,7 +7,8 @@
       <v-list-item title="화면 테마">
         <template #append>
           <v-select
-            v-model="theme"
+            :model-value="theme"
+            @update:model-value="onChangeTheme"
             :items="themeItems"
             density="compact"
             variant="outlined"
@@ -28,7 +29,8 @@
       <v-list-item title="화면 꺼짐 방지">
         <template #append>
           <v-switch
-            v-model="keepScreenOn"
+            :model-value="keepScreenOn"
+            @update:model-value="onChangeKeepScreenOn"
             inset
             hide-details
           />
@@ -41,7 +43,8 @@
       <v-list-item title="진동">
         <template #append>
           <v-switch
-            v-model="vibration"
+            :model-value="vibration"
+            @update:model-value="onChangeVibration"
             inset
             hide-details
           />
@@ -65,23 +68,39 @@
 
 <script setup lang="ts">
 import { ref } from "vue"
+import { useAppSettings, ThemeMode } from "@/composables/common/useAppSettings"
 
-const theme = ref("system")
-const keepScreenOn = ref(false)
-const vibration = ref(true)
-const push = ref(true)
+const { 
+  ThemeLabel, 
+  getSavedTheme, getSavedKeepScreenOnEnabled, getSavedVibrateEnabled,
+  applyTheme, applyKeepScreenOn, applyVibrate
+ } = useAppSettings()
 
-const themeItems = [
-  { title: "시스템", value: "system" },
-  { title: "라이트", value: "light" },
-  { title: "다크", value: "dark" },
-]
-</script>
+const theme = ref(getSavedTheme())
+const keepScreenOn = ref(getSavedKeepScreenOnEnabled())
+const vibration = ref(getSavedVibrateEnabled())
+const push = ref(false) 
 
-<style scoped>
-.app-title {
-  font-weight: 800;
-  font-size: 18px;
-  margin-bottom: 12px;
+const themeItems = Object.values(ThemeMode).map((value) => ({
+  title: ThemeLabel[value],
+  value,
+}))
+
+function onChangeTheme(val: ThemeMode) {
+  if(val == null) return
+  theme.value = val
+  applyTheme(val)
 }
-</style>
+
+function onChangeKeepScreenOn(val: boolean | null) {
+  if(val == null) return
+  keepScreenOn.value = val
+  applyKeepScreenOn(val)
+}
+
+function onChangeVibration(val: boolean | null) {
+  if(val == null) return
+  vibration.value = val
+  applyVibrate(val)
+}
+</script>
