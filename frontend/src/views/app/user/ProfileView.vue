@@ -139,17 +139,17 @@ import { ref, onMounted, nextTick } from "vue";
 import { storeToRefs } from "pinia"
 import { useRouter } from "vue-router"
 import { useUserStore } from "@/stores/user.store"
-import { useAuthStore } from "@/stores/auth.store"
 import { formatDate } from "@/utils/format"
+import { useAuthFlow } from "@/composables/auth/useAuthFlow"
 import { useAsyncAction } from "@/composables/common/useAsyncAction";
 import { mapCommonError } from "@/composables/error/error.mapper"
 import { mapChangePasswordError } from "@/composables/error/changePasswordError.mapper"
 
 const router = useRouter()
 const userStore = useUserStore()
-const authStore = useAuthStore()
 const { me } = storeToRefs(userStore)
 const { run, loading, isReady } = useAsyncAction()
+const { deactivate, changePassword } = useAuthFlow()
 
 const showConfirmDialog = ref(false)
 const showPasswordDialog = ref(false)
@@ -157,7 +157,7 @@ const showPasswordDialog = ref(false)
 async function handleDeactivate() {
   try {
     await run(async () => {
-      await authStore.deactivate() 
+      await deactivate() 
       router.replace({ name: "Login" })
     })
   } catch (err: any) {
@@ -168,7 +168,7 @@ async function handleDeactivate() {
 async function handleChangePassword({ payload, onSuccess, onError }: SubmitPayload) {
   try {
     await run(async () => {
-      await authStore.changePassword(payload)
+      await changePassword(payload)
       showPasswordDialog.value = false
       await nextTick()
 

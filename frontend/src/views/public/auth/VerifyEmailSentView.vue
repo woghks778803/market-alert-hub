@@ -47,6 +47,7 @@ import { useRouter } from "vue-router"
 import { useCooldown } from "@/composables/common/useCooldown"
 import { useUserStore } from "@/stores/user.store";
 import { useAuthStore } from "@/stores/auth.store";
+import { useAuthFlow } from "@/composables/auth/useAuthFlow"
 import { useVerifyEmailSent } from "@/composables/auth/useVerifyEmailSent";
 import { useAsyncAction } from "@/composables/common/useAsyncAction";
 import { mapCommonError } from "@/composables/error/error.mapper"
@@ -57,6 +58,8 @@ const userStore = useUserStore();
 const authStore = useAuthStore();
 const { successMessage, errorMessage, resetMessages } = useVerifyEmailSent();
 const { run, loading, isReady } = useAsyncAction()
+const { logout } = useAuthFlow()
+
 const { cooldownSec, isCooldown, startCooldown } =
   useCooldown();
 
@@ -91,7 +94,7 @@ async function onSubmit() {
       }
 
       if (r.kind === "logout") {
-        await authStore.logout()
+        await logout()
         await router.push({ name: "Login" }).catch(() => {})
         return
       }
@@ -110,7 +113,7 @@ async function onSubmit() {
 }
 
 async function goLogin() {
-  await authStore.logout()
+  await logout()
   router.push({ name: "Login" }).catch(() => {})
 }
 </script>

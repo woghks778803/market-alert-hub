@@ -129,6 +129,7 @@ import { computed, onMounted } from "vue"
 import AppCenterCard from "@/components/common/AppCenterCard.vue"
 import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth.store";
+import { useAuthFlow } from "@/composables/auth/useAuthFlow";
 import { useResetPasswordForm } from "@/composables/auth/useResetPasswordForm";
 import { useAsyncAction } from "@/composables/common/useAsyncAction";
 import { useMode } from "@/composables/common/useMode"
@@ -140,6 +141,7 @@ const route = useRoute();
 const authStore = useAuthStore();
 
 const { mode, setMode } = useMode();
+const { resetPassword } = useAuthFlow();
 
 const {
   password,
@@ -189,7 +191,7 @@ async function onSubmit() {
 
     await handleSubmit(async () => {
       await run(async () => {
-        await authStore.resetPassword({
+        await resetPassword({
           token: token,
           newPassword: password.value,
         });

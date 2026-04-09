@@ -102,13 +102,13 @@
 
 <script setup lang="ts">
 import { useRouter } from "vue-router"
-import { useAuthStore } from "@/stores/auth.store"
+import { useAuthFlow } from "@/composables/auth/useAuthFlow"
 
 const router = useRouter()
-const authStore = useAuthStore()
+const { logout } = useAuthFlow()
 
 async function goLogin() {
-  await authStore.logout() 
+  await logout() 
   router.replace({ name: "Login" })
 }
 </script>

@@ -3,7 +3,9 @@ import { vuetify } from '@/plugins/vuetify'
 enum BridgeType {
     THEME = "THEME",
     KEEP_SCREEN_ON = "KEEP_SCREEN_ON",
-    VIBRATE = "VIBRATE"
+    VIBRATE = "VIBRATE",
+    LOGIN = "LOGIN",
+    LOGOUT = "LOGOUT",
 }
 
 export enum ThemeMode {

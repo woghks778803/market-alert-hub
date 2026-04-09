@@ -47,6 +47,7 @@ import AuthFormCard from "@/components/auth/AuthFormCard.vue"
 import { useAuthStore } from "@/stores/auth.store";
 import { useAsyncAction } from "@/composables/common/useAsyncAction";
 import { useEmailActionForm } from "@/composables/auth/useEmailActionForm";
+import { useAuthFlow } from "@/composables/auth/useAuthFlow"
 import { mapCommonError } from "@/composables/error/error.mapper"
 import { mapEmailVerifyError } from "@/composables/error/emailVerifyError.mapper"
 
@@ -69,6 +70,7 @@ const {
   onBlurValidate,
 } = useEmailActionForm();
 const { run, loading, isReady } = useAsyncAction()
+const { logout } = useAuthFlow()
 
 async function onSubmit() {
   try {
@@ -101,7 +103,7 @@ async function onSubmit() {
 }
 
 async function goLogin() {
-  await authStore.logout()
+  await logout()
   router.push({ name: "Login" }).catch(() => {})
 }
 </script>

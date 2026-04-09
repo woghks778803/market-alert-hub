@@ -4,9 +4,6 @@ import type { TokenDto, ChangeEmailQuery, LoginQuery, RegisterQuery, ResetPasswo
 import { LS_KEY } from "@/services/auth.types"
 import * as authSevice from "@/services/auth.service";
 
-import { useUserStore } from "@/stores/user.store";
-
-
 
 export const useAuthStore = defineStore("auth", () => {
     const accessToken = ref<string | null>(localStorage.getItem(LS_KEY));
@@ -66,21 +63,11 @@ export const useAuthStore = defineStore("auth", () => {
     }
 
     async function resetPassword(payload: ResetPasswordQuery): Promise<void> {
-        const userStore = useUserStore()
-
         await authSevice.resetPassword(payload);
-
-        clearToken();
-        userStore.clearMe()
     }
 
     async function changePassword(payload: ChangePasswordQuery): Promise<void> {
-        const userStore = useUserStore()
-
         await authSevice.changePassword(payload);
-
-        clearToken();
-        userStore.clearMe()
     }
 
     async function changeEmail(payload: ChangeEmailQuery): Promise<string | null> {
@@ -90,29 +77,11 @@ export const useAuthStore = defineStore("auth", () => {
     }
 
     async function logout(): Promise<void> {
-        const userStore = useUserStore()
-
-        try {
-            await authSevice.logout();
-        } catch (_) {
-            // 무조건 무시
-        } finally {
-            clearToken();
-            userStore.clearMe()
-        }
+        await authSevice.logout();
     }
 
     async function deactivate(): Promise<void> {
-        const userStore = useUserStore()
-
-        try {
-            await authSevice.deactivate();
-        } catch (_) {
-            // 무조건 무시
-        } finally {
-            clearToken();
-            userStore.clearMe()
-        }
+        await authSevice.deactivate();
     }
 
     return {

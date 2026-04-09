@@ -60,18 +60,18 @@ import { computed, onMounted } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import AppCenterCard from "@/components/common/AppCenterCard.vue"
 import { useMode } from "@/composables/common/useMode"
-import { useAuthStore } from "@/stores/auth.store";
+import { useAuthFlow } from "@/composables/auth/useAuthFlow"
 
 const route = useRoute()
 const router = useRouter()
-const authStore = useAuthStore();
+const { logout } = useAuthFlow()
 
 const { mode, setMode } = useMode()
 
 const viewMode = computed(() => mode.value)
 
 async function goLogin() {
-  await authStore.logout()
+  await logout()
   router.replace({ name: "Login" })
 }
 
