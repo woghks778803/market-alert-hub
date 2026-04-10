@@ -197,17 +197,6 @@ class UserService:
 
             return email_verification
 
-    def ensure_user(
-        self, *, user_id: int, role: UserRole | None, status: UserStatus | None
-    ):
-        role = self.coerce(role, UserRole, "role")
-        status = self.coerce(status, UserStatus, "status")
-
-        with self._uow_factory() as uow:
-
-            uow.commit()
-            return user
-
     def change_user_settings(self, user_id: int, is_marketing: bool | None = None, is_quiet_hours: bool | None = None): 
         if(is_marketing is None and is_quiet_hours is None):
             raise ValidationAppError("Invalid user setting", target="user")

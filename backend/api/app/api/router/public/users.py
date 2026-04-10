@@ -19,7 +19,7 @@ from app.api.deps import (
 )
 import app.api.openapi as OpenApi
 
-router = APIRouter(prefix="/user")
+router = APIRouter(prefix="/users")
 
 
 @router.get(
@@ -74,3 +74,48 @@ def change_user_setting(
     return ok(
         result, request_id=meta.request_id
     )
+
+
+@router.post(
+    "/channel",
+    response_model=Envelope[UserSchema.SimpleOk],
+    summary="사용자 채널 등록",
+    description="",
+    responses=OpenApi.combine(
+        OpenApi.OK(
+            Envelope[UserSchema.SimpleOk],
+            description="등록 성공",
+        ),
+        OpenApi.ERR_409,
+    ),
+)
+def register_channel(
+    payload: UserSchema.UserChannelIn,
+    user: AuthSchema.CurrentUser = Security(get_current_user),
+    svcs: ServiceFactory = Depends(get_services),
+    meta: RequestMeta = Depends(get_request_meta),
+):
+    result = svcs.channels.register_channel(
+        user_id=user.id,
+        code=payload.code,
+        config=payload.config,
+    )
+
+    return Ok(result, request_id=meta.request_id)
+
+@router.delete(
+    "/channel",
+    summary="사용자 채널 비활성화",
+    responses=OpenApi.combine(OpenApi.NO_CONTENT({}, description="완료")),
+)
+def deactivate_channel(
+    payload: UserSchema.UserChannelIn,
+    user: AuthSchema.CurrentUser = Security(get_current_user),
+    svcs: ServiceFactory = Depends(get_services),
+):
+    svcs.channels.deactivate_channel(
+        user_id=user.id,
+        code=payload.code,
+        config=payload.config,
+    )
+    return no_content()

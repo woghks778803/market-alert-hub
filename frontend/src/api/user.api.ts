@@ -19,15 +19,15 @@ export type ChangeUserSettingRequest = {
 }
 
 export const userApi = {
-    // GET /user/me
+    // GET /users/me
     async getMe() {
-        const { data } = await http.get<Envelope<UserInfo>>("/user/me")
+        const { data } = await http.get<Envelope<UserInfo>>("/users/me")
         return data
     },
 
-    // PATCH /user/setting
+    // PATCH /users/setting
     async changeMeSetting(payload: ChangeUserSettingRequest) {
-        const { data } = await http.patch<Envelope<SimpleOk>>("/user/setting", payload)
+        const { data } = await http.patch<Envelope<SimpleOk>>("/users/setting", payload)
         return data
     },
 
