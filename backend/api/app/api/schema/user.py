@@ -1,7 +1,7 @@
 from datetime import datetime
 from pydantic import BaseModel, EmailStr, Field
 from pydantic.config import ConfigDict
-from app.core.constants import UserRole, UserStatus
+from app.core.constants import UserRole, UserStatus, ChannelCode, PlatformType
 
 _model_cfg = ConfigDict(from_attributes=True, use_enum_values=True)
 
@@ -53,5 +53,6 @@ class UserUpdateAdmin(BaseModel):
         default=None, description="active|suspended|deleted"
     )
 
-
-    
+class UserChannelIn(BaseModel):
+    code: ChannelCode = Field(..., description="채널 코드")
+    config: dict = Field(..., description="채널별 인증/설정 정보")

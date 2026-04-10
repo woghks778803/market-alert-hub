@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Body, Request, Response, status, Security, Path
+from fastapi import APIRouter, Depends, Body, Request, Response, status, Security, Path, Query
 
 from app.service.factory import ServiceFactory
 from app.api.schema import AuthSchema, ChannelSchema
@@ -12,7 +12,7 @@ router = APIRouter(prefix="/channels")
 @router.get(
     "",
     response_model=Envelope[list[ChannelSchema.ChannelRead]],
-    summary="사용자 채널 목록",
+    summary="채널 목록",
     responses=OpenApi.combine(
         OpenApi.OK(
             Envelope[list[ChannelSchema.ChannelRead]],  #  스키마도 래퍼로
@@ -22,13 +22,14 @@ router = APIRouter(prefix="/channels")
     ),
 )
 def list_channels(
-    user: AuthSchema.CurrentUser = Depends(get_current_user),
+    limit: int = Query(10, ge=1, le=20),
+    offset: int = Query(0, ge=0),
+    user: AuthSchema.CurrentUser = Security(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    rows = svcs.channels.list_channels_by_user_id(user_id=user.id)
-    out = [ChannelSchema.ChannelRead.model_validate(r) for r in rows]
-    return ok(out, request_id=meta.request_id)
+    rows = svcs.channels.list_channel_by_filter(limit=limit, offset=offset)
+    return ok(rows, request_id=meta.request_id)
 
 
 @router.get(
@@ -49,41 +50,29 @@ def get_channel(
     return ok(out, request_id=meta.request_id)
 
 
-@router.post(
-    "",
-    response_model=Envelope[ChannelSchema.ChannelRead],
-    summary="사용자 채널 등록",
-    responses=OpenApi.combine(
-        OpenApi.CREATED(
-            Envelope[list[ChannelSchema.ChannelRead]],  #  스키마도 래퍼로
-            description="리스트 조회 성공",
-        ),
-        OpenApi.ERR_409,
-    ),
-)
-def create_channel(
-    response: Response,
-    payload: ChannelSchema.ChannelCreate = Body(
-        ...,
-    ),
-    user: AuthSchema.CurrentUser = Depends(get_current_user),
-    svcs: ServiceFactory = Depends(get_services),
-    meta: RequestMeta = Depends(get_request_meta),
-):
-    result = svcs.channels.create_channel(
-        user_id=user.id, provider_id=payload.channel_provider_id, config=payload.config
-    )
-    return created(result, response=response, request_id=meta.request_id)
+# @router.post(
+#     "",
+#     response_model=Envelope[ChannelSchema.ChannelRead],
+#     summary="사용자 채널 등록",
+#     responses=OpenApi.combine(
+#         OpenApi.CREATED(
+#             Envelope[list[ChannelSchema.ChannelRead]],  #  스키마도 래퍼로
+#             description="리스트 조회 성공",
+#         ),
+#         OpenApi.ERR_409,
+#     ),
+# )
+# def create_channel(
+#     response: Response,
+#     payload: ChannelSchema.ChannelCreate = Body(
+#         ...,
+#     ),
+#     user: AuthSchema.CurrentUser = Depends(get_current_user),
+#     svcs: ServiceFactory = Depends(get_services),
+#     meta: RequestMeta = Depends(get_request_meta),
+# ):
+#     result = svcs.channels.create_channel(
+#         user_id=user.id, provider_id=payload.channel_provider_id, config=payload.config
+#     )
+#     return created(result, response=response, request_id=meta.request_id)
 
-
-@router.delete(
-    "/{user_channel_id}",
-    summary="사용자 채널 삭제(soft)",
-    responses=OpenApi.combine(OpenApi.NO_CONTENT({}, description="완료")),
-)
-def delete_channel(
-    user_channel_id: int = Path(..., ge=1),
-    svcs: ServiceFactory = Depends(get_services),
-):
-    svcs.channels.delete_channel(user_channel_id=user_channel_id)
-    return no_content()

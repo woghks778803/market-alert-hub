@@ -18,7 +18,7 @@ from app.core.util.datetime import utcnow, get_days_ago
 from app.core.constants import MarketSort
 from app.domain import MarketDTO
 from datetime import datetime
-from ..protocol.market_repo import MarketRepo
+from app.infra.db.repository.protocol.market_repo import MarketRepo
 from app.infra.db.utils import to_row_dict
 
 eit = ExchangeInstrumentTickerModel

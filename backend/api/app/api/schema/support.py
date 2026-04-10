@@ -38,5 +38,5 @@ class FAQRead(BaseModel):
     question: str
     answer: str
     category: str
-    display_order: int
+    sort_order: int
     updated_at: datetime

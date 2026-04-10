@@ -11,13 +11,23 @@ class UserChannel:
     channel_provider_id: int
     address: str | None
     config: dict | None
-    config_fingerprint: bytes | None
+    config_hash: bytes | None
     verified_at: datetime | None
     created_at: datetime
     updated_at: datetime
-    is_default: bool
-    is_deleted: bool
+    deleted_at: datetime | None
+    is_active: bool
 
+@dataclass(slots=True)
+class UserChannelCreate:
+    user_id: int
+    channel_provider_id: int
+    address: str | None
+    config: dict | None
+    config_hash: bytes | None
+    verified_at: datetime | None
+    deleted_at: datetime | None
+    is_active: bool
 
 @dataclass(slots=True)
 class ChannelProvider:

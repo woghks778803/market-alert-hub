@@ -39,7 +39,7 @@ class FAQ:
     question: str
     answer: str
     category: FAQCategory
-    display_order: int
+    sort_order: int
     is_active: bool
     created_at: datetime
     updated_at: datetime

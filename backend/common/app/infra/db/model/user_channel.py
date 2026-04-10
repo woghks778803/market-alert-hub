@@ -18,7 +18,7 @@ class UserChannel(Base):
 
     address:      Mapped[str | None] = mapped_column(String(255))
     config:       Mapped[dict | None] = mapped_column(JSON)
-    config_fingerprint: Mapped[bytes | None] = mapped_column(BINARY(32), index=True)
+    config_hash: Mapped[bytes | None] = mapped_column(BINARY(32), nullable=True, index=True)
     verified_at:  Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
         default=utcnow, 
@@ -29,8 +29,9 @@ class UserChannel(Base):
         onupdate=utcnow, 
         nullable=False
     )
-    is_default:   Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("0"))
-    is_deleted:   Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("0"))
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    is_active:  Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("0"))
 
     targets: Mapped[list["AlertChannelTarget"]] = relationship(back_populates="user_channel", cascade="all, delete-orphan")
     channel_provider: Mapped["ChannelProvider"] = relationship("ChannelProvider", back_populates="channels")
@@ -42,10 +43,24 @@ class UserChannel(Base):
             channel_provider_id=self.channel_provider_id,
             address=self.address,
             config=self.config,
-            config_fingerprint=self.config_fingerprint,
+            config_hash=self.config_hash,
             verified_at=self.verified_at,
             created_at=self.created_at,
             updated_at=self.updated_at,
-            is_default=self.is_default,
-            is_deleted=self.is_deleted,
+            deleted_at=self.deleted_at,
+            is_active=self.is_active,
+        )
+
+    @classmethod
+    def from_create_dto(cls, dto: ChannelDTO.UserChannelCreate) -> "UserChannel":
+        return cls(
+            user_id=dto.user_id,
+            channel_provider_id=dto.channel_provider_id,
+            address=dto.address,
+            config=dto.config,
+            config_hash=dto.config_hash,
+            verified_at=dto.verified_at,
+            is_active=dto.is_active,
+            # 생성 기본값
+            deleted_at=None,
         )

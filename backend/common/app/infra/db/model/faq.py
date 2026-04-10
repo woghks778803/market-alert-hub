@@ -19,7 +19,7 @@ class FAQ(Base):
                                                             native_enum=True, create_constraint=True, validate_strings=True),
                                                             default=FAQCategory.GENERAL, nullable=False)
     
-    display_order: Mapped[int] = mapped_column(Integer, default=100)
+    sort_order: Mapped[int] = mapped_column(Integer, default=100)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("0"))
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
@@ -31,7 +31,7 @@ class FAQ(Base):
             question=self.question,
             answer=self.answer,
             category=self.category,
-            display_order=self.display_order,
+            sort_order=self.sort_order,
             is_active=self.is_active,
             created_at=self.created_at,
             updated_at=self.updated_at,

@@ -1,10 +1,11 @@
 from typing import Callable
+from app.core.constants import ChannelCode
 from app.core.util.serialization import to_canonical_json
+from app.core.util.datetime import utcnow, ensure_utc
 from app.infra.db.model import UserChannelModel
 from app.domain.shared.uow import UnitOfWork
-from app.domain.shared.errors import ConflictError, ValidationAppError
-from app.domain import CryptoPort, ChannelRule
-
+from app.domain.shared.errors import ConflictError, ValidationAppError, NotFoundError
+from app.domain import CryptoPort, ChannelRule, ChannelDTO
 
 class ChannelService:
     def __init__(
@@ -14,26 +15,27 @@ class ChannelService:
         self._hmac = hmac
 
     # 목록
-    def list_channels_by_user_id(self, user_id: int):
+    def list_channel_by_filter(self, limit: int, offset: int):
         with self._uow_factory() as uow:
-            rows = uow.channels.list_channels_by_user_id(user_id)
+            rows = uow.channels.list_channel_by_filter(limit=limit, offset=offset)
             return rows
 
     def get_by_channel_id(self, *, user_channel_id: int):
         with self._uow_factory() as uow:
             return uow.channels.get_by_channel_id(user_channel_id)
 
-    def create_channel(self, *, user_id: int, provider_id: int, config: dict | None):
+    def register_channel(self, *, user_id: int, code: ChannelCode, config: dict):
+        now = utcnow()
 
         with self._uow_factory() as uow:
-            chp = uow.providers.get_by_provider_id(provider_id)
+            chp = uow.channels.get_provider_by_code(code)
             if not chp:
-                raise ValidationAppError(
-                    "Unknown channel provider.", target="provider_id"
+                raise NotFoundError(
+                    "Not found channel provider", target="channel_provider"
                 )
             if not chp.is_active:
                 raise ValidationAppError(
-                    "Channel provider is not active.", target="provider.is_active"
+                    "Channel provider is not active", target="channel_provider"
                 )
 
             channel_cnt = uow.channels.get_channel_cnt(
@@ -42,7 +44,7 @@ class ChannelService:
             # TODO 현재는 5개 고정 나중에 결제 서비스 넣을때 변경
             if channel_cnt >= ChannelRule.MAX_CHANNELS_PER_USER:
                 raise ConflictError(
-                    "Channel limit already exceed.", target="provider_id, user_id"
+                    "Channel limit already exceed", target="user_channel"
                 )
 
             # provider.user_schema 기반 JSON 검증 훅
@@ -50,41 +52,55 @@ class ChannelService:
                 code=chp.code, config=config, user_schema=chp.user_schema
             )
 
-            fingerprint = to_canonical_json(config)
-            if fingerprint is not None:
-                fingerprint = self._hmac.fp_hash(fingerprint)
+            token_hash = to_canonical_json(config)
+            if token_hash is not None:
+                token_hash = self._hmac.to(token_hash)
 
-            existed = uow.channels.get_channel_by_fingerprint(
-                user_id=user_id,
-                provider_id=provider_id,
-                fingerprint=fingerprint,
+            uow.channels.update_channel_active(
+                channel_provider_id=provider.id,
+                address=token,
+                is_active=False
             )
-            if existed:
-                raise ConflictError(
-                    "Channel with same configuration already exists.",
-                    target="user_id, provider_id, fingerprint",
+
+            uow.channels.upsert_channel(
+                ChannelDTO.UserChannelCreate(
+                    user_id=user_id,
+                    channel_provider_id=provider.id,
+                    address=token,
+                    config=config,
+                    config_hash=token_hash,
+                    verified_at=now,
+                    deleted_at=None,
+                    is_active=True
+                )
+            )
+
+            uow.commit()
+
+            return {"ok": True}
+            
+
+    def deactivate_channel(self, *, user_id: int, code: ChannelCode, config: dict) -> None:
+        with self._uow_factory() as uow:
+            chp = uow.channels.get_provider_by_code(code)
+            if not chp:
+                raise NotFoundError(
+                    "Not found channel provider", target="channel_provider"
+                )
+            if not chp.is_active:
+                raise ValidationAppError(
+                    "Channel provider is not active", target="channel_provider"
                 )
 
-            row = UserChannelModel(
-                user_id=user_id,
-                channel_provider_id=provider_id,
-                config=config or {},
-                config_fingerprint=fingerprint,
-                is_deleted=False,
+            ChannelRule.validate_user_config(
+                code=chp.code, config=config, user_schema=chp.user_schema
             )
-            uow.channels.add_channel(row)
-            uow.commit()
-            # refresh가 UoW에 없다면 session.refresh(row) 호출
-            # uow.db.refresh(row)
 
-            result = uow.channels.get_by_channel_id(user_channel_id=row.id)
-            return result
+            uow.channels.update_channel_active(
+                user_id=user_id,
+                channel_provider_id=chp.id,
+                address=token,
+                is_active=False,
+            )
 
-    def delete_channel(self, *, user_channel_id: int):
-        with self._uow_factory() as uow:
-            row = uow.channels.get_by_channel_id(user_channel_id)
-            if not row:
-                return None
-            row.is_deleted = True
             uow.commit()
-            return row

@@ -101,7 +101,7 @@ class SqlSupportRepo(SupportRepo):
                     FAQModel.is_active.is_(is_active),
                 )
             )
-            .order_by(asc(FAQModel.display_order))
+            .order_by(asc(FAQModel.sort_order))
             .limit(limit)
             .offset(offset)
         )

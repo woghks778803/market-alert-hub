@@ -39,6 +39,10 @@ class ExchangeCode(str, enum.Enum):
     BINANCE = "BINANCE"
     BITHUMB = "BITHUMB"
 
+class ChannelCode(str, enum.Enum):
+    FCM = "FCM"
+    TELEGRAM = "TELEGRAM"
+    DISCORD = "DISCORD"
 
 class OAuthCode(str, enum.Enum):
     KAKAO = "KAKAO"
@@ -69,6 +73,9 @@ class OutboxEventType(str, enum.Enum):
     TRIGGER_ALERTS = "TRIGGER_ALERTS"
     PERSIST_SNAPSHOTS = "PERSIST_SNAPSHOTS"
 
+class PlatformType(str, enum.Enum):
+    ANDROID = "android"
+    IOS = "ios"
 
 class DeploymentEnvironment(str, enum.Enum):
     LOCAL = "local"

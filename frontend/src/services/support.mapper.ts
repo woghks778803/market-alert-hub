@@ -43,7 +43,7 @@ export function toFAQDto(data: FAQInfo): FAQDto {
         answer: data.answer,
         category: data.category,
 
-        displayOrder: data.display_order,
+        sortOrder: data.sort_order,
         isActive: data.is_active,
 
         updatedAt: data.updated_at,

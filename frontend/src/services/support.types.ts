@@ -38,7 +38,7 @@ export type FAQDto = {
     answer: string
     category: string
 
-    displayOrder: number
+    sortOrder: number
     isActive: boolean
 
     updatedAt: string

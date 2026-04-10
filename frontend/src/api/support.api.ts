@@ -40,7 +40,7 @@ export type FAQInfo = {
     answer: string
     category: string
 
-    display_order: number
+    sort_order: number
     is_active: boolean
 
     updated_at: string
