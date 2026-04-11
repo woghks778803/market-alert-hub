@@ -10,8 +10,8 @@ function resolveBaseURL() {
 }
 
 export const http: AxiosInstance = axios.create({
-    baseURL: resolveBaseURL(),
-    // baseURL: "/api",
+    // baseURL: resolveBaseURL(),
+    baseURL: "/api",
     timeout: 15_000,
     withCredentials: true, // 쿠키 전송 허용 
     paramsSerializer: {
@@ -26,11 +26,6 @@ export const http: AxiosInstance = axios.create({
 
 // --- Request: attach Authorization token ---
 http.interceptors.request.use((config) => {
-    const token = localStorage.getItem(ACCESS_TOKEN_KEY)
-    if (token) {
-        config.headers = config.headers ?? {}
-        config.headers.Authorization = `Bearer ${token}`
-    }
     return config
 })
 
@@ -39,10 +34,10 @@ http.interceptors.request.use((config) => {
 -------------------------- */
 
 let isRefreshing = false
-let pendingQueue: Array<(token: string | null) => void> = []
+let pendingQueue: Array<(error: unknown) => void> = []
 
-function processQueue(token: string | null) {
-    pendingQueue.forEach((cb) => cb(token))
+function processQueue(error: unknown) {
+    pendingQueue.forEach((cb) => cb(error))
     pendingQueue = []
 }
 
@@ -54,14 +49,8 @@ async function refreshAccessToken(): Promise<string> {
             { withCredentials: true }
         )
 
-        const newToken = data?.data?.access_token
-        if (!newToken) throw new Error("invalid_refresh_response")
-
-        localStorage.setItem(ACCESS_TOKEN_KEY, newToken)
-        return newToken
+        return data?.data
     } catch (err: any) {
-        localStorage.removeItem(ACCESS_TOKEN_KEY)
-
         throw err
     }
 }
@@ -98,14 +87,11 @@ http.interceptors.response.use(
         if (isRefreshing) {
             // 이미 refresh 중이면 큐에 대기
             return new Promise((resolve, reject) => {
-                pendingQueue.push((token) => {
-                    if (!token) {
-                        reject(err)
-                        return
+                pendingQueue.push((error) => {
+                    if (error) {
+                        return reject(err)
                     }
 
-                    originalRequest.headers = originalRequest.headers ?? {}
-                    originalRequest.headers.Authorization = `Bearer ${token}`
                     resolve(http(originalRequest))
                 })
             })
@@ -113,16 +99,12 @@ http.interceptors.response.use(
 
         try {
             isRefreshing = true
-            const newToken = await refreshAccessToken()
-
-            processQueue(newToken)
-
-            originalRequest.headers = originalRequest.headers ?? {}
-            originalRequest.headers.Authorization = `Bearer ${newToken}`
-            return http(originalRequest)
-
-        } catch (refreshError) {
+            await refreshAccessToken()
             processQueue(null)
+
+            return http(originalRequest)
+        } catch (refreshError) {
+            processQueue(refreshError as Error)
 
             // refresh 실패 → 로그인 페이지로 보내는건 router에서 처리
             return Promise.reject(refreshError)

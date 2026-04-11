@@ -12,10 +12,10 @@ export function useAuthFlow() {
         } catch (_) {
             // 무조건 무시
         } finally {
-            authStore.clearToken()
+            authStore.clearStatus()
 
             userStore.clearMe()
-            // channelStore.clear()   // 👈 추가 (FCM 정리)
+            // channelStore.clear()  
         }
     }
 
@@ -25,7 +25,7 @@ export function useAuthFlow() {
         } catch (_) {
             // 무조건 무시
         } finally {
-            authStore.clearToken()
+            authStore.clearStatus()
 
             userStore.clearMe()
             // channelStore.clear()
@@ -35,14 +35,14 @@ export function useAuthFlow() {
     async function resetPassword(payload: ResetPasswordQuery): Promise<void> {
         await authStore.resetPassword(payload)
 
-        authStore.clearToken()
+        authStore.clearStatus()
         userStore.clearMe()
     }
 
     async function changePassword(payload: ChangePasswordQuery): Promise<void> {
         await authStore.changePassword(payload)
 
-        authStore.clearToken()
+        authStore.clearStatus()
         userStore.clearMe()
     }
 

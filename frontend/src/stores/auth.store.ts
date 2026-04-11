@@ -1,49 +1,36 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
-import type { TokenDto, ChangeEmailQuery, LoginQuery, RegisterQuery, ResetPasswordQuery, ChangePasswordQuery, VerifyTokenQuery } from "@/services/auth.types"
-import { LS_KEY } from "@/services/auth.types"
+import { ref } from "vue";
+import type { StatusDto, ChangeEmailQuery, LoginQuery, RegisterQuery, ResetPasswordQuery, ChangePasswordQuery, VerifyTokenQuery } from "@/services/auth.types"
 import * as authSevice from "@/services/auth.service";
 
 
 export const useAuthStore = defineStore("auth", () => {
-    const accessToken = ref<string | null>(localStorage.getItem(LS_KEY));
+    const authStatus = ref<StatusDto | null>(null);
 
-    const isAuthenticated = computed(() => !!accessToken.value);
-
-    function getToken(): string | null {
-        return accessToken.value;
+    function getStatus(): StatusDto | null {
+        return authStatus.value;
     }
 
-    function setToken(token: string) {
-        accessToken.value = token;
-        localStorage.setItem(LS_KEY, token);
+    function clearStatus() {
+        authStatus.value = null;
     }
-
-    function clearToken() {
-        accessToken.value = null;
-        localStorage.removeItem(LS_KEY);
-    }
-
 
     /*
         Action
     */
-    async function reissue() {
-        const token = await authSevice.reissue();
-        setToken(token.accessToken);
-        return token.accessToken;
+    async function reissue(): Promise<StatusDto | null> {
+        authStatus.value = await authSevice.reissue();
+        return authStatus.value
     }
 
-    async function login(payload: LoginQuery): Promise<string> {
-        const token = await authSevice.login(payload);
-        setToken(token.accessToken);
-        return token.accessToken;
+    async function login(payload: LoginQuery): Promise<StatusDto | null> {
+        authStatus.value = await authSevice.login(payload);
+        return authStatus.value
     }
 
-    async function register(payload: RegisterQuery): Promise<string | null> {
-        const token = await authSevice.register(payload);
-        if (token) setToken(token.accessToken);
-        return token.accessToken;
+    async function register(payload: RegisterQuery): Promise<StatusDto | null> {
+        authStatus.value = await authSevice.register(payload);
+        return authStatus.value
     }
 
     // async function verifyEmail(payload: VerifyTokenQuery): Promise<void> {
@@ -70,10 +57,9 @@ export const useAuthStore = defineStore("auth", () => {
         await authSevice.changePassword(payload);
     }
 
-    async function changeEmail(payload: ChangeEmailQuery): Promise<string | null> {
-        const token = await authSevice.changeEmail(payload);
-        setToken(token.accessToken);
-        return token.accessToken;
+    async function changeEmail(payload: ChangeEmailQuery): Promise<StatusDto | null> {
+        authStatus.value = await authSevice.changeEmail(payload);
+        return authStatus.value
     }
 
     async function logout(): Promise<void> {
@@ -85,12 +71,8 @@ export const useAuthStore = defineStore("auth", () => {
     }
 
     return {
-        accessToken,
-        isAuthenticated,
-
-        getToken,
-        setToken,
-        clearToken,
+        getStatus,
+        clearStatus,
 
         reissue,
         login,

@@ -2,7 +2,7 @@ from jwt import ExpiredSignatureError, InvalidTokenError
 from datetime import datetime, timezone
 from functools import lru_cache
 from dataclasses import dataclass
-from fastapi import Depends, Request
+from fastapi import Depends, Request, Response, Cookie
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from app.api.schema import AuthSchema
@@ -14,8 +14,7 @@ from app.runtime.bootstrap import (
     create_api_context,
 )
 
-_bearer = HTTPBearer(auto_error=False)
-
+# _bearer = HTTPBearer(auto_error=False)
 
 @dataclass(frozen=True)
 class RequestMeta:
@@ -38,16 +37,22 @@ def get_services(
 ):
     return ctx.svcs
 
+# def get_current_token(
+#     creds: HTTPAuthorizationCredentials | None = Depends(_bearer),
+# ) -> str:
+#     """
+#     Authorization: Bearer <token> 헤더에서 토큰만 추출.
+#     """
+#     if not creds or creds.scheme.lower() != "bearer":
+#         raise AuthError(message="Missing or invalid token", target="token")
+#     return creds.credentials
 
 def get_current_token(
-    creds: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    access_token: str | None = Cookie(default=None, alias="access_token"),
 ) -> str:
-    """
-    Authorization: Bearer <token> 헤더에서 토큰만 추출.
-    """
-    if not creds or creds.scheme.lower() != "bearer":
-        raise AuthError(message="Missing or invalid token", target="token")
-    return creds.credentials
+    if not access_token:
+        raise AuthError("Missing token", target="token")
+    return access_token
 
 
 def get_current_user(
@@ -67,6 +72,7 @@ def get_current_user(
         role = UserRole(payload["role"])
     except (KeyError, ValueError):
         raise AuthError("Invalid token payload", target="token")
+
     return AuthSchema.CurrentUser(
         id=user_id,
         role=role,
@@ -76,29 +82,53 @@ def get_current_user(
 
 def get_optional_user(
     svcs: ServiceFactory = Depends(get_services),
-    creds: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    access_token: str | None = Cookie(default=None, alias="access_token"),
 ) -> AuthSchema.CurrentUser | None:
 
-    if not creds or creds.scheme.lower() != "bearer":
+    if not access_token:
         return None
 
     try:
-        payload = svcs.jwt.decode_token(creds.credentials)
+        payload = svcs.jwt.decode_token(access_token)
+    except (ExpiredSignatureError, InvalidTokenError):
+        return None  
 
+    try:
         user_id = int(payload["sub"])
         role = UserRole(payload["role"])
-
-        return AuthSchema.CurrentUser(
-            id=user_id,
-            role=role,
-            email_enrolled=payload.get("ee"),
-            email_verified=payload.get("ev"),
-        )
-
-    except Exception:
-        # raise 하지 말고 None
+    except (KeyError, ValueError):
         return None
+
+    return AuthSchema.CurrentUser(
+        id=user_id,
+        role=role,
+        email_enrolled=payload.get("ee"),
+        email_verified=payload.get("ev"),
+    )
 
 def require_admin(user=Depends(get_current_user)):
     if getattr(user, "role", None) != UserRole.ADMIN:
         raise PermissionError("Admin role required", target="role")
+
+# RedirectResponse는 Response를 상속
+def expire_auth_cookies(response: Response): 
+    response.set_cookie(
+        key="access_token",
+        value="",
+        max_age=0,
+        expires=0,
+        path="/",
+        httponly=True,
+        secure=False,
+        samesite="lax",
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value="",
+        max_age=0,
+        expires=0,
+        path="/",
+        httponly=True,
+        secure=False,
+        samesite="lax",
+    )

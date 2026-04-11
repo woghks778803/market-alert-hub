@@ -2,8 +2,8 @@ import {
     authApi
 } from "@/api/auth.api"
 
-import { toTokenDto, toResetPasswordRequest, toChangePasswordRequest, toVerifyTokenRequest, toChangeEmailRequest, toLoginRequest, toRegisterRequest } from "@/services/auth.mapper"
-import type { TokenDto, ChangeEmailQuery, LoginQuery, RegisterQuery, ResetPasswordQuery, ChangePasswordQuery, VerifyTokenQuery } from "@/services/auth.types"
+import { toStatusDto, toResetPasswordRequest, toChangePasswordRequest, toVerifyTokenRequest, toChangeEmailRequest, toLoginRequest, toRegisterRequest } from "@/services/auth.mapper"
+import type { StatusDto, ChangeEmailQuery, LoginQuery, RegisterQuery, ResetPasswordQuery, ChangePasswordQuery, VerifyTokenQuery } from "@/services/auth.types"
 
 // TODO: ApiError → DomainError 변환 필요
 
@@ -79,47 +79,58 @@ export async function deactivate(): Promise<void> {
 }
 
 /** change email */
-export async function changeEmail(payload: ChangeEmailQuery): Promise<TokenDto> {
+export async function changeEmail(payload: ChangeEmailQuery): Promise<StatusDto> {
     const env = await authApi.changeEmail(toChangeEmailRequest(payload))
 
     if (!env.success || !env.data) {
         throw env.error ?? new Error("invalid_change_email_response")
     }
 
-    return toTokenDto(env.data)
+    return toStatusDto(env.data)
+}
+
+/**  */
+export async function checkStatus(): Promise<StatusDto> {
+    const env = await authApi.checkStatus()
+
+    if (!env.success || !env.data) {
+        throw env.error ?? new Error("invalid_status_response")
+    }
+
+    return toStatusDto(env.data)
 }
 
 /** reissue */
-export async function reissue(): Promise<TokenDto> {
+export async function reissue(): Promise<StatusDto> {
     const env = await authApi.reissue()
 
     if (!env.success || !env.data) {
         throw env.error ?? new Error("invalid_reissue_response")
     }
 
-    return toTokenDto(env.data)
+    return toStatusDto(env.data)
 }
 
 /** login */
-export async function login(payload: LoginQuery): Promise<TokenDto> {
+export async function login(payload: LoginQuery): Promise<StatusDto> {
     const env = await authApi.login(toLoginRequest(payload))
 
     if (!env.success || !env.data) {
         throw env.error ?? new Error("invalid_login_response")
     }
 
-    return toTokenDto(env.data)
+    return toStatusDto(env.data)
 }
 
 /** register */
-export async function register(payload: RegisterQuery): Promise<TokenDto> {
+export async function register(payload: RegisterQuery): Promise<StatusDto> {
     const env = await authApi.register(toRegisterRequest(payload))
 
     if (!env.success || !env.data) {
         throw env.error ?? new Error("invalid_register_response")
     }
 
-    return toTokenDto(env.data)
+    return toStatusDto(env.data)
 }
 
 

@@ -1,6 +1,13 @@
 import { http } from "./http"
 import type { Envelope, SimpleOk } from "./types"
 
+export type StatusInfo = {
+    id: number
+    role: string
+    email_verified: boolean
+    email_enrolled: boolean
+}
+
 export type TokenInfo = {
     access_token: string
     token_type: "bearer" | string
@@ -51,13 +58,13 @@ export type OauthCallbackRequest = {
 export const authApi = {
     // POST /auth/reissue
     async reissue() {
-        const { data } = await http.post<Envelope<TokenInfo>>("/auth/reissue");
+        const { data } = await http.post<Envelope<StatusInfo>>("/auth/reissue");
         return data;
     },
 
     // POST /auth/login
     async login(payload: LoginRequest) {
-        const { data } = await http.post<Envelope<TokenInfo>>("/auth/login", payload)
+        const { data } = await http.post<Envelope<StatusInfo>>("/auth/login", payload)
         return data
     },
 
@@ -75,7 +82,7 @@ export const authApi = {
 
     // POST /auth/register 
     async register(payload: RegisterRequest) {
-        const { data } = await http.post<Envelope<TokenInfo>>("/auth/register", payload);
+        const { data } = await http.post<Envelope<StatusInfo>>("/auth/register", payload);
         return data;
     },
 
@@ -93,7 +100,7 @@ export const authApi = {
 
     // POST /auth/change-email
     async changeEmail(payload: ChangeEmailRequest) {
-        const { data } = await http.post<Envelope<TokenInfo>>("/auth/change-email", payload);
+        const { data } = await http.post<Envelope<StatusInfo>>("/auth/change-email", payload);
         return data;
     },
 
@@ -121,11 +128,10 @@ export const authApi = {
         return data;
     },
 
-    // GET /auth/oauth/callback
-    async oauthCallback(params?: OauthCallbackRequest) {
-        const { data } = await http.get<Envelope<TokenInfo>>(
-            "/auth/oauth/callback",
-            { params }
+    // GET /auth/status
+    async checkStatus() {
+        const { data } = await http.get<Envelope<StatusInfo>>(
+            "/auth/status",
         )
         return data
     },

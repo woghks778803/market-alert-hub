@@ -1,3 +1,10 @@
+export type StatusDto = {
+    id: number
+    role: string
+    emailVerified: boolean
+    emaileEnrolled: boolean
+}
+
 export type TokenDto = {
     accessToken: string
     tokenType: "bearer" | string
@@ -37,8 +44,6 @@ export type RegisterQuery = {
     agreePrivacy: boolean;
     agreeMarketing: boolean;
 }
-
-export const LS_KEY = "access_token";
 
 export enum OAuthCode {
     KAKAO = "KAKAO",

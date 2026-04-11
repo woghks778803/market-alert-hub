@@ -16,6 +16,7 @@ from app.service.factory import ServiceFactory
 from app.api.schema import UserSchema, AuthSchema
 from app.api.common.envelope import Envelope, ok, created, no_content
 from app.api.deps import (
+    expire_auth_cookies,
     get_current_user,
     get_services,
     get_request_meta,
@@ -25,16 +26,34 @@ import app.api.openapi as OpenApi
 
 router = APIRouter(prefix="/auth")
 
+@router.get(
+    "/status",
+    response_model=Envelope[AuthSchema.CurrentUser], 
+    summary="리프레시 토큰으로 액세스 토큰 갱신",
+    description="리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급합니다.",
+    responses=OpenApi.combine(
+        OpenApi.OK(
+            Envelope[AuthSchema.CurrentUser],
+            description="",
+        ),
+        OpenApi.ERR_401,
+    ),
+)
+def get_auth_status(
+    user: AuthSchema.CurrentUser = Security(get_current_user),
+    meta: RequestMeta = Depends(get_request_meta),
+):  
+    return ok(user, request_id=meta.request_id)
 
 @router.post(
     "/reissue",
     status_code=status.HTTP_201_CREATED,
-    response_model=Envelope[AuthSchema.TokenOut],  # 래퍼 적용
+    response_model=Envelope[AuthSchema.CurrentUser], 
     summary="리프레시 토큰으로 액세스 토큰 갱신",
     description="리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급합니다.",
     responses=OpenApi.combine(
         OpenApi.CREATED(
-            Envelope[AuthSchema.TokenOut],  #  스키마도 래퍼로
+            Envelope[AuthSchema.CurrentUser],  #  스키마도 래퍼로
             description="액세스 토큰 갱신 성공",
             example=OpenApi.wrap_example({"ok": True}),
         ),
@@ -46,17 +65,29 @@ def reissue_token(
     response: Response,
     refresh_token: str = Cookie(..., alias="refresh_token"),
     svcs: ServiceFactory = Depends(get_services),
-    meta: RequestMeta = Depends(get_request_meta),  # request_id 주입
+    meta: RequestMeta = Depends(get_request_meta), 
 ):
     ip = request.client.host if request.client else None
     ua = request.headers.get("user-agent")
     token_out = svcs.auths.reissue_token(refresh_token=refresh_token, ip=ip, ua=ua)
 
+    response.set_cookie(
+        key="access_token",
+        value=token_out.access_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=svcs._config.access_token_minutes * 60,
+        path="/",
+    )
+
+    user = get_current_user(
+        svcs=svcs,
+        token=token_out.access_token
+    )
+
     return created(
-        AuthSchema.TokenOut(
-            access_token=token_out.access_token,
-            token_type="bearer",
-        ),
+        user,
         response=response,
         request_id=meta.request_id,
         location="/",
@@ -66,12 +97,12 @@ def reissue_token(
 @router.post(
     "/register",
     status_code=status.HTTP_201_CREATED,
-    response_model=Envelope[AuthSchema.TokenOut],
+    response_model=Envelope[AuthSchema.CurrentUser],
     summary="유저 회원가입",
     description="이메일 중복 시 ConflictError로 처리(전역 핸들러에서 409로 매핑).",
     responses=OpenApi.combine(
         OpenApi.CREATED(
-            Envelope[AuthSchema.TokenOut],  #  스키마도 래퍼로
+            Envelope[AuthSchema.CurrentUser],  #  스키마도 래퍼로
             description="회원가입 성공",
             example=OpenApi.wrap_example({"ok": True}),
         ),
@@ -118,11 +149,23 @@ def register(
         path="/",
     )
 
+    response.set_cookie(
+        key="access_token",
+        value=token_out.access_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=svcs._config.access_token_minutes * 60,
+        path="/",
+    )
+
+    user = get_current_user(
+        svcs=svcs,
+        token=token_out.access_token
+    )
+
     return created(
-        AuthSchema.TokenOut(
-            access_token=token_out.access_token,
-            token_type="bearer",
-        ),
+        user,
         response=response,
         request_id=meta.request_id,
         location="/auth/register",
@@ -131,11 +174,11 @@ def register(
 
 @router.post(
     "/login",
-    response_model=Envelope[AuthSchema.TokenOut],  # 래퍼 적용
+    response_model=Envelope[AuthSchema.CurrentUser],  # 래퍼 적용
     summary="로그인 (JWT 발급)",
     responses=OpenApi.combine(
         OpenApi.OK(
-            Envelope[AuthSchema.TokenOut],
+            Envelope[AuthSchema.CurrentUser],
             description="로그인 성공",
             example=OpenApi.wrap_example(
                 {"user_id": 5, "access_token": "<jwt>", "token_type": "bearer"}
@@ -168,11 +211,23 @@ def login(
         path="/",
     )
 
+    response.set_cookie(
+        key="access_token",
+        value=token_out.access_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=svcs._config.access_token_minutes * 60,
+        path="/",
+    )
+    
+    user = get_current_user(
+        svcs=svcs,
+        token=token_out.access_token
+    )
+
     return ok(
-        AuthSchema.TokenOut(
-            access_token=token_out.access_token,
-            token_type="bearer",
-        ),
+        user,
         request_id=meta.request_id,
     )
 
@@ -221,14 +276,16 @@ def verify_email(
     try:
         path = svcs.auths.verify_email(token=token)
     except Exception as e:
-        path = "code=invalid_token"
+        path = "code=internal_error"
     finally:
-        return RedirectResponse(url=redirect_url + path, status_code=302)
+        redirect = RedirectResponse(url=redirect_url + path, status_code=302)
+        expire_auth_cookies(redirect)
+        return redirect
 
 
 @router.post(
     "/change-email",
-    response_model=Envelope[AuthSchema.TokenOut],
+    response_model=Envelope[AuthSchema.CurrentUser],
     summary="이메일 변경",
     description="현재 비밀번호를 확인한 뒤 새 이메일로 인증 메일을 발송합니다.",
     responses=OpenApi.combine(
@@ -259,11 +316,13 @@ def change_email(
         new_email=payload.new_email,
     )
 
+    user = get_current_user(
+        svcs=svcs,
+        token=access_token
+    )
+
     return ok(
-        AuthSchema.TokenOut(
-            access_token=access_token,
-            token_type="bearer",
-        ),
+        user,
         request_id=meta.request_id,
     )
 
@@ -294,7 +353,7 @@ def change_password(
     result = svcs.auths.change_password(
         user_id=user.id, current_password=payload.current_password, new_password=payload.new_password
     )
-    response.delete_cookie("refresh_token", path="/")
+    expire_auth_cookies(response)
     return ok(result, request_id=meta.request_id)
 
 
@@ -339,7 +398,6 @@ def send_password_reset(
 def reset_password(
     request: Request,
     response: Response,
-    refresh_token: str = Cookie(..., alias="refresh_token"),
     payload: AuthSchema.ResetPasswordIn = Body(
         ...,
         example={
@@ -353,7 +411,8 @@ def reset_password(
     result = svcs.auths.reset_password(
         token=payload.token, new_password=payload.new_password
     )
-    response.delete_cookie("refresh_token", path="/")
+
+    expire_auth_cookies(response)
     return ok(result, request_id=meta.request_id)
 
 
@@ -406,7 +465,7 @@ def logout(
     meta: RequestMeta = Depends(get_request_meta),  #
 ):
     svcs.auths.logout(user_id=user.id, refresh_token=refresh_token)
-    response.delete_cookie("refresh_token", path="/")
+    expire_auth_cookies(response)
     return ok(AuthSchema.SimpleOk(ok=True), request_id=meta.request_id)
 
 
@@ -524,6 +583,16 @@ def oauth_callback(
             path="/",
         )
 
+        redirect.set_cookie(
+            key="access_token",
+            value=oauth_result.access_token,
+            httponly=True,
+            secure=False,
+            samesite="lax",
+            max_age=svcs._config.access_token_minutes * 60,
+            path="/",
+        )
+
         return redirect
     except Exception as e:
         error_url = (
@@ -544,5 +613,5 @@ def deactivate_user(
     svcs: ServiceFactory = Depends(get_services),
 ):
     svcs.auths.deactivate_user(user_id=user.id)
-    response.delete_cookie("refresh_token", path="/")
+    expire_auth_cookies(response)
     return no_content()

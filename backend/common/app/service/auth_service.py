@@ -167,17 +167,17 @@ class AuthService:
         with self._uow_factory() as uow:
             s = uow.sessions.get_session_by_hash(self._hmac.token_hash(refresh_token))
             if not s:
-                raise AuthError("Invalid token", target="token")
+                raise AuthError("Invalid token", target="refresh_token")
 
             if s.revoked_at is not None or ensure_utc(s.expires_at) <= now:
                 uow.sessions.update_session_revoke(
                     user_id=s.user_id, revoked_at=now, token_hash=s.token_hash
                 )
-                raise AuthError("Expired token", target="token")
+                raise AuthError("Expired token", target="refresh_token")
 
             user = uow.users.get_by_user_id(s.user_id)
             if not user:
-                raise AuthError("Invalid token", target="token")
+                raise AuthError("Invalid token", target="refresh_token")
 
             access_token = self._jwt.create_token(
                 subject=str(user.id),
@@ -279,6 +279,7 @@ class AuthService:
                 subject=str(user.id),
                 minutes=self._config.access_token_minutes,
                 claims={
+                    "ev": bool(user.email_verified_at),
                     "ee": bool(
                         user.email_fingerprint is not None
                         and user.email_ciphertext is not None
@@ -518,7 +519,13 @@ class AuthService:
             return urlencode(build_path)
 
     def change_email(
-        self, *, user_id: int, new_email: str, current_password: str | None = None
+        self, 
+        *, 
+        user_id: int, 
+        new_email: str, 
+        # current_password: str | None = None,
+        ip: str | None = None,
+        ua: str | None = None,
     ) -> str:
         now = utcnow()
         trace_id = get_trace_id()
@@ -980,6 +987,21 @@ class AuthService:
                 user_agent=ua,
             )
 
+            access_token = self._jwt.create_token(
+                subject=str(user.id),
+                minutes=self._config.access_token_minutes,
+                claims={
+                    "ev": bool(user.email_verified_at),
+                    "ee": bool(
+                        user.email_fingerprint is not None
+                        and user.email_ciphertext is not None
+                        and user.email_nonce is not None
+                        and user.email_key_version is not None
+                    ),
+                    "role": user.role.value,
+                },
+            )
+
             uow.commit()
 
         authorize_path = urlencode(
@@ -991,6 +1013,7 @@ class AuthService:
             result_type=OAuthResultType.SUCCESS,
             authorize_path=authorize_path,
             refresh_token=refresh_token,
+            access_token=access_token,
         )
 
     def deactivate_user(self, *, user_id: int) -> None:

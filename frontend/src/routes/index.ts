@@ -8,8 +8,8 @@ import { legalRoutes } from "@/routes/modules/legal.routes"
 import { supportRoutes } from "@/routes/modules/support.routes"
 import { appRoutes } from "@/routes/modules/app.routes"
 import { systemRoutes } from "@/routes/modules/system.routes"
+import type { StatusDto } from "@/services/auth.types"
 import { useAuthStore } from "@/stores/auth.store"
-import { isTokenExpired, isEmailVerifiedFromToken, isEmailEnrolledFromToken } from "@/utils/jwt"
 
 // NOTE: 여긴 "조립"만 한다.
 // - 레이아웃(공개/앱) 트리 만들고
@@ -56,14 +56,14 @@ export const router = createRouter({
   },
 })
 
-function getAuthState(token: string | null) {
-  if (!token) return "guest"
+function getAuthState(status: StatusDto | null) {
+  if (!status) return "guest"
 
-  if (!isEmailEnrolledFromToken(token)) {
+  if (!status.emaileEnrolled) {
     return "unenrolled"
   }
 
-  if (!isEmailVerifiedFromToken(token)) {
+  if (!status.emailVerified) {
     return "unverified"
   }
 
@@ -76,25 +76,23 @@ router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore()
   const allows = Array.isArray(to.meta.allows) ? to.meta.allows : []
 
-  let token = authStore.getToken()
+  let status = authStore.getStatus()
+  let authState = getAuthState(status)
 
   if (!authBootstrapped) {
     authBootstrapped = true
-    if (!token) {
-      try {
-        token = await authStore.reissue()
-      } catch {
-        authStore.clearToken()
-        // console.log("token :", token)
-      }
+    try {
+      status = await authStore.reissue()
+      authState = getAuthState(status)
+    } catch {
+      authStore.clearStatus()
     }
   }
 
-  const authState = getAuthState(token)
-  console.log("Global Guard:", { to: to.fullPath, authState, allows, hasToken: Boolean(token) })
+  console.log("Global Guard:", { to: to.fullPath, authState, allows, hasStatus: status })
 
   // if (token && isTokenExpired(token)) {
-  // authStore.clearToken()
+  // authStore.clearStatus()
   // }
 
   if (!allows || allows.length === 0) {

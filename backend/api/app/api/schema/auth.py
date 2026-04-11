@@ -47,7 +47,8 @@ class OAuthStartIn(BaseModel):
 class CurrentUser(BaseModel):
     id: int
     role: UserRole
-    email_verified: bool | None = None
+    email_verified: bool
+    email_enrolled: bool
 
     class Config:
         frozen = True  # 불변 객체 (선택)

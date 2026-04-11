@@ -100,7 +100,6 @@ import AppCenterCard from "@/components/common/AppCenterCard.vue"
 import { useRoute, useRouter } from "vue-router";
 import { useLoginForm } from "@/composables/auth/useLoginForm";
 import { useAsyncAction } from "@/composables/common/useAsyncAction";
-import { isEmailVerifiedFromToken } from "@/utils/jwt"
 import { useAuthStore } from "@/stores/auth.store";
 import { mapCommonError } from "@/composables/error/error.mapper"
 import { mapLoginError } from "@/composables/error/loginError.mapper"
@@ -135,13 +134,13 @@ async function onSubmit() {
   try {
     await handleSubmit(async () => {
       await run(async () => {
-        const token = await authStore.login({
+        const authStatus = await authStore.login({
           email: email.value,
           password: password.value,
         });
 
         const next = getNextPath();
-        if (!isEmailVerifiedFromToken(token)) {
+        if (!authStatus?.emailVerified) {
           await router.push({
             name: "VerifyEmailSent",
             query: { email: email.value, ...(next ? { next } : {}) },

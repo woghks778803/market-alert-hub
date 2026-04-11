@@ -73,7 +73,7 @@ const fetchParam = (async () => {
         await router.replace({ name: "VerifyEmail" })
       })
     } catch (err: any){
-      authStore.clearToken()
+      authStore.clearStatus()
       router.replace({ name: "OauthCallback", query: { code: "internal_error" } })
     }
     

@@ -89,9 +89,6 @@ onMounted(async () => {
   if (
     code === "not_found" ||
     code === "validation_error" ||
-    code === "expired" ||
-    code === "invalid_status" ||
-    code === "user_not_found" ||
     code === "internal_error"
   ) {
     setMode("fail")

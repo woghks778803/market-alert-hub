@@ -1,5 +1,14 @@
-import type { ResetPasswordRequest, ChangePasswordRequest, VerifyTokenRequest, ChangeEmailRequest, LoginRequest, RegisterRequest, TokenInfo } from "@/api/auth.api"
-import type { TokenDto, ResetPasswordQuery, ChangePasswordQuery, VerifyTokenQuery, ChangeEmailQuery, LoginQuery, RegisterQuery } from "@/services/auth.types"
+import type { ResetPasswordRequest, ChangePasswordRequest, VerifyTokenRequest, ChangeEmailRequest, LoginRequest, RegisterRequest, StatusInfo, TokenInfo } from "@/api/auth.api"
+import type { StatusDto, TokenDto, ResetPasswordQuery, ChangePasswordQuery, VerifyTokenQuery, ChangeEmailQuery, LoginQuery, RegisterQuery } from "@/services/auth.types"
+
+export function toStatusDto(data: StatusInfo): StatusDto {
+    return {
+        id: data.id,
+        role: data.role,
+        emailVerified: data.email_verified,
+        emaileEnrolled: data.email_enrolled,
+    }
+}
 
 export function toTokenDto(data: TokenInfo): TokenDto {
     return {

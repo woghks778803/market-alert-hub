@@ -210,8 +210,8 @@ async def unified_exception_handler(request: Request, exc: Exception):
         status_code=public_spec.status_code,
     )
 
-    # 401 token 에러일때 refresh_token 쿠키 제거
-    if isinstance(exc, AuthError) and getattr(exc, "target", None) == "token":
+    # 401 refresh_token 에러일때 refresh_token 쿠키 제거
+    if isinstance(exc, AuthError) and getattr(exc, "target", None) == "refresh_token":
         resp.delete_cookie(
             key="refresh_token",
             path="/",

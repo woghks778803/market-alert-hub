@@ -8,6 +8,7 @@ class OAuthResult:
     authorize_path: str
     result_type: OAuthResultType = OAuthResultType.ERROR
     refresh_token: str | None = None
+    access_token: str | None = None
 
 
 @dataclass(slots=True, frozen=True)
