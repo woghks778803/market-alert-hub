@@ -39,7 +39,7 @@ class ChannelService:
                 )
 
             channel_cnt = uow.channels.get_channel_cnt(
-                user_id=user_id, provider_id=provider_id
+                user_id=user_id, provider_id=chp.id
             )
             # TODO 현재는 5개 고정 나중에 결제 서비스 넣을때 변경
             if channel_cnt >= ChannelRule.MAX_CHANNELS_PER_USER:
@@ -47,28 +47,28 @@ class ChannelService:
                     "Channel limit already exceed", target="user_channel"
                 )
 
-            # provider.user_schema 기반 JSON 검증 훅
+            # chp.user_schema 기반 JSON 검증 훅
             ChannelRule.validate_user_config(
                 code=chp.code, config=config, user_schema=chp.user_schema
             )
 
-            token_hash = to_canonical_json(config)
-            if token_hash is not None:
-                token_hash = self._hmac.to(token_hash)
+            config_hash = to_canonical_json(config)
+            if config_hash is not None:
+                config_hash = self._hmac.token_hash(config_hash)
 
             uow.channels.update_channel_active(
-                channel_provider_id=provider.id,
-                address=token,
+                channel_provider_id=chp.id,
+                address=config.get("token"),
                 is_active=False
             )
 
             uow.channels.upsert_channel(
-                ChannelDTO.UserChannelCreate(
+                row=ChannelDTO.UserChannelCreate(
                     user_id=user_id,
-                    channel_provider_id=provider.id,
-                    address=token,
+                    channel_provider_id=chp.id,
+                    address=config.get("token"),
                     config=config,
-                    config_hash=token_hash,
+                    config_hash=config_hash,
                     verified_at=now,
                     deleted_at=None,
                     is_active=True
@@ -80,7 +80,7 @@ class ChannelService:
             return {"ok": True}
             
 
-    def deactivate_channel(self, *, user_id: int, code: ChannelCode, config: dict) -> None:
+    def deactivate_channel(self, *, code: ChannelCode, config: dict) -> None:
         with self._uow_factory() as uow:
             chp = uow.channels.get_provider_by_code(code)
             if not chp:
@@ -97,9 +97,8 @@ class ChannelService:
             )
 
             uow.channels.update_channel_active(
-                user_id=user_id,
                 channel_provider_id=chp.id,
-                address=token,
+                address=config.get("token"),
                 is_active=False,
             )
 

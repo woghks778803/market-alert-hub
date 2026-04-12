@@ -1,4 +1,5 @@
 import axios, { type AxiosError, type AxiosInstance } from "axios"
+import { emitUnauthorized } from '@/events/auth.events'
 import type { Envelope } from "@/api/types"
 
 
@@ -10,8 +11,8 @@ function resolveBaseURL() {
 }
 
 export const http: AxiosInstance = axios.create({
-    // baseURL: resolveBaseURL(),
-    baseURL: "/api",
+    baseURL: resolveBaseURL(),
+    // baseURL: "/api",
     timeout: 15_000,
     withCredentials: true, // 쿠키 전송 허용 
     paramsSerializer: {
@@ -105,6 +106,7 @@ http.interceptors.response.use(
             return http(originalRequest)
         } catch (refreshError) {
             processQueue(refreshError as Error)
+            emitUnauthorized()
 
             // refresh 실패 → 로그인 페이지로 보내는건 router에서 처리
             return Promise.reject(refreshError)

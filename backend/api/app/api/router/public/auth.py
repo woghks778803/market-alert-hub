@@ -17,6 +17,7 @@ from app.api.schema import UserSchema, AuthSchema
 from app.api.common.envelope import Envelope, ok, created, no_content
 from app.api.deps import (
     expire_auth_cookies,
+    get_refresh_token,
     get_current_user,
     get_services,
     get_request_meta,
@@ -63,7 +64,7 @@ def get_auth_status(
 def reissue_token(
     request: Request,
     response: Response,
-    refresh_token: str = Cookie(..., alias="refresh_token"),
+    refresh_token: str = Depends(get_refresh_token),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta), 
 ):
@@ -338,7 +339,7 @@ def change_email(
 )
 def change_password(
     response: Response,
-    refresh_token: str = Cookie(..., alias="refresh_token"),
+    refresh_token: str = Depends(get_refresh_token),
     payload: AuthSchema.ChangePasswordIn = Body(
         ...,
         example={
@@ -459,7 +460,7 @@ def verify_password_reset(
 )
 def logout(
     response: Response,
-    refresh_token: str = Cookie(..., alias="refresh_token"),
+    refresh_token: str = Depends(get_refresh_token),
     user: AuthSchema.CurrentUser = Security(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),  #

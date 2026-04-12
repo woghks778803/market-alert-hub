@@ -20,8 +20,9 @@ class ChannelRepo(Protocol):
     def update_channel_active(
         self,
         channel_provider_id: int,
-        address: str,
-        is_active: bool
+        is_active: bool,
+        user_id: int | None = None,
+        address: str | None = None,
     ) -> int: ...
     def upsert_channel(
         self,

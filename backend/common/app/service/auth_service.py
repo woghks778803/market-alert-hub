@@ -11,6 +11,7 @@ from app.core.constants import (
     OutboxEventType,
     OAuthCode,
     OAuthResultType,
+    ChannelCode
 )
 from app.core import dto as CoreDTO
 from app.core.util.trace import get_trace_id
@@ -685,6 +686,21 @@ class AuthService:
                 id=user.id, password_hash=self._password.hash_password(new_password)
             )
 
+            chp = uow.channels.get_provider_by_code(ChannelCode.FCM.value)
+            if not chp:
+                raise NotFoundError(
+                    "Not found channel provider", target="channel_provider"
+                )
+            if not chp.is_active:
+                raise ValidationAppError(
+                    "Channel provider is not active", target="channel_provider"
+                )
+
+            uow.channels.update_channel_active(
+                channel_provider_id=chp.id,
+                user_id=user.id,
+                is_active=False
+            )
             uow.sessions.update_session_revoke(user_id=user_id, revoked_at=now)
 
             uow.commit()
@@ -694,6 +710,7 @@ class AuthService:
     def reset_password(self, *, token: str, new_password: str):
         now = utcnow()
         token_hash = self._hmac.token_hash(token)
+
         with self._uow_factory() as uow:
             password_reset = uow.users.get_password_reset_by_token_hash(
                 token_hash, consumed_is_null=True, expires_after=now
@@ -721,7 +738,22 @@ class AuthService:
                 consumed_is_null=True,
             )
 
-            uow.sessions.update_session_revoke(user_id=password_reset.user_id, revoked_at=now)
+            chp = uow.channels.get_provider_by_code(ChannelCode.FCM.value)
+            if not chp:
+                raise NotFoundError(
+                    "Not found channel provider", target="channel_provider"
+                )
+            if not chp.is_active:
+                raise ValidationAppError(
+                    "Channel provider is not active", target="channel_provider"
+                )
+
+            uow.channels.update_channel_active(
+                channel_provider_id=chp.id,
+                user_id=user.id,
+                is_active=False
+            )
+            uow.sessions.update_session_revoke(user_id=user.id, revoked_at=now)
 
             uow.commit()
 
@@ -1025,7 +1057,7 @@ class AuthService:
 
             # 외부 OAuth 연동 해제
             accounts = uow.users.list_oauth_accounts_by_user(
-                user_id=user_id, unlinked_at_is_null=True
+                user_id=user.id, unlinked_at_is_null=True
             )
 
             if accounts:
@@ -1055,12 +1087,27 @@ class AuthService:
                             ) from e
 
                 uow.users.update_oauth_accounts_unlinked_at(
-                    user_id=user_id, unlinked_at=now
+                    user_id=user.id, unlinked_at=now
                 )
 
-            uow.users.delete_user(
-                user_id=user_id, status=UserStatus.DELETED, deleted_at=now
+            chp = uow.channels.get_provider_by_code(ChannelCode.FCM.value)
+            if not chp:
+                raise NotFoundError(
+                    "Not found channel provider", target="channel_provider"
+                )
+            if not chp.is_active:
+                raise ValidationAppError(
+                    "Channel provider is not active", target="channel_provider"
+                )
+
+            uow.channels.update_channel_active(
+                channel_provider_id=chp.id,
+                user_id=user.id,
+                is_active=False
             )
-            uow.sessions.update_session_revoke(user_id=user_id, revoked_at=now)
-            uow.users.update_user_email_verified_at(id=user_id)
+            uow.users.delete_user(
+                user_id=user.id, status=UserStatus.DELETED, deleted_at=now
+            )
+            uow.sessions.update_session_revoke(user_id=user.id, revoked_at=now)
+            uow.users.update_user_email_verified_at(id=user.id)
             uow.commit()

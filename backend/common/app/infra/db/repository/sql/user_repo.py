@@ -346,7 +346,10 @@ class SqlUserRepo(UserRepo):
             wheres.append(PasswordResetModel.consumed_at.is_(None))
 
         if not wheres:
-            raise ValueError("Unsafe update: at least one narrowing filter required")
+            raise ValidationAppError(
+                "Unsafe update: at least one narrowing filter required",
+                target="filters",
+            )
 
         values = {}
         if sent_at is not None:

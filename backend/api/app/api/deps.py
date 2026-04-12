@@ -47,6 +47,13 @@ def get_services(
 #         raise AuthError(message="Missing or invalid token", target="token")
 #     return creds.credentials
 
+def get_refresh_token(
+    refresh_token: str | None = Cookie(None, alias="refresh_token"),
+) -> str:
+    if not refresh_token:
+        raise AuthError("Missing refresh token", target="refresh_token")  # 401
+    return refresh_token
+
 def get_current_token(
     access_token: str | None = Cookie(default=None, alias="access_token"),
 ) -> str:

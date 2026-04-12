@@ -38,14 +38,16 @@ import { useRoute, useRouter } from "vue-router"
 import AppCenterCard from "@/components/common/AppCenterCard.vue"
 import { mapOauthError } from "@/composables/error/oauthError.mapper"
 import { useMode } from "@/composables/common/useMode"
-import { useAsyncAction } from "@/composables/common/useAsyncAction";
-import { useAuthStore } from "@/stores/auth.store";
+import { useAsyncAction } from "@/composables/common/useAsyncAction"
+import { useAppSettings } from "@/composables/common/useAppSettings"
+import { useAuthStore } from "@/stores/auth.store"
 
 const router = useRouter()
 const route = useRoute()
-const authStore = useAuthStore();
+const authStore = useAuthStore()
 const { mode, setMode } = useMode()
 const { run } = useAsyncAction()
+const { applyLogin, applyLogout } = useAppSettings()
 const viewMode = computed(() => mode.value)
 const errorMessage = ref<string | null>(null)
 
@@ -70,10 +72,12 @@ const fetchParam = (async () => {
     try{
       await run(async () => {
         await authStore.reissue()
+        applyLogin()
         await router.replace({ name: "VerifyEmail" })
       })
     } catch (err: any){
       authStore.clearStatus()
+      applyLogout()
       router.replace({ name: "OauthCallback", query: { code: "internal_error" } })
     }
     

@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Integer, String, Boolean, JSON, DateTime, ForeignKey, func, text, BINARY
+from sqlalchemy import Integer, String, Boolean, DateTime, ForeignKey, func, text, BINARY, JSON, UniqueConstraint, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infra.db.base import Base
 from app.core.util.datetime import utcnow
@@ -35,6 +35,25 @@ class UserChannel(Base):
 
     targets: Mapped[list["AlertChannelTarget"]] = relationship(back_populates="user_channel", cascade="all, delete-orphan")
     channel_provider: Mapped["ChannelProvider"] = relationship("ChannelProvider", back_populates="channels")
+
+    __table_args__ = (
+        UniqueConstraint(
+            "channel_provider_id",
+            "user_id",
+            "address",
+            name="uq_user_channel_provider_user_address"
+        ),
+        Index(
+            "ix_user_channel_address_provider",
+            "channel_provider_id",
+            "address",
+        ),
+        Index(
+            "ix_user_channel_user_provider",
+            "user_id",
+            "channel_provider_id",
+        ),
+    )
 
     def to_dto(self) -> ChannelDTO.UserChannel:
         return ChannelDTO.UserChannel(

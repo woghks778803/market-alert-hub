@@ -97,12 +97,13 @@
 <script setup lang="ts">
 import Logo from '@/assets/logo/alertping-logo.svg'
 import AppCenterCard from "@/components/common/AppCenterCard.vue"
-import { useRoute, useRouter } from "vue-router";
-import { useLoginForm } from "@/composables/auth/useLoginForm";
-import { useAsyncAction } from "@/composables/common/useAsyncAction";
-import { useAuthStore } from "@/stores/auth.store";
+import { useRoute, useRouter } from "vue-router"
+import { useLoginForm } from "@/composables/auth/useLoginForm"
+import { useAsyncAction } from "@/composables/common/useAsyncAction"
+import { useAppSettings } from "@/composables/common/useAppSettings"
 import { mapCommonError } from "@/composables/error/error.mapper"
 import { mapLoginError } from "@/composables/error/loginError.mapper"
+import { useAuthStore } from "@/stores/auth.store"
 import { OAuthCode } from "@/services/auth.types"
 
 const router = useRouter();
@@ -123,6 +124,7 @@ const {
   onBlurValidate,
 } = useLoginForm();
 const { run, loading, isReady } = useAsyncAction()
+const { applyLogin } = useAppSettings()
 
 
 function getNextPath(): string | null {
@@ -138,6 +140,8 @@ async function onSubmit() {
           email: email.value,
           password: password.value,
         });
+
+        applyLogin();
 
         const next = getNextPath();
         if (!authStatus?.emailVerified) {

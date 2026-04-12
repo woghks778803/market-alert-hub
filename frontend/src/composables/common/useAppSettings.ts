@@ -4,8 +4,8 @@ enum BridgeType {
     THEME = "THEME",
     KEEP_SCREEN_ON = "KEEP_SCREEN_ON",
     VIBRATE = "VIBRATE",
-    LOGIN = "LOGIN",
-    LOGOUT = "LOGOUT",
+    AUTH_LOGIN = "AUTH_LOGIN",
+    AUTH_LOGOUT = "AUTH_LOGOUT",
 }
 
 export enum ThemeMode {
@@ -94,6 +94,14 @@ export function useAppSettings() {
         return getBoolean(STORAGE_KEYS.keepScreenOnEnabled, false)
     }
 
+    function applyLogin(): void {
+        postBridgeMessage(BridgeType.AUTH_LOGIN, {})
+    }
+
+    function applyLogout(): void {
+        postBridgeMessage(BridgeType.AUTH_LOGOUT, {})
+    }
+
     function initAppSettings(): void {
         applyTheme(getSavedTheme())
         applyVibrate(getSavedVibrateEnabled())
@@ -115,6 +123,8 @@ export function useAppSettings() {
     return {
         ThemeLabel,
 
+        applyLogin,
+        applyLogout,
         applyTheme,
         getSavedTheme,
         applyVibrate,

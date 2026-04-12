@@ -101,20 +101,18 @@ def register_channel(
         config=payload.config,
     )
 
-    return Ok(result, request_id=meta.request_id)
+    return ok(result, request_id=meta.request_id)
 
 @router.delete(
     "/channel",
-    summary="사용자 채널 비활성화",
+    summary="채널 비활성화",
     responses=OpenApi.combine(OpenApi.NO_CONTENT({}, description="완료")),
 )
 def deactivate_channel(
     payload: UserSchema.UserChannelIn,
-    user: AuthSchema.CurrentUser = Security(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
 ):
     svcs.channels.deactivate_channel(
-        user_id=user.id,
         code=payload.code,
         config=payload.config,
     )

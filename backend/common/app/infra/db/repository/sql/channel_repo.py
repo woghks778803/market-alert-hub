@@ -1,10 +1,12 @@
 from typing import Sequence
 from sqlalchemy.orm import aliased, Session as DbSession, selectinload
-from sqlalchemy import insert, select, func, and_, asc, desc
+from sqlalchemy import update, insert, select, func, and_, asc, desc
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from app.domain import ChannelDTO
+from app.domain.shared.errors import ValidationAppError
 from app.infra.db.model import UserChannelModel, ChannelProviderModel
 from app.infra.db.repository.protocol.channel_repo import ChannelRepo
+from app.infra.db.utils import to_row_dict
 
 class SqlChannelRepo(ChannelRepo): 
     def __init__(self, db: DbSession):
@@ -62,23 +64,37 @@ class SqlChannelRepo(ChannelRepo):
         stmt = select(func.count(uc.id)).where(
             uc.user_id == user_id,
             uc.channel_provider_id == provider_id,
-            uc.is_deleted.is_(False),
+            uc.deleted_at.is_(None),
         )
         return self._db.execute(stmt).scalar()
 
     def update_channel_active(
         self,
         channel_provider_id: int,
-        address: str,
-        is_active: bool
+        is_active: bool,
+        user_id: int | None = None,
+        address: str | None = None,
     ) -> int:
+        if user_id is None and address is None:
+            raise ValidationAppError(
+                "Unsafe update: at least one narrowing filter required",
+                target="filters",
+            )
+
+        wheres = [
+            UserChannelModel.channel_provider_id == channel_provider_id,
+            UserChannelModel.deleted_at.is_(None)
+        ]
+
+        if user_id is not None:
+            wheres.append(UserChannelModel.user_id == user_id)
+
+        if address is not None:
+            wheres.append(UserChannelModel.address == address)
+
         stmt = (
             update(UserChannelModel)
-            .where(
-                UserChannelModel.address == address,
-                UserChannelModel.channel_provider_id == channel_provider_id,
-                UserChannelModel.deleted_at.is_(None)
-            )
+            .where(*wheres)
             .values(is_active=is_active)
         )
 
