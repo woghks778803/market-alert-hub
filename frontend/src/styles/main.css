@@ -1061,6 +1061,11 @@ html.dark {
     gap: 12px;
 }
 
+.alert-rule-scroll {
+    height: calc(100vh - 220px);
+    overflow-y: auto;
+}
+
 .alert-rule-list {
     display: flex;
     flex-direction: column;
@@ -1068,8 +1073,8 @@ html.dark {
 }
 
 .alert-rule-card {
-    padding: 16px;
-    border-radius: 16px;
+    padding: 18px 16px;
+    border-radius: 18px;
 }
 
 .alert-rule-header {
@@ -1085,22 +1090,40 @@ html.dark {
 }
 
 .alert-rule-symbol {
-    font-weight: 700;
+    font-size: 18px;
+    font-weight: 800;
 }
 
 .alert-rule-exchange {
-    font-size: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    opacity: 0.9;
     background: var(--bg-main);
     padding: 2px 6px;
     border-radius: 6px;
 }
 
-.alert-rule-status.on {
+.alert-rule-symbol.inactive,
+.alert-rule-exchange.inactive {
+    text-decoration: line-through;
+    text-decoration-thickness: 2px;
+    opacity: 0.55;
+}
+
+.alert-rule-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.alert-rule-status.active {
     background: #22c55e;
     color: white;
     padding: 2px 8px;
     border-radius: 8px;
-    font-size: 12px;
+    font-size: 11px;
+    font-weight: 800;
 }
 
 .alert-rule-status.paused {
@@ -1108,17 +1131,41 @@ html.dark {
     color: white;
     padding: 2px 8px;
     border-radius: 8px;
-    font-size: 12px;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.alert-rule-status.archived {
+    background: #6b7280;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 800;
 }
 
 .alert-rule-condition {
     margin-top: 8px;
+    font-size: 16px;
+    font-weight: 700;
 }
 
 .alert-rule-meta {
-    margin-top: 4px;
-    font-size: 12px;
+    margin-top: 6px;
+    font-size: 13px;
     color: var(--text-secondary);
+}
+
+.alert-rule-meta-main {
+    line-height: 1.4;
+}
+
+.alert-rule-meta-date {
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    opacity: 0.85;
+    line-height: 1.4;
 }
 
 button.alert-rule-fab {
@@ -1275,6 +1322,149 @@ html.dark .notice-summary-text {
 /* 스크롤바 제거 */
 .notice-wrapper {
     overflow-y: auto;
+}
+
+/* =========================
+   Alert Rule Setting
+========================= */
+
+.rs-form-helper-text {
+    margin-top: 8px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: rgba(var(--v-theme-on-surface), 0.6);
+}
+
+.rs-form-view {
+    min-height: 100dvh;
+    background: rgb(var(--v-theme-background));
+}
+
+.rs-form-page {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+}
+
+.rs-form-body {
+    flex: 1;
+    padding: 4px 16px 120px;
+}
+
+.rs-section {
+    margin-bottom: 20px;
+}
+
+.rs-section-title {
+    margin-bottom: 10px;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.rs-section-card {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: rgb(var(--v-theme-surface));
+}
+
+.rs-field-block+.rs-field-block {
+    margin-top: 16px;
+}
+
+.rs-field-label {
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.rs-field-row {
+    display: flex;
+    gap: 12px;
+}
+
+.rs-field-col {
+    flex: 1;
+    min-width: 0;
+}
+
+.rs-direction-toggle {
+    display: flex;
+    width: 100%;
+}
+
+.rs-flex-1 {
+    flex: 1;
+}
+
+.rs-checkbox-label-wrap {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.4;
+}
+
+.rs-checkbox-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: rgb(var(--v-theme-on-surface));
+}
+
+.rs-checkbox-caption {
+    margin-top: 2px;
+    font-size: 13px;
+    color: rgba(var(--v-theme-on-surface), 0.6);
+}
+
+.rs-empty-guide {
+    font-size: 14px;
+    color: rgba(var(--v-theme-on-surface), 0.6);
+}
+
+.rs-form-footer {
+    position: sticky;
+    bottom: 0;
+    padding: 12px 16px 20px;
+    background: linear-gradient(to top,
+            rgb(var(--v-theme-background)) 70%,
+            rgba(255, 255, 255, 0));
+}
+
+.rs-submit-btn {
+    height: 56px;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+@media (max-width: 420px) {
+    .rs-field-row {
+        flex-direction: column;
+        gap: 16px;
+    }
+}
+
+.rs-search-block {
+    position: relative;
+}
+
+.rs-simple-market-dropdown {
+    position: static;
+
+    height: 160px;
+    overflow-y: auto;
+
+    margin-top: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--bg-card);
+}
+
+.rs-simple-market-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    color: var(--text-primary);
+    font-size: 15px;
+}
+
+.rs-simple-market-item:hover {
+    background: rgba(255, 255, 255, 0.06);
 }
 
 /* =========================

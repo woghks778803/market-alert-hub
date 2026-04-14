@@ -1,6 +1,12 @@
-export function formatPrice(value: number | null) {
+export function formatPrice(value: number | null, tickSize?: number) {
     if (value == null) return "-"
 
+    if (tickSize) {
+        const decimals = tickSize.toString().split('.')[1]?.length ?? 0
+        return value.toFixed(decimals)
+    }
+
+    // fallback
     if (value >= 1000) return value.toLocaleString(undefined, { maximumFractionDigits: 0 })
     if (value >= 1) return value.toFixed(2)
 
@@ -52,4 +58,29 @@ export function formatDate(dateStr: string): string {
     const min = String(d.getMinutes()).padStart(2, '0')
 
     return `${yyyy}.${mm}.${dd}`
+}
+
+export function formatThrottleSeconds(seconds: number | null | undefined): string {
+    if (seconds === null || seconds === undefined) return "-"
+
+    if (seconds < 60) return `${seconds}초`
+
+    const minutes = Math.floor(seconds / 60)
+    if (minutes < 60) return `${minutes}분`
+
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return `${hours}시간`
+
+    const days = Math.floor(hours / 24)
+    return `${days}일`
+}
+
+export function formatTimeframe(
+    timeframe: string | null | undefined,
+    period: number | null | undefined,
+): string {
+    if (!timeframe) return "기준 없음"
+    if (!period) return timeframe
+
+    return `${timeframe} ${period}`
 }

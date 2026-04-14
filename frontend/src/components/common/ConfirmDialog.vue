@@ -47,7 +47,7 @@ const props = withDefaults(defineProps<{
   cancelText: string,
   danger: boolean,
   loading: boolean,
-  isReady: boolean
+  isReady: boolean,
 }>(), {
   title: "확인",
   message: "",
