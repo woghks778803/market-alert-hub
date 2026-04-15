@@ -1,27 +1,32 @@
 <template>
+  <div class="alert-rule-summary">
 
-<div class="alert-rule-summary">
+    <div class="alert-rule-summary-left">
+      <span class="alert-rule-title">야간 알림 허용</span>
 
-  <div class="alert-rule-summary-left">
-    <span class="alert-rule-title">전체 알림</span>
+      <v-switch
+        v-if="me"
+        :model-value="me.isQuietHours"
+        @update:model-value="userStore.setQuietHours"
+        density="compact"
+        hide-details
+      />
+    </div>
 
-    <v-switch
-      v-model="enabled"
-      density="compact"
-      hide-details
-    />
+    <div class="alert-rule-summary-right">
+      전체 {{ alertSummary?.totalCount ?? 0 }} · 활성 {{ alertSummary?.activeCount ?? 0 }} · 일시정지 {{ alertSummary?.pausedCount ?? 0 }}
+    </div>
+
   </div>
-
-  <div class="alert-rule-summary-right">
-    활성 6 · 일시정지 3
-  </div>
-
-</div>
-
 </template>
 
-<script setup>
-import { ref } from "vue"
+<script setup lang="ts">
+import { storeToRefs } from "pinia"
+import { useAlertStore } from "@/stores/alert.store"
+import { useUserStore } from "@/stores/user.store"
 
-const enabled = ref(true)
+const alertStore = useAlertStore()
+const { alertSummary } = storeToRefs(alertStore)
+const userStore = useUserStore()
+const { me } = storeToRefs(userStore)
 </script>

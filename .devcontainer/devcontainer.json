@@ -12,6 +12,7 @@
     "dispatcher",
     "scheduler",
     "collector",
+    "stream_processor",
     "gateway"
   ],
   "workspaceFolder": "/app",
@@ -23,8 +24,6 @@
       "extensions": [
         "ms-python.python",
         "ms-python.vscode-pylance",
-        "openai.chatgpt",
-        "github.copilot-chat"
       ],
       "settings": {
         "python.defaultInterpreterPath": "/usr/local/bin/python3",

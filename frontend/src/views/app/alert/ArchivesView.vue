@@ -3,32 +3,25 @@
 
   <div class="alert-rules-container">
 
-    <RuleSummary/>
-
-    <RuleFilter 
+    <!-- <RuleFilter 
       :sort="currentAlertSort" 
-      :status="currentAlertStatus" 
       @change-sort="handleChangeSort" 
-      @change-status="handleFilterStatus"
-    />
+    /> -->
 
     <div v-if="!initialLoaded" class="alert-list-loading">
       불러오는 중...
     </div>
-
+    
     <v-infinite-scroll
-      v-else
       class="alert-rule-list"
-      :disabled="!alertHasMore || alertLoadingMore"
+      :disabled="!initialLoaded || !alertHasMore || alertLoadingMore"
       @load="handleLoadMore"
     >
       <RuleCard
         v-for="alert in alerts"
         :key="alert.id"
         :alert="alert"
-        @detail="handleDetail"
-        @archive="handleArchive"
-        @change-status="handleAlertStatus"
+        @restore="handleRestore"
         @delete="handleDelete"
       />
 
@@ -46,7 +39,6 @@
     </v-infinite-scroll>
 
   </div>
-  <RuleAddFab />
 
 <ConfirmDialog
   v-model="showConfirmDialog"
@@ -67,17 +59,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue"
-import { useRoute, useRouter } from 'vue-router'
+import { onMounted, ref } from "vue"
+import { useRoute } from 'vue-router'
 import { toast } from 'vue3-toastify'
 import { storeToRefs } from "pinia"
 
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import AppLoading from "@/components/common/AppLoading.vue"
-import RuleSummary from "@/components/alert/RuleSummary.vue"
-import RuleFilter from "@/components/alert/RuleFilter.vue"
 import RuleCard from "@/components/alert/RuleCard.vue"
-import RuleAddFab from "@/components/alert/RuleAddFab.vue"
 
 import { useAsyncAction } from "@/composables/common/useAsyncAction"
 import { mapCommonError } from "@/composables/error/error.mapper"
@@ -86,21 +75,15 @@ import { mapAlertUpdateStatusError } from "@/composables/error/alertError.mapper
 import {
   type AlertDto,
   AlertListMode,
-  AlertSort,
-  AlertStatus,
-  AlertStatusFilter,
+  AlertStatus
 } from "@/services/alert.types"
 import { useAlertStore } from "@/stores/alert.store"
-import { useUserStore } from "@/stores/user.store"
-
 
 const route = useRoute()
-const router = useRouter()
 const mode = route.meta.mode as AlertListMode
 const ruleAction = useAsyncAction()
 const alertStore = useAlertStore()
-const userStore = useUserStore()
-const { alerts, currentAlertSort, currentAlertStatus, alertHasMore, alertLoadingMore } = storeToRefs(alertStore)
+const { alerts, alertHasMore, alertLoadingMore } = storeToRefs(alertStore)
 
 const initialLoaded = ref(false)
 const showConfirmDialog = ref(false)
@@ -108,45 +91,18 @@ const deleteTargetAlert = ref<AlertDto | null>(null)
 
 onMounted(async () => {
   alertStore.resetAlert()
-
+  
   await ruleAction.run(async () => {
-    await alertStore.fetchAlertSummary()
-    await alertStore.fetchAlerts()
-    await userStore.fetchMe()
+    await alertStore.fetchArchivedAlerts()
   })
 
   initialLoaded.value = true
 })
 
-const handleDetail = (payload: { alertId: number }) => {
-  router.push({
-    name: 'RuleDetail',
-    params: payload,
-  })
-}
-
-const handleDelete = async (alert: AlertDto) => {
-  showConfirmDialog.value = true
-  deleteTargetAlert.value = alert
-}
-
-const handleConfirmDelete = async () => {
-  if (!deleteTargetAlert.value) return
-
-  const alertId = deleteTargetAlert.value.id
-
-  await ruleAction.run(async () => {
-    await alertStore.removeAlert(alertId)
-  })
-
-  showConfirmDialog.value = false
-  deleteTargetAlert.value = null
-}
-
-const handleArchive = async (alert: AlertDto) => {
+const handleRestore = async (alert: AlertDto) => {
   try {
     await ruleAction.run(async () => {
-      await alertStore.changeAlertStatus(alert, AlertStatus.ARCHIVED, mode)
+      await alertStore.changeAlertStatus(alert, AlertStatus.PAUSED, mode)
     })
   } catch (err: any) {
     const apiError = err?.response?.data?.error
@@ -169,45 +125,22 @@ const handleArchive = async (alert: AlertDto) => {
   }
 }
 
-const handleAlertStatus = async (alert: AlertDto) => {
-  const nextStatus =
-    alert.status === AlertStatus.ACTIVE
-      ? AlertStatus.PAUSED
-      : AlertStatus.ACTIVE
-
-  try {
-    await alertStore.changeAlertStatus(alert, nextStatus, mode)
-  } catch (err: any) {
-    const apiError = err?.response?.data?.error
-
-    const r = mapAlertUpdateStatusError(apiError)
-    if (r) {
-      toast.error(r, {
-        toastId: "alert-status-update-failed",
-      })
-      return
-    }
-
-    const commonMessage = mapCommonError(apiError)
-    if (commonMessage) {
-      toast.error(commonMessage, {
-        toastId: "alert-status-update-failed",
-      })
-      return
-    }
-  }
+const handleDelete = async (alert: AlertDto) => {
+  showConfirmDialog.value = true
+  deleteTargetAlert.value = alert
 }
 
-const handleFilterStatus = async (status: AlertStatusFilter) => {
-  await ruleAction.run(() => {
-    alertStore.setStatus(status)
-  })
-}
+const handleConfirmDelete = async () => {
+  if (!deleteTargetAlert.value) return
 
-const handleChangeSort = async (sort: AlertSort) => {
-  await ruleAction.run(() => {
-    alertStore.setSort(sort)
+  const alertId = deleteTargetAlert.value.id
+
+  await ruleAction.run(async () => {
+    await alertStore.removeAlert(alertId)
   })
+
+  showConfirmDialog.value = false
+  deleteTargetAlert.value = null
 }
 
 const handleLoadMore = async ({ done }: { done: (status: "ok" | "empty" | "error") => void }) => {
@@ -217,7 +150,7 @@ const handleLoadMore = async ({ done }: { done: (status: "ok" | "empty" | "error
   }
 
   try {
-    await alertStore.fetchAlerts({ append: true })
+    await alertStore.fetchArchivedAlerts({ append: true })
 
     done(alertHasMore.value ? "ok" : "empty")
   } catch {

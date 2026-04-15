@@ -1,7 +1,7 @@
 import { defineStore } from "pinia"
 import { ref } from "vue"
 
-import { getNotices, getNotice, getFAQs } from "@/services/support.service"
+import * as supportService from "@/services/support.service"
 import type { NoticeDto, NoticeDatailDto, NoticeListQuery, FAQDto, FAQListQuery } from "@/services/support.types"
 import { NoticeCategory } from "@/services/support.types"
 
@@ -26,15 +26,15 @@ export const useSupportStore = defineStore("notice", () => {
     })
 
     async function fetchNotices() {
-        notices.value = await getNotices(noticeListQuery.value)
+        notices.value = await supportService.getNotices(noticeListQuery.value)
     }
 
     async function fetchNotice(id: number) {
-        notice.value = await getNotice(id)
+        notice.value = await supportService.getNotice(id)
     }
 
     async function fetchFAQs() {
-        faqs.value = await getFAQs(FAQListQuery.value)
+        faqs.value = await supportService.getFAQs(FAQListQuery.value)
     }
 
     function setSearch(value: string) {
