@@ -7,6 +7,10 @@
       <v-tab :to="{ name: 'Rules' }">
         규칙
       </v-tab>
+
+      <v-tab :to="{ name: 'Archives' }">
+        보관
+      </v-tab>
     
       <v-tab :to="{ name: 'Logs' }">
         기록
