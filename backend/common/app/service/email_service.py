@@ -106,35 +106,3 @@ class EmailService:
             html_body=html,
             to=to,
         )
-
-    # def send_alert(
-    #     self,
-    #     to: Sequence[str],
-    #     user_name: str,
-    #     exchange: str,
-    #     symbol: str,
-    #     condition: str,
-    #     current_price: str,
-    #     currency: str,
-    #     settings_link: str,
-    #     alert_link: str | None = None,
-    # ) -> dict:
-    #     to = self._validate_recipients(to)
-    #     html = self.renderer().render(
-    #         "alert_notification.html",
-    #         {
-    #             "user_name": user_name,
-    #             "exchange": exchange,
-    #             "symbol": symbol,
-    #             "condition": condition,
-    #             "current_price": current_price,
-    #             "currency": currency,
-    #             "alert_link": alert_link,
-    #             "settings_link": settings_link,
-    #         },
-    #     )
-    #     return self.client().send(
-    #         subject=f"[알림] {symbol} 목표가 도달",
-    #         html_body=html,
-    #         to=to,
-    #     )

@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from . import auth, markets, supports, users, watchlists, seed, channels
+from . import auth, markets, supports, users, watchlists, seed, channels, alerts
 
 router = APIRouter(prefix="/api")
 router.include_router(auth.router, tags=["Auth"])
@@ -10,3 +10,4 @@ router.include_router(watchlists.router, tags=["Watchlists"])
 router.include_router(seed.router, tags=["Seed"])
 router.include_router(channels.router, tags=["Channels"])
 router.include_router(supports.router, tags=["Support"])
+router.include_router(alerts.router, tags=["Alert"])
