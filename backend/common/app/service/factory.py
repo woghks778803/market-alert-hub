@@ -3,7 +3,7 @@ from functools import cached_property
 
 from app.core import dto as CoreDTO
 from app.domain.shared.uow import UnitOfWork
-from app.domain import EmailPort, CryptoPort, MarketPort, AuthPort, ThrottlePort
+from app.domain import EmailPort, CryptoPort, MarketPort, AlertPort, AuthPort, ThrottlePort
 
 from .auth_service import AuthService
 from .user_service import UserService
@@ -22,7 +22,9 @@ class ServiceFactory:
         *,
         uow: Callable[[], UnitOfWork],
         candle_store: Callable[[], MarketPort.CandleStore],
-        snapshot_publisher: Callable[[], MarketPort.MarketSnapshotPublish],
+        market_snapshot: Callable[[], MarketPort.MarketSnapshot],
+        alert_snapshot: Callable[[], AlertPort.AlertSnapshot],
+        alert_bucket: Callable[[], AlertPort.AlertBucket],
         state: Callable[[], AuthPort.AuthState],
         cooldown: Callable[[], ThrottlePort.Cooldown],
         email_client: Callable[[], EmailPort.EmailClient],
@@ -37,7 +39,9 @@ class ServiceFactory:
     ) -> None:
         self._uow = uow
         self._candle_store = candle_store
-        self._snapshot_publisher = snapshot_publisher
+        self._market_snapshot = market_snapshot
+        self._alert_snapshot = alert_snapshot
+        self._alert_bucket = alert_bucket
         self._state = state
         self._cooldown = cooldown
         self._email_client = email_client
@@ -59,8 +63,16 @@ class ServiceFactory:
         return self._candle_store()
 
     @cached_property
-    def snapshot_publisher(self):
-        return self._snapshot_publisher()
+    def market_snapshot(self):
+        return self._market_snapshot()
+
+    @cached_property
+    def alert_snapshot(self):
+        return self._alert_snapshot()
+
+    @cached_property
+    def alert_bucket(self):
+        return self._alert_bucket()
 
     @cached_property
     def cooldown(self):
@@ -100,6 +112,14 @@ class ServiceFactory:
         )
 
     @cached_property
+    def alerts(self) -> AlertService:
+        return AlertService(
+            uow_factory=self._uow,
+            alert_snapshot=self.alert_snapshot,
+            alert_bucket=self.alert_bucket,
+        )
+
+    @cached_property
     def watchlists(self) -> WatchlistService:
         return WatchlistService(uow_factory=self._uow)
 
@@ -109,7 +129,7 @@ class ServiceFactory:
             uow_factory=self._uow,
             symbol_providers=self.symbol_providers,
             candle_store=self.candle_store,
-            snapshot_publisher=self.snapshot_publisher,
+            market_snapshot=self.market_snapshot,
         )
 
     @cached_property

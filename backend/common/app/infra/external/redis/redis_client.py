@@ -40,8 +40,7 @@ class RedisClient:
             health_check_interval=self._cfg.health_check_interval,
         )
 
-    # --- 기본 primitive ---
-    def set(
+    def set_value( # set 타입 충돌로 set_value로 네이밍 변경
         self,
         key: str,
         value: bytes,
@@ -82,11 +81,25 @@ class RedisClient:
             log.exception("redis delete failed: key=%s", key)
             raise
 
+    def hget(self, key: str, field: str) -> int:
+        try:
+            return cast(int, self._client.hget(name=key, key=field))
+        except RedisError:
+            log.exception("redis hget failed: key=%s field=%s", key, field)
+            raise
+
     def hset(self, key: str, mapping: dict) -> int:
         try:
             return cast(int, self._client.hset(name=key, mapping=mapping))
         except RedisError:
             log.exception("redis hset failed: key=%s", key)
+            raise
+
+    def hdel(self, key: str, *fields: str) -> int:
+        try:
+            return cast(int, self._client.hdel(key, *fields))
+        except RedisError:
+            log.exception("redis hdel failed: key=%s fields=%s", key, fields)
             raise
 
     def hgetall(self, key: str) -> dict[bytes, bytes]:
@@ -95,6 +108,35 @@ class RedisClient:
         except RedisError:
             log.exception("redis hgetall failed: key=%s", key)
             raise
+
+
+    def sadd(self, key: str, *values: str) -> int:
+        try:
+            if not values:
+                return 0
+            return cast(int, self._client.sadd(key, *values))
+        except RedisError:
+            log.exception("redis sadd failed: key=%s", key)
+            raise
+
+
+    def srem(self, key: str, *values: str) -> int:
+        try:
+            if not values:
+                return 0
+            return cast(int, self._client.srem(key, *values))
+        except RedisError:
+            log.exception("redis srem failed: key=%s", key)
+            raise
+
+
+    def smembers(self, key: str) -> set[bytes]:
+        try:
+            return cast(set[bytes], self._client.smembers(key))
+        except RedisError:
+            log.exception("redis smembers failed: key=%s", key)
+            raise
+
 
     def publish(self, channel: str, message: str) -> int:
         try:

@@ -44,7 +44,7 @@ class RedisClientAsync:
             log.exception("redis get failed key=%s", key)
             raise
 
-    async def set(
+    async def set_value( # set 타입 충돌로 set_value로 네이밍 변경
         self,
         key: str,
         value: bytes,
@@ -89,6 +89,13 @@ class RedisClientAsync:
             return await self._client.hset(name=key, mapping=mapping)
         except RedisError:
             log.exception("redis hset failed: key=%s", key)
+            raise
+
+    async def hget(self, key: str, field: str):
+        try:
+            return await self._client.hget(name=key, key=field)
+        except RedisError:
+            log.exception("redis hget failed: key=%s field=%s", key, field)
             raise
 
     async def hgetall(self, key: str) -> dict[bytes, bytes]:

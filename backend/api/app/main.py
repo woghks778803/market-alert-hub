@@ -4,7 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 
 from sentry_sdk.integrations.fastapi import FastApiIntegration
-from app.core.constants import DeploymentEnvironment, CandleInterval
+
+from app.core.constants import DeploymentEnvironment, CandleInterval, TickerInterval
 from app.core.logging import setup_logging
 
 from app.api.deps import get_api_context
@@ -92,6 +93,7 @@ def create_app() -> FastAPI:
 
     # 앱 전역 싱글톤 저장소 - 하나만 있어야 함
     app.state.ws_hub = Hub()
+    app.state.ws_config = ws_ctx.config
     app.state.ws_facade = ws_ctx.facade
     app.state.market_store = MarketStore()
     app.state.candle_queue = asyncio.Queue()
@@ -140,7 +142,8 @@ def create_app() -> FastAPI:
         asyncio.create_task(run_candle_consumer(app, interval=CandleInterval.HOUR_1))
         asyncio.create_task(run_candle_consumer(app, interval=CandleInterval.DAY_1))
 
-        asyncio.create_task(run_ticker_consumer(app))
+        asyncio.create_task(run_ticker_consumer(app, interval=TickerInterval.HOUR_24))
+
         asyncio.create_task(run_candle_broadcaster(app))
         asyncio.create_task(run_ticker_broadcaster(app))
         asyncio.create_task(run_candle_list_broadcaster(app))

@@ -17,6 +17,9 @@ class Base:
 
 @dataclass(frozen=True)
 class ServiceConfigBag:
+    app_name: str
+    deploy_env: str
+    
     oauth_state_sec: int
     # 이메일 재전송 쿨다운 초
     email_resend_cooldown_sec: int
@@ -33,9 +36,7 @@ class ServiceConfigBag:
     # 기본 URL
     public_web_base_url: str
     public_api_base_url: str
-    public_admin_api_base_url: str
     kakao_auth_rest_base_url: str
-    kakao_api_rest_base_url: str
 
 
 @dataclass(frozen=True)
@@ -107,6 +108,7 @@ class SchedulerConfigBag:
     cleanup_interval_sec: int
     sync_interval_sec: int
     tickers_interval_sec: int
+    alerts_interval_sec: int
     trig_interval_sec: int
     snapshot_intervals_sec: list[int]
 

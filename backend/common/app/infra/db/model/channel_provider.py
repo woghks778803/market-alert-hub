@@ -12,8 +12,8 @@ class ChannelProvider(Base):
     name: Mapped[str] = mapped_column(String(64), nullable=False)
     description: Mapped[str | None] = mapped_column(String(255))
 
-    user_schema: Mapped[dict | None] = mapped_column(JSON)     # optional
-    admin_schema: Mapped[dict | None] = mapped_column(JSON)    # optional
+    user_schema: Mapped[dict | None] = mapped_column(JSON)     
+    admin_schema: Mapped[dict | None] = mapped_column(JSON)    
     rate_limit_policy: Mapped[dict | None] = mapped_column(JSON)
     retry_policy: Mapped[dict | None] = mapped_column(JSON)
 

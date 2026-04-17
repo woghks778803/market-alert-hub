@@ -13,7 +13,6 @@ async def run_ticker_list_broadcaster(app):
 
         snapshot = store.ticker_list_snapshot()
 
-        # print("ticker snapshot", snapshot)
         if not snapshot:
             continue
 
@@ -29,6 +28,7 @@ async def run_ticker_list_broadcaster(app):
 async def run_ticker_broadcaster(app):
     hub: Hub = app.state.ws_hub
     store: MarketStore = app.state.market_store
+    config: CoreDTO.WsConfigBag = app.state.ws_config
 
     while True:
         await asyncio.sleep(60)
@@ -36,7 +36,6 @@ async def run_ticker_broadcaster(app):
         for key in store.get_ticker_data().keys():
             snapshot = store.ticker_snapshot(key)
 
-            # print("ticker snapshot", snapshot)
             if not snapshot:
                 continue
 

@@ -42,7 +42,9 @@ from app.infra.external.redis.provider import (
     RedisCandleStoreAsync,
     RedisCandleStoreSync,
     RedisCooldown,
-    RedisMarketSnapshotPublish,
+    RedisMarketSnapshot,
+    RedisAlertSnapshot,
+    RedisAlertBucket,
     RedisState,
 )
 
@@ -57,22 +59,18 @@ from app.infra.external.exchange.port.subscribe import SubscribeFactoryRegistry
 
 from app.infra.external.exchange.upbit.provider.symbol import UpbitSymbol
 from app.infra.external.exchange.upbit.rest_client import (
-    UpbitRestClient,
     UpbitRestClientConfig,
     get_upbit_rest_client,
 )
 from app.infra.external.exchange.binance.rest_client import (
-    BinanceRestClient,
     BinanceRestClientConfig,
     get_binance_rest_client,
 )
 from app.infra.external.exchange.upbit.ws_client import (
-    UpbitWsClient,
     UpbitWsClientConfig,
     get_upbit_ws_client,
 )
 from app.infra.external.exchange.binance.ws_client import (
-    BinanceWsClient,
     BinanceWsClientConfig,
     get_binance_ws_client,
 )
@@ -81,7 +79,7 @@ from app.infra.external.redis.async_redis_client import (
     RedisClientAsync,
     get_async_redis_client,
 )
-from app.infra.external.redis.redis_client import RedisClient, get_redis_client
+from app.infra.external.redis.redis_client import get_redis_client
 from app.infra.external.email.ses_client import SesEmailClient
 from app.infra.external.email.jinja_renderer import JinjaEmailRenderer
 from app.infra.db.uow import UnitOfWork
@@ -93,7 +91,7 @@ from app.infra.external.crypto.local_aesgcm import LocalAesGcmCrypto
 from app.infra.external.crypto.local_aesgcm_from_secrets import LocalAesGcmFromSecrets
 
 
-from typing import Callable, Any
+from typing import Callable
 from functools import lru_cache
 from passlib.context import CryptContext
 
@@ -156,26 +154,29 @@ class Providers:
 
     @staticmethod
     def ticker_store_async_provider(
+        prefix: str,
         async_redis_client: RedisClientAsync,
     ) -> Callable[[], RedisTickerStoreAsync]:
         return lambda: RedisTickerStoreAsync(
-            async_redis_client,
+            redis=async_redis_client,
+            prefix=prefix,
         )
 
     @staticmethod
     def candle_store_async_provider(
+        prefix: str,
         async_redis_client: RedisClientAsync,
     ) -> Callable[[], RedisCandleStoreAsync]:
         return lambda: RedisCandleStoreAsync(
-            async_redis_client,
-            symbols_1s_key_fn=lambda ex, symbol: f"{CANDLE}:{CandleInterval.SEC_1.value}:{ex}:{symbol}",
+            redis=async_redis_client,
+            prefix=prefix,
         )
 
     @staticmethod
-    def candle_store_sync_provider() -> Callable[[], RedisCandleStoreSync]:
+    def candle_store_sync_provider(prefix: str) -> Callable[[], RedisCandleStoreSync]:
         return lambda: RedisCandleStoreSync(
             redis=get_redis_client(settings.REDIS_URL),
-            symbols_1s_key_fn=lambda ex, symbol: f"{CANDLE}:{CandleInterval.SEC_1.value}:{ex}:{symbol}",
+            prefix=prefix,
         )
 
     @staticmethod
@@ -269,18 +270,33 @@ class Providers:
         return lambda: get_binance_ws_client(config)
 
     @staticmethod
-    def snapshot_publisher_provider() -> Callable[[], RedisMarketSnapshotPublish]:
-        return lambda: RedisMarketSnapshotPublish(
-            redis=get_redis_client(settings.REDIS_URL)
+    def market_snapshot_provider(prefix: str) -> Callable[[], RedisMarketSnapshot]:
+        return lambda: RedisMarketSnapshot(
+            redis=get_redis_client(settings.REDIS_URL),
+            prefix=prefix
         )
 
     @staticmethod
-    def state_provider() -> Callable[[], RedisState]:
-        return lambda: RedisState(redis=get_redis_client(settings.REDIS_URL))
+    def alert_snapshot_provider(prefix: str) -> Callable[[], RedisAlertSnapshot]:
+        return lambda: RedisAlertSnapshot(
+            redis=get_redis_client(settings.REDIS_URL),
+            prefix=prefix
+        )
 
     @staticmethod
-    def cooldown_provider() -> Callable[[], RedisCooldown]:
-        return lambda: RedisCooldown(redis=get_redis_client(settings.REDIS_URL))
+    def alert_bucket_provider(prefix: str) -> Callable[[], RedisAlertBucket]:
+        return lambda: RedisAlertBucket(
+            redis=get_redis_client(settings.REDIS_URL),
+            prefix=prefix
+        )
+
+    @staticmethod
+    def state_provider(prefix: str) -> Callable[[], RedisState]:
+        return lambda: RedisState(redis=get_redis_client(settings.REDIS_URL), prefix=prefix)
+
+    @staticmethod
+    def cooldown_provider(prefix: str) -> Callable[[], RedisCooldown]:
+        return lambda: RedisCooldown(redis=get_redis_client(settings.REDIS_URL), prefix=prefix)
 
     @staticmethod
     def uow_provider(sqlalchemy_url: str) -> Callable[[], UnitOfWork]:
@@ -377,8 +393,10 @@ class Providers:
 providers = Providers()
 
 
-def build_service_config_bag() -> CoreDTO.ServiceConfigBag:
+def build_service_config_bag(prefix: str) -> CoreDTO.ServiceConfigBag:
     return CoreDTO.ServiceConfigBag(
+        app_name=settings.APP_NAME,
+        deploy_env=settings.DEPLOY_ENV,
         oauth_state_sec=settings.OAUTH_STATE_TTL_SEC,
         email_resend_cooldown_sec=settings.EMAIL_RESEND_COOLDOWN_SEC,
         notice_view_cooldown_sec=settings.NOTICE_VIEW_COOLDOWN_SEC,
@@ -389,9 +407,7 @@ def build_service_config_bag() -> CoreDTO.ServiceConfigBag:
         crypto_data_kid=settings.CRYPTO_DATA_ENC_KID,
         public_web_base_url=settings.PUBLIC_WEB_BASE_URL,
         public_api_base_url=settings.PUBLIC_API_BASE_URL,
-        public_admin_api_base_url=settings.PUBLIC_ADMIN_API_BASE_URL,
         kakao_auth_rest_base_url=settings.KAKAO_AUTH_REST_BASE_URL,
-        kakao_api_rest_base_url=settings.KAKAO_API_REST_BASE_URL,
     )
 
 
@@ -462,6 +478,7 @@ def build_scheduler_config_bag() -> CoreDTO.SchedulerConfigBag:
         cleanup_interval_sec=settings.SCHEDULER_CLEANUP_INTERVAL_SEC,
         sync_interval_sec=settings.SCHEDULER_SYNC_INTERVAL_SEC,
         tickers_interval_sec=settings.SCHEDULER_TICKERS_INTERVAL_SEC,
+        alerts_interval_sec=settings.SCHEDULER_ALERTS_INTERVAL_SEC,
         trig_interval_sec=settings.SCHEDULER_TRIG_INTERVAL_SEC,
         snapshot_intervals_sec=settings.SCHEDULER_SNAPSHOT_INTERVALS,
         restart_base_backoff_sec=settings.SCHEDULER_RESTART_BASE_BACKOFF_SEC,
@@ -517,10 +534,15 @@ def build_stream_processor_config_bag() -> CoreDTO.StreamProcessorConfigBag:
 def create_service_factory(prefix: str) -> ServiceFactory:
     return ServiceFactory(
         uow=providers.uow_provider(settings.SQLALCHEMY_URL),
-        candle_store=providers.candle_store_sync_provider(),
-        snapshot_publisher=providers.snapshot_publisher_provider(),
-        state=providers.state_provider(),
-        cooldown=providers.cooldown_provider(),
+
+        candle_store=providers.candle_store_sync_provider(prefix),
+        market_snapshot=providers.market_snapshot_provider(prefix),
+        alert_snapshot=providers.alert_snapshot_provider(prefix),
+        alert_bucket=providers.alert_bucket_provider(prefix),
+        
+        state=providers.state_provider(prefix),
+        cooldown=providers.cooldown_provider(prefix),
+
         email_client=providers.email_client_provider(),
         email_renderer=providers.email_renderer_provider(),
         password_hasher=providers.password_hasher_provider(),
@@ -529,7 +551,7 @@ def create_service_factory(prefix: str) -> ServiceFactory:
         secret_crypto=providers.secret_crypto_provider(),
         symbol_providers=_build_symbol_provider_registry(),
         kakao_oauth=providers.kakao_oauth_provider(),
-        config=build_service_config_bag(),
+        config=build_service_config_bag(prefix),
     )
 
 
@@ -538,10 +560,10 @@ def create_facade_container(prefix: str) -> FacadeContainer:
 
     return FacadeContainer(
         candle_store=providers.candle_store_async_provider(
-            async_redis_client=async_redis
+            prefix=prefix, async_redis_client=async_redis
         ),
         ticker_store=providers.ticker_store_async_provider(
-            async_redis_client=async_redis
+            prefix=prefix, async_redis_client=async_redis
         ),
         active_catalog=providers.active_catalog_provider(
             prefix=prefix, async_redis_client=async_redis

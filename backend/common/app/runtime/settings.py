@@ -26,7 +26,6 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     PUBLIC_WEB_BASE_URL: str
     PUBLIC_API_BASE_URL: str
-    PUBLIC_ADMIN_API_BASE_URL: str
     SENTRY_DSN: str
     SAMPLE_RATE: float
     TRACES_SAMPLE_RATE: float
@@ -122,6 +121,10 @@ class Settings(BaseSettings):
     SYNC_SYMBOLS_BATCH_SIZE: int = 500
     SYNC_SYMBOLS_TTL_SEC: int = 600
 
+    # alerts
+    SYNC_ALERTS_BATCH_SIZE: int = 500
+    SYNC_ALERTS_TTL_SEC: int = 600
+
     # --- Collector ---
     COLLECTOR_LOG_LEVEL: str = Field(default="INFO")
 
@@ -173,6 +176,7 @@ class Settings(BaseSettings):
     SCHEDULER_CLEANUP_INTERVAL_SEC: int = 86400
     SCHEDULER_SYNC_INTERVAL_SEC: int = 1800  # 30분
     SCHEDULER_TICKERS_INTERVAL_SEC: int = 60  # 1분
+    SCHEDULER_ALERTS_INTERVAL_SEC: int = 300 # 5분
     SCHEDULER_TRIG_INTERVAL_SEC: int = 3  # 3초
     SCHEDULER_SNAPSHOT_INTERVALS: list[int] = Field(
         default_factory=lambda: [60, 3600, 86400]
@@ -221,9 +225,6 @@ class Settings(BaseSettings):
         event_type dict로 묶음
         """
         return {
-            OutboxEventType.SYNC_TICKERS.value: {
-                "run_key": OutboxEventType.SYNC_TICKERS.value,
-            },
             OutboxEventType.CLEANUP_DELETED_USERS.value: {
                 "run_key": OutboxEventType.CLEANUP_DELETED_USERS.value,
             },
@@ -231,7 +232,7 @@ class Settings(BaseSettings):
                 "run_key": OutboxEventType.PERSIST_SNAPSHOTS.value,
             },
             OutboxEventType.SYNC_EXCHANGES.value: {
-                "run_key": SYMBOLS,
+                "run_key": EXCHANGES,
                 "batch_size": self.SYNC_EXCHANGES_BATCH_SIZE,
                 "ttl_sec": self.SYNC_EXCHANGES_TTL_SEC,
             },
@@ -239,6 +240,14 @@ class Settings(BaseSettings):
                 "run_key": SYMBOLS,
                 "batch_size": self.SYNC_SYMBOLS_BATCH_SIZE,
                 "ttl_sec": self.SYNC_SYMBOLS_TTL_SEC,
+            },
+            OutboxEventType.SYNC_TICKERS.value: {
+                "run_key": OutboxEventType.SYNC_TICKERS.value,
+            },
+            OutboxEventType.SYNC_ALERTS.value: {
+                "run_key": OutboxEventType.SYNC_ALERTS.value,
+                "batch_size": self.SYNC_ALERTS_BATCH_SIZE,
+                "ttl_sec": self.SYNC_ALERTS_TTL_SEC,
             },
         }
 

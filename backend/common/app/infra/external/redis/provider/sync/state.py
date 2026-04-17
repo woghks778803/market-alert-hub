@@ -9,8 +9,9 @@ from app.infra.external.redis.redis_client import RedisClient
 
 class RedisState(AuthPort.AuthState):
 
-    def __init__(self, redis: RedisClient):
+    def __init__(self, redis: RedisClient, prefix: str):
         self._redis = redis
+        self._prefix = prefix
 
     def create(self, key: str, data: dict, ttl_sec: int = 300) -> str:
         """
@@ -21,7 +22,7 @@ class RedisState(AuthPort.AuthState):
         """
 
         state = secrets.token_urlsafe(32)
-        redis_key = f"{STATE}:{key}:{state}"
+        redis_key = f"{self._prefix}:{STATE}:{key}:{state}"
 
         value_dict = {
             **data,
@@ -42,7 +43,7 @@ class RedisState(AuthPort.AuthState):
         state 조회 + 삭제 (one-time token)
         """
 
-        redis_key = f"{STATE}:{key}:{state}"
+        redis_key = f"{self._prefix}:{STATE}:{key}:{state}"
 
         pipe = self._redis.pipeline()
         pipe.get(redis_key)

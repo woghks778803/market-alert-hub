@@ -55,9 +55,6 @@ def handle_sync_tickers(
         )
         return result
 
-    except RetryHandler:
-        # 재시도 핸들러는 상위에서 처리하게 패스
-        raise
     except SkipHandler:
         # 스킵 핸들러도 그대로 전달
         raise

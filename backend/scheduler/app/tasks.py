@@ -3,11 +3,12 @@ from app.core.constants import OutboxEventType
 from app.core.util.trace import set_trace_id, clear_trace_id
 from app.handlers import (
     handle_cleanup_deleted_users,
-    handle_sync_exchanges,
-    handle_trigger_alerts,
-    handle_sync_symbols,
     handle_persist_snapshots,
+    handle_sync_exchanges,
+    handle_sync_symbols,
     handle_sync_tickers,
+    handle_sync_alerts,
+    handle_trigger_alerts,
 )
 
 
@@ -64,6 +65,11 @@ def build_default_tasks(config):
             OutboxEventType.SYNC_TICKERS,
             config.tickers_interval_sec,
             handle_sync_tickers,
+        ),
+        IntervalTask(
+            OutboxEventType.SYNC_ALERTS,
+            config.alerts_interval_sec,
+            handle_sync_alerts,
         ),
         # IntervalTask(
         #     OutboxEventType.TRIGGER_ALERTS,

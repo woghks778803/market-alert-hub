@@ -13,18 +13,33 @@ STREAM = "stream"
 META = "meta"
 LOCK = "lock"
 CURSOR = "cursor"
+INDEX = "index"
+
+PRICE = "price"
+INDICATOR = "indicator"
 
 CANDLE = "candle"
 TICKER = "ticker"
 TICKERS = "tickers"
 
+BUCKET= "bucket"
 COOLDOWN = "cooldown"
 PUBLISH = "publish"
 STATE = "state"
 
 SYMBOLS = "symbols"
 EXCHANGES = "exchanges"
+ALERTS = "alerts"
 
+class ThrottleTimeframe(str, enum.Enum):
+    MIN_5 = "5m"
+    MIN_10 = "10m"
+    MIN_30 = "30m"
+    HOUR_1 = "1h"
+    HOUR_3 = "3h"
+    HOUR_6 = "6h"
+    HOUR_12 = "12h"
+    DAY_1 = "1d"
 
 # 거래소 표준 대문자 유지
 class BaseQuote(str, enum.Enum):
@@ -59,6 +74,15 @@ class MarketSort(str, enum.Enum):
     PRICE_DESC = "price_desc"
     PRICE_ASC = "price_asc"
 
+class AlertSort(str, enum.Enum):
+    RECENT_UPDATED = "recent_updated"   
+    RECENT_CREATED = "recent_created"  
+    MARKET_ASC = "market_asc"          
+    STATUS = "status"    
+
+class AlertScope(str, enum.Enum):
+    SINGLE = "single"
+    CROSS = "cross"
 
 class OutboxEventType(str, enum.Enum):
     AUTH_EMAIL_VERIFY = "AUTH_EMAIL_VERIFY"
@@ -69,6 +93,7 @@ class OutboxEventType(str, enum.Enum):
     SYNC_EXCHANGES = "SYNC_EXCHANGES"
     SYNC_SYMBOLS = "SYNC_SYMBOLS"
     SYNC_TICKERS = "SYNC_TICKERS"
+    SYNC_ALERTS = "SYNC_ALERTS"
 
     TRIGGER_ALERTS = "TRIGGER_ALERTS"
     PERSIST_SNAPSHOTS = "PERSIST_SNAPSHOTS"
@@ -165,11 +190,20 @@ class AssetType(str, enum.Enum):
     STOCK = "stock"
     FUTURE = "future"
 
+class IndicatorType(str, enum.Enum):
+    PRICE = "price"
+    RSI = "rsi"
+    MACD = "macd"
+    MA = "ma"
+    EMA = "ema"
+    ICHIMOKU = "ichimoku"
+    ENVELOPE = "envelope"
+    BOLLINGER = "bollinger"
 
-class AlertScope(str, enum.Enum):
-    SINGLE = "single"
-    CROSS = "cross"
-
+class DirectionType(str, enum.Enum):
+    UP = "up"
+    DOWN = "down"
+    REACH = "both"
 
 class NoticeCategory(str, enum.Enum):
     UPDATE = "update"
@@ -182,3 +216,15 @@ class FAQCategory(str, enum.Enum):
     ACCOUNT = "account"
     PAYMENT = "payment"
     NOTIFICATION = "notification"
+
+
+THROTTLE_SECONDS = {
+    ThrottleTimeframe.MIN_5: 300,
+    ThrottleTimeframe.MIN_10: 600,
+    ThrottleTimeframe.MIN_30: 1800,
+    ThrottleTimeframe.HOUR_1: 3600,
+    ThrottleTimeframe.HOUR_3: 10800,
+    ThrottleTimeframe.HOUR_6: 21600,
+    ThrottleTimeframe.HOUR_12: 43200,
+    ThrottleTimeframe.DAY_1: 86400,
+}
