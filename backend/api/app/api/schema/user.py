@@ -12,7 +12,7 @@ class UserSettingIn(BaseModel):
     is_marketing: bool | None = None
     is_quiet_hours: bool | None = None
 
-class UserCreateIn(BaseModel):
+class UserIn(BaseModel):
     email: EmailStr
     nickname: str = Field(max_length=100)
     password: str = Field(min_length=8, max_length=255)

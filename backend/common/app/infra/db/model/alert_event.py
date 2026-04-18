@@ -25,7 +25,7 @@ class AlertEvent(Base):
     trigger_value: Mapped[Decimal | None] = mapped_column(DECIMAL(32, 16))
     context:       Mapped[dict | None] = mapped_column(JSON)
 
-    dedup_key:     Mapped[str | None] = mapped_column(String(64), unique=True)  # DDL 길이에 맞춰 조정
+    dedup_key:     Mapped[str] = mapped_column(String(64), unique=True, nullable=False)  
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
         default=utcnow, 
         nullable=False

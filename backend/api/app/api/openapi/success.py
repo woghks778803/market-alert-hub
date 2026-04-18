@@ -7,18 +7,33 @@ from .types import Responses
 
 
 def _success(
-    status: int,
-    model: Type[BaseModel],
+    status: HS,
+    model: Optional[Type[BaseModel]] = None,
+    *,
     description: str,
     example: Optional[Dict[str, Any]] = None,
 ) -> Responses:
-    return {
-        status: {
-            "description": description,
-            "model": model,
-            "content": {"application/json": {"example": example}} if example else {},
-        }
+    response: Dict[str, Any] = {
+        "description": description,
     }
+
+    if status != HS.NO_CONTENT:
+        if model is None:
+            raise ValueError("model is required for success response with body")
+
+        response["model"] = model
+
+        if example:
+            response["content"] = {
+                "application/json": {
+                    "example": example,
+                }
+            }
+
+    res: Responses = {
+        int(status): response,
+    }
+    return res
 
 
 def OK(
@@ -27,7 +42,7 @@ def OK(
     description: str = "성공",
     example: Optional[Dict[str, Any]] = None
 ):
-    return _success(HS.OK, model, description, example)
+    return _success(HS.OK, model, description=description, example=example)
 
 
 def CREATED(
@@ -36,16 +51,17 @@ def CREATED(
     description: str = "생성됨",
     example: Optional[Dict[str, Any]] = None
 ):
-    return _success(HS.CREATED, model, description, example)
+    return _success(HS.CREATED, model, description=description, example=example)
 
 
 def NO_CONTENT(
-    model: Type[BaseModel],
     *,
     description: str = "삭제됨",
-    example: Optional[Dict[str, Any]] = None
 ):
-    return _success(HS.NO_CONTENT, model, description, {})
+    return _success(
+        HS.NO_CONTENT,
+        description=description,
+    )
 
 
 def wrap_example(

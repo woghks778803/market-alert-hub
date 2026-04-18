@@ -1,7 +1,7 @@
 from app.core.constants import ChannelCode
 from app.domain.shared.errors import ValidationAppError
 
-MAX_CHANNELS_PER_USER = 5
+MAX_ACTIVE_CHANNELS_PER_USER = 5
 
 
 def validate_user_config(code: ChannelCode, config: dict | None, user_schema: dict | None):

@@ -23,7 +23,7 @@ class SupportService:
         self._cooldown = cooldown
         self._config = config
 
-    def get_notice_by_id(self, id: int, user_id: int | None, client_ip: str, cookie_id: str) -> SupportDTO.NoticeDetail:
+    def get_notice_by_id(self, id: int, user_id: int | None, client_ip: str | None, cookie_id: str) -> SupportDTO.NoticeDetail:
         with self._uow_factory() as uow:
             row = uow.supports.get_notice_by_id(id)
 
@@ -31,6 +31,9 @@ class SupportService:
                 raise NotFoundError(
                     "Notice not found", target="notice"
                 )
+            
+            if client_ip is None and user_id is None:
+                return row
 
             cooldown_sec = self._config.notice_view_cooldown_sec
             ip_rate_sec = self._config.ip_rate_cooldown_sec
@@ -42,15 +45,16 @@ class SupportService:
             key = f"notice_view:{id}:{identifier}"
             ok_view = self._cooldown.acquire(key, cooldown_sec)
 
-            key = f"notice_view_rate:{client_ip}"
-            ok_rate = self._cooldown.acquire(key, ip_rate_sec)
+            ok_rate = True
+            if user_id is None:
+                key = f"notice_view_rate:{client_ip}"
+                ok_rate = self._cooldown.acquire(key, ip_rate_sec)
 
             # 사용자 조회 체크, ip 요청 체크
             if ok_view and ok_rate: 
                 uow.supports.update_notice_view_count(id)
 
             uow.commit()
-
             return row
             
     def list_notice_by_filter(

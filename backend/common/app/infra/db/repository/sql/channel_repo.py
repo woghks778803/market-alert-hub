@@ -57,15 +57,24 @@ class SqlChannelRepo(ChannelRepo):
         return self._db.execute(stmt).scalar_one_or_none()
 
     def get_channel_cnt(
-        self, *, user_id: int, provider_id: int,
+        self, 
+        *, 
+        user_id: int, 
+        provider_id: int,
+        is_active: bool,
+        deleted_is_null: bool = True,
     ) -> int | None:
         uc = UserChannelModel
         
         stmt = select(func.count(uc.id)).where(
             uc.user_id == user_id,
             uc.channel_provider_id == provider_id,
-            uc.deleted_at.is_(None),
+            uc.is_active.is_(is_active),
         )
+
+        if deleted_is_null:
+            stmt = stmt.where(uc.deleted_at.is_(None))
+
         return self._db.execute(stmt).scalar()
 
     def update_channel_active(

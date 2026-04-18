@@ -3,7 +3,7 @@ from fastapi import Response, APIRouter, Depends, Query, Path, status
 from app.service.factory import ServiceFactory
 from app.api.common.envelope import Envelope, ok, created, no_content
 from app.api.deps import get_services, get_current_user, get_request_meta, RequestMeta
-from app.api.schema.watchlist import WatchlistCreate, WatchlistItemRead
+from app.api.schema.watchlist import WatchlistIn, WatchlistItemRead
 from app.domain import AuthDTO
 import app.api.openapi as OpenApi
 
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/watchlists")
 )
 def create_item(
     response: Response,
-    payload: WatchlistCreate,
+    payload: WatchlistIn,
     user: AuthDTO.AuthUser = Depends(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
@@ -46,7 +46,7 @@ def create_item(
 @router.delete(
     "/{exchange_instrument_id}",
     summary="관심종목 삭제",
-    responses=OpenApi.combine(OpenApi.NO_CONTENT({}, description="완료")),
+    responses=OpenApi.combine(OpenApi.NO_CONTENT(description="완료")),
 )
 def delete_item(
     exchange_instrument_id: int = Path(..., ge=1),

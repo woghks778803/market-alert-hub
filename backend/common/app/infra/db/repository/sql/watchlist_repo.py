@@ -1,11 +1,8 @@
-from typing import Sequence
 from sqlalchemy import delete, select, func, and_, asc, desc
 from sqlalchemy.orm import aliased, Session as DbSession
 from app.domain import WatchlistDTO
 from app.infra.db.model import (
     WatchlistItemModel,
-    ExchangeInstrumentModel,
-    InstrumentModel,
 )
 from ..protocol.watchlist_repo import WatchlistRepo
 
@@ -26,10 +23,10 @@ class SqlWatchlistRepo(WatchlistRepo):
         self._db.flush()  # id 채우기
         return row.to_dto()
 
-    def exists(
+    def get_item_by_filter(
         self, *, user_id: int, exchange_instrument_id: int
     ) -> WatchlistDTO.WatchlistItem | None:
-        stmt = select(func.count(WatchlistItemModel.id)).where(
+        stmt = select(WatchlistItemModel).where(
             and_(
                 WatchlistItemModel.user_id == user_id,
                 WatchlistItemModel.exchange_instrument_id == exchange_instrument_id,

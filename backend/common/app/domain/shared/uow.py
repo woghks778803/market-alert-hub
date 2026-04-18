@@ -3,7 +3,6 @@ from app.infra.db.repository.protocol.session_repo import SessionRepo
 from app.infra.db.repository.protocol.market_repo import MarketRepo
 from app.infra.db.repository.protocol.watchlist_repo import WatchlistRepo
 from app.infra.db.repository.protocol.channel_repo import ChannelRepo
-from app.infra.db.repository.protocol.provider_repo import ProviderRepo
 from app.infra.db.repository.protocol.alert_repo import AlertRepo
 from app.infra.db.repository.protocol.user_repo import UserRepo
 from app.infra.db.repository.protocol.outbox_repo import OutboxRepo
@@ -32,8 +31,6 @@ class UnitOfWork(Protocol):
     def watchlists(self) -> WatchlistRepo: ...
     @property
     def channels(self) -> ChannelRepo: ...
-    @property
-    def providers(self) -> ProviderRepo: ...
     @property
     def outboxs(self) -> OutboxRepo: ...
     @property

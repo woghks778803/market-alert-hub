@@ -11,7 +11,7 @@ from app.domain.shared.uow import UnitOfWork
 from app.domain.shared.errors import (
     ValidationAppError,
     NotFoundError,
-    InternalServerError,
+    AuthError
 )
 from app.domain import UserDTO, EmailDTO, CryptoPort, AuthPort
 

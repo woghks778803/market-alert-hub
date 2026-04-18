@@ -1,6 +1,5 @@
-from typing import Protocol, Sequence
+from typing import Protocol
 from app.domain import WatchlistDTO
-from app.infra.db.model import WatchlistItemModel
 
 
 class WatchlistRepo(Protocol):

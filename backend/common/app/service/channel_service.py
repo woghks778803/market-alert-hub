@@ -1,8 +1,7 @@
 from typing import Callable
 from app.core.constants import ChannelCode
 from app.core.util.serialization import to_canonical_json
-from app.core.util.datetime import utcnow, ensure_utc
-from app.infra.db.model import UserChannelModel
+from app.core.util.datetime import utcnow
 from app.domain.shared.uow import UnitOfWork
 from app.domain.shared.errors import ConflictError, ValidationAppError, NotFoundError
 from app.domain import CryptoPort, ChannelRule, ChannelDTO
@@ -39,17 +38,18 @@ class ChannelService:
                 )
 
             channel_cnt = uow.channels.get_channel_cnt(
-                user_id=user_id, provider_id=chp.id
+                user_id=user_id, provider_id=chp.id, is_active=True
             )
+            
             # TODO 현재는 5개 고정 나중에 결제 서비스 넣을때 변경
-            if channel_cnt >= ChannelRule.MAX_CHANNELS_PER_USER:
+            if channel_cnt >= ChannelRule.MAX_ACTIVE_CHANNELS_PER_USER:
                 raise ConflictError(
                     "Channel limit already exceed", target="user_channel"
                 )
 
             # chp.user_schema 기반 JSON 검증 훅
             ChannelRule.validate_user_config(
-                code=chp.code, config=config, user_schema=chp.user_schema
+                code=ChannelCode(chp.code), config=config, user_schema=chp.user_schema
             )
 
             config_hash = to_canonical_json(config)
@@ -93,7 +93,7 @@ class ChannelService:
                 )
 
             ChannelRule.validate_user_config(
-                code=chp.code, config=config, user_schema=chp.user_schema
+                code=ChannelCode(chp.code), config=config, user_schema=chp.user_schema
             )
 
             uow.channels.update_channel_active(

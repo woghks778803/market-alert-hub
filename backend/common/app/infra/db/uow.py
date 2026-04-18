@@ -10,7 +10,6 @@ from app.infra.db.repository.protocol.alert_repo import AlertRepo
 from app.infra.db.repository.protocol.market_repo import MarketRepo
 from app.infra.db.repository.protocol.watchlist_repo import WatchlistRepo
 from app.infra.db.repository.protocol.channel_repo import ChannelRepo
-from app.infra.db.repository.protocol.provider_repo import ProviderRepo
 from app.infra.db.repository.protocol.outbox_repo import OutboxRepo
 from app.infra.db.repository.protocol.support_repo import SupportRepo
 
@@ -20,7 +19,6 @@ from app.infra.db.repository.sql.alert_repo import SqlAlertRepo
 from app.infra.db.repository.sql.market_repo import SqlMarketRepo
 from app.infra.db.repository.sql.watchlist_repo import SqlWatchlistRepo
 from app.infra.db.repository.sql.channel_repo import SqlChannelRepo
-from app.infra.db.repository.sql.provider_repo import SqlProviderRepo
 from app.infra.db.repository.sql.outbox_repo import SqlOutboxRepo
 from app.infra.db.repository.sql.support_repo import SqlSupportRepo
 
@@ -124,12 +122,6 @@ class UnitOfWork(UnitOfWorkPort):
         if self._channels is None:
             self._channels = SqlChannelRepo(self.db)
         return self._channels
-
-    @property
-    def providers(self) -> ProviderRepo:
-        if self._providers is None:
-            self._providers = SqlProviderRepo(self.db)
-        return self._providers
 
     @property
     def outboxs(self) -> OutboxRepo:

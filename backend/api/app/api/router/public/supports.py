@@ -32,7 +32,7 @@ router = APIRouter(prefix="/supports")
         OpenApi.OK(Envelope[list[SupportSchema.NoticeRead]]),
     ),
 )
-def list_notices(
+def list_notice(
     category: NoticeCategory | None = Query(None),
     limit: int = Query(10, ge=1, le=20),
     offset: int = Query(0, ge=0),
@@ -60,12 +60,15 @@ def get_notice(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
+    ip = request.client.host if request.client else None
+    ua = request.headers.get("user-agent")
     cookie_id = request.cookies.get("vid")
+    
     if not cookie_id:
         cookie_id = str(uuid4())
         response.set_cookie("vid", cookie_id, max_age=60*60*24*365)
 
-    row = svcs.supports.get_notice_by_id(id, user_id=user.id if user else None, client_ip=request.client.host, cookie_id=cookie_id)
+    row = svcs.supports.get_notice_by_id(id, user_id=user.id if user else None, client_ip=ip, cookie_id=cookie_id)
     return ok(row, request_id=meta.request_id,)
 
 
@@ -77,7 +80,7 @@ def get_notice(
         OpenApi.OK(Envelope[list[SupportSchema.FAQRead]]),
     ),
 )
-def list_faqs(
+def list_faq(
     search: str | None = Query(None),
     category: FAQCategory | None = Query(None),
     limit: int = Query(10, ge=1, le=20),

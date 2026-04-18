@@ -1,5 +1,5 @@
 from typing import Sequence
-from sqlalchemy import select, update, delete, bindparam, desc, and_, or_, asc
+from sqlalchemy import select, update, and_, or_, asc
 from sqlalchemy.orm import Session as DbSession
 
 from app.core.constants import NoticeCategory, FAQCategory

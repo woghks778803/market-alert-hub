@@ -14,7 +14,12 @@ class ChannelRepo(Protocol):
     def get_by_channel_id(self, user_channel_id: int) -> UserChannelModel | None: ...
     def get_channel_by_code(self, code: str) -> ChannelProviderModel: ...
     def get_channel_cnt(
-        self, *, user_id: int, provider_id: int,
+        self, 
+        *, 
+        user_id: int, 
+        provider_id: int, 
+        is_active: bool, 
+        deleted_is_null: bool = True,
     ) -> int: ...
 
     def update_channel_active(

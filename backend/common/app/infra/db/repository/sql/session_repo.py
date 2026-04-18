@@ -20,16 +20,16 @@ class SqlSessionRepo(SessionRepo):
         ip_addr: str | None,
         user_agent: str | None
     ) -> AuthDTO.Session:
-        s = SessionModel(
+        entity = SessionModel(
             user_id=user_id,
             token_hash=token_hash,
             expires_at=expires_at,
             ip_addr=ip_addr,
             user_agent=user_agent,
         )
-        self._db.add(s)
+        self._db.add(entity)
         self._db.flush()
-        return s.to_dto()
+        return entity.to_dto()
 
     def update_session_revoke(
         self, user_id: int, revoked_at: datetime, token_hash: bytes | None = None
