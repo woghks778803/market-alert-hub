@@ -1,6 +1,7 @@
 import logging
 import json
 from typing import Any, Callable, Mapping
+
 from app.core.util.datetime import utcnow, datetime_to_epoch_ms
 from app.core.constants import OutboxEventType, SNAP, META, TMP, LOCK
 from app.runtime.app_context import WorkerContext
@@ -15,22 +16,21 @@ def handle_sync_symbols(
     payload: Mapping[str, Any],
 ) -> dict[str, Any]:
     started_at = utcnow()
+
     interval_sec = int(require(payload, "interval_sec", target="payload.interval_sec"))
     slot = int(require(payload, "slot", target="payload.slot"))
     exchange = require(payload, "exchange", target="payload.exchange")
     ex_code = require(exchange, "code", target="exchange.code")
 
     job_config = ctx.config.worker_jobs[OutboxEventType.SYNC_SYMBOLS.value]
+
     app_name = ctx.config.app_name
     deploy_env = ctx.config.deploy_env
     batch_size = job_config["batch_size"]
     ttl_sec = job_config["ttl_sec"]
     run_key = job_config["run_key"]
-    redis_key = f"{app_name}:{deploy_env}:{SNAP}:{run_key}:{ex_code}"
 
-    total = 0
-    offset = 0
-    r = ctx.redis_client.conn()
+    redis_key = f"{app_name}:{deploy_env}:{SNAP}:{run_key}:{ex_code}"
     tmp_key = f"{app_name}:{deploy_env}:{TMP}:{run_key}:{ex_code}:{slot}:{interval_sec}"
     lock_key = (
         f"{app_name}:{deploy_env}:{LOCK}:{run_key}:{ex_code}:{slot}:{interval_sec}"
@@ -43,14 +43,16 @@ def handle_sync_symbols(
     if not token:
         raise SkipHandler("locked")
 
+    total = 0
+    offset = 0
+    
     try:
-        exchange_instruments = ctx.svcs.markets.sync_exchange_instruments(code=ex_code)
+        r = ctx.redis_client.conn()
+        r.delete(tmp_key)
 
-        pipe = r.pipeline(transaction=False)
-        pipe.delete(tmp_key)
+        exchange_instruments = ctx.svcs.markets.sync_exchange_instruments(exchange_code=ex_code)
 
         mapping: dict[str, str] = {}
-        total = 0
         for row in exchange_instruments:
             sym = getattr(row, "exchange_symbol", None)
             if not sym:
@@ -60,24 +62,48 @@ def handle_sync_symbols(
                 ensure_ascii=False,
                 separators=(",", ":"),
             )
-            total += 1
 
         if mapping:
+            pipe = r.pipeline(transaction=False)
             pipe.hset(tmp_key, mapping=mapping)
+            pipe.execute()
+            total += len(mapping)
+        
+        offset += batch_size
 
-        pipe.hset(
+        finished_at = utcnow()
+        started_epoch_ms = datetime_to_epoch_ms(started_at)
+        finished_epoch_ms = datetime_to_epoch_ms(finished_at)
+        
+        meta = {
+            "run_key": run_key,
+            "slot": slot,
+            "interval_sec": interval_sec,
+            "total": total,
+            "started_at_epoch_ms": started_epoch_ms,
+            "synced_at_epoch_ms": finished_epoch_ms,
+        }
+
+        pipe = r.pipeline(transaction=False)
+        pipe.set(
             meta_key,
-            mapping={"started_at": datetime_to_epoch_ms(started_at), "count": total},
+            json.dumps(
+                meta,
+                ensure_ascii=False,
+                separators=(",", ":"),
+            ),
         )
+
+        if total > 0:
+            pipe.rename(tmp_key, redis_key)
+        else:
+            pipe.delete(redis_key)
 
         # TTL이 필요하면 tmp/meta 둘 다 TTL 적용
         # if ttl_sec > 0:
         #     pipe.expire(tmp_key, ttl_sec)
         #     pipe.expire(meta_key, ttl_sec)
-
         pipe.execute()
-
-        r.rename(tmp_key, redis_key)
 
         logger.info(
             "sync_symbols: wrote %s exchange_instruments into redis_key=%s",
@@ -101,7 +127,7 @@ def _exchange_instrument_to_payload(row: Any) -> dict[str, Any]:
     (MarketSimple 기준 필드)
     """
     return {
-        "id": row.id,
+        "exchange_instrument_id": row.exchange_instrument_id,
         "base_asset_id": row.base_asset_id,
         "quote_asset_id": row.quote_asset_id,
     }

@@ -16,7 +16,6 @@ from app.core.util.datetime import utcnow, epoch_to_datetime
 from app.domain.shared.uow import UnitOfWork
 from app.domain.shared.errors import ValidationAppError, NotFoundError
 from app.domain import MarketDTO, MarketRule, MarketPort
-from app.domain.market.dto import SymbolInfo
 
 
 class MarketService:
@@ -26,12 +25,12 @@ class MarketService:
         uow_factory: Callable[[], UnitOfWork],
         symbol_providers: dict[str, MarketPort.ExchangeSymbol],
         candle_store: MarketPort.CandleStore,
-        snapshot_publisher: MarketPort.MarketSnapshotPublish,
+        market_snapshot: MarketPort.MarketSnapshot,
     ) -> None:
         self._uow_factory = uow_factory
         self._symbol_providers = symbol_providers
         self._candle_store = candle_store
-        self._snapshot_publisher = snapshot_publisher
+        self._market_snapshot = market_snapshot
 
     # Meta
     def get_by_exchange_instrument_id(
@@ -97,12 +96,14 @@ class MarketService:
         self,
         *,
         exchange_id: int | None,
+        search: str | None = None,
         is_active: bool | None = None,
         limit: int,
         offset: int,
     ) -> list[MarketDTO.MarketSimple]:
         with self._uow_factory() as uow:
             rows = uow.markets.list_exchange_instrument_by_filter(
+                search=search,
                 exchange_id=exchange_id,
                 deleted_is_null=True,
                 is_active=is_active,
@@ -185,7 +186,7 @@ class MarketService:
             )
 
             # 🔥 market lookup map
-            market_map = {m.id: m for m in market_simples}
+            market_map = {m.exchange_instrument_id: m for m in market_simples}
 
             # 🔥 BTC 기준값 찾기
             btc_krw_symbol = None
@@ -224,17 +225,17 @@ class MarketService:
             if btc_krw_symbol:
                 exchange, symbol = btc_krw_symbol
                 data = self._candle_store.get_1s(exchange, symbol)
-                btc_krw = Decimal(str(data["close"])) if data else None
+                btc_krw = Decimal(data["close"]) if data else None
 
             if btc_usdt_symbol:
                 exchange, symbol = btc_usdt_symbol
                 data = self._candle_store.get_1s(exchange, symbol)
-                btc_usdt = Decimal(str(data["close"])) if data else None
+                btc_usdt = Decimal(data["close"]) if data else None
 
             if eth_btc_symbol:
                 exchange, symbol = eth_btc_symbol
                 data = self._candle_store.get_1s(exchange, symbol)
-                eth_btc = Decimal(str(data["close"])) if data else None
+                eth_btc = Decimal(data["close"]) if data else None
 
             # 🔥 normalized 계산
             for s in snapshots:
@@ -271,12 +272,12 @@ class MarketService:
             uow.markets.upsert_exchange_instrument_tickers(snapshots)
             uow.commit()
 
-        self._snapshot_publisher.ticker_publish(
+        self._market_snapshot.ticker_publish(
             MarketRule.compose_ticker_snapshot_data(
                 market_simples=market_simples,
                 snapshots=snapshots,
             ),
-            type=TickerInterval.HOUR_24.value,
+            interval_type=TickerInterval.HOUR_24.value,
         )
 
         return len(snapshots)
@@ -289,14 +290,14 @@ class MarketService:
         no_tick_symbols = [
             MarketDTO.MarketSimple.from_dict(m) for m in no_tick_payloads
         ]
-        ids = [s.id for s in no_tick_symbols]
+        ids = [s.exchange_instrument_id for s in no_tick_symbols]
 
         with self._uow_factory() as uow:
             last_1m_map = uow.markets.get_last_1m_by_exchange_instrument_ids(ids)
 
         result: list[MarketDTO.PriceSnapshotCreate] = []
         for s in no_tick_symbols:
-            prev = last_1m_map.get(s.id)
+            prev = last_1m_map.get(s.exchange_instrument_id)
             if prev is None:
                 # 초기 구간(이전 캔들 없음)은 스킵
                 continue
@@ -304,7 +305,7 @@ class MarketService:
             close = prev.close  # Decimal
             result.append(
                 MarketDTO.PriceSnapshotCreate(
-                    exchange_instrument_id=s.id,
+                    exchange_instrument_id=s.exchange_instrument_id,
                     ts_open=ts_open,
                     open=close,
                     high=close,
@@ -363,7 +364,7 @@ class MarketService:
         low_d = low_p if low_p is not None else open_d
 
         snapshot = MarketDTO.PriceSnapshotCreate(
-            exchange_instrument_id=symbol.id,
+            exchange_instrument_id=symbol.exchange_instrument_id,
             ts_open=ts_open,
             open=open_d,
             high=high_d,
@@ -374,25 +375,24 @@ class MarketService:
         )
         return snapshot
 
-    def sync_exchange_instruments(self, code: str):
+    def sync_exchange_instruments(self, exchange_code: str):
         raw_symbols = self._symbol_providers[
-            code
+            exchange_code
         ].list_symbols()  # list[MarketDTO.SymbolInfo]
 
-        normalized = self.normalize_upbit_symbols(raw_symbols)
+        normalized = self.normalize_symbols(raw_symbols)
         with self._uow_factory() as uow:
             active = self.ensure_exchange_instruments(
                 uow=uow,
-                code=code,
+                exchange_code=exchange_code,
                 symbols=normalized,
             )
             uow.commit()
             return active
 
-    def normalize_upbit_symbols(self, rows: list[SymbolInfo]) -> list:
+    def normalize_symbols(self, rows: list[MarketDTO.SymbolInfo]) -> list:
         """
-        입력/출력: MarketDTO.SymbolInfo 그대로.
-        - 여기선 필터링/기본 정리만(예: KRW 마켓만, 중복 제거 등)
+        심볼 중복 방어용
         """
         result = []
         seen = set()
@@ -401,25 +401,19 @@ class MarketService:
             if r.symbol in seen:
                 continue
 
-            # parsed = MarketDTO.ParsedMarketSymbol(base=r.base, quote=r.quote)
-
-            # 예: KRW 마켓만 사용
-            # if parsed.quote != "KRW":
-            #     continue
-
             seen.add(r.symbol)
             result.append(r)
         return result
 
     def ensure_exchange_instruments(
-        self, *, uow: UnitOfWork, code: str, symbols: list[MarketDTO.SymbolInfo]
+        self, *, uow: UnitOfWork, exchange_code: str, symbols: list[MarketDTO.SymbolInfo]
     ):
         """
         DB 반영(멱등 보장):
         - symbols는 MarketDTO.SymbolInfo 리스트
         """
         repo = uow.markets
-        exchange = repo.get_exchange_by_filter(code=code)
+        exchange = repo.get_exchange_by_filter(code=exchange_code)
         if not exchange:
             raise NotFoundError("Not found exchange", target="exchange")
 
@@ -430,67 +424,62 @@ class MarketService:
 
         # 집합 생성
         desired = set()
-        symbol_by_key = {}
+        symbol_info_by_key: dict[tuple[int, int], MarketDTO.SymbolInfo] = {}
 
-        for s in symbols:
-            base_id = instrument_id_by_symbol.get(s.base)
+        for sym in symbols:
+            base_id = instrument_id_by_symbol.get(sym.base)
             if not base_id:
                 continue
 
-            quote_id = instrument_id_by_symbol.get(s.quote)
+            quote_id = instrument_id_by_symbol.get(sym.quote)
             if not quote_id:
                 continue
 
             key = (base_id, quote_id)
             desired.add(key)
-            symbol_by_key[key] = s.symbol
+            symbol_info_by_key[key] = sym
 
         # 기존 매핑 조회
-        blocked = repo.list_exchange_instrument_by_filter(
+        all_mappings = repo.list_exchange_instrument_by_filter(
             exchange_id=exchange.id, deleted_is_null=False
         )
         existing = repo.list_exchange_instrument_by_filter(exchange_id=exchange.id)
-        blocked_keys = {(m.base_asset_id, m.quote_asset_id) for m in blocked}
+        all_keys  = {(m.base_asset_id, m.quote_asset_id) for m in all_mappings}
         existing_keys = {(m.base_asset_id, m.quote_asset_id) for m in existing}
 
         # print("symbol_info")
-        # print(symbol_by_key)
+        # print(symbol_info_by_key)
         # print(desired)
-        # print(blocked_keys)
+        # print(all_keys)
         # print(existing_keys)
 
         # diff 필터
-        to_insert = desired - existing_keys - blocked_keys
-        to_activate = desired & existing_keys  # - blocked_keys
+        to_insert = desired - all_keys
+        to_activate = desired & existing_keys 
         to_deactivate = existing_keys - desired
         updated_at = utcnow()
 
-        if to_insert:
-            # bulk insert용
-            creates = [
-                MarketDTO.ExchangeInstrumentCreate(
+        to_upsert = to_insert | to_activate
+        if to_upsert:
+            sync_items = [
+                MarketDTO.ExchangeInstrumentSync(
                     exchange_id=exchange.id,
-                    exchange_symbol=symbol_by_key[(base_id, quote_id)],
+                    exchange_symbol=symbol_info_by_key[(base_id, quote_id)].symbol,
                     base_asset_id=base_id,
                     quote_asset_id=quote_id,
+
+                    tick_size=symbol_info_by_key[(base_id, quote_id)].tick_size,
+                    price_precision=symbol_info_by_key[(base_id, quote_id)].price_precision,
+                    qty_precision=symbol_info_by_key[(base_id, quote_id)].qty_precision,
+                    min_notional=symbol_info_by_key[(base_id, quote_id)].min_notional,
+
                     updated_at=updated_at,
                     is_active=True,
                 )
-                for (base_id, quote_id) in to_insert
+                for base_id, quote_id in to_upsert
             ]
-            repo.add_exchange_instruments(creates)
 
-        # 활성화
-        if to_activate:
-            to_activate_pairs = [
-                (base_id, quote_id) for base_id, quote_id in to_activate
-            ]
-            repo.upsert_exchange_instruments_by_pairs(
-                exchange_id=exchange.id,
-                pairs=to_activate_pairs,
-                is_active=True,
-                updated_at=updated_at,
-            )
+            repo.upsert_exchange_instruments(sync_items)
 
         # 비활성화
         if to_deactivate:
@@ -552,7 +541,7 @@ class MarketService:
                     for t in times:
                         rows.append(
                             {
-                                "exchange_instrument_id": m.id,
+                                "exchange_instrument_id": m.exchange_instrument_id,
                                 "ts_open": t,
                                 **rand.ohlcv(base_price),
                             }
@@ -577,7 +566,7 @@ class MarketService:
         ts = MarketRule.align_utc(item.ts_open, base, ("base", "ts_open"))
 
         row = MarketDTO.PriceSnapshotCreate(
-            exchange_instrument_id=item.id,
+            exchange_instrument_id=item.exchange_instrument_id,
             ts_open=ts,
             open=MarketRule.dec(item.open),
             high=MarketRule.dec(item.high),
@@ -590,7 +579,7 @@ class MarketService:
         with self._uow_factory() as uow:
             # exchange_instrument_id 유효성 검사
             exchange_instrument = uow.markets.get_exchange_instrument_by_filter(
-                exchange_instrument_id=item.id
+                exchange_instrument_id=item.exchange_instrument_id
             )
             if exchange_instrument is None:
                 raise NotFoundError(
@@ -617,7 +606,6 @@ class MarketService:
     ) -> int:
         if not snapshots:
             return 0
-
         with self._uow_factory() as uow:
             ids = {s.exchange_instrument_id for s in snapshots}
             market_simples = uow.markets.list_exchange_instrument_by_filter(
@@ -627,11 +615,11 @@ class MarketService:
             uow.markets.upsert_snapshots_1m(snapshots)
             uow.commit()
 
-        self._snapshot_publisher.candle_publish(
+        self._market_snapshot.candle_publish(
             MarketRule.compose_candle_snapshot_data(
                 market_simples=market_simples, snapshots=snapshots
             ),
-            type=CandleInterval.MIN_1.value,
+            interval_type=CandleInterval.MIN_1.value,
         )
         return len(snapshots)
 
@@ -656,11 +644,11 @@ class MarketService:
             uow.markets.upsert_snapshots_1h(snapshots)
             uow.commit()
 
-        self._snapshot_publisher.candle_publish(
+        self._market_snapshot.candle_publish(
             MarketRule.compose_candle_snapshot_data(
                 market_simples=market_simples, snapshots=snapshots
             ),
-            type=CandleInterval.HOUR_1.value,
+            interval_type=CandleInterval.HOUR_1.value,
         )
         return len(snapshots)
 
@@ -685,10 +673,10 @@ class MarketService:
             uow.markets.upsert_snapshots_1d(snapshots)
             uow.commit()
 
-        self._snapshot_publisher.candle_publish(
+        self._market_snapshot.candle_publish(
             MarketRule.compose_candle_snapshot_data(
                 market_simples=market_simples, snapshots=snapshots
             ),
-            type=CandleInterval.DAY_1.value,
+            interval_type=CandleInterval.DAY_1.value,
         )
         return len(snapshots)

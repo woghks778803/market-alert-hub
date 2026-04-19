@@ -6,7 +6,7 @@ export type WatchlistCreateRequest = {
     sort_order?: number
 }
 
-export type WatchlistItemRead = {
+export type WatchlistItemInfo = {
     id: number
     exchange_instrument_id: number
     sort_order: number
@@ -15,7 +15,7 @@ export type WatchlistItemRead = {
 export const watchlistApi = {
     // POST /watchlists
     async create(payload: WatchlistCreateRequest) {
-        const { data } = await http.post<Envelope<WatchlistItemRead>>(
+        const { data } = await http.post<Envelope<WatchlistItemInfo>>(
             "/watchlists", payload
         );
         return data;

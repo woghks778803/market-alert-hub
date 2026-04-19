@@ -5,12 +5,12 @@ from pydantic import BaseModel, ConfigDict
 _model_cfg = ConfigDict(from_attributes=True, use_enum_values=True)
 
 
-class MarketInstrumentItem(BaseModel):
-    id: int
+class MarketSimpleRead(BaseModel):
+    exchange_instrument_id: int
     exchange_symbol: str
+    exchange_name: str
     base_symbol: str
     quote_symbol: str
-    exchange_name: str
 
     model_config = _model_cfg
 
@@ -23,11 +23,12 @@ class ExchangeRead(BaseModel):
 
 
 class MarketRead(BaseModel):
-    id: int
-    symbol: str
+    exchange_instrument_id: int
+    exchange_symbol: str
     exchange_code: str
-    base_asset: str
-    quote_asset: str
+    exchange_name: str
+    base_symbol: str
+    quote_symbol: str
     asset_name: str
 
     is_watchlisted: bool
@@ -48,7 +49,7 @@ class MarketRead(BaseModel):
 
 class CandleRead(BaseModel):
     model_config = _model_cfg
-    id: int
+    exchange_instrument_id: int
     ts_open: datetime
     open: float
     high: float

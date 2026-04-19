@@ -7,11 +7,11 @@ class ExchangeSymbol(Protocol):
         raise NotImplementedError
 
 
-class MarketSnapshotPublish(Protocol):
-    def candle_publish(self, payloads: list, type: str) -> None:
+class MarketSnapshot(Protocol):
+    def candle_publish(self, payloads: list, interval_type: str) -> None:
         raise NotImplementedError
 
-    def ticker_publish(self, payloads: list, type: str) -> None:
+    def ticker_publish(self, payloads: list, interval_type: str) -> None:
         raise NotImplementedError
 
 

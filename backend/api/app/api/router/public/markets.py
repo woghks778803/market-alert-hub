@@ -1,6 +1,6 @@
 from datetime import datetime
 from fastapi import Security, Response, APIRouter, Depends, Query, Path, Body, status
-from app.core.constants import CandleInterval, CandleOutputInterval, MarketSort
+from app.core.constants import CandleOutputInterval, MarketSort
 from app.service.factory import ServiceFactory
 from app.api.common.envelope import Envelope, ok, no_content
 from app.api.deps import get_current_user, get_services, get_request_meta, RequestMeta
@@ -96,7 +96,6 @@ def list_markets(
     )
     return ok(rows, request_id=meta.request_id)
 
-
 @router.get(
     "/exchanges",
     response_model=Envelope[list[MarketSchema.ExchangeRead]],
@@ -121,18 +120,19 @@ def list_exchanges(
 
 
 @router.get(
-    "/instruments",
-    response_model=Envelope[list[MarketSchema.MarketInstrumentItem]],
-    summary="종목 목록",
+    "/exchange-instruments",
+    response_model=Envelope[list[MarketSchema.MarketSimpleRead]],
+    summary="거래소 종목 목록",
     responses=OpenApi.combine(
         OpenApi.OK(
-            Envelope[list[MarketSchema.MarketInstrumentItem]],
+            Envelope[list[MarketSchema.MarketSimpleRead]],
             description="리스트 조회 성공",
         ),
         OpenApi.ERR_409,
     ),
 )
 def list_exchange_instruments(
+    search: str | None = Query(None),
     exchange_id: int | None = Query(None, ge=1),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
@@ -141,7 +141,7 @@ def list_exchange_instruments(
     meta: RequestMeta = Depends(get_request_meta),
 ):
     rows = svcs.markets.list_exchange_instrument_by_filter(
-        exchange_id=exchange_id, limit=limit, offset=offset
+        search=search, exchange_id=exchange_id, is_active=True, limit=limit, offset=offset
     )
 
     return ok(rows, request_id=meta.request_id)

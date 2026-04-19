@@ -2,7 +2,7 @@ import { http } from "./http"
 import type { Envelope } from "./types"
 
 export type CandleInfo = {
-    id: number
+    exchange_instrument_id: number
     ts_open: number   // datetime → epoch(ms)
     open: number
     high: number
@@ -18,12 +18,13 @@ export type ExchangeInfo = {
 }
 
 export type MarketInfo = {
-    id: number
-    symbol: string
+    exchange_instrument_id: number
+    exchange_symbol: string
     exchange_code: string
+    exchange_name: string
 
-    base_asset: string
-    quote_asset: string
+    base_symbol: string
+    quote_symbol: string
     asset_name: string
 
     is_watchlisted: boolean
@@ -39,6 +40,14 @@ export type MarketInfo = {
 
     normalized_price: string | null
     normalized_volume: string | null
+}
+
+export type SimpleMarketInfo = {
+    exchange_instrument_id: number
+    exchange_symbol: string
+    base_symbol: string
+    quote_symbol: string
+    exchange_name: string
 }
 
 export type MarketListRequest = {
@@ -88,6 +97,15 @@ export const marketApi = {
     async getMarkets(params?: MarketListRequest) {
         const { data } = await http.get<Envelope<MarketInfo[]>>(
             '/markets',
+            { params }
+        );
+        return data;
+    },
+
+    // GET /markets/exchange-instruments
+    async getSimpleMarkets(params?: { search: string }) {
+        const { data } = await http.get<Envelope<SimpleMarketInfo[]>>(
+            '/markets/exchange-instruments',
             { params }
         );
         return data;

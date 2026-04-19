@@ -8,7 +8,7 @@ from app.domain.shared.errors import ValidationAppError
 
 @dataclass(slots=True, frozen=True)
 class MarketCandle:
-    id: int
+    exchange_instrument_id: int
     ts_open: datetime
     open: float
     high: float
@@ -19,7 +19,7 @@ class MarketCandle:
 
 @dataclass(slots=True)
 class MarketSimple:
-    id: int
+    exchange_instrument_id: int
     base_asset_id: int
     quote_asset_id: int
 
@@ -69,7 +69,7 @@ class MarketSimple:
     @classmethod
     def from_dict(cls, d: Mapping[str, Any]) -> "MarketSimple":
         return cls(
-            id=cls._req_int(d, "id"),
+            exchange_instrument_id=cls._req_int(d, "exchange_instrument_id"),
             base_asset_id=cls._req_int(d, "base_asset_id"),
             quote_asset_id=cls._req_int(d, "quote_asset_id"),
             exchange_id=cls._opt_int(d, "exchange_id"),
@@ -82,12 +82,13 @@ class MarketSimple:
 
 @dataclass(slots=True)
 class Market:
-    id: int
-    symbol: str
+    exchange_instrument_id: int
+    exchange_symbol: str
     exchange_code: str
+    exchange_name: str
 
-    base_asset: str
-    quote_asset: str
+    base_symbol: str
+    quote_symbol: str
     asset_name: str
 
     open_price: Decimal | None
@@ -149,19 +150,22 @@ class ExchangeInstrument:
     price_precision: int | None
     qty_precision: int | None
     min_notional: Decimal | None
+    tick_size: Decimal | None
 
 
 @dataclass(slots=True)
-class ExchangeInstrumentCreate:
+class ExchangeInstrumentSync:
     exchange_id: int
     base_asset_id: int
     quote_asset_id: int
     exchange_symbol: str
     updated_at: datetime
     is_active: bool
+    
     price_precision: int | None = None
     qty_precision: int | None = None
     min_notional: Decimal | None = None
+    tick_size: Decimal | None = None
 
 
 @dataclass(slots=True)
@@ -226,3 +230,8 @@ class SymbolInfo:
     symbol: str  # 예: "KRW-BTC"
     base: str
     quote: str
+
+    tick_size: str | None = None
+    price_precision: int | None = None
+    qty_precision: int | None = None
+    min_notional: str | None = None

@@ -1,5 +1,6 @@
 from typing import Protocol, Sequence, Tuple
 from datetime import datetime
+from app.core.constants import MarketSort
 from app.domain import MarketDTO
 
 
@@ -49,7 +50,7 @@ class MarketRepo(Protocol):
         exchange_codes: list[str] | None,
         search: str | None,
         watchlist_only: bool,
-        sort: str,
+        sort: MarketSort,
         is_active: bool | None = None,
         limit: int,
         offset: int,
@@ -65,6 +66,7 @@ class MarketRepo(Protocol):
     def list_exchange_instrument_by_filter(
         self,
         *,
+        search: str | None = None,
         exchange_instrument_ids: set[int] | None = None,
         exchange_id: int | None = None,
         is_active: bool | None = None,
@@ -124,13 +126,16 @@ class MarketRepo(Protocol):
         end_dt: datetime,
     ) -> list[MarketDTO.PriceSnapshotCreate]: ...
     def add_exchange_instruments(
-        self, exchange_instruments: list[MarketDTO.ExchangeInstrumentCreate]
+        self, exchange_instruments: list[MarketDTO.ExchangeInstrumentSync]
     ) -> None: ...
     def upsert_exchange_instrument_tickers(
         self,
         rows: list[MarketDTO.ExchangeInstrumentTickerCreate],
         *,
         chunk_size: int = 1000,
+    ) -> int: ...
+    def upsert_exchange_instruments(
+        self, exchange_instruments: list[MarketDTO.ExchangeInstrumentSync]
     ) -> int: ...
     def upsert_exchange_instruments_by_pairs(
         self,

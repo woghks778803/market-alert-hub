@@ -14,7 +14,7 @@
           </div>
 
           <div class="mk-exchange">
-            {{ item.exchange }} · {{ item.quoteAsset }}
+            {{ item.exchange }} · {{ item.quoteSymbol }}
           </div>
 
           <div class="mk-name">
@@ -26,7 +26,7 @@
         <v-icon
           :icon="item.isWatchlisted ? 'mdi-star' : 'mdi-star-outline'"
           :color="item.isWatchlisted ? 'amber' : 'grey'"
-          @click.stop="toggle"
+          @click.stop.prevent="onToggle"
           size="25"
         />
 
@@ -36,7 +36,7 @@
       <div class="mk-row-bottom">
 
         <div class="mk-price">
-          {{ formatPrice(item.closePrice) }} {{ item.quoteAsset }}
+          {{ formatPrice(item.closePrice) }} {{ item.quoteSymbol }}
         </div>
 
         <div class="mk-change-block">
@@ -86,7 +86,7 @@ function goDetail() {
   })
 }
 
-async function toggle(e: MouseEvent) {
+async function onToggle(e: MouseEvent) {
   // e.stopPropagation()
   await marketStore.toggleWatchlist(props.item)
 }

@@ -3,7 +3,7 @@
     <v-container class="pa-4 bg-surface">
       <v-text-field
         :model-value="FAQListQuery.search"
-        @update:modelValue="supportStore.setSearch"
+        @update:model-value="supportStore.setSearch"
         prepend-inner-icon="mdi-magnify"
         label="궁금한 점을 검색해보세요"
         variant="solo"

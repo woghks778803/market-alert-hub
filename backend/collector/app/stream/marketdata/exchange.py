@@ -118,7 +118,7 @@ async def upsert_marketdata_and_buffer_5m(
 
     # 파이프라인으로 한번에 처리
     pipe = redis.pipeline(transaction=True)
-    pipe.hset(snap_key, symbol, payload_json)
+    # pipe.hset(snap_key, symbol, payload_json)
 
     # Stream 엔트리는 너무 큰 필드명/구조 피하고 최소화
     pipe.xadd(stream_key, {"ts": ts_ms, "p": payload_json})

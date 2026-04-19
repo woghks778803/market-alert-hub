@@ -2,8 +2,8 @@ import {
     marketApi,
 } from "@/api/market.api"
 
-import { toMarketDto, toExchangeDto, toCandleDto, toMarketListRequest, toCandlesListRequest, toExchangeListRequest } from "@/services/market.mapper"
-import type { MarketDto, ExchangeDto, CandleDto, MarketListQuery, ExchangeListQuery, CandlesListQuery } from "@/services/market.types"
+import { toSimpleMarketDto, toMarketDto, toExchangeDto, toCandleDto, toMarketListRequest, toCandlesListRequest, toExchangeListRequest } from "@/services/market.mapper"
+import type { SimpleMarketDto, MarketDto, ExchangeDto, CandleDto, SimpleMarketListQuery, MarketListQuery, ExchangeListQuery, CandlesListQuery } from "@/services/market.types"
 
 export async function getMarket(exchange_code: string, symbol: string): Promise<MarketDto> {
     const env = await marketApi.getMarket(exchange_code, symbol)
@@ -23,6 +23,16 @@ export async function getMarkets(payload: MarketListQuery): Promise<MarketDto[]>
     }
 
     return env.data.map(toMarketDto)
+}
+
+export async function getSimpleMarkets(payload: { search: string }): Promise<SimpleMarketDto[]> {
+    const env = await marketApi.getSimpleMarkets(payload)
+
+    if (!env.success || !env.data) {
+        throw env.error ?? new Error("invalid_simple_market_list_response")
+    }
+
+    return env.data.map(toSimpleMarketDto)
 }
 
 export async function getExchanges(payload: ExchangeListQuery): Promise<ExchangeDto[]> {

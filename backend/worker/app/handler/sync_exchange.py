@@ -1,6 +1,7 @@
 import json
 import logging
 from typing import Any, Mapping
+
 from app.core.util.datetime import utcnow, datetime_to_epoch_ms
 from app.core.constants import OutboxEventType, SNAP, META, TMP, LOCK
 from app.runtime.app_context import WorkerContext
@@ -14,57 +15,88 @@ def handle_sync_exchanges(
     ctx: WorkerContext, payload: Mapping[str, Any]
 ) -> dict[str, Any]:
     started_at = utcnow()
+
     interval_sec = int(require(payload, "interval_sec", target="payload.interval_sec"))
     slot = int(require(payload, "slot", target="payload.slot"))
+
     job_config = ctx.config.worker_jobs[OutboxEventType.SYNC_EXCHANGES.value]
+
     app_name = ctx.config.app_name
     deploy_env = ctx.config.deploy_env
     batch_size = job_config["batch_size"]
     ttl_sec = job_config["ttl_sec"]
     run_key = job_config["run_key"]
-    redis_key = f"{app_name}:{deploy_env}:{SNAP}:{run_key}"
 
-    total = 0
-    offset = 0
-    r = ctx.redis_client.conn()
+    redis_key = f"{app_name}:{deploy_env}:{SNAP}:{run_key}"
     tmp_key = f"{app_name}:{deploy_env}:{TMP}:{run_key}:{slot}:{interval_sec}"
     lock_key = f"{app_name}:{deploy_env}:{LOCK}:{run_key}:{slot}:{interval_sec}"
     meta_key = f"{app_name}:{deploy_env}:{META}:{run_key}"
+
     token = try_acquire_lock(
         ctx.redis_client, lock_key, ttl_sec=ctx.config.outbox_send_lock_ttl_sec
     )
     if not token:
         raise SkipHandler("locked")
 
+    total = 0
+    offset = 0
+    
     try:
-        pipe = r.pipeline(transaction=False)
-        pipe.delete(tmp_key)
+        r = ctx.redis_client.conn()
+        r.delete(tmp_key)
 
         while True:
             exchanges = ctx.svcs.markets.list_exchange_by_filter(
                 limit=batch_size, offset=offset
             )
+
             if not exchanges:
                 break
 
-            mapping = {}
+            mapping: dict[str, str] = {}
+
             for ex in exchanges:
                 mapping[ex.code] = json.dumps(
                     _exchange_to_payload(ex), ensure_ascii=False, separators=(",", ":")
                 )
 
-            pipe.hset(tmp_key, mapping=mapping)
-            total += len(exchanges)
-            offset += len(exchanges)
+            if mapping:
+                # 파이프라인을 너무 크게 잡지 않도록 배치 단위로 flush
+                pipe = r.pipeline(transaction=False)
+                pipe.hset(tmp_key, mapping=mapping)
+                pipe.execute()
+                total += len(mapping)
 
-            # 파이프라인을 너무 크게 잡지 않도록 배치 단위로 flush
-            pipe.execute()
+            offset += batch_size
+
+        finished_at = utcnow()
+        started_epoch_ms = datetime_to_epoch_ms(started_at)
+        finished_epoch_ms = datetime_to_epoch_ms(finished_at)
+
+        meta = {
+            "run_key": run_key,
+            "slot": slot,
+            "interval_sec": interval_sec,
+            "total": total,
+            "started_at_epoch_ms": started_epoch_ms,
+            "synced_at_epoch_ms": finished_epoch_ms,
+        }
 
         pipe = r.pipeline(transaction=False)
-        pipe.hset(
+        pipe.set(
             meta_key,
-            mapping={"started_at": datetime_to_epoch_ms(started_at), "count": total},
+            json.dumps(
+                meta,
+                ensure_ascii=False,
+                separators=(",", ":"),
+            ),
         )
+        
+        if total > 0:
+            # 원자적 스왑: tmp_key -> redis_key
+            pipe.rename(tmp_key, redis_key)
+        else:
+            pipe.delete(redis_key)
 
         # TTL이 필요하면 tmp/meta 둘 다 TTL 적용
         # if ttl_sec > 0:
@@ -72,9 +104,6 @@ def handle_sync_exchanges(
         #     pipe.expire(meta_key, ttl_sec)
 
         pipe.execute()
-
-        # 원자적 스왑: tmp_key -> redis_key
-        r.rename(tmp_key, redis_key)
 
         logger.info(
             "sync_exchanges: wrote %s exchanges into redis_key=%s", total, redis_key

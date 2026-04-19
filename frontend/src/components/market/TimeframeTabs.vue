@@ -6,7 +6,7 @@
       mandatory
       selected-class="mk-tab-active"
       :model-value="currentTimeframe"
-      @update:modelValue="onUpdate"
+      @update:model-value="onUpdate"
     >
       <v-chip
         v-for="tab in tabs"

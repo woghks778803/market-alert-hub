@@ -1,14 +1,15 @@
-import type { MarketInfo, ExchangeInfo, MarketListRequest, ExchangeListRequest, CandlesListRequest } from "@/api/market.api"
-import type { MarketDto, ExchangeDto, CandleDto, MarketListQuery, ExchangeListQuery, CandlesListQuery } from "@/services/market.types"
+import type { SimpleMarketInfo, MarketInfo, ExchangeInfo, CandleInfo, MarketListRequest, ExchangeListRequest, CandlesListRequest } from "@/api/market.api"
+import type { SimpleMarketDto, MarketDto, ExchangeDto, CandleDto, MarketListQuery, ExchangeListQuery, CandlesListQuery } from "@/services/market.types"
 
 export function toMarketDto(data: MarketInfo): MarketDto {
     return {
-        id: data.id,
-        symbol: data.symbol,
+        exchangeInstrumentId: data.exchange_instrument_id,
+        symbol: data.exchange_symbol,
         exchange: data.exchange_code,
+        exchangeName: data.exchange_name,
 
-        baseAsset: data.base_asset,
-        quoteAsset: data.quote_asset,
+        baseSymbol: data.base_symbol,
+        quoteSymbol: data.quote_symbol,
         name: data.asset_name,
 
         isWatchlisted: data.is_watchlisted,
@@ -27,6 +28,17 @@ export function toMarketDto(data: MarketInfo): MarketDto {
     }
 }
 
+export function toSimpleMarketDto(data: SimpleMarketInfo): SimpleMarketDto {
+    return {
+        label: data.exchange_name + " · " + data.exchange_symbol,
+        exchangeInstrumentId: data.exchange_instrument_id,
+        symbol: data.exchange_symbol,
+        exchange: data.exchange_name,
+        baseSymbol: data.base_symbol,
+        quoteSymbol: data.quote_symbol,
+    }
+}
+
 export function toExchangeDto(data: ExchangeInfo): ExchangeDto {
     return {
         id: data.id,
@@ -34,9 +46,10 @@ export function toExchangeDto(data: ExchangeInfo): ExchangeDto {
         name: data.name
     }
 }
-export function toCandleDto(data: any): CandleDto {
+
+export function toCandleDto(data: CandleInfo): CandleDto {
     return {
-        id: data.id,
+        exchangeInstrumentId: data.exchange_instrument_id,
 
         tsOpen: new Date(data.ts_open).getTime(),
 

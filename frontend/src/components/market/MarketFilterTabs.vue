@@ -5,7 +5,7 @@
       selected-class="mk-tab-active"
       multiple
       :model-value="currentSystemTab"
-      @update:modelValue="onUpdate"
+      @update:model-value="onUpdate"
     >
       <v-chip
         v-for="tab in tabs"

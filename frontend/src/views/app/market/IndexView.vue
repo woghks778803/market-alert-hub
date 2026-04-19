@@ -81,7 +81,7 @@ function handleSort(sort: MarketSort) {
 
 const handleSearch = (keyword: string) => {
   marketAction.run(() => {
-    marketStore.setSearch(keyword)
+    marketStore.setMarketSearch(keyword)
   })
 }
 
@@ -91,5 +91,4 @@ const handleFilter = (filter: string[]) => {
   })
 }
 
-// watch( () => marketAction.loading.value, (v) => { console.log('[market loading]', v) } ) 
 </script>

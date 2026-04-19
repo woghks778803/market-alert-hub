@@ -27,7 +27,7 @@ def compose_candle_snapshot_data(
             "exchange_symbol": m.exchange_symbol,
         }
         for m in market_simples
-        if (s := snapshot_map.get(m.id)) is not None
+        if (s := snapshot_map.get(m.exchange_instrument_id)) is not None
     ]
     return merged
 
@@ -54,7 +54,7 @@ def compose_ticker_snapshot_data(
             "exchange_symbol": m.exchange_symbol,
         }
         for m in market_simples
-        if (s := snapshot_map.get(m.id)) is not None
+        if (s := snapshot_map.get(m.exchange_instrument_id)) is not None
     ]
 
     return merged
@@ -190,7 +190,7 @@ def aggregate(
     for b in buckets.values():
         out.append(
             MarketDTO.MarketCandle(
-                id=b["exi"],
+                exchange_instrument_id=b["exi"],
                 ts_open=b["ts"],
                 open=float(b["_first_open"]),
                 high=float(b["high"]),

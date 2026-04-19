@@ -1,14 +1,12 @@
 <template>
 
   <div class="mk-list">
-
     <MarketItem
       v-for="item in items"
       :key="item.exchange + ':' + item.symbol"
       :item="item"
-      @select="goDetail"
+      @select="handleDetail"
     />
-
   </div>
 
 </template>
@@ -26,11 +24,10 @@ defineProps<{
   items: MarketDto[],
 }>()
 
-function goDetail(payload: { exchange: string; symbol: string }) {
+function handleDetail(payload: { exchange: string; symbol: string }) {
   router.push({
     name: 'SymbolDetail',
     params: payload,
   })
-  // console.log('Navigate to detail view for', payload)
 }
 </script>

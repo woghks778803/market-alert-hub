@@ -16,12 +16,12 @@
             </div>
     
             <div class="sd-base">
-              {{ market.baseAsset }}
+              {{ market.baseSymbol }}
             </div>
           </div>
     
           <div class="sd-price">
-            {{ formatPrice(market.closePrice) }} {{ market.quoteAsset }}
+            {{ formatPrice(market.closePrice) }} {{ market.quoteSymbol }}
           </div>
     
           <div

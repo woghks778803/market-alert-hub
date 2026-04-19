@@ -1,6 +1,7 @@
 from cProfile import label
 from decimal import Decimal
-from typing import Iterable, Sequence, Tuple
+from typing import cast, Sequence, Tuple
+from sqlalchemy.engine import CursorResult
 from sqlalchemy import update, insert, select, and_, or_, asc, desc, func, tuple_
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.orm import aliased, Session as DbSession
@@ -62,7 +63,7 @@ class SqlMarketRepo(MarketRepo):
         )
 
         if is_active:
-            latest_1d = latest_1d.where(ei.is_active == is_active)
+            latest_1d = latest_1d.where(ei.is_active.is_(is_active))
         if deleted_is_null:
             latest_1d = latest_1d.where(ei.deleted_at.is_(None))
 
@@ -139,8 +140,9 @@ class SqlMarketRepo(MarketRepo):
                 ei.id,
                 ei.exchange_symbol.label("exchange_symbol"),
                 e.code.label("exchange_code"),
-                base.symbol.label("base_asset"),
-                quote.symbol.label("quote_asset"),
+                e.name.label("exchange_name"),
+                base.symbol.label("base_symbol"),
+                quote.symbol.label("quote_symbol"),
                 base.name.label("asset_name"),
                 eit.open_price,
                 eit.close_price,
@@ -186,11 +188,12 @@ class SqlMarketRepo(MarketRepo):
             return None
 
         return MarketDTO.Market(
-            id=row.id,
-            symbol=row.exchange_symbol,
+            exchange_instrument_id=row.id,
+            exchange_symbol=row.exchange_symbol,
             exchange_code=row.exchange_code,
-            base_asset=row.base_asset,  # base asset symbol
-            quote_asset=row.quote_asset,
+            exchange_name=row.exchange_name,
+            base_symbol=row.base_symbol,  
+            quote_symbol=row.quote_symbol,
             asset_name=row.asset_name,
             high_24h=row.high_24h if row.high_24h is not None else None,
             low_24h=row.low_24h if row.low_24h is not None else None,
@@ -326,7 +329,7 @@ class SqlMarketRepo(MarketRepo):
         exchange_codes: list[str] | None,
         search: str | None,
         watchlist_only: bool,
-        sort: str,
+        sort: MarketSort,
         is_active: bool | None = None,
         limit: int,
         offset: int,
@@ -336,8 +339,9 @@ class SqlMarketRepo(MarketRepo):
                 ei.id,
                 ei.exchange_symbol.label("exchange_symbol"),
                 e.code.label("exchange_code"),
-                base.symbol.label("base_asset"),
-                quote.symbol.label("quote_asset"),
+                e.name.label("exchange_name"),
+                base.symbol.label("base_symbol"),
+                quote.symbol.label("quote_symbol"),
                 base.name.label("asset_name"),
                 wi.id.label("watchlist_id"),
                 eit.open_price,
@@ -375,6 +379,8 @@ class SqlMarketRepo(MarketRepo):
                     quote.symbol.ilike(f"%{search}%"),
                     quote.name.ilike(f"%{search}%"),
                     ei.exchange_symbol.ilike(f"%{search}%"),
+                    e.code.ilike(f"%{search}%"),
+                    e.name.ilike(f"%{search}%"),
                 )
             )
 
@@ -423,11 +429,12 @@ class SqlMarketRepo(MarketRepo):
 
         return [
             MarketDTO.Market(
-                id=row.id,
-                symbol=row.exchange_symbol,
+                exchange_instrument_id=row.id,
+                exchange_symbol=row.exchange_symbol,
                 exchange_code=row.exchange_code,
-                base_asset=row.base_asset,  # base asset symbol
-                quote_asset=row.quote_asset,
+                exchange_name=row.exchange_name,
+                base_symbol=row.base_symbol,  
+                quote_symbol=row.quote_symbol,
                 asset_name=row.asset_name,
                 high_24h=row.high_24h if row.high_24h is not None else None,
                 low_24h=row.low_24h if row.low_24h is not None else None,
@@ -481,6 +488,7 @@ class SqlMarketRepo(MarketRepo):
     def list_exchange_instrument_by_filter(
         self,
         *,
+        search: str | None = None,
         exchange_instrument_ids: set[int] | None = None,
         exchange_id: int | None = None,
         is_active: bool | None = None,
@@ -491,7 +499,7 @@ class SqlMarketRepo(MarketRepo):
 
         stmt = (
             select(
-                ei.id.label("id"),
+                ei.id.label("exchange_instrument_id"),
                 ei.exchange_symbol.label("exchange_symbol"),
                 ei.base_asset_id,
                 ei.quote_asset_id,
@@ -510,6 +518,18 @@ class SqlMarketRepo(MarketRepo):
             .offset(offset)
         )
 
+        conditions = []
+        
+        if search:
+            conditions.append(
+                or_(
+                    base.symbol.ilike(f"%{search}%"),
+                    quote.symbol.ilike(f"%{search}%"),
+                    e.name.ilike(f"%{search}%"),
+                    ei.exchange_symbol.ilike(f"%{search}%"),
+                )
+            )
+
         if deleted_is_null:
             stmt = stmt.where(
                 and_(
@@ -524,6 +544,9 @@ class SqlMarketRepo(MarketRepo):
             stmt = stmt.where(ei.exchange_id == exchange_id)
         if exchange_instrument_ids is not None:
             stmt = stmt.where(ei.id.in_(exchange_instrument_ids))
+
+        if conditions:
+            stmt = stmt.where(and_(*conditions))
 
         rows = self._db.execute(stmt).mappings().all()
 
@@ -560,7 +583,7 @@ class SqlMarketRepo(MarketRepo):
 
         return [
             MarketDTO.MarketCandle(
-                id=row.exchange_instrument_id,
+                exchange_instrument_id=row.exchange_instrument_id,
                 ts_open=row.ts_open,
                 open=float(row.open),
                 high=float(row.high),
@@ -756,7 +779,7 @@ class SqlMarketRepo(MarketRepo):
     # ---------------------------- add ----------------------------------------------
 
     def add_exchange_instruments(
-        self, exchange_instruments: list[MarketDTO.ExchangeInstrumentCreate]
+        self, exchange_instruments: list[MarketDTO.ExchangeInstrumentSync]
     ) -> None:
         if not exchange_instruments:
             return
@@ -803,6 +826,53 @@ class SqlMarketRepo(MarketRepo):
 
             self._db.execute(stmt)
 
+    def upsert_exchange_instruments(
+        self, exchange_instruments: list[MarketDTO.ExchangeInstrumentSync]
+    ) -> int:
+        if not exchange_instruments:
+            return 0
+
+        total = 0
+        CHUNK = 1000
+
+        for i in range(0, len(exchange_instruments), CHUNK):
+            chunk = exchange_instruments[i : i + CHUNK]
+
+            values = [
+                {
+                    "exchange_id": x.exchange_id,
+                    "exchange_symbol": x.exchange_symbol,
+                    "base_asset_id": x.base_asset_id,
+                    "quote_asset_id": x.quote_asset_id,
+                    "tick_size": x.tick_size,
+                    "price_precision": x.price_precision,
+                    "qty_precision": x.qty_precision,
+                    "min_notional": x.min_notional,
+                    "is_active": x.is_active,
+                    "updated_at": x.updated_at,
+                }
+                for x in chunk
+            ]
+
+            stmt = mysql_insert(ei).values(values)
+
+            stmt = stmt.on_duplicate_key_update(
+                exchange_symbol=stmt.inserted.exchange_symbol,
+                tick_size=stmt.inserted.tick_size,
+                price_precision=stmt.inserted.price_precision,
+                qty_precision=stmt.inserted.qty_precision,
+                min_notional=stmt.inserted.min_notional,
+                is_active=stmt.inserted.is_active,
+                updated_at=stmt.inserted.updated_at,
+                # deleted_at=None # soft delete 살릴거면
+            )
+
+            result = self._db.execute(stmt)
+            rowcount = result.rowcount or 0
+            total += rowcount
+
+        return total
+
     def upsert_exchange_instruments_by_pairs(
         self,
         exchange_id: int,
@@ -836,10 +906,12 @@ class SqlMarketRepo(MarketRepo):
                 )
             )
 
-            result = self._db.execute(stmt)
+            result = cast(CursorResult, self._db.execute(stmt))
+
             # rowcount는 DB/드라이버에 따라 -1일 수 있음. 그래도 참고값으로 누적.
-            if result.rowcount and result.rowcount > 0:
-                total += result.rowcount
+            rowcount = result.rowcount or 0
+            if rowcount > 0:
+                total += rowcount
 
         return total
 
@@ -873,10 +945,13 @@ class SqlMarketRepo(MarketRepo):
             close=stmt.inserted.close,
             volume=stmt.inserted.volume,
         )
-        res = self._db.execute(stmt)
-        # rowcount: 1=insert, 2=update, 0=no-op (같은 값으로 업데이트)
-        created = res.rowcount == 1
-        _id = int(res.lastrowid)  # insert/duplicate 모두 PK 반환
+        result = cast(CursorResult, self._db.execute(stmt))
+        # rowcount:
+        # 1 = insert
+        # 2 = duplicate update
+        # 0 = duplicate인데 같은 값이라 실제 변경 없음
+        created = result.rowcount == 1
+        _id = int(result.lastrowid)  # insert/duplicate 모두 PK 반환
         return _id, created
 
     def upsert_snapshots_1m(

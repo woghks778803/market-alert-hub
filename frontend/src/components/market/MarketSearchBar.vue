@@ -7,7 +7,7 @@
     hide-details
     class="mk-search"
     :model-value="marketListQuery.search"
-    @update:modelValue="onInput"
+    @update:model-value="onInput"
   />
 </template>
 
