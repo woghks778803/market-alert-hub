@@ -26,6 +26,10 @@ class UpbitSymbol(MarketPort.ExchangeSymbol):
                     symbol=r.market,
                     base=base,
                     quote=quote,
+                    tick_size=None,
+                    price_precision=None,
+                    qty_precision=None,
+                    min_notional=None,
                 )
             )
         return result

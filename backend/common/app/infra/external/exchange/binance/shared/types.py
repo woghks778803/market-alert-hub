@@ -3,14 +3,16 @@ from typing import Any, Literal
 
 
 # ---------- REST ----------
-
-
 @dataclass(frozen=True)
 class BinanceMarket:
     symbol: str
     base_asset: str
     quote_asset: str
 
+    tick_size: str | None
+    price_precision: int | None
+    qty_precision: int | None
+    min_notional: str | None
 
 # ---------- WS ----------
 

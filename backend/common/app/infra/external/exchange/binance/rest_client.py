@@ -67,6 +67,17 @@ class BinanceRestClient:
         except Exception as e:
             raise BinanceDecodeError(f"Failed to decode Binance response: {e}") from e
 
+    def _get_price_precision(self, tick_size: str | None) -> int | None:
+        if not tick_size:
+            return None
+
+        normalized = tick_size.rstrip("0")
+
+        if "." not in normalized:
+            return 0
+
+        return len(normalized.split(".", 1)[1])
+
     def list_markets(self) -> list[BinanceMarket]:
         data = self._get_json("/api/v3/exchangeInfo")
         symbols = data.get("symbols") if isinstance(data, dict) else None
@@ -80,8 +91,61 @@ class BinanceRestClient:
             sym = item.get("symbol")
             base = item.get("baseAsset")
             quote = item.get("quoteAsset")
-            if sym and base and quote:
-                out.append(BinanceMarket(symbol=sym, base_asset=base, quote_asset=quote))
+            status = item.get("status")
+            raw_price_precision = item.get("pricePrecision")
+            raw_qty_precision = item.get("quantityPrecision")
+
+            if not (
+                isinstance(sym, str)
+                and isinstance(base, str)
+                and isinstance(quote, str)
+                and status == "TRADING"
+            ):
+                continue
+
+            price_precision: int | None = (
+                raw_price_precision if isinstance(raw_price_precision, int) else None
+            )
+            qty_precision: int | None = (
+                raw_qty_precision if isinstance(raw_qty_precision, int) else None
+            )
+
+            tick_size: str | None = None
+            min_notional: str | None = None
+
+            filters = item.get("filters", [])
+            if isinstance(filters, list):
+                for f in filters:
+                    if not isinstance(f, dict):
+                        continue
+
+                    filter_type = f.get("filterType")
+
+                    if filter_type == "PRICE_FILTER":
+                        raw_tick_size = f.get("tickSize")
+                        if isinstance(raw_tick_size, str):
+                            tick_size = raw_tick_size
+
+                    elif filter_type in ("MIN_NOTIONAL", "NOTIONAL"):
+                        raw_min_notional = f.get("minNotional")
+                        if isinstance(raw_min_notional, str):
+                            min_notional = raw_min_notional
+
+                    break
+
+            price_precision = self._get_price_precision(tick_size)
+        
+            out.append(
+                BinanceMarket(
+                    symbol=sym,
+                    base_asset=base,
+                    quote_asset=quote,
+                    tick_size=tick_size,
+                    price_precision=price_precision,
+                    qty_precision=qty_precision,
+                    min_notional=min_notional,
+                )
+            )
         return out
 
 

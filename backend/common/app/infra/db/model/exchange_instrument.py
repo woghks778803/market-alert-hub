@@ -34,7 +34,8 @@ class ExchangeInstrument(Base):
     price_precision: Mapped[int | None] = mapped_column(Integer, nullable=True)
     qty_precision: Mapped[int | None] = mapped_column(Integer, nullable=True)
     min_notional: Mapped[Decimal | None] = mapped_column(DECIMAL(20, 10), nullable=True)
-
+    tick_size: Mapped[Decimal | None] = mapped_column(DECIMAL(20, 10), nullable=True)
+    
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, nullable=False
     )
@@ -74,14 +75,9 @@ class ExchangeInstrument(Base):
             price_precision=self.price_precision,
             qty_precision=self.qty_precision,
             min_notional=self.min_notional,
+            tick_size=self.tick_size,
             created_at=self.created_at,
             updated_at=self.updated_at,
             deleted_at=self.deleted_at,
             is_active=self.is_active,
         )
-
-    # @classmethod
-    # def from_create_dto(cls, dto: MarketDTO.ExchangeInstrumentCreate) -> "ExchangeInstrument":
-    #     return cls(
-
-    #     )

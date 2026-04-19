@@ -18,6 +18,10 @@ class BinanceSymbol(MarketPort.ExchangeSymbol):
                     symbol=r.symbol,
                     base=r.base_asset,  # Binance는 별도 한글명이 없으므로 기초/호가 자산을 표기
                     quote=r.quote_asset,
+                    tick_size=r.tick_size,
+                    price_precision=r.price_precision,
+                    qty_precision=r.qty_precision,
+                    min_notional=r.min_notional,
                 )
             )
         return result
