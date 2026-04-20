@@ -1,5 +1,4 @@
 import secrets
-import json
 from typing import Callable, Dict, Any
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
@@ -856,16 +855,26 @@ class AuthService:
     def oauth_callback(
         self,
         # provider: str,
-        code: str,
-        state: str,
-        error: str,
+        code: str | None = None,
+        state: str | None = None,
+        error: str | None = None,
         ip: str | None = None,
         ua: str | None = None,
     ):
         now = utcnow()
-        is_enroll_email = False
-        is_verify_email = False
 
+        if not code or not state:
+            return AuthDTO.OAuthResult(
+                result_type=OAuthResultType.ERROR,
+                authorize_path=urlencode(
+                    {
+                        "source": None,
+                        "code": "invalid_request",
+                        "target": "oauth",
+                    }
+                )
+            )
+        
         data = self._state.consume("oauth", state)
 
         if data == None:  # key not exist
@@ -879,7 +888,7 @@ class AuthService:
                     }
                 )
             )
-
+        
         provider = data["provider"]
         agree_service = data["agree_service"]
         agree_privacy = data["agree_privacy"]
@@ -892,18 +901,6 @@ class AuthService:
                     {
                         "source": provider,
                         "code": error,
-                        "target": "oauth",
-                    }
-                )
-            )
-
-        if not code or not state:
-            return AuthDTO.OAuthResult(
-                result_type=OAuthResultType.ERROR,
-                authorize_path=urlencode(
-                    {
-                        "source": provider,
-                        "code": "invalid_request",
                         "target": "oauth",
                     }
                 )
@@ -1047,6 +1044,7 @@ class AuthService:
             refresh_token=refresh_token,
             access_token=access_token,
         )
+
 
     def deactivate_user(self, *, user_id: int) -> None:
         now = utcnow()

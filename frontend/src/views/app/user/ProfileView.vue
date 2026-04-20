@@ -136,14 +136,14 @@ import PasswordChangeDialog from '@/components/common/PasswordChangeDialog.vue'
 import type { SubmitPayload } from "@/components/common/PasswordChangeDialog.vue"
 import { toast } from 'vue3-toastify'
 import { ref, onMounted, nextTick } from "vue";
-import { storeToRefs } from "pinia"
 import { useRouter } from "vue-router"
+import { storeToRefs } from "pinia"
 import { useUserStore } from "@/stores/user.store"
-import { formatDate } from "@/utils/format"
 import { useAuthFlow } from "@/composables/auth/useAuthFlow"
 import { useAsyncAction } from "@/composables/common/useAsyncAction";
 import { mapCommonError } from "@/composables/error/error.mapper"
 import { mapChangePasswordError } from "@/composables/error/changePasswordError.mapper"
+import { formatDate } from "@/utils/format"
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -154,7 +154,7 @@ const { deactivate, changePassword } = useAuthFlow()
 const showConfirmDialog = ref(false)
 const showPasswordDialog = ref(false)
 
-async function handleDeactivate() {
+const handleDeactivate = async () => {
   try {
     await run(async () => {
       await deactivate() 
@@ -165,28 +165,30 @@ async function handleDeactivate() {
   }
 }
 
-async function handleChangePassword({ payload, onSuccess, onError }: SubmitPayload) {
+const handleChangePassword = async ({ payload, onSuccess, onError }: SubmitPayload) => {
   try {
     await run(async () => {
       await changePassword(payload)
       showPasswordDialog.value = false
       await nextTick()
-
+  
       router.replace({ name: "Login" })
       setTimeout(() => {
-        toast.success("비밀번호가 변경되었습니다. 다시 로그인해주세요.")
+        toast.success("비밀번호가 변경되었습니다. 다시 로그인해주세요.", {
+          toastId: "change-password-success",
+        })
       }, 0)
     })
   } catch (err: any) {
     console.error("change password error:", err);
     const apiError = err?.response?.data?.error;
-
+  
     const r = mapChangePasswordError(apiError)
     if(r){
       onError?.(r)
       return 
     }
-
+  
     const commonMessage = mapCommonError(apiError)
     if (commonMessage) {
       onError?.(commonMessage)

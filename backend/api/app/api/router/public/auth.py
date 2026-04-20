@@ -1,3 +1,4 @@
+from typing import cast
 from fastapi import (
     APIRouter,
     Depends,
@@ -113,7 +114,7 @@ def reissue_token(
 def register(
     request: Request,
     response: Response,
-    payload: UserSchema.UserCreateIn = Body(
+    payload: UserSchema.UserIn = Body(
         ...,
         example={
             "email": "alice@example.com",
@@ -561,40 +562,44 @@ def oauth_callback(
                 f"{svcs._config.public_web_base_url}/auth/signup/terms?"
                 f"{oauth_result.authorize_path}"
             )
+            return RedirectResponse(url=redirect_url, status_code=302)
         elif oauth_result.result_type == OAuthResultType.ERROR:
             redirect_url = (
                 f"{svcs._config.public_web_base_url}/auth/oauth/callback?"
                 f"{oauth_result.authorize_path}"
             )
+            return RedirectResponse(url=redirect_url, status_code=302)
         elif oauth_result.result_type == OAuthResultType.SUCCESS:
+            # SUCCESS 결과는 서비스 레이어에서 토큰 생성을 보장 (cast 사용)
+
             redirect_url = (
                 f"{svcs._config.public_web_base_url}/auth/verify-email?"
                 f"{oauth_result.authorize_path}"
             )
 
-        redirect = RedirectResponse(url=redirect_url, status_code=302)
+            redirect = RedirectResponse(url=redirect_url, status_code=302)
 
-        redirect.set_cookie(
-            key="refresh_token",
-            value=oauth_result.refresh_token,
-            httponly=True,
-            secure=False,
-            samesite="lax",
-            max_age=svcs._config.refresh_token_minutes * 60,
-            path="/",
-        )
+            redirect.set_cookie(
+                key="refresh_token",
+                value=cast(str, oauth_result.refresh_token),
+                httponly=True,
+                secure=False,
+                samesite="lax",
+                max_age=svcs._config.refresh_token_minutes * 60,
+                path="/",
+            )
 
-        redirect.set_cookie(
-            key="access_token",
-            value=oauth_result.access_token,
-            httponly=True,
-            secure=False,
-            samesite="lax",
-            max_age=svcs._config.access_token_minutes * 60,
-            path="/",
-        )
+            redirect.set_cookie(
+                key="access_token",
+                value=cast(str, oauth_result.access_token),
+                httponly=True,
+                secure=False,
+                samesite="lax",
+                max_age=svcs._config.access_token_minutes * 60,
+                path="/",
+            )
 
-        return redirect
+            return redirect
     except Exception as e:
         error_url = (
             f"{svcs._config.public_web_base_url}/auth/oauth/callback"
@@ -606,7 +611,7 @@ def oauth_callback(
 @router.delete(
     "/deactivate",
     summary="회원 탈퇴 (soft delete + OAuth unlink)",
-    responses=OpenApi.combine(OpenApi.NO_CONTENT({}, description="탈퇴 완료")),
+    responses=OpenApi.combine(OpenApi.NO_CONTENT(description="탈퇴 완료")),
 )
 def deactivate_user(
     response: Response,

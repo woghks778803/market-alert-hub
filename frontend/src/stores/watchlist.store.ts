@@ -1,17 +1,17 @@
 import { defineStore } from "pinia"
 import { ref } from "vue"
-import { createWatchlist, removeWatchlist } from "@/services/watchlist.service"
+import * as watchlistSevice from "@/services/watchlist.service"
 
 export const useWatchlistStore = defineStore("watchlist", () => {
     const items = ref<Set<number>>(new Set())
 
-    async function add(id: number) {
-        await createWatchlist({ exchangeInstrumentId: id })
+    async function createWatchlist(id: number) {
+        await watchlistSevice.createWatchlist({ exchangeInstrumentId: id })
         items.value.add(id)
     }
 
-    async function remove(id: number) {
-        await removeWatchlist(id)
+    async function removeWatchlist(id: number) {
+        await watchlistSevice.removeWatchlist(id)
         items.value.delete(id)
     }
 
@@ -21,8 +21,8 @@ export const useWatchlistStore = defineStore("watchlist", () => {
 
     return {
         items,
-        add,
-        remove,
+        createWatchlist,
+        removeWatchlist,
         isWatchlisted,
     }
 })
