@@ -91,6 +91,24 @@ def handle_sync_tickers(ctx, slot, now_epoch, interval_sec):
     )
 
 
+def handle_sync_alerts(ctx, slot, now_epoch, interval_sec):
+    outbox_fingerprint_dict = {
+        "event_type": OutboxEventType.SYNC_ALERTS,
+        "aggregate_type": "system",
+        "aggregate_id": 0,
+        "slot": slot,
+    }
+    payload = {
+        "slot": slot,
+        "requested_at_epoch": now_epoch,
+        "interval_sec": interval_sec,
+    }
+
+    _insert_outbox(
+        ctx, OutboxEventType.SYNC_ALERTS, outbox_fingerprint_dict, payload
+    )
+
+
 def handle_trigger_alerts(ctx, slot, now_epoch, interval_sec):
     # shard_total=0
     # shard_index=0
