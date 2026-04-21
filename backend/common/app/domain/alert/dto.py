@@ -16,7 +16,6 @@ class AlertSimple:
     name: str
 
     status: AlertStatus
-    scope: AlertScope
 
     timezone: str
     timeframe: str | None
@@ -46,7 +45,6 @@ class Alert:
 
     name: str
     status: AlertStatus
-    scope: AlertScope
 
     timezone: str
     timeframe: str | None
@@ -77,7 +75,6 @@ class AlertCreate:
     timezone: str
 
     status: AlertStatus
-    scope: AlertScope
 
     timeframe: str | None
     period: int | None
@@ -101,12 +98,16 @@ class AlertType:
     id: int
     code: str
     name: str
+
+    scope: AlertScope
     indicator: str
     direction: str | None
     form_type: str
     param_schema: dict
 
+    sort_order: int
     is_active: bool
+    
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None
@@ -121,6 +122,7 @@ class AlertSnapshot:
 
     alert_type_id: int
     alert_type_code: str
+    scope: AlertScope
     indicator: str
     direction: str
     form_type: str

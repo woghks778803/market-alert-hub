@@ -16,7 +16,6 @@ export function toAlertDto(data: AlertInfo): AlertDto {
         alertTypeId: data.alert_type_id,
         name: data.name,
         status: data.status as AlertStatus,
-        scope: data.scope as AlertScope,
 
         timezone: data.timezone,
         timeframe: data.timeframe,
@@ -55,7 +54,6 @@ export function toAlertListRequest(q: AlertListQuery): AlertListRequest {
         limit: q.limit,
         offset: q.offset,
         status: q.status,
-        // scope: q.scope,
         sort: q.sort,
     }
 }
@@ -86,7 +84,6 @@ export function toAlertSaveRequest(q: AlertSaveQuery): AlertSaveRequest {
 
         is_once: q.isOnce,
         status: q.status,
-        scope: q.scope,
 
         throttle_timeframe: q.throttleTimeframe,
         timezone: q.timezone,

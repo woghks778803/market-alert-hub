@@ -12,9 +12,10 @@ from .exchange_instrument_ticker import (
 from .price_snapshots_1m import PriceSnapshot1m as PriceSnapshot1mModel
 from .price_snapshots_1h import PriceSnapshot1h as PriceSnapshot1hModel
 from .price_snapshots_1d import PriceSnapshot1d as PriceSnapshot1dModel
-from .alert import Alert as AlertModel
 from .user_channel import UserChannel as UserChannelModel
 from .channel_provider import ChannelProvider as ChannelProviderModel
+from .alert import Alert as AlertModel
+from .alert_bucket_policy import AlertBucketPolicy as AlertBucketPolicyModel
 from .alert_channel_target import AlertChannelTarget as AlertChannelTargetModel
 from .alert_event import AlertEvent as AlertEventModel
 from .alert_type import AlertType as AlertTypeModel
@@ -41,6 +42,7 @@ __all__ = [
     "PriceSnapshot1hModel",
     "PriceSnapshot1dModel",
     "AlertModel",
+    "AlertBucketPolicyModel",
     "AlertChannelTargetModel",
     "AlertEventModel",
     "AlertTypeModel",

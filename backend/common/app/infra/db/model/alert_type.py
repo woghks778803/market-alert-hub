@@ -1,6 +1,7 @@
 from datetime import datetime
-from sqlalchemy import DateTime, String, JSON, Index, Integer, Boolean, text
+from sqlalchemy import DateTime, String, Index, Integer, Boolean, text, Enum as SAEnum, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from app.core.constants import AlertScope
 from app.core.util.datetime import utcnow
 from app.infra.db.base import Base
 from app.domain import AlertDTO
@@ -14,11 +15,21 @@ class AlertType(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
 
     # 핵심 서비스의 타입 변경시 DB Lock 우려가 있어 enum 대신 str 처리
+    scope: Mapped[AlertScope] = mapped_column(
+        SAEnum(
+            AlertScope, values_callable=lambda e: [m.value for m in e], 
+            native_enum=True, create_constraint=True, validate_strings=True
+        ),
+        default=AlertScope.SINGLE,
+        server_default=AlertScope.SINGLE,
+        nullable=False,
+    )
     indicator: Mapped[str] = mapped_column(String(32), nullable=False)
     direction: Mapped[str | None] = mapped_column(String(32), nullable=True)
     form_type: Mapped[str] = mapped_column(String(32), nullable=False)
     param_schema: Mapped[dict] = mapped_column(JSON, nullable=False)
 
+    sort_order: Mapped[int] = mapped_column(Integer, default=100)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, nullable=False
     )
@@ -35,6 +46,7 @@ class AlertType(Base):
             id=self.id,
             code=self.code,
             name=self.name,
+            scope=self.scope,
             indicator=self.indicator,
             direction=self.direction,
             form_type=self.form_type,
@@ -42,5 +54,6 @@ class AlertType(Base):
             created_at=self.created_at,
             updated_at=self.updated_at,
             deleted_at=self.deleted_at,
+            sort_order=self.sort_order,
             is_active=self.is_active,
         )

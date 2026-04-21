@@ -13,7 +13,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from app.core.constants import AlertStatus, AlertScope
+from app.core.constants import AlertStatus
 from app.core.util.datetime import utcnow
 from app.domain import AlertDTO
 from app.infra.db.base import Base
@@ -43,15 +43,6 @@ class Alert(Base):
         ),
         default=AlertStatus.ACTIVE,
         server_default=AlertStatus.ACTIVE,
-        nullable=False,
-    )
-    scope: Mapped[AlertScope] = mapped_column(
-        SAEnum(
-            AlertScope, values_callable=lambda e: [m.value for m in e], 
-            native_enum=True, create_constraint=True, validate_strings=True
-        ),
-        default=AlertScope.SINGLE,
-        server_default=AlertScope.SINGLE,
         nullable=False,
     )
     
@@ -94,7 +85,6 @@ class Alert(Base):
             name=self.name,
             timezone=self.timezone,
             status=self.status,
-            scope=self.scope,
             timeframe=self.timeframe,
             period=self.period,
             params=self.params,
@@ -118,7 +108,6 @@ class Alert(Base):
             name=dto.name,
             timezone=dto.timezone,
             status=dto.status,
-            scope=dto.scope,
             timeframe=dto.timeframe,
             period=dto.period,
             params=dto.params,

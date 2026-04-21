@@ -18,7 +18,6 @@ class AlertIn(BaseModel):
 
     is_once: bool
     status: AlertStatus
-    scope: AlertScope
 
     throttle_timeframe: ThrottleTimeframe  
     timezone: str
@@ -51,7 +50,6 @@ class AlertRead(BaseModel):
     alert_type_id: int
     name: str
     status: str
-    scope: str
 
     timezone: str
     timeframe: str | None = None

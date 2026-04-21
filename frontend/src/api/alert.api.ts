@@ -12,7 +12,6 @@ export type AlertInfo = {
     alert_type_id: number
     name: string
     status: string
-    scope: string
 
     timezone: string
     timeframe: string | null
@@ -53,7 +52,6 @@ export type AlertListRequest = {
     limit?: number
     offset?: number
     status?: string
-    scope?: string
     sort?: string
 }
 
@@ -70,7 +68,6 @@ export type AlertSaveRequest = {
 
     is_once: boolean
     status: string
-    scope: string
 
     throttle_timeframe: string
     timezone: string

@@ -1,6 +1,6 @@
 from typing import Callable, Sequence
 from datetime import datetime
-from app.core.constants import AlertStatus, AlertScope, AlertSort, ThrottleTimeframe, THROTTLE_SECONDS
+from app.core.constants import AlertStatus, AlertSort, ThrottleTimeframe, THROTTLE_SECONDS
 from app.core.util.datetime import utcnow
 from app.domain import AlertDTO, AlertRule, AlertPort
 from app.domain.shared.uow import UnitOfWork
@@ -49,7 +49,7 @@ class AlertService:
     def list_type_by_filter(self, *, search: str | None, limit: int, offset: int) -> Sequence[AlertDTO.AlertType]: 
         with self._uow_factory() as uow:
             rows = uow.alerts.list_type_by_filter(
-                search=search, is_active=True, 
+                search=search, is_active=True, asc_order=True,
                 limit=limit, offset=offset
             )
             return rows
@@ -68,7 +68,6 @@ class AlertService:
             return uow.alerts.list_alert_by_filter(
                 user_id=user_id,
                 status=status,
-                scope=AlertScope.SINGLE,
                 archived_only=archived_only,
                 sort=sort,
                 limit=limit,
@@ -84,7 +83,6 @@ class AlertService:
         alert_type_id: int,
         is_once: bool,
         status: AlertStatus,
-        scope: AlertScope,
         throttle_timeframe: ThrottleTimeframe,
         timezone: str,
         use_validity: bool,
@@ -137,7 +135,6 @@ class AlertService:
                     status=status,
 
                     # TODO: 추후 추가 개발시 고정값 해제
-                    scope=AlertScope.SINGLE, 
                     timezone="UTC", 
 
                     timeframe=timeframe,
@@ -177,7 +174,6 @@ class AlertService:
         alert_type_id: int,
         is_once: bool,
         status: AlertStatus,
-        scope: AlertScope,
         throttle_timeframe: ThrottleTimeframe,
         timezone: str,
         use_validity: bool,
@@ -221,7 +217,6 @@ class AlertService:
                 name=name,
                 status=alert.status, # 수정 화면에 미제공
 
-                scope=AlertScope.SINGLE,
                 timezone="UTC",
 
                 timeframe=timeframe,

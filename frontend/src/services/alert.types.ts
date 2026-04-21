@@ -10,7 +10,6 @@ export type AlertDto = {
     alertTypeId: number
     name: string
     status: AlertStatus
-    scope: AlertScope
 
     timezone: string
     timeframe: string | null
@@ -46,7 +45,6 @@ export type AlertListQuery = {
     limit?: number
     offset?: number
     status?: AlertStatus
-    // scope?: AlertScope
     sort?: AlertSort
 }
 
@@ -69,7 +67,6 @@ export type AlertSaveQuery = {
 
     isOnce: boolean
     status: AlertStatus
-    scope: AlertScope
 
     throttleTimeframe: ThrottleTimeframe
     timezone: string

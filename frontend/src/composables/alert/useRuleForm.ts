@@ -4,7 +4,6 @@ import { toNumberOrNull } from '@/utils/numbers'
 import {
     FormType,
     ThrottleTimeframe,
-    AlertScope,
     AlertStatus
 } from '@/services/alert.types'
 import type {
@@ -28,7 +27,6 @@ type RuleFormFields = {
     validFrom: string
     validTo: string
     status: AlertStatus
-    scope: AlertScope
     timezone: string
 }
 
@@ -85,7 +83,6 @@ export function useRuleForm(params: UseRuleFormParams) {
         validFrom: initialFields?.validFrom ?? '',
         validTo: initialFields?.validTo ?? '',
         status: initialFields?.status ?? AlertStatus.ACTIVE,
-        scope: initialFields?.scope ?? AlertScope.SINGLE,
         timezone: initialFields?.timezone ?? 'UTC',
     })
 
@@ -321,7 +318,6 @@ export function useRuleForm(params: UseRuleFormParams) {
 
             isOnce: form.isOnce,
             status: form.status,
-            scope: form.scope,
 
             throttleTimeframe: form.throttleTimeframe,
             timezone: form.timezone,
@@ -343,7 +339,6 @@ export function useRuleForm(params: UseRuleFormParams) {
         form.alertTypeId = alert.alertTypeId
         form.isOnce = alert.isOnce
         form.status = alert.status
-        form.scope = alert.scope
         form.timezone = alert.timezone
 
         form.throttleTimeframe = toThrottleTimeframe(alert.throttleSeconds)

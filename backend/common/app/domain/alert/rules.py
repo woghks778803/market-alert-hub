@@ -22,6 +22,7 @@ def alert_snapshot_to_payload(
 
         "alert_type_id": json_safe(alert_snapshot.alert_type_id),
         "alert_type_code": json_safe(alert_snapshot.alert_type_code),
+        "scope": json_safe(alert_snapshot.scope),
         "indicator": json_safe(alert_snapshot.indicator),
         "direction": json_safe(alert_snapshot.direction),
         "form_type": json_safe(alert_snapshot.form_type),

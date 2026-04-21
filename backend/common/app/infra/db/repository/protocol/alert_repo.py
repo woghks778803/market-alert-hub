@@ -1,6 +1,6 @@
 from typing import Protocol, Sequence
 from datetime import datetime
-from app.core.constants import AlertStatus, AlertScope, AlertSort
+from app.core.constants import AlertStatus, AlertSort
 from app.domain import AlertDTO
 
 class AlertRepo(Protocol):
@@ -52,6 +52,7 @@ class AlertRepo(Protocol):
         search: str | None, 
         is_active: bool, 
         deleted_is_null: bool = True, 
+        asc_order: bool = False,
         limit: int, 
         offset: int
     ) -> Sequence[AlertDTO.AlertType]: ...
@@ -72,7 +73,6 @@ class AlertRepo(Protocol):
         *,
         user_id: int,
         status: AlertStatus | None,
-        scope: AlertScope | None,
         sort: AlertSort,
         deleted_is_null: bool = True,
         archived_only: bool = False,

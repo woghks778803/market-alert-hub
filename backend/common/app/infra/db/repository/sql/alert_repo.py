@@ -2,7 +2,7 @@ from typing import Sequence
 from datetime import datetime
 from sqlalchemy.orm import Session as DbSession
 from sqlalchemy import update, insert, select, and_, or_, asc, desc, func, case
-from app.core.constants import AlertStatus, AlertScope, AlertSort
+from app.core.constants import AlertStatus, AlertSort
 from app.domain import AlertDTO
 from app.infra.db.model import AlertModel, AlertTypeModel, ExchangeInstrumentModel, ExchangeModel, UserModel
 from app.infra.db.repository.protocol.alert_repo import AlertRepo
@@ -158,7 +158,6 @@ class SqlAlertRepo(AlertRepo):
                 a.alert_type_id.label("alert_type_id"),
                 a.name.label("name"),
                 a.status.label("status"),
-                a.scope.label("scope"),
                 a.timezone.label("timezone"),
                 a.timeframe.label("timeframe"),
                 a.period.label("period"),
@@ -217,6 +216,7 @@ class SqlAlertRepo(AlertRepo):
 
                 a.alert_type_id.label("alert_type_id"),
                 at.code.label("alert_type_code"),
+                at.scope.label("scope"),
                 at.indicator.label("indicator"),
                 at.direction.label("direction"),
                 at.form_type.label("form_type"),
@@ -267,6 +267,7 @@ class SqlAlertRepo(AlertRepo):
         search: str | None, 
         is_active: bool, 
         deleted_is_null: bool = True, 
+        asc_order: bool = False,
         limit: int, 
         offset: int
     ) -> Sequence[AlertDTO.AlertType]: 
@@ -275,19 +276,24 @@ class SqlAlertRepo(AlertRepo):
             .where(
                 at.is_active.is_(is_active)
             )
-            .order_by(asc(at.id))
             .limit(limit)
             .offset(offset)
         )
 
         if deleted_is_null:
             stmt = stmt.where(at.deleted_at.is_(None))
+
         if search:
             stmt = stmt.where(
                 or_(
                     at.name.ilike(f"%{search}%"),
                 )
             )
+
+        if asc_order:
+            stmt = stmt.order_by(at.sort_order.asc())
+        else:
+            stmt = stmt.order_by(at.sort_order.desc())
 
         rows = self._db.execute(stmt).scalars().all()
         return [row.to_dto() for row in rows]
@@ -311,6 +317,7 @@ class SqlAlertRepo(AlertRepo):
 
                 a.alert_type_id.label("alert_type_id"),
                 at.code.label("alert_type_code"),
+                at.scope.label("scope"),
                 at.indicator.label("indicator"),
                 at.direction.label("direction"),
                 at.form_type.label("form_type"),
@@ -373,7 +380,6 @@ class SqlAlertRepo(AlertRepo):
         *,
         user_id: int,
         status: AlertStatus | None,
-        scope: AlertScope | None,
         sort: AlertSort | None,
         deleted_is_null: bool = True,
         archived_only: bool = False,
@@ -415,7 +421,6 @@ class SqlAlertRepo(AlertRepo):
                 a.alert_type_id.label("alert_type_id"),
                 a.name.label("name"),
                 a.status.label("status"),
-                a.scope.label("scope"),
                 a.timezone.label("timezone"),
                 a.timeframe.label("timeframe"),
                 a.period.label("period"),
@@ -456,9 +461,6 @@ class SqlAlertRepo(AlertRepo):
 
         if deleted_is_null:
             stmt = stmt.where(a.deleted_at.is_(None))
-
-        if scope:
-            stmt = stmt.where(a.scope == scope)
 
         if archived_only:
             stmt = stmt.where(a.status == AlertStatus.ARCHIVED)
@@ -516,7 +518,6 @@ class SqlAlertRepo(AlertRepo):
                 exchange_instrument_id=row.exchange_instrument_id,
                 name=row.name,
                 status=row.status,
-                scope=row.scope,
                 timezone=row.timezone,
                 timeframe=row.timeframe,
                 period=row.period,

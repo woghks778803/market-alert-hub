@@ -53,16 +53,3 @@ class RedisAlertSnapshot(AlertPort.AlertSnapshot):
 
     def _snapshot_key(self) -> str:
         return f"{self._prefix}:{SNAP}:{OutboxEventType.SYNC_ALERTS.value}"
-
-
-    # def _bucket_key(
-    #     self,
-    #     alert_snapshot: AlertDTO.AlertSnapshot,
-    #     *,
-    #     bucket_size: int | float,
-    # ) -> str:
-    #     suffix = AlertRule.alert_snapshot_to_bucket_key(
-    #         alert_snapshot,
-    #         bucket_size=bucket_size,
-    #     )
-    #     return f"{self._prefix}:idx:{suffix}"
