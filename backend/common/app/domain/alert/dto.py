@@ -1,7 +1,7 @@
 from typing import Any
 from datetime import datetime
 from dataclasses import dataclass
-from app.core.constants import AlertStatus, AlertScope
+from app.core.constants import AlertStatus, AlertScope, AlertFormType, IndicatorType, DirectionType
 
 @dataclass(slots=True, frozen=True)
 class AlertSummary:
@@ -16,13 +16,13 @@ class AlertSimple:
     name: str
 
     status: AlertStatus
-
     timezone: str
-    timeframe: str | None
-    period: int | None
+
     params: dict
-    throttle_seconds: int
+
     is_once: bool
+    throttle_seconds: int
+    
     valid_from: datetime | None
     valid_to: datetime | None
     updated_at: datetime
@@ -45,19 +45,15 @@ class Alert:
 
     name: str
     status: AlertStatus
-
     timezone: str
-    timeframe: str | None
-    period: int | None
 
     params: dict[str, Any]
 
+    is_once: bool
     throttle_seconds: int
 
     valid_from: datetime | None
     valid_to: datetime | None
-
-    is_once: bool
 
     # 수정 주의
     created_at: datetime | None = None
@@ -73,20 +69,15 @@ class AlertCreate:
 
     name: str
     timezone: str
-
     status: AlertStatus
-
-    timeframe: str | None
-    period: int | None
 
     params: dict[str, Any]
 
+    is_once: bool
     throttle_seconds: int
 
     valid_from: datetime | None
     valid_to: datetime | None
-
-    is_once: bool
 
     last_fired_at: datetime | None = None
     deleted_at: datetime | None = None
@@ -100,9 +91,9 @@ class AlertType:
     name: str
 
     scope: AlertScope
-    indicator: str
-    direction: str | None
-    form_type: str
+    indicator: IndicatorType
+    direction: DirectionType | None
+    form_type: AlertFormType
     param_schema: dict
 
     sort_order: int
@@ -123,21 +114,19 @@ class AlertSnapshot:
     alert_type_id: int
     alert_type_code: str
     scope: AlertScope
-    indicator: str
-    direction: str
-    form_type: str
+    indicator: IndicatorType
+    direction: DirectionType
+    form_type: AlertFormType
 
     exchange_instrument_id: int
     exchange_code: str
     exchange_symbol: str
 
-    timeframe: str | None
-    period: int | None
     params: dict
 
+    is_once: bool
     throttle_seconds: int
     valid_from: datetime | None
     valid_to: datetime | None
-    is_once: bool
     last_fired_at: datetime | None
 

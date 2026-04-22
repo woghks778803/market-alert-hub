@@ -71,8 +71,6 @@ export type AlertSaveRequest = {
 
     throttle_timeframe: string
     timezone: string
-    timeframe: string | null
-    period: number | null
 
     use_validity: boolean
     valid_from: string | null

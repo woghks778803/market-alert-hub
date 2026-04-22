@@ -99,9 +99,9 @@
 
     <div class="alert-rule-meta">
       <div class="alert-rule-meta-main">
-        {{ formatTimeframe(alert.timeframe, alert.period) }}
+        {{ formatTimeFrame(alert.params) }}
         ·
-        {{ formatThrottleSeconds(alert.throttleSeconds) }}
+        {{ formatThrottleSeconds(alert.isOnce, alert.throttleSeconds) }}
       </div>
 
       <div class="alert-rule-meta-date">
@@ -115,7 +115,7 @@
 import {computed} from "vue"
 import type { AlertDto } from "@/services/alert.types"
 import { AlertStatus, AlertStatusLabel } from "@/services/alert.types"
-import { formatDate, formatThrottleSeconds, formatTimeframe } from "@/utils/format"
+import { formatDate, formatThrottleSeconds, formatTimeFrame } from "@/utils/format"
 const isArchived = computed(() => props.alert.status === AlertStatus.ARCHIVED)
 const props = defineProps<{
   alert: AlertDto

@@ -326,9 +326,6 @@ export function useRuleForm(params: UseRuleFormParams) {
             validFrom: form.useValidity ? form.validFrom : null,
             validTo: form.useValidity ? form.validTo : null,
 
-            timeframe: null,
-            period: null,
-
             params: buildParams(),
         }
     }

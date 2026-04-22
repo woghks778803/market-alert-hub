@@ -15,15 +15,7 @@ class AlertType(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
 
     # 핵심 서비스의 타입 변경시 DB Lock 우려가 있어 enum 대신 str 처리
-    scope: Mapped[AlertScope] = mapped_column(
-        SAEnum(
-            AlertScope, values_callable=lambda e: [m.value for m in e], 
-            native_enum=True, create_constraint=True, validate_strings=True
-        ),
-        default=AlertScope.SINGLE,
-        server_default=AlertScope.SINGLE,
-        nullable=False,
-    )
+    scope: Mapped[str] = mapped_column(String(32), nullable=False)
     indicator: Mapped[str] = mapped_column(String(32), nullable=False)
     direction: Mapped[str | None] = mapped_column(String(32), nullable=True)
     form_type: Mapped[str] = mapped_column(String(32), nullable=False)

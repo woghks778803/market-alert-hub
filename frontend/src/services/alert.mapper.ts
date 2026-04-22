@@ -92,9 +92,6 @@ export function toAlertSaveRequest(q: AlertSaveQuery): AlertSaveRequest {
         valid_from: q.validFrom,
         valid_to: q.validTo,
 
-        timeframe: q.timeframe,
-        period: q.period,
-
         params: q.params,
     }
 }

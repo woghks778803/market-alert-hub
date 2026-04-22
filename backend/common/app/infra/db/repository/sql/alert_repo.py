@@ -159,8 +159,6 @@ class SqlAlertRepo(AlertRepo):
                 a.name.label("name"),
                 a.status.label("status"),
                 a.timezone.label("timezone"),
-                a.timeframe.label("timeframe"),
-                a.period.label("period"),
                 a.params.label("params"),
                 a.throttle_seconds.label("throttle_seconds"),
                 a.is_once.label("is_once"),
@@ -225,8 +223,6 @@ class SqlAlertRepo(AlertRepo):
                 e.code.label("exchange_code"),
                 ei.exchange_symbol.label("exchange_symbol"),
 
-                a.timeframe.label("timeframe"),
-                a.period.label("period"),
                 a.params.label("params"),
 
                 a.throttle_seconds.label("throttle_seconds"),
@@ -326,8 +322,6 @@ class SqlAlertRepo(AlertRepo):
                 e.code.label("exchange_code"),
                 ei.exchange_symbol.label("exchange_symbol"),
 
-                a.timeframe.label("timeframe"),
-                a.period.label("period"),
                 a.params.label("params"),
                 a.throttle_seconds.label("throttle_seconds"),
                 a.valid_from.label("valid_from"),
@@ -422,8 +416,7 @@ class SqlAlertRepo(AlertRepo):
                 a.name.label("name"),
                 a.status.label("status"),
                 a.timezone.label("timezone"),
-                a.timeframe.label("timeframe"),
-                a.period.label("period"),
+
                 a.params.label("params"),
                 a.throttle_seconds.label("throttle_seconds"),
                 a.is_once.label("is_once"),
@@ -519,13 +512,14 @@ class SqlAlertRepo(AlertRepo):
                 name=row.name,
                 status=row.status,
                 timezone=row.timezone,
-                timeframe=row.timeframe,
-                period=row.period,
+
                 params=row.params,
+
+                is_once=row.is_once,
                 throttle_seconds=row.throttle_seconds,
+                
                 valid_from=row.valid_from,
                 valid_to=row.valid_to,
-                is_once=row.is_once,
                 updated_at=row.updated_at,
             )
         )

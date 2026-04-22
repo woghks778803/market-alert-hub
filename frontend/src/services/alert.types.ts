@@ -70,8 +70,6 @@ export type AlertSaveQuery = {
 
     throttleTimeframe: ThrottleTimeframe
     timezone: string
-    timeframe: string | null
-    period: number | null
 
     useValidity: boolean
     validFrom: string | null
@@ -130,10 +128,10 @@ export enum AlertScope {
 export enum FormType {
     THRESHOLD = "threshold",
     THRESHOLD_WITH_PERIOD = "threshold_with_period",
-    CROSS = "cross",
     RANGE = "range",
     PERCENT = "percent",
     PATTERN = "pattern",
+    CROSS = "cross",
 }
 
 export enum ThrottleTimeframe {

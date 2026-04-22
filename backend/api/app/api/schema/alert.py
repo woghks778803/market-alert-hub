@@ -2,7 +2,7 @@ from typing import Literal, Any
 from datetime import datetime
 from decimal import Decimal
 from pydantic import BaseModel, ConfigDict
-from app.core.constants import AlertStatus, AlertScope, ThrottleTimeframe
+from app.core.constants import AlertStatus, AlertScope, AlertFormType, IndicatorType, DirectionType, ThrottleTimeframe
 
 _model_cfg = ConfigDict(from_attributes=True, use_enum_values=True)
 
@@ -25,9 +25,6 @@ class AlertIn(BaseModel):
     use_validity: bool
     valid_from: datetime | None = None
     valid_to: datetime | None = None
-
-    timeframe: str | None = None  
-    period: int | None = None    
 
     params: dict[str, Any]
 
@@ -52,8 +49,6 @@ class AlertRead(BaseModel):
     status: str
 
     timezone: str
-    timeframe: str | None = None
-    period: int | None = None
     params: dict
 
     throttle_seconds: int
@@ -75,9 +70,9 @@ class AlertTypeRead(BaseModel):
     code: str
     name: str
 
-    indicator: str
-    direction: str | None
-    form_type: str
+    indicator: IndicatorType
+    direction: DirectionType | None
+    form_type: AlertFormType
     param_schema: dict
     
     model_config = _model_cfg

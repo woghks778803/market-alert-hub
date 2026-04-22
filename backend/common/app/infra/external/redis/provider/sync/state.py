@@ -31,7 +31,7 @@ class RedisState(AuthPort.AuthState):
 
         value = json.dumps(value_dict).encode()
 
-        ok = self._redis.set(redis_key, value, nx=True, ex=ttl_sec)
+        ok = self._redis.set_value(redis_key, value, nx=True, ex=ttl_sec)
 
         if not ok:
             raise RuntimeError("state_create_failed")

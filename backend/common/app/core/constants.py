@@ -80,6 +80,17 @@ class AlertSort(str, enum.Enum):
     MARKET_ASC = "market_asc"          
     STATUS = "status"    
 
+class AlertFormType(str, enum.Enum):
+    THRESHOLD = "threshold"          # 기준값 1개: price >= threshold, RSI > 70
+    RANGE = "range"                  # 범위 입력: 30 <= RSI <= 70
+    PERCENT = "percent"              # 퍼센트 입력: price change >= 5%
+    PATTERN = "pattern"
+    CROSS = "cross"
+    # CROSS_VALUE = "cross_value"      # 값 기준 돌파: RSI crosses 70
+    # CROSS_LINE = "cross_line"        # 선 교차: MA short crosses MA long, MACD crosses signal
+    BAND = "band"                    # 밴드 기준: Bollinger upper/lower/middle
+    COMPARE = "compare"              # A/B 비교: volume > volume_ma
+
 class AlertScope(str, enum.Enum):
     SINGLE = "single"
     CROSS = "cross"

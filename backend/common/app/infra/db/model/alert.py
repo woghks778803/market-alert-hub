@@ -45,9 +45,7 @@ class Alert(Base):
         server_default=AlertStatus.ACTIVE,
         nullable=False,
     )
-    
-    timeframe: Mapped[str | None] = mapped_column(String(16), nullable=True)
-    period: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
     params: Mapped[dict] = mapped_column(JSON, nullable=False)
     throttle_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=300)
     valid_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -85,17 +83,19 @@ class Alert(Base):
             name=self.name,
             timezone=self.timezone,
             status=self.status,
-            timeframe=self.timeframe,
-            period=self.period,
+            
             params=self.params,
+
+            is_once=self.is_once,
             throttle_seconds=self.throttle_seconds,
+            
             valid_from=self.valid_from,
             valid_to=self.valid_to,
             last_fired_at=self.last_fired_at,
+            
             created_at=self.created_at,
             updated_at=self.updated_at,
             deleted_at=self.deleted_at,
-            is_once=self.is_once,
         )
 
 
@@ -108,13 +108,13 @@ class Alert(Base):
             name=dto.name,
             timezone=dto.timezone,
             status=dto.status,
-            timeframe=dto.timeframe,
-            period=dto.period,
+            
             params=dto.params,
+            
+            is_once=dto.is_once,
             throttle_seconds=dto.throttle_seconds,
             valid_from=dto.valid_from,
             valid_to=dto.valid_to,
-            is_once=dto.is_once,
 
             # 생성 기본값
             last_fired_at=None,

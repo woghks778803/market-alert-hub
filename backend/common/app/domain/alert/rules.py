@@ -31,14 +31,12 @@ def alert_snapshot_to_payload(
         "exchange_code": json_safe(alert_snapshot.exchange_code),
         "exchange_symbol": json_safe(alert_snapshot.exchange_symbol),
 
-        "timeframe": json_safe(alert_snapshot.timeframe),
-        "period": json_safe(alert_snapshot.period),
         "params": json_safe(alert_snapshot.params or {}),
 
+        "is_once": json_safe(alert_snapshot.is_once),
         "throttle_seconds": json_safe(alert_snapshot.throttle_seconds),
         "valid_from": json_safe(alert_snapshot.valid_from),
         "valid_to": json_safe(alert_snapshot.valid_to),
-        "is_once": json_safe(alert_snapshot.is_once),
         "last_fired_at": json_safe(alert_snapshot.last_fired_at),
 
         "bucket_key": None,
@@ -60,8 +58,6 @@ def alert_to_snapshot(
         exchange_instrument_id=alert.exchange_instrument_id,
         exchange_code=alert.exchange_code,
         exchange_symbol=alert.exchange_symbol,
-        timeframe=alert.timeframe,
-        period=alert.period,
         params=alert.params,
         throttle_seconds=alert.throttle_seconds,
         valid_from=alert.valid_from,

@@ -102,6 +102,7 @@
               <ThresholdForm
                 v-if="selectedAlertType?.formType === FormType.THRESHOLD"
                 v-model="thresholdForm"
+                :schema="selectedAlertType.paramSchema"
                 :error="fieldErrors.params"
                 @input="onInputChanged"
                 @blur="onBlurValidate"
@@ -110,6 +111,7 @@
               <CrossForm
                 v-else-if="selectedAlertType?.formType === FormType.CROSS"
                 v-model="crossForm"
+                :schema="selectedAlertType.paramSchema"
                 :error="fieldErrors.params"
                 @input="onInputChanged"
                 @blur="onBlurValidate"
@@ -118,6 +120,7 @@
               <RangeForm
                 v-else-if="selectedAlertType?.formType === FormType.RANGE"
                 v-model="rangeForm"
+                :schema="selectedAlertType.paramSchema"
                 :error="fieldErrors.params"
                 @input="onInputChanged"
                 @blur="onBlurValidate"
@@ -126,6 +129,7 @@
               <PercentForm
                 v-else-if="selectedAlertType?.formType === FormType.PERCENT"
                 v-model="percentForm"
+                :schema="selectedAlertType.paramSchema"
                 :error="fieldErrors.params"
                 @input="onInputChanged"
                 @blur="onBlurValidate"
@@ -134,6 +138,7 @@
               <PatternForm
                 v-else-if="selectedAlertType?.formType === FormType.PATTERN"
                 v-model="patternForm"
+                :schema="selectedAlertType.paramSchema"
                 :error="fieldErrors.params"
                 @input="onInputChanged"
                 @blur="onBlurValidate"

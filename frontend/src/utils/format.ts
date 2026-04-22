@@ -60,7 +60,8 @@ export function formatDate(dateStr: string): string {
     return `${yyyy}.${mm}.${dd}`
 }
 
-export function formatThrottleSeconds(seconds: number | null | undefined): string {
+export function formatThrottleSeconds(isOnce: boolean, seconds: number | null | undefined): string {
+    if (isOnce) return "최초 1회"
     if (seconds === null || seconds === undefined) return "-"
 
     if (seconds < 60) return `${seconds}초`
@@ -75,12 +76,14 @@ export function formatThrottleSeconds(seconds: number | null | undefined): strin
     return `${days}일`
 }
 
-export function formatTimeframe(
-    timeframe: string | null | undefined,
-    period: number | null | undefined,
+export function formatTimeFrame(
+    params: Record<string, unknown> | null | undefined,
 ): string {
-    if (!timeframe) return "기준 없음"
-    if (!period) return timeframe
+    const timeframe = params?.timeframe
+    const period = params?.period
 
-    return `${timeframe} ${period}`
+    if (!timeframe) return "기준 없음"
+    if (!period) return String(timeframe)
+
+    return `${String(timeframe)} ${String(period)}`
 }
