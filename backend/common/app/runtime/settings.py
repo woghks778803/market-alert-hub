@@ -263,6 +263,16 @@ class Settings(BaseSettings):
 
     @computed_field
     @property
+    def SQLALCHEMY_ASYNC_URL(self) -> str:
+        pw = quote_plus(self.MYSQL_PASSWORD)
+        return (
+            f"mysql+asyncmy://{self.MYSQL_USER}:{pw}"
+            f"@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DATABASE}"
+            f"?charset=utf8mb4"
+        )
+
+    @computed_field
+    @property
     def REDIS_URL(self) -> str:
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
 

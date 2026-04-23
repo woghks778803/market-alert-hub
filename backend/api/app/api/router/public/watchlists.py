@@ -1,6 +1,6 @@
 from fastapi import Response, APIRouter, Depends, Query, Path, status
 
-from app.service.factory import ServiceFactory
+from app.service.sync.factory import ServiceFactory
 from app.api.common.envelope import Envelope, ok, created, no_content
 from app.api.deps import get_services, get_current_user, get_request_meta, RequestMeta
 from app.api.schema.watchlist import WatchlistIn, WatchlistItemRead

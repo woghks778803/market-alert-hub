@@ -2,7 +2,7 @@ import asyncio, json
 
 from app.core import dto as CoreDTO
 from app.core.constants import CANDLE
-from app.facade.container import FacadeContainer
+from app.service.aio.factory import AsyncServiceFactory
 from app.ws.stores import MarketStore
 from app.ws.protocols import WsMessageType
 
@@ -10,10 +10,10 @@ from app.ws.protocols import WsMessageType
 async def run_candle_consumer(app, interval):
     queue = app.state.candle_queue
     store: MarketStore = app.state.market_store
-    facade: FacadeContainer = app.state.ws_facade
+    svcs: AsyncServiceFactory = app.state.ws_svcs
     config: CoreDTO.WsConfigBag = app.state.ws_config
 
-    pubsub = await facade.candle_store.subscribe(interval_type=interval.value)
+    pubsub = await svcs.candle_store.subscribe(interval_type=interval.value)
 
     while True:
         msg = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)

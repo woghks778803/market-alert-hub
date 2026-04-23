@@ -14,7 +14,7 @@ async def run_stream_marketdata_main_loop(
     tasks: dict[str, asyncio.Task] = {}
     cfg = ctx.config
     key_prefix = f"{cfg.app_name}:{cfg.deploy_env}"
-    catalog = ctx.facade.active_catalog  # RedisActiveMarketCatalog
+    catalog = ctx.svcs.active_catalog  
     ws_factory = ctx.ws_facs_register
 
     try:

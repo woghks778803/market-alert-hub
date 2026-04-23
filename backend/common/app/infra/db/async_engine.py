@@ -1,0 +1,16 @@
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+
+def create_async_sqlalchemy_engine(sqlalchemy_url: str) -> AsyncEngine:
+    return create_async_engine(
+        sqlalchemy_url,
+        pool_pre_ping=True,
+        future=True,
+    )
+
+def create_async_sessionmaker(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
+    return async_sessionmaker(
+        bind=engine,
+        expire_on_commit=False,
+        autoflush=False,
+        autocommit=False,
+    )

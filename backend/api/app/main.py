@@ -94,7 +94,7 @@ def create_app() -> FastAPI:
     # 앱 전역 싱글톤 저장소 - 하나만 있어야 함
     app.state.ws_hub = Hub()
     app.state.ws_config = ws_ctx.config
-    app.state.ws_facade = ws_ctx.facade
+    app.state.ws_svcs = ws_ctx.svcs
     app.state.market_store = MarketStore()
     app.state.candle_queue = asyncio.Queue()
 

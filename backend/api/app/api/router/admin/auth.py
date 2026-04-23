@@ -1,6 +1,6 @@
 # from fastapi import APIRouter, Depends, Request, Body
 
-# from app.service.factory import ServiceFactory
+# from app.service.sync.factory import ServiceFactory
 # from app.api.schema import auth as AuthSchema
 # from app.api.common.envelope import Envelope, ok, created
 # from app.api.deps import get_services, get_request_meta, RequestMeta

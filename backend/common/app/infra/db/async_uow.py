@@ -1,0 +1,54 @@
+from typing import Union
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+from app.infra.db.repository.protocol.aio.alert_repo import AlertRepo
+from app.infra.db.repository.aio.alert_repo import AsyncAlertRepo
+
+class AsyncUnitOfWork:
+    def __init__(
+        self,
+        db: Union[AsyncSession, async_sessionmaker[AsyncSession]],
+        owns_session: bool = True,
+    ) -> None:
+        self.db: AsyncSession = db() if callable(db) else db
+
+        self._alert_events = None
+
+        self._done = False
+        self._owns = owns_session
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, *_):
+        if not self.db:
+            return False
+            
+        try:
+            if exc_type and not self._done:
+                self.db.rollback()
+        finally:
+            if self._owns:
+                self.db.close()
+        return False
+
+    async def commit(self) -> None:
+        if not self._done:
+            await self.db.commit()
+            self._done = True
+
+    async def rollback(self) -> None:
+        if not self._done:
+            await self.db.rollback()
+            self._done = True
+    
+    async def flush(self) -> None:
+        if self._done:
+            return
+        await self.db.flush()
+
+    @property
+    async def alerts(self) -> AlertRepo:
+        if self._alerts is None:
+            self._alerts = AsyncAlertRepo(self.db)
+        return self._alerts

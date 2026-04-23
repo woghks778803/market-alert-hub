@@ -2,10 +2,9 @@ import json
 from typing import Callable
 from app.core.constants import CANDLE, CandleInterval
 from app.infra.external.redis.async_redis_client import RedisClientAsync
-from app.facade.ports import CandleStore
+from app.domain import MarketPort
 
-
-class RedisCandleStore(CandleStore):
+class RedisCandleStore(MarketPort.AsyncCandleStore):
     def __init__(
         self,
         redis: RedisClientAsync,

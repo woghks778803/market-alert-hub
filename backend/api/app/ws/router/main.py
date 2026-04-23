@@ -2,8 +2,8 @@ import uuid
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 
-from app.facade.container import FacadeContainer
-from app.ws.deps import get_hub, get_facade
+from app.service.aio.factory import AsyncServiceFactory
+from app.ws.deps import get_hub, get_services
 from app.ws.handlers import handle_message
 from app.ws.hub import Hub
 from app.ws.protocols import WsMessageType
@@ -15,7 +15,7 @@ router = APIRouter(prefix="/ws")
 async def websocket_endpoint(
     ws: WebSocket,
     hub: Hub = Depends(get_hub),
-    facade: FacadeContainer = Depends(get_facade),
+    svcs: AsyncServiceFactory = Depends(get_services),
 ) -> None:
     await ws.accept()
     conn_id = str(uuid.uuid4())
@@ -26,7 +26,7 @@ async def websocket_endpoint(
     try:
         while True:
             data = await ws.receive_json()
-            await handle_message(hub, facade, conn_id, ws, data)
+            await handle_message(hub, svcs, conn_id, ws, data)
 
     except WebSocketDisconnect:
         pass

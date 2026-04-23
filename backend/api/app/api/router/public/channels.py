@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Body, Request, Response, status, Security, Path, Query
 
-from app.service.factory import ServiceFactory
+from app.service.sync.factory import ServiceFactory
 from app.api.schema import AuthSchema, ChannelSchema
 from app.api.common.envelope import Envelope, ok, created, no_content
 from app.api.deps import get_current_user, get_services, get_request_meta, RequestMeta

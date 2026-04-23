@@ -4,7 +4,7 @@ from app.core.constants import CandleBaseInterval
 from app.api.deps import get_services, get_request_meta, RequestMeta
 from app.api.schema import SeedSchema
 from app.api.common.envelope import Envelope, ok, created
-from app.service.factory import ServiceFactory
+from app.service.sync.factory import ServiceFactory
 import app.api.openapi as OpenApi
 
 router = APIRouter(prefix="/seed/snapshots")

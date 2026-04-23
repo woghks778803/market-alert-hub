@@ -8,7 +8,7 @@ from fastapi import (
     Body
 )
 
-from app.service.factory import ServiceFactory
+from app.service.sync.factory import ServiceFactory
 from app.api.schema import UserSchema, AuthSchema
 from app.api.common.envelope import Envelope, ok, created, no_content
 from app.api.deps import (

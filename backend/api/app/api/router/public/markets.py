@@ -1,7 +1,7 @@
 from datetime import datetime
 from fastapi import Security, Response, APIRouter, Depends, Query, Path, Body, status
 from app.core.constants import CandleOutputInterval, MarketSort
-from app.service.factory import ServiceFactory
+from app.service.sync.factory import ServiceFactory
 from app.api.common.envelope import Envelope, ok, no_content
 from app.api.deps import get_current_user, get_services, get_request_meta, RequestMeta
 from app.api.schema import AuthSchema, MarketSchema

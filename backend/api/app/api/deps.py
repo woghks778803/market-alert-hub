@@ -8,7 +8,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.api.schema import AuthSchema
 from app.core.constants import UserRole
 from app.domain.shared.errors import AuthError, PermissionError
-from app.service.factory import ServiceFactory
+from app.service.sync.factory import ServiceFactory
 from app.runtime.app_context import ApiContext
 from app.runtime.bootstrap import (
     create_api_context,

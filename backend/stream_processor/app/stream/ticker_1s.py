@@ -11,8 +11,8 @@ async def run_ticker_1s_loop(
     market_refresh_sec: float = 10.0,
 ):
     cfg = ctx.config
-    catalog = ctx.facade.active_catalog
-    candle = ctx.facade.candle_store
+    catalog = ctx.svcs.active_catalog
+    candle = ctx.svcs.candle_store
     redis = ctx.async_redis_client
     last_id = "$"  # 최신부터 시작
     key_prefix = f"{cfg.app_name}:{cfg.deploy_env}"

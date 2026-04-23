@@ -98,12 +98,26 @@ class RedisClientAsync:
             log.exception("redis hget failed: key=%s field=%s", key, field)
             raise
 
+    async def hmget(self, key: str, fields: list[str]) -> list[bytes | None]:
+        try:
+            return await self._client.hmget(name=key, keys=fields)
+        except RedisError:
+            log.exception("redis hmget failed: key=%s fields=%s", key, fields)
+            raise
+
     async def hgetall(self, key: str) -> dict[bytes, bytes]:
         try:
             result = await self._client.hgetall(name=key)
             return result or {}
         except RedisError as e:
             log.exception("redis hgetall failed: key=%s", key)
+            raise
+
+    async def smembers(self, key: str) -> set[bytes]:
+        try:
+            return await self._client.smembers(name=key)
+        except RedisError:
+            log.exception("redis smembers failed: key=%s", key)
             raise
 
     async def publish(self, channel: str, message: str) -> int:

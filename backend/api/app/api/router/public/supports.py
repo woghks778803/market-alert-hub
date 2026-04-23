@@ -11,7 +11,7 @@ from fastapi import (
     Query,
 )
 from app.core.constants import NoticeCategory, FAQCategory
-from app.service.factory import ServiceFactory
+from app.service.sync.factory import ServiceFactory
 from app.api.schema import SupportSchema, AuthSchema
 from app.api.common.envelope import Envelope, ok, created, no_content
 from app.api.deps import (

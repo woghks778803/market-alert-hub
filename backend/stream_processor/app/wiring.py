@@ -95,6 +95,7 @@ def _build_on_task_error() -> Callable[[str, BaseException], None]:
 
 def _build_specs(runtime: Any) -> list[tuple[str, TaskFactory]]:
     from app.stream.ticker_1s import run_ticker_1s_loop
+    from app.stream.alert_price import run_alert_price_loop
 
     cfg = runtime.ctx.config
     specs: list[tuple[str, TaskFactory]] = []
@@ -102,13 +103,24 @@ def _build_specs(runtime: Any) -> list[tuple[str, TaskFactory]]:
     if not cfg.enable_stream:
         return specs
 
+    """
+        TODO: 추후 서비스 성장 또는 CPU-heavy 작업 증가시 태스크 역할별로 멀티 컨테이너 진행
+        이후 컨테이너 내부 프로세스 샤딩 필요
+    """
     def _ticker_1s():
         return run_ticker_1s_loop(
             stop_event=runtime.stop_event,
             ctx=runtime.ctx,
         )
+    
+    def _alert_price():
+        return run_alert_price_loop(
+            stop_event=runtime.stop_event,
+            ctx=runtime.ctx,
+        )
 
     specs.append(("ticker:1s", _ticker_1s))
+    specs.append(("alert:price", _alert_price))
 
     return specs
 

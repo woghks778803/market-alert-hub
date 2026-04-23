@@ -4,7 +4,7 @@ from app.core.constants import AlertStatus, AlertSort
 from app.api.deps import get_current_user, get_services, get_request_meta, RequestMeta
 from app.api.schema import AuthSchema, AlertSchema
 from app.api.common.envelope import Envelope, ok, created
-from app.service.factory import ServiceFactory
+from app.service.sync.factory import ServiceFactory
 import app.api.openapi as OpenApi
 
 router = APIRouter(prefix="/alerts")
@@ -177,10 +177,6 @@ def create_alert(
         use_validity=payload.use_validity,
         valid_from=payload.valid_from,
         valid_to=payload.valid_to,
-
-        timeframe=payload.timeframe,  
-        period=payload.period,       
-
         params=payload.params,
     )
 
@@ -225,10 +221,6 @@ def change_alert(
         use_validity=payload.use_validity,
         valid_from=payload.valid_from,
         valid_to=payload.valid_to,
-
-        timeframe=payload.timeframe,
-        period=payload.period,
-
         params=payload.params,
     )
 

@@ -25,7 +25,9 @@ from app.infra.db.repository.sql.support_repo import SqlSupportRepo
 
 class UnitOfWork(UnitOfWorkPort):
     def __init__(
-        self, db: Union[DbSession, sessionmaker[DbSession]], owns_session: bool = True
+        self, 
+        db: Union[DbSession, sessionmaker[DbSession]], 
+        owns_session: bool = True
     ) -> None:
         self.db: DbSession = db() if callable(db) else db
         self._users = None
@@ -47,6 +49,7 @@ class UnitOfWork(UnitOfWorkPort):
     def __exit__(self, exc_type, *_):
         if not self.db:
             return False
+            
         try:
             if exc_type and not self._done:
                 self.db.rollback()

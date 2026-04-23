@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-from app.service.factory import ServiceFactory
-from app.facade.container import FacadeContainer
+from app.service.sync.factory import ServiceFactory
+from app.service.aio.factory import AsyncServiceFactory
 from app.core import dto as CoreDTO
 
 from app.infra.external.redis.redis_client import RedisClient
@@ -15,7 +15,7 @@ from app.infra.external.exchange.port.subscribe import SubscribeFactoryRegistry
 @dataclass(frozen=True)
 class WsContext:
     config: CoreDTO.WsConfigBag
-    facade: FacadeContainer
+    svcs: AsyncServiceFactory
 
 
 @dataclass(frozen=True)
@@ -48,7 +48,7 @@ class WorkerContext:
 @dataclass(frozen=True)
 class CollectorContext:
     config: CoreDTO.CollectorConfigBag
-    facade: FacadeContainer
+    svcs: AsyncServiceFactory
     subscribe_facs_register: SubscribeFactoryRegistry
     ws_facs_register: WsFactoryRegistry
     async_redis_client: RedisClientAsync
@@ -57,5 +57,5 @@ class CollectorContext:
 @dataclass(frozen=True)
 class StreamProcessorContext:
     config: CoreDTO.StreamProcessorConfigBag
-    facade: FacadeContainer
+    svcs: AsyncServiceFactory
     async_redis_client: RedisClientAsync

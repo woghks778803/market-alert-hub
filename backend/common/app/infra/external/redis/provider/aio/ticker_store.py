@@ -1,9 +1,8 @@
 from app.core.constants import TICKER
 from app.infra.external.redis.async_redis_client import RedisClientAsync
-from app.facade.ports import TickerStore
+from app.domain import MarketPort
 
-
-class RedisTickerStore(TickerStore):
+class RedisTickerStore(MarketPort.AsyncTickerStore):
     def __init__(
         self,
         redis: RedisClientAsync,

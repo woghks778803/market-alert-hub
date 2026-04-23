@@ -30,13 +30,20 @@ class AlertBucket(Protocol):
     ) -> None:
         raise NotImplementedError
 
-    def list_price_alert_ids(
-        self,
-        *,
-        exchange_code: str,
-        exchange_symbol: str,
-    ) -> list[int]:
+    def get_price_bucket_key(exchange_code: str, exchange_symbol: str) -> str:
         raise NotImplementedError
 
-    def get_price_bucket_key(exchange_code: str, exchange_symbol: str) -> str:
+class AsyncAlertSnapshot(Protocol):
+    async def alert_get(self, alert_id: int) -> dict[str, Any] | None:
+        raise NotImplementedError
+
+    async def alert_mget(self, alert_ids: list[int]) -> list[dict[str, Any]]:
+        raise NotImplementedError
+
+
+class AsyncAlertBucket(Protocol):
+    async def list_alert_id(self, *, bucket_key: str) -> list[int]: 
+        raise NotImplementedError
+        
+    async def list_alert_id_many(self, *, bucket_keys: list[str]) -> list[int]:
         raise NotImplementedError

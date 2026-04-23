@@ -1,13 +1,13 @@
 from fastapi import WebSocket
 
-from app.facade.container import FacadeContainer
+from app.service.aio.factory import AsyncServiceFactory
 from app.ws.hub import Hub
 from app.ws.protocols import WsMessageType
 
 
 async def handle_message(
     hub: Hub,
-    facade: FacadeContainer,
+    svcs: AsyncServiceFactory,
     conn_id: str,
     ws: WebSocket,
     data: dict,

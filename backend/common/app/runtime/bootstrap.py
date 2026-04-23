@@ -10,8 +10,10 @@ from app.core.constants import (
     EXCHANGES,
 )
 from app.core import dto as CoreDTO
-from app.service.factory import ServiceFactory
-from app.facade.container import FacadeContainer
+
+from app.service.sync.factory import ServiceFactory
+from app.service.aio.factory import AsyncServiceFactory
+
 from app.runtime.app_context import (
     WorkerContext,
     WsContext,
@@ -37,10 +39,13 @@ from app.infra.external.oauth.kakao.rest_client import (
 )
 
 from app.infra.external.redis.provider import (
-    RedisActiveMarketCatalogAsync,
-    RedisTickerStoreAsync,
-    RedisCandleStoreAsync,
-    RedisCandleStoreSync,
+    RedisAsyncMarketCatalog,
+    RedisAsyncAlertSnapshot,
+    RedisAsyncAlertBucket,
+    RedisAsyncTickerStore,
+    RedisAsyncCandleStore,
+
+    RedisCandleStore,
     RedisCooldown,
     RedisMarketSnapshot,
     RedisAlertSnapshot,
@@ -82,8 +87,12 @@ from app.infra.external.redis.async_redis_client import (
 from app.infra.external.redis.redis_client import get_redis_client
 from app.infra.external.email.ses_client import SesEmailClient
 from app.infra.external.email.jinja_renderer import JinjaEmailRenderer
+
 from app.infra.db.uow import UnitOfWork
+from app.infra.db.async_uow import AsyncUnitOfWork
 from app.infra.db.engine import create_sqlalchemy_engine, create_sessionmaker
+from app.infra.db.async_engine import create_async_sqlalchemy_engine, create_async_sessionmaker
+
 from app.infra.external.password.passlib_hasher import PasslibPasswordHasher
 from app.infra.external.token.jwt_signer import JwtTokenSigner
 from app.infra.external.token.hmac_hasher import HmacTokenHasher
@@ -142,10 +151,9 @@ class Providers:
     @staticmethod
     def active_catalog_provider(
         prefix: str,
-        async_redis_client: RedisClientAsync,
-    ) -> Callable[[], RedisActiveMarketCatalogAsync]:
-        return lambda: RedisActiveMarketCatalogAsync(
-            async_redis_client,
+    ) -> Callable[[], RedisAsyncMarketCatalog]:
+        return lambda: RedisAsyncMarketCatalog(
+            redis=get_async_redis_client(settings.REDIS_URL),
             exchanges_snap_key=f"{prefix}:{SNAP}:{EXCHANGES}",
             exchanges_meta_key=f"{prefix}:{META}:{EXCHANGES}",
             symbols_snap_key_fn=lambda ex: f"{prefix}:{SNAP}:{SYMBOLS}:{ex}",
@@ -153,28 +161,44 @@ class Providers:
         )
 
     @staticmethod
+    def alert_snapshot_async_provider(
+        prefix: str,
+    ) -> Callable[[], RedisAsyncAlertSnapshot]:
+        return lambda: RedisAsyncAlertSnapshot(
+            redis=get_async_redis_client(settings.REDIS_URL),
+            prefix=prefix,
+        )
+    
+    @staticmethod
+    def alert_bucket_async_provider(
+        prefix: str,
+    ) -> Callable[[], RedisAsyncAlertBucket]:
+        return lambda: RedisAsyncAlertBucket(
+            redis=get_async_redis_client(settings.REDIS_URL),
+            prefix=prefix,
+        )
+
+    @staticmethod
     def ticker_store_async_provider(
         prefix: str,
-        async_redis_client: RedisClientAsync,
-    ) -> Callable[[], RedisTickerStoreAsync]:
-        return lambda: RedisTickerStoreAsync(
-            redis=async_redis_client,
+    ) -> Callable[[], RedisAsyncTickerStore]:
+        return lambda: RedisAsyncTickerStore(
+            redis=get_async_redis_client(settings.REDIS_URL),
             prefix=prefix,
         )
 
     @staticmethod
     def candle_store_async_provider(
         prefix: str,
-        async_redis_client: RedisClientAsync,
-    ) -> Callable[[], RedisCandleStoreAsync]:
-        return lambda: RedisCandleStoreAsync(
-            redis=async_redis_client,
+    ) -> Callable[[], RedisAsyncCandleStore]:
+        return lambda: RedisAsyncCandleStore(
+            redis=get_async_redis_client(settings.REDIS_URL),
             prefix=prefix,
         )
 
     @staticmethod
-    def candle_store_sync_provider(prefix: str) -> Callable[[], RedisCandleStoreSync]:
-        return lambda: RedisCandleStoreSync(
+    def candle_store_sync_provider(prefix: str) -> Callable[[], RedisCandleStore]:
+        return lambda: RedisCandleStore(
             redis=get_redis_client(settings.REDIS_URL),
             prefix=prefix,
         )
@@ -307,6 +331,17 @@ class Providers:
             # owns_session=True 같은 옵션은 네 UnitOfWork 시그니처에 맞춰서
             db_session = SessionLocal()
             return UnitOfWork(db_session, owns_session=True)
+
+        return _provide
+
+    @staticmethod
+    def async_uow_provider(sqlalchemy_async_url: str) -> Callable[[], AsyncUnitOfWork]:
+        engine = create_async_sqlalchemy_engine(sqlalchemy_async_url)
+        SessionLocal = create_async_sessionmaker(engine)
+
+        def _provide() -> AsyncUnitOfWork:
+            db_session = SessionLocal()
+            return AsyncUnitOfWork(db_session, owns_session=True)
 
         return _provide
 
@@ -555,18 +590,24 @@ def create_service_factory(prefix: str) -> ServiceFactory:
     )
 
 
-def create_facade_container(prefix: str) -> FacadeContainer:
-    async_redis = get_async_redis_client(settings.REDIS_URL)
+def create_async_service_factory(prefix: str) -> AsyncServiceFactory:
+    return AsyncServiceFactory(
+        uow=providers.async_uow_provider(settings.SQLALCHEMY_ASYNC_URL),
 
-    return FacadeContainer(
+        alert_snapshot=providers.alert_snapshot_async_provider(
+            prefix=prefix
+        ),
+        alert_bucket=providers.alert_bucket_async_provider(
+            prefix=prefix
+        ),
         candle_store=providers.candle_store_async_provider(
-            prefix=prefix, async_redis_client=async_redis
+            prefix=prefix
         ),
         ticker_store=providers.ticker_store_async_provider(
-            prefix=prefix, async_redis_client=async_redis
+            prefix=prefix
         ),
         active_catalog=providers.active_catalog_provider(
-            prefix=prefix, async_redis_client=async_redis
+            prefix=prefix
         ),
     )
 
@@ -574,11 +615,11 @@ def create_facade_container(prefix: str) -> FacadeContainer:
 @lru_cache
 def create_ws_context() -> WsContext:
     cfg = build_ws_config_bag()
-    facade = create_facade_container(prefix=f"{cfg.app_name}:{cfg.deploy_env}")
+    svcs = create_async_service_factory(prefix=f"{cfg.app_name}:{cfg.deploy_env}")
 
     return WsContext(
         config=cfg,
-        facade=facade,
+        svcs=svcs,
     )
 
 
@@ -617,7 +658,7 @@ def create_scheduler_context() -> SchedulerContext:
 @lru_cache
 def create_collector_context() -> CollectorContext:
     cfg = build_collector_config_bag()
-    facade = create_facade_container(prefix=f"{cfg.app_name}:{cfg.deploy_env}")
+    svcs = create_async_service_factory(prefix=f"{cfg.app_name}:{cfg.deploy_env}")
     async_redis = get_async_redis_client(settings.REDIS_URL)
 
     subscribe_facs_register: SubscribeFactoryRegistry = {
@@ -641,19 +682,19 @@ def create_collector_context() -> CollectorContext:
         subscribe_facs_register=subscribe_facs_register,
         ws_facs_register=ws_facs_register,
         async_redis_client=async_redis,
-        facade=facade,
+        svcs=svcs,
     )
 
 
 @lru_cache
 def create_stream_processor_context() -> StreamProcessorContext:
     cfg = build_stream_processor_config_bag()
-    facade = create_facade_container(prefix=f"{cfg.app_name}:{cfg.deploy_env}")
+    svcs = create_async_service_factory(prefix=f"{cfg.app_name}:{cfg.deploy_env}")
     async_redis = get_async_redis_client(settings.REDIS_URL)
 
     return StreamProcessorContext(
         config=cfg,
-        facade=facade,
+        svcs=svcs,
         async_redis_client=async_redis,
     )
 

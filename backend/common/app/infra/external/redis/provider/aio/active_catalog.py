@@ -1,7 +1,7 @@
 import json
 from typing import Any, Callable, Mapping
 from app.infra.external.redis.async_redis_client import RedisClientAsync
-from app.facade.ports import ActiveMarketCatalog, JsonDict
+from app.domain import MarketPort
 
 
 def _to_str(v: Any) -> str:
@@ -12,7 +12,7 @@ def _to_str(v: Any) -> str:
     return str(v)
 
 
-def _loads_json(v: Any) -> JsonDict:
+def _loads_json(v: Any) -> MarketPort.JsonDict:
     """
     redis hash value (bytes/str) -> dict
     - 값이 비어있거나 파싱 실패하면 {} 반환
@@ -27,7 +27,7 @@ def _loads_json(v: Any) -> JsonDict:
         return {}
 
 
-class RedisActiveMarketCatalog(ActiveMarketCatalog):
+class RedisMarketCatalog(MarketPort.AsyncMarketCatalog):
     """
     Redis 스냅샷(HASH field -> json payload)을 그대로 읽어온다.
     - snap 키: hgetall()로 전체 (field + payload)
@@ -49,7 +49,7 @@ class RedisActiveMarketCatalog(ActiveMarketCatalog):
         self._sym_snap_key_fn = symbols_snap_key_fn
         self._sym_meta_key_fn = symbols_meta_key_fn
 
-    async def get_exchanges_snap(self) -> Mapping[str, JsonDict]:
+    async def get_exchanges_snap(self) -> Mapping[str, MarketPort.JsonDict]:
         raw: dict[Any, Any] = await self._redis.hgetall(self._ex_snap_key) or {}
         # field: exchange_code, value: json
         return {_to_str(k): _loads_json(v) for k, v in raw.items() if k}
@@ -58,7 +58,7 @@ class RedisActiveMarketCatalog(ActiveMarketCatalog):
         raw: dict[Any, Any] = await self._redis.hgetall(self._ex_meta_key) or {}
         return {_to_str(k): _to_str(v) for k, v in raw.items() if k}
 
-    async def get_symbols_snap(self, exchange_code: str) -> Mapping[str, JsonDict]:
+    async def get_symbols_snap(self, exchange_code: str) -> Mapping[str, MarketPort.JsonDict]:
         key = self._sym_snap_key_fn(exchange_code)
         raw: dict[Any, Any] = await self._redis.hgetall(key) or {}
         # field: exchange_symbol, value: json

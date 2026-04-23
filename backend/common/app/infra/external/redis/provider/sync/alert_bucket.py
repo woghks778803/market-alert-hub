@@ -44,64 +44,48 @@ class RedisAlertBucket(AlertPort.AlertBucket):
         redis_key = self._bucket_key(bucket_key)
         self._redis.srem(redis_key, str(alert_id))
 
-    def _list_alert_ids(
+    def alert_add(
         self,
         *,
         bucket_key: str,
-    ) -> list[int]:
-        """
-        bucket에 포함된 alert_id 목록 조회
-        """
-        redis_key = self._bucket_key(bucket_key)
-        rows = self._redis.smembers(redis_key)
-
-        result: list[int] = []
-        for row in rows:
-            try:
-                if isinstance(row, bytes):
-                    row = row.decode()
-
-                result.append(int(row))
-            except (TypeError, ValueError):
-                continue
-
-        return result
-
-    def alert_add_price(
-        self,
-        *,
-        exchange_code: str,
-        exchange_symbol: str,
         alert_id: int,
         ttl_sec: int | None = None,
     ) -> None:
-        bucket_key = self.get_price_bucket_key(exchange_code, exchange_symbol)
-        self._alert_add(bucket_key=bucket_key, alert_id=alert_id, ttl_sec=ttl_sec)
+        self._alert_add(
+            bucket_key=bucket_key,
+            alert_id=alert_id,
+            ttl_sec=ttl_sec,
+        )
 
-    def alert_remove_price(
+    def alert_remove(
         self,
         *,
-        exchange_code: str,
-        exchange_symbol: str,
+        bucket_key: str,
         alert_id: int,
     ) -> None:
-        bucket_key = self.get_price_bucket_key(exchange_code, exchange_symbol)
-        self._alert_remove(bucket_key=bucket_key, alert_id=alert_id)
+        self._alert_remove(
+            bucket_key=bucket_key,
+            alert_id=alert_id,
+        )
 
-    def list_price_alert_ids(
+    def get_alert_bucket_key(
         self,
         *,
+        indicator: str,
         exchange_code: str,
         exchange_symbol: str,
-    ) -> list[int]:
-        bucket_key = self.get_price_bucket_key(
-            exchange_code=exchange_code,
-            exchange_symbol=exchange_symbol,
-        )
-        return self._list_alert_ids(bucket_key=bucket_key)
+        form_type: str,
+        scope: str,
+        direction: str,
+    ) -> str:
+        # form_type_key = form_type or "none"
+        # scope_key = scope or "none"
+        # direction_key = direction or "none"
 
-    def get_price_bucket_key(self, exchange_code: str, exchange_symbol: str) -> str:
-        return f"{PRICE}:{exchange_code}:{exchange_symbol}"
+        return (
+            f"{indicator}:{exchange_code}:{exchange_symbol}:"
+            f"{form_type}:{scope}:{direction}"
+        )
 
     def _bucket_index_key(self) -> str:
         return f"{self._prefix}:{BUCKET}:{OutboxEventType.SYNC_ALERTS.value}:{INDEX}"

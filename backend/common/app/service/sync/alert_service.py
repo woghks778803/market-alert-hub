@@ -88,8 +88,8 @@ class AlertService:
         use_validity: bool,
         valid_from: datetime | None,
         valid_to: datetime | None,
-        timeframe: str | None,
-        period: int | None,
+        # timeframe: str | None,
+        # period: int | None,
         params: dict,
     ):
         throttle_seconds = THROTTLE_SECONDS[throttle_timeframe]
@@ -137,8 +137,8 @@ class AlertService:
                     # TODO: 추후 추가 개발시 고정값 해제
                     timezone="UTC", 
 
-                    timeframe=timeframe,
-                    period=period,
+                    # timeframe=timeframe,
+                    # period=period,
                     params=params,
 
                     throttle_seconds=throttle_seconds,
@@ -179,8 +179,8 @@ class AlertService:
         use_validity: bool,
         valid_from: datetime | None,
         valid_to: datetime | None,
-        timeframe: str | None,
-        period: int | None,
+        # timeframe: str | None,
+        # period: int | None,
         params: dict,
     ):
         now = utcnow()
@@ -219,8 +219,8 @@ class AlertService:
 
                 timezone="UTC",
 
-                timeframe=timeframe,
-                period=period,
+                # timeframe=timeframe,
+                # period=period,
                 params=params,
 
                 throttle_seconds=throttle_seconds,
@@ -393,15 +393,23 @@ class AlertService:
         result = []
         for alert_snapshot in alert_snapshots:
             payload = AlertRule.alert_snapshot_to_payload(alert_snapshot)
-
-            bucket_key = self._alert_bucket.get_price_bucket_key(
+            print("payload", payload)
+            bucket_key = self._alert_bucket.get_alert_bucket_key(
+                indicator=alert_snapshot.indicator,
                 exchange_code=alert_snapshot.exchange_code,
                 exchange_symbol=alert_snapshot.exchange_symbol,
+                form_type=alert_snapshot.form_type,
+                scope=alert_snapshot.scope,
+                direction=alert_snapshot.direction,
             )
+
             payload["bucket_key"] = bucket_key
 
             result.append(payload)
 
+        print("alert_snapshots", alert_snapshots)
+        print("result", result)
+        
         return result
 
     def _sync_alert_snapshot(
@@ -412,13 +420,11 @@ class AlertService:
     ) -> None:
         old_payload = self._alert_snapshot.alert_get(alert_id)
         if old_payload:
-            old_exchange_code = old_payload.get("exchange_code")
-            old_exchange_symbol = old_payload.get("exchange_symbol")
-            
-            if old_exchange_code and old_exchange_symbol:
-                self._alert_bucket.alert_remove_price(
-                    exchange_code=old_exchange_code,
-                    exchange_symbol=old_exchange_symbol,
+            old_bucket_key = old_payload.get("bucket_key")
+
+            if old_bucket_key:
+                self._alert_bucket.alert_remove(
+                    bucket_key=old_bucket_key,
                     alert_id=alert_id,
                 )
 
@@ -432,9 +438,17 @@ class AlertService:
 
         payload = AlertRule.alert_snapshot_to_payload(alert_snapshot)
 
-        bucket_key = self._alert_bucket.alert_add_price(
+        bucket_key = self._alert_bucket.get_alert_bucket_key(
+            indicator=alert_snapshot.indicator,
             exchange_code=alert_snapshot.exchange_code,
             exchange_symbol=alert_snapshot.exchange_symbol,
+            form_type=alert_snapshot.form_type,
+            scope=alert_snapshot.scope,
+            direction=alert_snapshot.direction,
+        )
+
+        self._alert_bucket.alert_add(
+            bucket_key=bucket_key,
             alert_id=alert_snapshot.alert_id,
         )
 
