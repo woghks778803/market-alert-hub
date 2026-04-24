@@ -10,6 +10,7 @@ Exchange / Symbol - 대문자 유지
 TMP = "tmp"
 SNAP = "snap"
 STREAM = "stream"
+PUBLISH = "publish"
 META = "meta"
 LOCK = "lock"
 CURSOR = "cursor"
@@ -24,7 +25,6 @@ TICKERS = "tickers"
 
 BUCKET= "bucket"
 COOLDOWN = "cooldown"
-PUBLISH = "publish"
 STATE = "state"
 
 SYMBOLS = "symbols"

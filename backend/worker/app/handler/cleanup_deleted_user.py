@@ -31,7 +31,7 @@ def handle_cleanup_deleted_users(
         raise SkipHandler("locked")
 
     try:
-        result = ctx.svcs.users.delete_user()
+        result = ctx.svcs.auths.cleanup_deleted_users()
 
         logger.info(
             "cleanup_deleted_users processed_count=%s start_date=%s end_date=%s",

@@ -620,4 +620,5 @@ def deactivate_user(
 ):
     svcs.auths.deactivate_user(user_id=user.id)
     expire_auth_cookies(response)
-    return no_content()
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return response

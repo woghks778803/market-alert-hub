@@ -14,7 +14,14 @@ from app.core.constants import (
 )
 from app.core import dto as CoreDTO
 from app.core.util.trace import get_trace_id
-from app.core.util.datetime import utcnow, ensure_utc
+from app.core.util.datetime import (
+    utcnow, 
+    ensure_utc,
+    get_days_ago,
+    get_days_later,
+    start_of_day,
+    ISO_FMT,
+)
 from app.core.util.serialization import to_canonical_json
 from app.domain.shared.uow import UnitOfWork
 from app.domain.shared.errors import (
@@ -341,8 +348,7 @@ class AuthService:
 
             if user.email_verified_at is None:
                 cooldown_sec = self._config.email_resend_cooldown_sec
-                key = f"email_verify_resend:{user.id}"
-                ok = self._cooldown.acquire(key, cooldown_sec)
+                ok = self._cooldown.acquire_email_verify_resend(user.id, cooldown_sec)
                 if ok:
                     if (
                         user.email_fingerprint is not None
@@ -431,10 +437,9 @@ class AuthService:
 
             #  쿨다운 (연타 방지)
             cooldown_sec = self._config.email_resend_cooldown_sec
-            key = f"email_verify_resend:{user.id}"
-            ok = self._cooldown.acquire(key, cooldown_sec)
+            ok = self._cooldown.acquire_email_verify_resend(user.id, cooldown_sec)
             if not ok:
-                remain = self._cooldown.remain(key)  # -2/-1 처리만 조심
+                remain = self._cooldown.remain_email_verify_resend(user.id)  # -2/-1 처리만 조심
                 raise RateLimitError(
                     "Too many requests. Please try again later.",
                     target="resend_email_verification",
@@ -549,10 +554,9 @@ class AuthService:
 
             #  쿨다운 (연타 방지)
             cooldown_sec = self._config.email_resend_cooldown_sec
-            key = f"email_verify_resend:{user.id}"
-            ok = self._cooldown.acquire(key, cooldown_sec)
+            ok = self._cooldown.acquire_email_verify_resend(user.id, cooldown_sec)
             if not ok:
-                remain = self._cooldown.remain(key)  # -2/-1 처리만 조심
+                remain = self._cooldown.remain_email_verify_resend(user.id)  # -2/-1 처리만 조심
                 raise RateLimitError(
                     "Too many requests. Please try again later.",
                     target="resend_email_verification",
@@ -615,10 +619,9 @@ class AuthService:
 
             #  쿨다운 (연타 방지)
             cooldown_sec = self._config.email_resend_cooldown_sec
-            key = f"email_verify_resend:{user.id}"
-            ok = self._cooldown.acquire(key, cooldown_sec)
+            ok = self._cooldown.acquire_email_verify_resend(user.id, cooldown_sec)
             if not ok:
-                remain = self._cooldown.remain(key)  # -2/-1 처리만 조심
+                remain = self._cooldown.remain_email_verify_resend(user.id)  # -2/-1 처리만 조심
                 raise RateLimitError(
                     "Too many requests. Please try again later.",
                     target="resend_password_reset",
@@ -1109,3 +1112,74 @@ class AuthService:
             uow.sessions.update_session_revoke(user_id=user.id, revoked_at=now)
             uow.users.update_user_email_verified_at(id=user.id)
             uow.commit()
+
+
+    def cleanup_deleted_users(self) -> dict[str, Any]:
+        days_ago = get_days_ago(utcnow(), days=30)
+        start_date = start_of_day(days_ago)
+        end_date = get_days_later(start_date, days=30)
+
+        with self._uow_factory() as uow:
+            deleted_users = uow.users.list_deleted_user(
+                status=UserStatus.DELETED, start_date=start_date, end_date=end_date
+            )
+
+            user_email_updates = []
+            user_ids = []
+            unlink_map = {
+                OAuthCode.KAKAO.value: lambda provider_user_id: (
+                    self._kakao_oauth.unlink(int(provider_user_id))
+                ),
+            }
+            
+            for user in deleted_users:
+                
+                # 탈퇴 처리 기간 중 재가입시 oauth link된 부분 보정 
+                accounts = uow.users.list_oauth_accounts_by_user(
+                    user_id=user.id,
+                )
+
+                for account in accounts:
+                    provider = uow.users.get_oauth_provider_by_id(
+                        id=account.oauth_providers_id
+                    )
+                    if not provider:
+                        continue
+
+                    handler = unlink_map.get(provider.code)
+                    if not handler:
+                        continue
+
+                    if not account.provider_user_id:
+                        continue
+
+                    handler(account.provider_user_id)
+
+                # bulk update용
+                user_email_updates.append(
+                    UserDTO.UserEmailInfo(
+                        id=user.id,
+                        nickname=user.nickname,
+                        email_ciphertext=None,
+                        email_fingerprint=None,
+                        email_nonce=None,
+                        email_key_version=None,
+                        email_verified_at=None,
+                    )
+                )
+
+                # bulk delete용
+                user_ids.append(user.id)
+
+            if user_email_updates:
+                uow.users.update_user_emails(user_email_updates)
+            if user_ids:
+                uow.users.delete_user_oauth_accounts(user_ids)
+
+            uow.commit()
+
+            return {
+                "start_date": start_date.strftime(ISO_FMT),
+                "end_date": end_date.strftime(ISO_FMT),
+                "processed_count": len(deleted_users),
+            }
