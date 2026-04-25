@@ -1,31 +1,29 @@
 from typing import Protocol, Any
 
 class AlertSnapshot(Protocol):
-    def alert_upsert(self, alert_id: int, payload: dict[str, Any], ttl_sec: int | None = None) -> None:
+    def upsert_alert(self, alert_id: int, payload: dict[str, Any], ttl_sec: int | None = None) -> None:
         raise NotImplementedError
 
-    def alert_remove(self, alert_id: int) -> None:
+    def remove_alert(self, alert_id: int) -> None:
         raise NotImplementedError
 
-    def alert_get(self, alert_id: int) -> dict[str, Any] | None:
+    def get_alert(self, alert_id: int) -> dict[str, Any] | None:
         raise NotImplementedError
 
 class AlertBucket(Protocol):
-    def alert_add_price(
+    def add_alert(
         self,
         *,
-        exchange_code: str,
-        exchange_symbol: str,
+        bucket_key: str,
         alert_id: int,
         ttl_sec: int | None = None,
     ) -> None:
         raise NotImplementedError
 
-    def alert_remove_price(
+    def remove_alert(
         self,
         *,
-        exchange_code: str,
-        exchange_symbol: str,
+        bucket_key: str,
         alert_id: int,
     ) -> None:
         raise NotImplementedError
@@ -34,10 +32,10 @@ class AlertBucket(Protocol):
         raise NotImplementedError
 
 class AsyncAlertSnapshot(Protocol):
-    async def alert_get(self, alert_id: int) -> dict[str, Any] | None:
+    async def get_alert(self, alert_id: int) -> dict[str, Any] | None:
         raise NotImplementedError
 
-    async def alert_mget(self, alert_ids: list[int]) -> list[dict[str, Any]]:
+    async def mget_alert(self, alert_ids: list[int]) -> list[dict[str, Any]]:
         raise NotImplementedError
 
 
@@ -45,5 +43,35 @@ class AsyncAlertBucket(Protocol):
     async def list_alert_id(self, *, bucket_key: str) -> list[int]: 
         raise NotImplementedError
         
-    async def list_alert_id_many(self, *, bucket_keys: list[str]) -> list[int]:
+    async def list_alert_ids(self, *, bucket_keys: list[str]) -> list[int]:
+        raise NotImplementedError
+
+class AsyncAlertEvent(Protocol):
+    async def add_event(self, payload: dict[str, Any]) -> str:
+        raise NotImplementedError
+
+
+    async def add_events(self, payloads: list[dict[str, Any]]) -> list[str]:
+        raise NotImplementedError
+
+
+    async def read_persist_alert_events(
+        self,
+        *,
+        consumer_name: str,
+        count: int,
+        block_ms: int,
+    ) -> list[tuple[str, dict[str, Any]]]:
+        raise NotImplementedError
+
+
+    async def ack_persist_alert_events(
+        self,
+        *,
+        message_ids: list[str],
+    ) -> int:
+        raise NotImplementedError
+
+
+    async def ensure_persist_group(self) -> None:
         raise NotImplementedError

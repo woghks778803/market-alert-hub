@@ -2,15 +2,15 @@ import json
 from typing import Any
 
 from app.core.constants import OutboxEventType, SNAP
-from app.infra.external.redis.async_redis_client import RedisClientAsync
 from app.domain import AlertPort
+from app.infra.external.redis.async_redis_client import RedisClientAsync
 
 class RedisAlertSnapshot(AlertPort.AsyncAlertSnapshot):
     def __init__(self, redis: RedisClientAsync, prefix: str):
         self._redis = redis
         self._prefix = prefix
 
-    async def alert_get(self, alert_id: int) -> dict[str, Any] | None:
+    async def get_alert(self, alert_id: int) -> dict[str, Any] | None:
         """
         단일 알림 Redis snapshot 조회
         """
@@ -26,7 +26,7 @@ class RedisAlertSnapshot(AlertPort.AsyncAlertSnapshot):
         data = json.loads(raw)
         return data if isinstance(data, dict) else None
 
-    async def alert_mget(self, alert_ids: list[int]) -> list[dict[str, Any]]:
+    async def mget_alert(self, alert_ids: list[int]) -> list[dict[str, Any]]:
         """
         알림 Redis snapshot 다건 조회
         """

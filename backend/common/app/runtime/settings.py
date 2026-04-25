@@ -100,12 +100,30 @@ class Settings(BaseSettings):
     API_LOG_LEVEL: str = Field(default="INFO")
     CORS_ALLOW_ORIGINS: str | list[str] = ["http://localhost:5173"]
 
+    API_DB_POOL_SIZE: int = 1
+    API_DB_MAX_OVERFLOW: int = 0
+
+    # --- WS ---
+    WS_LOG_LEVEL: str = Field(default="INFO")
+    WS_ASYNC_DB_POOL_SIZE: int = 1
+    WS_ASYNC_DB_MAX_OVERFLOW: int = 0
+
     # --- Dispatcher, Worker ---
-    WORKER_LOG_LEVEL: str = Field(default="INFO")
-    DISPATCHER_LOG_LEVEL: str = Field(default="INFO")
     OUTBOX_POLL_LIMIT: int = Field(default=100)
     OUTBOX_IDLE_SLEEP: float = Field(default=0.5)
-    # --- Worker 전용 ---
+
+    # --- Dispatcher ---
+    DISPATCHER_LOG_LEVEL: str = Field(default="INFO")
+
+    DISPATCHER_DB_POOL_SIZE: int = 1
+    DISPATCHER_DB_MAX_OVERFLOW: int = 0
+
+    # --- Worker ---
+    WORKER_LOG_LEVEL: str = Field(default="INFO")
+
+    WORKER_DB_POOL_SIZE: int = 1
+    WORKER_DB_MAX_OVERFLOW: int = 0
+    
     OUTBOX_RETRY_DELAY_SEC: int = Field(default=60)
     OUTBOX_SEND_LOCK_TTL_SEC: int = Field(default=120)
     OUTBOX_CONCURRENCY: int = Field(default=4)
@@ -147,6 +165,9 @@ class Settings(BaseSettings):
     COLLECTOR_ENABLE_BACKFILL: bool = False
     COLLECTOR_BACKFILL_LOOKBACK_MINUTES: int = 60
 
+    COLLECTOR_ASYNC_DB_POOL_SIZE: int = 1
+    COLLECTOR_ASYNC_DB_MAX_OVERFLOW: int = 0
+
     # --- Stream Processor ---
     STREAM_PROCESSOR_LOG_LEVEL: str = Field(default="INFO")
 
@@ -161,6 +182,9 @@ class Settings(BaseSettings):
     STREAM_PROCESSOR_CHECKPOINT_KEY_PREFIX: str = "stream_processor:checkpoint"
     STREAM_PROCESSOR_CHECKPOINT_FILE_PATH: str = "/tmp/stream_processor_checkpoint.json"
 
+    STREAM_PROCESSOR_ASYNC_DB_POOL_SIZE: int = 1
+    STREAM_PROCESSOR_ASYNC_DB_MAX_OVERFLOW: int = 0
+    
     # --- Scheduler ---
     SCHEDULER_LOG_LEVEL: str = Field(default="INFO")
 
@@ -181,6 +205,9 @@ class Settings(BaseSettings):
     SCHEDULER_SNAPSHOT_INTERVALS: list[int] = Field(
         default_factory=lambda: [60, 3600, 86400]
     )
+
+    SCHEDULER_DB_POOL_SIZE: int = 1
+    SCHEDULER_DB_MAX_OVERFLOW: int = 0
 
     # --- network tuning (optional) ---
     HTTP_TIMEOUT_SEC: float = 10.0  # REST 요청 전체 타임아웃

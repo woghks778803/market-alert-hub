@@ -2,7 +2,7 @@ from typing import Sequence
 from datetime import datetime
 from sqlalchemy.orm import Session as DbSession
 from sqlalchemy import update, insert, select, and_, or_, asc, desc, func, case
-from app.core.constants import AlertStatus, AlertSort
+from app.core.constants import UserStatus, AlertStatus, AlertSort
 from app.domain import AlertDTO
 from app.infra.db.model import AlertModel, AlertTypeModel, ExchangeInstrumentModel, ExchangeModel, UserModel
 from app.infra.db.repository.protocol.alert_repo import AlertRepo
@@ -199,11 +199,13 @@ class SqlAlertRepo(AlertRepo):
 
         return AlertDTO.AlertSimple(**row)
 
-    def get_alert_snapshot_by_id(
+    def get_alert_snapshot_by_filter(
         self,
         *,
         alert_id: int,
         user_id: int | None = None,
+        status: AlertStatus | None,
+        archived_only: bool = False,
         deleted_is_null: bool = True,
     ) -> AlertDTO.AlertSnapshot | None:
         stmt = (
@@ -232,12 +234,16 @@ class SqlAlertRepo(AlertRepo):
                 a.last_fired_at.label("last_fired_at"),
             )
             .select_from(a)
+            .join(u, u.id == a.user_id)
             .join(at, at.id == a.alert_type_id)
             .join(ei, ei.id == a.exchange_instrument_id)
             .join(e, e.id == ei.exchange_id)
             .where(
                 a.id == alert_id,
                 
+                u.status == UserStatus.ACTIVE, 
+                u.deleted_at.is_(None), 
+
                 at.is_active.is_(True),
                 at.deleted_at.is_(None),
                 e.is_active.is_(True),
@@ -249,6 +255,13 @@ class SqlAlertRepo(AlertRepo):
 
         if user_id is not None:
             stmt = stmt.where(a.user_id == user_id)
+
+        if archived_only:
+            stmt = stmt.where(a.status == AlertStatus.ARCHIVED)
+        elif status:
+            stmt = stmt.where(a.status == status)
+        else:
+            stmt = stmt.where(a.status != AlertStatus.ARCHIVED)
 
         if deleted_is_null:
             stmt = stmt.where(a.deleted_at.is_(None))
@@ -299,8 +312,8 @@ class SqlAlertRepo(AlertRepo):
         self,
         *,
         status: AlertStatus | None,
-        deleted_is_null: bool = True, 
         archived_only: bool = False,
+        deleted_is_null: bool = True, 
         asc_order: bool = False,
         limit: int, 
         offset: int
@@ -330,6 +343,7 @@ class SqlAlertRepo(AlertRepo):
                 a.last_fired_at.label("last_fired_at"),
             )
             .select_from(a)
+            .join(u, u.id == a.user_id)
             .join(at, at.id == a.alert_type_id)
             .join(ei, ei.id == a.exchange_instrument_id)
             .join(e, e.id == ei.exchange_id)
@@ -349,6 +363,9 @@ class SqlAlertRepo(AlertRepo):
 
         # TODO: 현재 사용처 제한으로 고정
         stmt = stmt.where(
+            u.status == UserStatus.ACTIVE, 
+            u.deleted_at.is_(None), 
+
             at.is_active.is_(True),
             at.deleted_at.is_(None),
             e.is_active.is_(True),

@@ -1,7 +1,7 @@
 import json
 from typing import Any, Callable, Mapping
-from app.infra.external.redis.async_redis_client import RedisClientAsync
 from app.domain import MarketPort
+from app.infra.external.redis.async_redis_client import RedisClientAsync
 
 
 def _to_str(v: Any) -> str:

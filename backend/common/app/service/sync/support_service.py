@@ -42,13 +42,12 @@ class SupportService:
                 if user_id
                 else f"guest:{cookie_id}"
             )
-            key = f"notice_view:{id}:{identifier}"
-            ok_view = self._cooldown.acquire(key, cooldown_sec)
+            key = f"{id}:{identifier}"
+            ok_view = self._cooldown.acquire_notice_view(key, cooldown_sec)
 
             ok_rate = True
             if user_id is None:
-                key = f"notice_view_rate:{client_ip}"
-                ok_rate = self._cooldown.acquire(key, ip_rate_sec)
+                ok_rate = self._cooldown.acquire_notice_view_rate(client_ip, ip_rate_sec)
 
             # 사용자 조회 체크, ip 요청 체크
             if ok_view and ok_rate: 

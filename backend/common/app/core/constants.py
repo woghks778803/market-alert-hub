@@ -109,6 +109,15 @@ class OutboxEventType(str, enum.Enum):
     TRIGGER_ALERTS = "TRIGGER_ALERTS"
     PERSIST_SNAPSHOTS = "PERSIST_SNAPSHOTS"
 
+class StreamType(str, enum.Enum):
+    PERSIST_ALERT_EVENTS = "PERSIST_ALERT_EVENTS"
+
+class CooldownType(str, enum.Enum):
+    ALERT_PRICE = "ALERT_PRICE"
+    EMAIL_VERIFY_RESEND = "EMAIL_VERIFY_RESEND"
+    NOTICE_VIEW = "NOTICE_VIEW"
+    NOTICE_VIEW_RATE = "NOTICE_VIEW_RATE"
+
 class PlatformType(str, enum.Enum):
     ANDROID = "android"
     IOS = "ios"
@@ -186,6 +195,11 @@ class AlertStatus(str, enum.Enum):
     ACTIVE = "active"
     PAUSED = "paused"
     ARCHIVED = "archived"
+
+
+class AlertEventStatus(str, enum.Enum):
+    PENDING = "pending"
+    QUEUED = "queued"
 
 
 class DeliveryStatus(str, enum.Enum):

@@ -2,9 +2,17 @@ from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import sessionmaker, Session
 
 
-def create_sqlalchemy_engine(sqlalchemy_url: str) -> Engine:
+def create_sqlalchemy_engine(sqlalchemy_url: str, pool_size: int, max_overflow: int) -> Engine:
     # 여기서 settings import 금지. url은 외부(bootstrap)에서 주입
-    return create_engine(sqlalchemy_url, pool_pre_ping=True, future=True)
+    return create_engine(
+        sqlalchemy_url, 
+        pool_pre_ping=True, 
+        pool_size=pool_size,
+        max_overflow=max_overflow,
+        future=True, # 2.0 방식 사용 옵션
+        # pool_timeout=30
+        # pool_recycle=1800
+    )
 
 
 def create_sessionmaker(engine: Engine) -> sessionmaker[Session]:

@@ -42,8 +42,10 @@ from app.infra.external.redis.provider import (
     RedisAsyncMarketCatalog,
     RedisAsyncAlertSnapshot,
     RedisAsyncAlertBucket,
+    RedisAsyncAlertEvent,
     RedisAsyncTickerStore,
     RedisAsyncCandleStore,
+    RedisAsyncCooldown,
 
     RedisCandleStore,
     RedisCooldown,
@@ -179,6 +181,15 @@ class Providers:
         )
 
     @staticmethod
+    def alert_event_async_provider(
+        prefix: str,
+    ) -> Callable[[], RedisAsyncAlertEvent]:
+        return lambda: RedisAsyncAlertEvent(
+            redis=get_async_redis_client(settings.REDIS_URL),
+            prefix=prefix,
+        )
+
+    @staticmethod
     def ticker_store_async_provider(
         prefix: str,
     ) -> Callable[[], RedisAsyncTickerStore]:
@@ -197,11 +208,8 @@ class Providers:
         )
 
     @staticmethod
-    def candle_store_sync_provider(prefix: str) -> Callable[[], RedisCandleStore]:
-        return lambda: RedisCandleStore(
-            redis=get_redis_client(settings.REDIS_URL),
-            prefix=prefix,
-        )
+    def cooldown_async_provider(prefix: str) -> Callable[[], RedisAsyncCooldown]:
+        return lambda: RedisAsyncCooldown(redis=get_async_redis_client(settings.REDIS_URL), prefix=prefix)
 
     @staticmethod
     def kakao_oauth_provider() -> Callable[[], KakaoOAuth]:
@@ -294,6 +302,13 @@ class Providers:
         return lambda: get_binance_ws_client(config)
 
     @staticmethod
+    def candle_store_provider(prefix: str) -> Callable[[], RedisCandleStore]:
+        return lambda: RedisCandleStore(
+            redis=get_redis_client(settings.REDIS_URL),
+            prefix=prefix,
+        )
+
+    @staticmethod
     def market_snapshot_provider(prefix: str) -> Callable[[], RedisMarketSnapshot]:
         return lambda: RedisMarketSnapshot(
             redis=get_redis_client(settings.REDIS_URL),
@@ -323,8 +338,14 @@ class Providers:
         return lambda: RedisCooldown(redis=get_redis_client(settings.REDIS_URL), prefix=prefix)
 
     @staticmethod
-    def uow_provider(sqlalchemy_url: str) -> Callable[[], UnitOfWork]:
-        engine = create_sqlalchemy_engine(sqlalchemy_url)
+    def uow_provider(
+        sqlalchemy_url: str,
+        pool_size: int,
+        max_overflow: int
+    ) -> Callable[[], UnitOfWork]:
+        engine = create_sqlalchemy_engine(
+            sqlalchemy_url, pool_size, max_overflow
+        )
         SessionLocal = create_sessionmaker(engine)
 
         def _provide() -> UnitOfWork:
@@ -335,8 +356,15 @@ class Providers:
         return _provide
 
     @staticmethod
-    def async_uow_provider(sqlalchemy_async_url: str) -> Callable[[], AsyncUnitOfWork]:
-        engine = create_async_sqlalchemy_engine(sqlalchemy_async_url)
+    def async_uow_provider(
+        sqlalchemy_async_url: str,
+        pool_size: int,
+        max_overflow: int
+
+    ) -> Callable[[], AsyncUnitOfWork]:
+        engine = create_async_sqlalchemy_engine(
+            sqlalchemy_async_url, pool_size, max_overflow
+        )
         SessionLocal = create_async_sessionmaker(engine)
 
         def _provide() -> AsyncUnitOfWork:
@@ -450,7 +478,9 @@ def build_ws_config_bag() -> CoreDTO.WsConfigBag:
     return CoreDTO.WsConfigBag(
         app_name=settings.APP_NAME,
         deploy_env=settings.DEPLOY_ENV,
-        log_level=settings.API_LOG_LEVEL or settings.LOG_LEVEL,
+        log_level=settings.WS_LOG_LEVEL or settings.LOG_LEVEL,
+        pool_size=settings.WS_ASYNC_DB_POOL_SIZE,
+        max_overflow=settings.WS_ASYNC_DB_MAX_OVERFLOW,
     )
 
 
@@ -459,6 +489,8 @@ def build_api_config_bag() -> CoreDTO.ApiConfigBag:
         app_name=settings.APP_NAME,
         deploy_env=settings.DEPLOY_ENV,
         log_level=settings.API_LOG_LEVEL or settings.LOG_LEVEL,
+        pool_size=settings.API_DB_POOL_SIZE,
+        max_overflow=settings.API_DB_MAX_OVERFLOW,
         sentry_dsn=settings.SENTRY_DSN,
         sample_rate=settings.SAMPLE_RATE,
         traces_sample_rate=settings.TRACES_SAMPLE_RATE,
@@ -471,6 +503,8 @@ def build_worker_config_bag() -> CoreDTO.WorkerConfigBag:
         app_name=settings.APP_NAME,
         deploy_env=settings.DEPLOY_ENV,
         log_level=settings.WORKER_LOG_LEVEL or settings.LOG_LEVEL,
+        pool_size=settings.WORKER_DB_POOL_SIZE,
+        max_overflow=settings.WORKER_DB_MAX_OVERFLOW,
         sentry_dsn=settings.SENTRY_DSN,
         sample_rate=settings.SAMPLE_RATE,
         traces_sample_rate=settings.TRACES_SAMPLE_RATE,
@@ -491,6 +525,8 @@ def build_dispatcher_config_bag() -> CoreDTO.DispatcherConfigBag:
         app_name=settings.APP_NAME,
         deploy_env=settings.DEPLOY_ENV,
         log_level=settings.DISPATCHER_LOG_LEVEL or settings.LOG_LEVEL,
+        pool_size=settings.DISPATCHER_DB_POOL_SIZE,
+        max_overflow=settings.DISPATCHER_DB_MAX_OVERFLOW,
         sentry_dsn=settings.SENTRY_DSN,
         sample_rate=settings.SAMPLE_RATE,
         traces_sample_rate=settings.TRACES_SAMPLE_RATE,
@@ -505,6 +541,8 @@ def build_scheduler_config_bag() -> CoreDTO.SchedulerConfigBag:
         app_name=settings.APP_NAME,
         deploy_env=settings.DEPLOY_ENV,
         log_level=settings.SCHEDULER_LOG_LEVEL or settings.LOG_LEVEL,
+        pool_size=settings.SCHEDULER_DB_POOL_SIZE,
+        max_overflow=settings.SCHEDULER_DB_MAX_OVERFLOW,
         sentry_dsn=settings.SENTRY_DSN,
         sample_rate=settings.SAMPLE_RATE,
         traces_sample_rate=settings.TRACES_SAMPLE_RATE,
@@ -530,6 +568,8 @@ def build_collector_config_bag() -> CoreDTO.CollectorConfigBag:
         app_name=settings.APP_NAME,
         deploy_env=settings.DEPLOY_ENV,
         log_level=settings.COLLECTOR_LOG_LEVEL or settings.LOG_LEVEL,
+        pool_size=settings.COLLECTOR_ASYNC_DB_POOL_SIZE,
+        max_overflow=settings.COLLECTOR_ASYNC_DB_MAX_OVERFLOW,
         sentry_dsn=settings.SENTRY_DSN,
         sample_rate=settings.SAMPLE_RATE,
         traces_sample_rate=settings.TRACES_SAMPLE_RATE,
@@ -552,6 +592,8 @@ def build_stream_processor_config_bag() -> CoreDTO.StreamProcessorConfigBag:
         app_name=settings.APP_NAME,
         deploy_env=settings.DEPLOY_ENV,
         log_level=settings.STREAM_PROCESSOR_LOG_LEVEL or settings.LOG_LEVEL,
+        pool_size=settings.STREAM_PROCESSOR_ASYNC_DB_POOL_SIZE,
+        max_overflow=settings.STREAM_PROCESSOR_ASYNC_DB_MAX_OVERFLOW,
         sentry_dsn=settings.SENTRY_DSN,
         sample_rate=settings.SAMPLE_RATE,
         traces_sample_rate=settings.TRACES_SAMPLE_RATE,
@@ -566,11 +608,15 @@ def build_stream_processor_config_bag() -> CoreDTO.StreamProcessorConfigBag:
     )
 
 
-def create_service_factory(prefix: str) -> ServiceFactory:
+def create_service_factory(prefix: str, pool_size: int, max_overflow: int) -> ServiceFactory:
     return ServiceFactory(
-        uow=providers.uow_provider(settings.SQLALCHEMY_URL),
+        uow=providers.uow_provider(
+            settings.SQLALCHEMY_URL, 
+            pool_size, 
+            max_overflow
+        ),
 
-        candle_store=providers.candle_store_sync_provider(prefix),
+        candle_store=providers.candle_store_provider(prefix),
         market_snapshot=providers.market_snapshot_provider(prefix),
         alert_snapshot=providers.alert_snapshot_provider(prefix),
         alert_bucket=providers.alert_bucket_provider(prefix),
@@ -590,14 +636,21 @@ def create_service_factory(prefix: str) -> ServiceFactory:
     )
 
 
-def create_async_service_factory(prefix: str) -> AsyncServiceFactory:
+def create_async_service_factory(prefix: str, pool_size: int, max_overflow: int) -> AsyncServiceFactory:
     return AsyncServiceFactory(
-        uow=providers.async_uow_provider(settings.SQLALCHEMY_ASYNC_URL),
+        uow=providers.async_uow_provider(
+            settings.SQLALCHEMY_ASYNC_URL,
+            pool_size, 
+            max_overflow,
+        ),
 
         alert_snapshot=providers.alert_snapshot_async_provider(
             prefix=prefix
         ),
         alert_bucket=providers.alert_bucket_async_provider(
+            prefix=prefix
+        ),
+        alert_event=providers.alert_event_async_provider(
             prefix=prefix
         ),
         candle_store=providers.candle_store_async_provider(
@@ -609,14 +662,18 @@ def create_async_service_factory(prefix: str) -> AsyncServiceFactory:
         active_catalog=providers.active_catalog_provider(
             prefix=prefix
         ),
+        cooldown=providers.cooldown_async_provider(prefix),
     )
 
 
 @lru_cache
 def create_ws_context() -> WsContext:
     cfg = build_ws_config_bag()
-    svcs = create_async_service_factory(prefix=f"{cfg.app_name}:{cfg.deploy_env}")
-
+    svcs = create_async_service_factory(
+        prefix=f"{cfg.app_name}:{cfg.deploy_env}",
+        pool_size=cfg.pool_size,
+        max_overflow=cfg.max_overflow,
+    )
     return WsContext(
         config=cfg,
         svcs=svcs,
@@ -626,14 +683,22 @@ def create_ws_context() -> WsContext:
 @lru_cache
 def create_api_context() -> ApiContext:
     cfg = build_api_config_bag()
-    svcs = create_service_factory(prefix=f"{cfg.app_name}:{cfg.deploy_env}")
+    svcs = create_service_factory(
+        prefix=f"{cfg.app_name}:{cfg.deploy_env}",
+        pool_size=cfg.pool_size,
+        max_overflow=cfg.max_overflow,
+    )
     return ApiContext(config=cfg, svcs=svcs)
 
 
 @lru_cache
 def create_worker_context() -> WorkerContext:
     cfg = build_worker_config_bag()
-    svcs = create_service_factory(prefix=f"{cfg.app_name}:{cfg.deploy_env}")
+    svcs = create_service_factory(
+        prefix=f"{cfg.app_name}:{cfg.deploy_env}",
+        pool_size=cfg.pool_size,
+        max_overflow=cfg.max_overflow,
+    )
     redis = get_redis_client(settings.REDIS_URL)
     return WorkerContext(config=cfg, svcs=svcs, redis_client=redis)
 
@@ -641,7 +706,11 @@ def create_worker_context() -> WorkerContext:
 @lru_cache
 def create_dispatcher_context() -> DispatcherContext:
     cfg = build_dispatcher_config_bag()
-    svcs = create_service_factory(prefix=f"{cfg.app_name}:{cfg.deploy_env}")
+    svcs = create_service_factory(
+        prefix=f"{cfg.app_name}:{cfg.deploy_env}",
+        pool_size=cfg.pool_size,
+        max_overflow=cfg.max_overflow,
+    )
     redis = get_redis_client(settings.REDIS_URL)
     return DispatcherContext(config=cfg, svcs=svcs, redis_client=redis)
 
@@ -649,7 +718,11 @@ def create_dispatcher_context() -> DispatcherContext:
 @lru_cache
 def create_scheduler_context() -> SchedulerContext:
     cfg = build_scheduler_config_bag()
-    svcs = create_service_factory(prefix=f"{cfg.app_name}:{cfg.deploy_env}")
+    svcs = create_service_factory(
+        prefix=f"{cfg.app_name}:{cfg.deploy_env}",
+        pool_size=cfg.pool_size,
+        max_overflow=cfg.max_overflow,
+    )
     redis = get_redis_client(settings.REDIS_URL)
 
     return SchedulerContext(config=cfg, svcs=svcs, redis_client=redis)
@@ -658,7 +731,11 @@ def create_scheduler_context() -> SchedulerContext:
 @lru_cache
 def create_collector_context() -> CollectorContext:
     cfg = build_collector_config_bag()
-    svcs = create_async_service_factory(prefix=f"{cfg.app_name}:{cfg.deploy_env}")
+    svcs = create_async_service_factory(
+        prefix=f"{cfg.app_name}:{cfg.deploy_env}",
+        pool_size=cfg.pool_size,
+        max_overflow=cfg.max_overflow,
+    )
     async_redis = get_async_redis_client(settings.REDIS_URL)
 
     subscribe_facs_register: SubscribeFactoryRegistry = {
@@ -689,7 +766,11 @@ def create_collector_context() -> CollectorContext:
 @lru_cache
 def create_stream_processor_context() -> StreamProcessorContext:
     cfg = build_stream_processor_config_bag()
-    svcs = create_async_service_factory(prefix=f"{cfg.app_name}:{cfg.deploy_env}")
+    svcs = create_async_service_factory(
+        prefix=f"{cfg.app_name}:{cfg.deploy_env}",
+        pool_size=cfg.pool_size,
+        max_overflow=cfg.max_overflow,
+    )
     async_redis = get_async_redis_client(settings.REDIS_URL)
 
     return StreamProcessorContext(

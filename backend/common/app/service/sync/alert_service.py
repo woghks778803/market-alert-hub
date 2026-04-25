@@ -152,9 +152,11 @@ class AlertService:
 
             uow.commit()
 
-            alert_snapshot = uow.alerts.get_alert_snapshot_by_id(
+            alert_snapshot = uow.alerts.get_alert_snapshot_by_filter(
                 alert_id=alert.id,
                 user_id=user_id,
+                status=AlertStatus.ACTIVE,
+                archived_only=False,
             )
 
             self._sync_alert_snapshot(
@@ -231,7 +233,9 @@ class AlertService:
                 is_once=is_once,
 
                 last_fired_at=alert.last_fired_at,
+                created_at=alert.created_at,
                 updated_at=now,
+                deleted_at=alert.deleted_at,
             )
 
             uow.alerts.update_alert(
@@ -240,9 +244,11 @@ class AlertService:
 
             uow.commit()
 
-            alert_snapshot = uow.alerts.get_alert_snapshot_by_id(
+            alert_snapshot = uow.alerts.get_alert_snapshot_by_filter(
                 alert_id=alert_id,
                 user_id=user_id,
+                status=AlertStatus.ACTIVE,
+                archived_only=False,
             )
 
             self._sync_alert_snapshot(
@@ -328,9 +334,11 @@ class AlertService:
 
             uow.commit()
 
-            alert_snapshot = uow.alerts.get_alert_snapshot_by_id(
+            alert_snapshot = uow.alerts.get_alert_snapshot_by_filter(
                 alert_id=alert_id,
                 user_id=user_id,
+                status=AlertStatus.ACTIVE,
+                archived_only=False,
             )
 
             self._sync_alert_snapshot(
@@ -393,7 +401,7 @@ class AlertService:
         result = []
         for alert_snapshot in alert_snapshots:
             payload = AlertRule.alert_snapshot_to_payload(alert_snapshot)
-            print("payload", payload)
+
             bucket_key = self._alert_bucket.get_alert_bucket_key(
                 indicator=alert_snapshot.indicator,
                 exchange_code=alert_snapshot.exchange_code,
@@ -406,10 +414,6 @@ class AlertService:
             payload["bucket_key"] = bucket_key
 
             result.append(payload)
-
-        print("alert_snapshots", alert_snapshots)
-        print("result", result)
-        
         return result
 
     def _sync_alert_snapshot(
@@ -418,22 +422,22 @@ class AlertService:
         alert_id: int,
         alert_snapshot: AlertDTO.AlertSnapshot | None,
     ) -> None:
-        old_payload = self._alert_snapshot.alert_get(alert_id)
+        old_payload = self._alert_snapshot.get_alert(alert_id)
         if old_payload:
             old_bucket_key = old_payload.get("bucket_key")
 
             if old_bucket_key:
-                self._alert_bucket.alert_remove(
+                self._alert_bucket.remove_alert(
                     bucket_key=old_bucket_key,
                     alert_id=alert_id,
                 )
 
         if alert_snapshot is None:
-            self._alert_snapshot.alert_remove(alert_id)
+            self._alert_snapshot.remove_alert(alert_id)
             return
 
         if alert_snapshot.status != AlertStatus.ACTIVE:
-            self._alert_snapshot.alert_remove(alert_id)
+            self._alert_snapshot.remove_alert(alert_id)
             return
 
         payload = AlertRule.alert_snapshot_to_payload(alert_snapshot)
@@ -447,14 +451,14 @@ class AlertService:
             direction=alert_snapshot.direction,
         )
 
-        self._alert_bucket.alert_add(
+        self._alert_bucket.add_alert(
             bucket_key=bucket_key,
             alert_id=alert_snapshot.alert_id,
         )
 
         payload["bucket_key"] = bucket_key
 
-        self._alert_snapshot.alert_upsert(
+        self._alert_snapshot.upsert_alert(
             alert_id=alert_snapshot.alert_id,
             payload=payload,
         )

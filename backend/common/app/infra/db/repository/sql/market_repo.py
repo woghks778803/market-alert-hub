@@ -701,7 +701,7 @@ class SqlMarketRepo(MarketRepo):
         )
 
         rows = self._db.execute(stmt).all()
-
+        now = utcnow()
         return [
             MarketDTO.PriceSnapshotCreate(
                 exchange_instrument_id=r.exchange_instrument_id,
@@ -711,7 +711,7 @@ class SqlMarketRepo(MarketRepo):
                 low=r.low,
                 close=r.close,
                 volume=r.volume,
-                updated_at=utcnow(),
+                updated_at=now,
             )
             for r in rows
         ]
@@ -761,7 +761,7 @@ class SqlMarketRepo(MarketRepo):
         )
 
         rows = self._db.execute(stmt).all()
-
+        now = utcnow()
         return [
             MarketDTO.PriceSnapshotCreate(
                 exchange_instrument_id=r.exchange_instrument_id,
@@ -771,7 +771,7 @@ class SqlMarketRepo(MarketRepo):
                 low=r.low,
                 close=r.close,
                 volume=r.volume,
-                updated_at=utcnow(),
+                updated_at=now,
             )
             for r in rows
         ]

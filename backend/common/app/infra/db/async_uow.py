@@ -12,7 +12,7 @@ class AsyncUnitOfWork:
     ) -> None:
         self.db: AsyncSession = db() if callable(db) else db
 
-        self._alert_events = None
+        self._alerts = None
 
         self._done = False
         self._owns = owns_session
@@ -26,10 +26,10 @@ class AsyncUnitOfWork:
             
         try:
             if exc_type and not self._done:
-                self.db.rollback()
+                await self.db.rollback()
         finally:
             if self._owns:
-                self.db.close()
+                await self.db.close()
         return False
 
     async def commit(self) -> None:
@@ -48,7 +48,7 @@ class AsyncUnitOfWork:
         await self.db.flush()
 
     @property
-    async def alerts(self) -> AlertRepo:
+    def alerts(self) -> AlertRepo:
         if self._alerts is None:
             self._alerts = AsyncAlertRepo(self.db)
         return self._alerts

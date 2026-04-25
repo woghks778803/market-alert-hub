@@ -44,6 +44,9 @@ class ApiConfigBag:
     app_name: str
     deploy_env: str
     log_level: str
+    pool_size: int
+    max_overflow: int
+
     sentry_dsn: str
     sample_rate: float
     traces_sample_rate: float
@@ -55,6 +58,8 @@ class WsConfigBag:
     app_name: str
     deploy_env: str
     log_level: str
+    pool_size: int
+    max_overflow: int
 
 
 @dataclass(frozen=True)
@@ -62,6 +67,9 @@ class WorkerConfigBag:
     app_name: str
     deploy_env: str
     log_level: str
+    pool_size: int
+    max_overflow: int
+
     sentry_dsn: str
     sample_rate: float
     traces_sample_rate: float
@@ -82,6 +90,9 @@ class DispatcherConfigBag:
     app_name: str
     deploy_env: str
     log_level: str
+    pool_size: int
+    max_overflow: int
+
     sentry_dsn: str
     sample_rate: float
     traces_sample_rate: float
@@ -96,6 +107,9 @@ class SchedulerConfigBag:
     app_name: str
     deploy_env: str
     log_level: str
+    pool_size: int
+    max_overflow: int
+
     sentry_dsn: str
     sample_rate: float
     traces_sample_rate: float
@@ -129,6 +143,9 @@ class CollectorConfigBag:
     app_name: str
     deploy_env: str
     log_level: str
+    pool_size: int
+    max_overflow: int
+
     sentry_dsn: str
     sample_rate: float
     traces_sample_rate: float
@@ -164,6 +181,9 @@ class StreamProcessorConfigBag:
     app_name: str
     deploy_env: str
     log_level: str
+    pool_size: int
+    max_overflow: int
+    
     sentry_dsn: str
     sample_rate: float
     traces_sample_rate: float

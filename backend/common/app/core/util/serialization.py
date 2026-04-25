@@ -10,6 +10,7 @@ def to_canonical_json(fingerprint_dict: dict | None) -> str | None:
         return None
     return json.dumps(fingerprint_dict, sort_keys=True, separators=(",", ":"))
 
+
 def json_safe(value: Any) -> Any:
     if value is None:
         return None
@@ -30,3 +31,17 @@ def json_safe(value: Any) -> Any:
         return [json_safe(v) for v in value]
 
     return value
+
+
+def decode_bytes(value: Any) -> Any:
+    if isinstance(value, bytes):
+        return value.decode()
+
+    return value
+
+
+def decode_bytes_dict(data: dict[Any, Any]) -> dict[str, Any]:
+    return {
+        str(decode_bytes(key)): decode_bytes(value)
+        for key, value in data.items()
+    }

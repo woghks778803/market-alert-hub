@@ -2,7 +2,7 @@ import logging
 from dataclasses import dataclass
 from functools import lru_cache
 from redis.asyncio import Redis as AsyncRedis
-from redis.exceptions import RedisError
+from redis.exceptions import RedisError, ResponseError
 
 log = logging.getLogger(__name__)
 
@@ -141,6 +141,89 @@ class RedisClientAsync:
             return pubsub
         except RedisError:
             log.exception("redis psubscribe failed: patterns=%s", patterns)
+            raise
+
+    async def xadd(
+        self,
+        key: str,
+        fields: dict[str, str | bytes | int | float],
+        *,
+        maxlen: int | None = None,
+        approximate: bool = True,
+    ) -> str:
+        try:
+            result = await self._client.xadd(
+                name=key,
+                fields=fields,
+                maxlen=maxlen,
+                approximate=approximate,
+            )
+            return str(result)
+        except RedisError:
+            log.exception("redis xadd failed: key=%s", key)
+            raise
+
+    async def xgroup_create(
+        self,
+        *,
+        key: str,
+        group_name: str,
+        id: str = "0",
+        mkstream: bool = True,
+    ) -> bool:
+        try:
+            result = await self._client.xgroup_create(
+                name=key,
+                groupname=group_name,
+                id=id,
+                mkstream=mkstream,
+            )
+            return bool(result)
+
+        except ResponseError:
+            raise
+        except RedisError:
+            log.exception("redis xgroup_create failed: key=%s", key)
+            raise
+
+
+    async def xreadgroup(
+        self,
+        *,
+        group_name: str,
+        consumer_name: str,
+        streams: dict[str, str],
+        count: int,
+        block_ms: int,
+    ):
+        try:
+            result = await self._client.xreadgroup(
+                groupname=group_name,
+                consumername=consumer_name,
+                streams=streams,
+                count=count,
+                block=block_ms,
+            )
+            return result
+        except RedisError:
+            log.exception("redis xreadgroup failed: streams=%s", streams)
+            raise
+
+
+    async def xack(self, key: str, group_name: str, *message_ids: str) -> int:
+        try:
+            result = await self._client.xack(key, group_name, *message_ids)
+            return int(result)
+        except RedisError:
+            log.exception("redis xack failed: key=%s", key)
+            raise
+
+
+    def pipeline(self, transaction: bool = True):
+        try:
+            return self._client.pipeline(transaction=transaction)
+        except RedisError:
+            log.exception("redis pipeline create failed")
             raise
 
     def conn(self) -> AsyncRedis:

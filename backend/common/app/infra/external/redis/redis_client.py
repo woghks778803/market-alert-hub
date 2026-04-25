@@ -148,7 +148,7 @@ class RedisClient:
     def conn(self) -> SyncRedis:
         return self._client
 
-    def pipeline(self) -> Pipeline:
+    def pipeline(self, transaction: bool = True) -> Pipeline:
         """
         redis pipeline wrapper
 
@@ -159,25 +159,10 @@ class RedisClient:
             raw, _ = pipe.execute()
         """
         try:
-            return self._client.pipeline()
+            return self._client.pipeline(transaction=transaction)
         except RedisError:
             log.exception("redis pipeline create failed")
             raise
-
-    # def set_cooldown(self, key: str, *, ttl_sec: int) -> bool:
-    #     """
-    #     NX + EX ttl
-    #     """
-    #     return self.set(key, b"1", nx=True, ex=ttl_sec)
-
-    # def get_retry_after_sec(self, key: str, *, fallback: int) -> int:
-    #     """
-    #     ttl이 애매한 값(-1/-2)이면 fallback 반환.
-    #     """
-    #     t = self.ttl(key)
-    #     if t > 0:
-    #         return t
-    #     return fallback
 
 
 # 프로세스 내 재사용(bootstrap이 깔끔해짐)

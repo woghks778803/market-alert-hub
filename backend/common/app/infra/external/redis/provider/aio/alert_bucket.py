@@ -1,6 +1,6 @@
-from app.core.constants import OutboxEventType, BUCKET, PRICE
-from app.infra.external.redis.async_redis_client import RedisClientAsync
+from app.core.constants import OutboxEventType, BUCKET
 from app.domain import AlertPort
+from app.infra.external.redis.async_redis_client import RedisClientAsync
 
 class RedisAlertBucket(AlertPort.AsyncAlertBucket):
     def __init__(self, redis: RedisClientAsync, prefix: str):
@@ -27,7 +27,7 @@ class RedisAlertBucket(AlertPort.AsyncAlertBucket):
 
         return result
 
-    async def list_alert_id_many(self, *, bucket_keys: list[str]) -> list[int]:
+    async def list_alert_ids(self, *, bucket_keys: list[str]) -> list[int]:
         """
         여러 bucket의 alert_id 목록 조회
         """

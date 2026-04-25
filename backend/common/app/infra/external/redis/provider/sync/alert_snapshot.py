@@ -11,7 +11,7 @@ class RedisAlertSnapshot(AlertPort.AlertSnapshot):
         self._redis = redis
         self._prefix = prefix
 
-    def alert_upsert(self, alert_id: int, payload: dict[str, Any], ttl_sec: int | None = None) -> None:
+    def upsert_alert(self, alert_id: int, payload: dict[str, Any], ttl_sec: int | None = None) -> None:
         """
         단일 알림 Redis snapshot 반영
         """
@@ -31,14 +31,14 @@ class RedisAlertSnapshot(AlertPort.AlertSnapshot):
 
         pipe.execute()
 
-    def alert_remove(self, alert_id: int) -> None:
+    def remove_alert(self, alert_id: int) -> None:
         """
         단일 알림 Redis snapshot 제거
         """
         redis_key = self._snapshot_key()
         self._redis.hdel(redis_key, str(alert_id))
 
-    def alert_get(self, alert_id: int) -> dict[str, Any] | None:
+    def get_alert(self, alert_id: int) -> dict[str, Any] | None:
         redis_key = self._snapshot_key()
         raw = self._redis.hget(redis_key, str(alert_id))
 

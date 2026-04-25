@@ -1,7 +1,8 @@
 from typing import Any
 from datetime import datetime
+from decimal import Decimal
 from dataclasses import dataclass
-from app.core.constants import AlertStatus, AlertScope, AlertFormType, IndicatorType, DirectionType
+from app.core.constants import AlertStatus, AlertEventStatus, AlertScope, AlertFormType, IndicatorType, DirectionType
 
 @dataclass(slots=True, frozen=True)
 class AlertSummary:
@@ -55,11 +56,10 @@ class Alert:
     valid_from: datetime | None
     valid_to: datetime | None
 
-    # 수정 주의
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
-    last_fired_at: datetime | None = None
-    deleted_at: datetime | None = None
+    created_at: datetime | None
+    updated_at: datetime | None
+    last_fired_at: datetime | None
+    deleted_at: datetime | None
 
 @dataclass(slots=True, frozen=True)
 class AlertCreate:
@@ -130,3 +130,32 @@ class AlertSnapshot:
     valid_to: datetime | None
     last_fired_at: datetime | None
 
+
+@dataclass(slots=True, frozen=True)
+class AlertEvent:
+    id: int
+    alert_id: int
+    exchange_instrument_id: int | None
+
+    status: AlertEventStatus
+
+    detected_at: datetime
+    queued_at: datetime | None
+    
+    trigger_value: Decimal | None
+    context: dict | None
+    dedup_key: str
+    created_at: datetime
+
+
+@dataclass(slots=True, frozen=True)
+class AlertEventCreate:
+    alert_id: int
+    exchange_instrument_id: int | None
+    detected_at: datetime
+    trigger_value: Decimal | None
+    context: dict | None
+    dedup_key: str
+
+    status: AlertEventStatus = AlertEventStatus.PENDING
+    queued_at: datetime | None = None

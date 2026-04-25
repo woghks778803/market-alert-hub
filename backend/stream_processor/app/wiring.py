@@ -96,6 +96,7 @@ def _build_on_task_error() -> Callable[[str, BaseException], None]:
 def _build_specs(runtime: Any) -> list[tuple[str, TaskFactory]]:
     from app.stream.ticker_1s import run_ticker_1s_loop
     from app.stream.alert_price import run_alert_price_loop
+    from app.stream.alert_event import run_alert_event_loop
 
     cfg = runtime.ctx.config
     specs: list[tuple[str, TaskFactory]] = []
@@ -119,8 +120,15 @@ def _build_specs(runtime: Any) -> list[tuple[str, TaskFactory]]:
             ctx=runtime.ctx,
         )
 
+    def _alert_event():
+        return run_alert_event_loop(
+            stop_event=runtime.stop_event,
+            ctx=runtime.ctx,
+        )
+
     specs.append(("ticker:1s", _ticker_1s))
     specs.append(("alert:price", _alert_price))
+    specs.append(("alert:event", _alert_event))
 
     return specs
 

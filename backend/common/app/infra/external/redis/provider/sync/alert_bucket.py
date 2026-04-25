@@ -10,7 +10,7 @@ class RedisAlertBucket(AlertPort.AlertBucket):
         self._redis = redis
         self._prefix = prefix
 
-    def _alert_add(
+    def _add_alert(
         self,
         *,
         bucket_key: str,
@@ -32,7 +32,7 @@ class RedisAlertBucket(AlertPort.AlertBucket):
 
         pipe.execute()
 
-    def _alert_remove(
+    def _remove_alert(
         self,
         *,
         bucket_key: str,
@@ -44,26 +44,26 @@ class RedisAlertBucket(AlertPort.AlertBucket):
         redis_key = self._bucket_key(bucket_key)
         self._redis.srem(redis_key, str(alert_id))
 
-    def alert_add(
+    def add_alert(
         self,
         *,
         bucket_key: str,
         alert_id: int,
         ttl_sec: int | None = None,
     ) -> None:
-        self._alert_add(
+        self._add_alert(
             bucket_key=bucket_key,
             alert_id=alert_id,
             ttl_sec=ttl_sec,
         )
 
-    def alert_remove(
+    def remove_alert(
         self,
         *,
         bucket_key: str,
         alert_id: int,
     ) -> None:
-        self._alert_remove(
+        self._remove_alert(
             bucket_key=bucket_key,
             alert_id=alert_id,
         )

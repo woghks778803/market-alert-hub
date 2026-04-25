@@ -1,11 +1,8 @@
-from typing import Protocol
-from app.core.constants import AlertStatus, AlertSort
+from typing import Protocol, Sequence
 from app.domain import AlertDTO
 
 class AlertRepo(Protocol):
-    async def get_alert_summary(
+    async def upsert_alert_events(
         self,
-        *,
-        user_id: int,
-        deleted_is_null: bool = True,
-    ) -> AlertDTO.AlertSummary: ...
+        events: Sequence[AlertDTO.AlertEventCreate],
+    ) -> int: ...

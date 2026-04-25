@@ -38,11 +38,13 @@ class AlertRepo(Protocol):
         deleted_is_null: bool = True,
     ) -> AlertDTO.AlertSimple | None: ...
 
-    def get_alert_snapshot_by_id(
+    def get_alert_snapshot_by_filter(
         self,
         *,
         alert_id: int,
         user_id: int | None = None,
+        status: AlertStatus | None,
+        archived_only: bool = False,
         deleted_is_null: bool = True,
     ) -> AlertDTO.AlertSnapshot | None: ...
 
@@ -61,8 +63,8 @@ class AlertRepo(Protocol):
         self,
         *,
         status: AlertStatus | None,
-        deleted_is_null: bool = True, 
         archived_only: bool = False,
+        deleted_is_null: bool = True, 
         asc_order: bool = False,
         limit: int, 
         offset: int
