@@ -1,6 +1,7 @@
 from .settings import settings
 from app.core.constants import (
     ExchangeCode,
+    ChannelCode,
     CandleInterval,
     SNAP,
     META,
@@ -24,20 +25,25 @@ from app.runtime.app_context import (
     StreamProcessorContext,
 )
 
-# from app.infra.external.rq.queue_factory import RqQueueFactory, RqQueueConfig
-# from app.infra.external.rq.worker_factory import RqWorkerFactory, RqWorkerConfig
 from app.infra.external.transport.impl.httpx import (
-    HttpxSyncTransport,
+    HttpxTransport,
     HttpxTransportConfig,
+)
+
+from app.infra.external.notify.fcm.provider.push import FcmPush
+from app.infra.external.notify.fcm.rest_client import (
+    FcmRestClientConfig,
+    get_fcm_rest_client,
 )
 
 from app.infra.external.oauth.kakao.provider.oauth import KakaoOAuth
 from app.infra.external.oauth.kakao.rest_client import (
-    KakaoRestClient,
     KakaoRestClientConfig,
     get_kakao_rest_client,
 )
 
+from app.infra.external.redis.async_redis_client import get_async_redis_client
+from app.infra.external.redis.redis_client import get_redis_client
 from app.infra.external.redis.provider import (
     RedisAsyncMarketCatalog,
     RedisAsyncAlertSnapshot,
@@ -77,16 +83,13 @@ from app.infra.external.exchange.upbit.ws_client import (
     UpbitWsClientConfig,
     get_upbit_ws_client,
 )
+
 from app.infra.external.exchange.binance.ws_client import (
     BinanceWsClientConfig,
     get_binance_ws_client,
 )
 from app.infra.external.exchange.binance.provider.symbol import BinanceSymbol
-from app.infra.external.redis.async_redis_client import (
-    RedisClientAsync,
-    get_async_redis_client,
-)
-from app.infra.external.redis.redis_client import get_redis_client
+
 from app.infra.external.email.ses_client import SesEmailClient
 from app.infra.external.email.jinja_renderer import JinjaEmailRenderer
 
@@ -136,6 +139,10 @@ def _resolve_master_key() -> str:
         "Set CRYPTO_DATA_ENC_KEY or CRYPTO_DATA_ENC_SECRET_ID."
     )
 
+def _build_message_provider_registry():
+    return {
+        ChannelCode.FCM.value: providers.fcm_push_provider(),
+    }
 
 def _build_symbol_provider_registry():
     return {
@@ -212,6 +219,20 @@ class Providers:
         return lambda: RedisAsyncCooldown(redis=get_async_redis_client(settings.REDIS_URL), prefix=prefix)
 
     @staticmethod
+    def fcm_push_provider() -> Callable[[], FcmPush]:
+        config = FcmRestClientConfig(
+            service_account_path=settings.FCM_SERVICE_ACCOUNT_PATH,
+            project_id=settings.FCM_PROJECT_ID,
+            # app_name=,
+        )
+
+        return lambda: FcmPush(
+            rest_client=get_fcm_rest_client(
+                config=config,
+            ),
+        )
+
+    @staticmethod
     def kakao_oauth_provider() -> Callable[[], KakaoOAuth]:
         config = KakaoRestClientConfig(
             client_id=settings.KAKAO_CLIENT_ID,
@@ -219,14 +240,14 @@ class Providers:
             client_secret=settings.KAKAO_OAUTH_CLIENT_SECRET,
             admin_key=settings.KAKAO_OAUTH_ADMIN_KEY,
         )
-        auth_transport = HttpxSyncTransport(
+        auth_transport = HttpxTransport(
             HttpxTransportConfig(
                 base_url=settings.KAKAO_AUTH_REST_BASE_URL,
                 timeout_sec=10.0,
             )
         )
 
-        api_transport = HttpxSyncTransport(
+        api_transport = HttpxTransport(
             HttpxTransportConfig(
                 base_url=settings.KAKAO_API_REST_BASE_URL,
                 timeout_sec=10.0,
@@ -239,32 +260,6 @@ class Providers:
                 auth_transport=auth_transport,
                 api_transport=api_transport,
             )
-        )
-
-    @staticmethod
-    def kakao_rest_provider() -> Callable[[], KakaoRestClient]:
-        config = KakaoRestClientConfig(
-            client_id=settings.KAKAO_CLIENT_ID,
-            redirect_uri=settings.KAKAO_OAUTH_REDIRECT_URI,
-            client_secret=settings.KAKAO_OAUTH_CLIENT_SECRET,
-            admin_key=settings.KAKAO_OAUTH_ADMIN_KEY,
-        )
-        auth_transport = HttpxSyncTransport(
-            HttpxTransportConfig(
-                base_url=settings.KAKAO_AUTH_REST_BASE_URL,
-                timeout_sec=settings.HTTP_TIMEOUT_SEC,
-            )
-        )
-
-        api_transport = HttpxSyncTransport(
-            HttpxTransportConfig(
-                base_url=settings.KAKAO_API_REST_BASE_URL,
-                timeout_sec=settings.HTTP_TIMEOUT_SEC,
-            )
-        )
-
-        return lambda: get_kakao_rest_client(
-            config, auth_transport=auth_transport, api_transport=api_transport
         )
 
     @staticmethod
@@ -432,26 +427,6 @@ class Providers:
 
         return _build
 
-    # @staticmethod
-    # def rq_queue_factory_provider() -> Callable[[], RqQueueFactory]:
-    #     def _build() -> RqQueueFactory:
-    #         redis_client = get_redis_client(settings.REDIS_URL)
-    #         redis_conn_provider = redis_client.conn  # callable
-    #         cfg = RqQueueConfig()
-    #         return RqQueueFactory(redis_conn_provider, cfg=cfg)
-
-    #     return _build
-
-    # @staticmethod
-    # def rq_worker_factory_provider() -> Callable[[], RqWorkerFactory]:
-    #     def _build() -> RqWorkerFactory:
-    #         redis_client = get_redis_client(settings.REDIS_URL)
-    #         redis_conn_provider = redis_client.conn  # callable
-    #         cfg = RqWorkerConfig()
-    #         return RqWorkerFactory(redis_conn_provider, cfg=cfg)
-
-    #     return _build
-
 
 providers = Providers()
 
@@ -547,12 +522,12 @@ def build_scheduler_config_bag() -> CoreDTO.SchedulerConfigBag:
         sample_rate=settings.SAMPLE_RATE,
         traces_sample_rate=settings.TRACES_SAMPLE_RATE,
         redis_url=settings.REDIS_URL,
-        # exchange=settings.SCHEDULER_EXCHANGE,
         cleanup_interval_sec=settings.SCHEDULER_CLEANUP_INTERVAL_SEC,
-        sync_interval_sec=settings.SCHEDULER_SYNC_INTERVAL_SEC,
+        exchanges_interval_sec=settings.SCHEDULER_EXCHANGES_INTERVAL_SEC,
+        symbols_interval_sec=settings.SCHEDULER_SYMBOLS_INTERVAL_SEC,
         tickers_interval_sec=settings.SCHEDULER_TICKERS_INTERVAL_SEC,
         alerts_interval_sec=settings.SCHEDULER_ALERTS_INTERVAL_SEC,
-        trig_interval_sec=settings.SCHEDULER_TRIG_INTERVAL_SEC,
+        dispatch_interval_sec=settings.SCHEDULER_DISPATCH_INTERVAL_SEC,
         snapshot_intervals_sec=settings.SCHEDULER_SNAPSHOT_INTERVALS,
         restart_base_backoff_sec=settings.SCHEDULER_RESTART_BASE_BACKOFF_SEC,
         restart_max_backoff_sec=settings.SCHEDULER_RESTART_MAX_BACKOFF_SEC,
@@ -630,7 +605,8 @@ def create_service_factory(prefix: str, pool_size: int, max_overflow: int) -> Se
         hmac_hasher=providers.hmac_hasher_provider(),
         jwt_signer=providers.jwt_signer_provider(),
         secret_crypto=providers.secret_crypto_provider(),
-        symbol_providers=_build_symbol_provider_registry(),
+        exchange_symbol_providers=_build_symbol_provider_registry(),
+        channel_message_providers=_build_message_provider_registry(),
         kakao_oauth=providers.kakao_oauth_provider(),
         config=build_service_config_bag(prefix),
     )
@@ -778,16 +754,3 @@ def create_stream_processor_context() -> StreamProcessorContext:
         svcs=svcs,
         async_redis_client=async_redis,
     )
-
-
-# @lru_cache(maxsize=1)
-# def get_rq_queue_factory() -> RqQueueFactory:
-#     return providers.rq_queue_factory_provider()
-
-
-# @lru_cache(maxsize=1)
-# def get_rq_worker_factory() -> RqWorkerFactory:
-#     return providers.rq_worker_factory_provider()
-
-# rq_queue_factory = get_rq_queue_factory()
-# rq_worker_factory = get_rq_worker_factory()

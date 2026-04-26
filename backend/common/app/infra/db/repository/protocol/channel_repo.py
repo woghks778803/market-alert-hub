@@ -3,7 +3,7 @@ from app.domain import ChannelDTO
 from app.infra.db.model import UserChannelModel, ChannelProviderModel
 
 class ChannelRepo(Protocol): 
-    def list_channel_by_filter(
+    def list_provider_by_filter(
         self,
         *,
         is_active: bool = True,

@@ -19,7 +19,7 @@ from .alert_bucket_policy import AlertBucketPolicy as AlertBucketPolicyModel
 from .alert_channel_target import AlertChannelTarget as AlertChannelTargetModel
 from .alert_event import AlertEvent as AlertEventModel
 from .alert_type import AlertType as AlertTypeModel
-from .delivery import Delivery as DeliveryModel
+from .alert_delivery import AlertDelivery as AlertDeliveryModel
 from .watchlist_item import WatchlistItem as WatchlistItemModel
 from .outbox import Outbox as OutboxModel
 from .outbox_attempt import OutboxAttempt as OutboxAttemptModel
@@ -46,9 +46,9 @@ __all__ = [
     "AlertChannelTargetModel",
     "AlertEventModel",
     "AlertTypeModel",
+    "AlertDeliveryModel",
     "UserChannelModel",
     "ChannelProviderModel",
-    "DeliveryModel",
     "WatchlistItemModel",
     "OutboxModel",
     "OutboxAttemptModel",

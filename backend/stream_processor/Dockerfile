@@ -4,8 +4,3 @@ WORKDIR /app
 
 COPY common/requirements.txt .
 RUN pip install --upgrade pip && pip install -r /app/requirements.txt
-
-COPY ./stream_processor /app
-
-RUN chmod +x /app/entrypoint.sh
-ENTRYPOINT ["/app/entrypoint.sh"]

@@ -27,7 +27,7 @@ class KakaoOAuth(AuthPort.KakaoOAuth):
         return self._to_identity(user_data)
 
     # -------------------------
-    # 3️연결 해제
+    # 연결 해제
     # -------------------------
     def unlink(self, provider_user_id: int) -> None:
         self.rest_client.unlink(provider_user_id)

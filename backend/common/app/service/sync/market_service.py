@@ -23,12 +23,12 @@ class MarketService:
         self,
         *,
         uow_factory: Callable[[], UnitOfWork],
-        symbol_providers: dict[str, MarketPort.ExchangeSymbol],
+        exchange_symbol_providers: dict[str, MarketPort.ExchangeSymbol],
         candle_store: MarketPort.CandleStore,
         market_snapshot: MarketPort.MarketSnapshot,
     ) -> None:
         self._uow_factory = uow_factory
-        self._symbol_providers = symbol_providers
+        self._exchange_symbol_providers = exchange_symbol_providers
         self._candle_store = candle_store
         self._market_snapshot = market_snapshot
 
@@ -376,7 +376,7 @@ class MarketService:
         return snapshot
 
     def sync_exchange_instruments(self, exchange_code: str):
-        raw_symbols = self._symbol_providers[
+        raw_symbols = self._exchange_symbol_providers[
             exchange_code
         ].list_symbols()  # list[MarketDTO.SymbolInfo]
 

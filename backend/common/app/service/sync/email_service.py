@@ -29,21 +29,6 @@ class EmailService:
                 raise ValidationAppError(f"Invalid email: {e}") from ex
         return out
 
-    # def send_welcome(
-    #     self, to: Sequence[str], user_name: str, dashboard_link: str
-    # ) -> str:
-    #     to = self._validate_recipients(to)
-
-    #     html = self.renderer().render(
-    #         "user_welcome.html",
-    #         {"user_name": user_name, "dashboard_link": dashboard_link},
-    #     )
-    #     return self.client().send(
-    #         subject="[AlertPing] 회원가입을 환영합니다",
-    #         html_body=html,
-    #         to=to,
-    #     )
-
     def send_email_verify(
         self, *, user: UserDTO.UserEmailInfo, verify_token: str
     ) -> dict:

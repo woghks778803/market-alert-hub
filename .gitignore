@@ -56,6 +56,8 @@ redis_data/
 .env.*
 !*.env.example
 !**/*.env.example
+ops/dev/env/
+ops/dev/secrets/
 
 # ======================
 # VSCode / IDE
@@ -84,7 +86,7 @@ Thumbs.db
 # ======================
 # Deploy hold
 # ======================
-backend/api/app/api/realtime/
-backend/common/app/infra/external/websocket/
+backend/common/app/infra/external/notify/telegram
+backend/common/app/infra/external/notify/discord
 backend/common/app/script
 branch_delete.sh

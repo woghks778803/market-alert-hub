@@ -14,7 +14,7 @@ class OutboxRepo(Protocol):
     def update_outbox_by_filter(
         self, filters: OutboxDTO.OutboxFilter, updates: OutboxDTO.OutboxUpdate
     ) -> int: ...
-    def list_outboxs_by_filter(
+    def list_outbox_by_filter(
         self,
         filters: OutboxDTO.OutboxFilter,
         *,

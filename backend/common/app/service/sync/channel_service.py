@@ -14,9 +14,9 @@ class ChannelService:
         self._hmac = hmac
 
     # 목록
-    def list_channel_by_filter(self, limit: int, offset: int):
+    def list_provider_by_filter(self, limit: int, offset: int):
         with self._uow_factory() as uow:
-            rows = uow.channels.list_channel_by_filter(limit=limit, offset=offset)
+            rows = uow.channels.list_provider_by_filter(limit=limit, offset=offset)
             return rows
 
     def get_by_channel_id(self, *, user_channel_id: int):

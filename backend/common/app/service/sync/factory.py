@@ -3,7 +3,12 @@ from functools import cached_property
 
 from app.core import dto as CoreDTO
 from app.domain.shared.uow import UnitOfWork
-from app.domain import EmailPort, CryptoPort, MarketPort, AlertPort, AuthPort, ThrottlePort
+from app.domain import (
+    EmailPort, CryptoPort, 
+    MarketPort, AlertPort, 
+    AuthPort, ThrottlePort,
+    ChannelPort
+)
 
 from .auth_service import AuthService
 from .user_service import UserService
@@ -34,7 +39,8 @@ class ServiceFactory:
         jwt_signer: Callable[[], CryptoPort.TokenSigner],
         secret_crypto: Callable[[], CryptoPort.SecretCrypto],
         kakao_oauth: Callable[[], AuthPort.KakaoOAuth],
-        symbol_providers: dict[str, Callable[[], MarketPort.ExchangeSymbol]],
+        exchange_symbol_providers: dict[str, Callable[[], MarketPort.ExchangeSymbol]],
+        channel_message_providers: dict[str, Callable[[], ChannelPort.ChannelMessage]],
         config: CoreDTO.ServiceConfigBag,
     ) -> None:
         self._uow = uow
@@ -51,12 +57,17 @@ class ServiceFactory:
         self._jwt_signer = jwt_signer
         self._secret_crypto = secret_crypto
         self._kakao_oauth = kakao_oauth
-        self._symbol_providers = symbol_providers
+        self._exchange_symbol_providers = exchange_symbol_providers
+        self._channel_message_providers = channel_message_providers
         self._config = config
 
     @cached_property
-    def symbol_providers(self):
-        return {k: v() for k, v in self._symbol_providers.items()}
+    def exchange_symbol_providers(self):
+        return {k: v() for k, v in self._exchange_symbol_providers.items()}
+
+    @cached_property
+    def channel_message_providers(self):
+        return {k: v() for k, v in self._channel_message_providers.items()}
 
     @cached_property
     def candle_store(self):
@@ -115,6 +126,7 @@ class ServiceFactory:
     def alerts(self) -> AlertService:
         return AlertService(
             uow_factory=self._uow,
+            channel_message_providers=self.channel_message_providers,
             alert_snapshot=self.alert_snapshot,
             alert_bucket=self.alert_bucket,
         )
@@ -127,7 +139,7 @@ class ServiceFactory:
     def markets(self) -> MarketService:
         return MarketService(
             uow_factory=self._uow,
-            symbol_providers=self.symbol_providers,
+            exchange_symbol_providers=self.exchange_symbol_providers,
             candle_store=self.candle_store,
             market_snapshot=self.market_snapshot,
         )

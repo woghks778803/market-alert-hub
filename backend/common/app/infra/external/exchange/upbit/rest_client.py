@@ -6,26 +6,29 @@ from .shared.types import UpbitMarket
 
 from app.infra.external.transport.port.http import SyncHttpTransport
 from app.infra.external.transport.impl.httpx import (
-    HttpxSyncTransport,
+    HttpxTransport,
     HttpxTransportConfig,
 )
 
 
 @dataclass(frozen=True)
 class UpbitRestClientConfig:
-    base_url: str = "https://api.upbit.com"
+    base_url: str
     timeout_sec: float = 10.0
 
 
 class UpbitRestClient:
     def __init__(
         self,
-        config: UpbitRestClientConfig | None = None,
+        config: UpbitRestClientConfig,
         *,
         transport: SyncHttpTransport | None = None,
     ) -> None:
-        self._config = config or UpbitRestClientConfig()
-        self._transport = transport or HttpxSyncTransport(
+        if not config.base_url:
+            raise RuntimeError("Upbit base_url is required")
+
+        self._config = config
+        self._transport = transport or HttpxTransport(
             HttpxTransportConfig(
                 base_url=self._config.base_url,
                 timeout_sec=self._config.timeout_sec,
@@ -83,5 +86,7 @@ class UpbitRestClient:
         return out
 
 
-def get_upbit_rest_client(config: UpbitRestClientConfig) -> UpbitRestClient:
+def get_upbit_rest_client(
+    config: UpbitRestClientConfig
+) -> UpbitRestClient:
     return UpbitRestClient(config)

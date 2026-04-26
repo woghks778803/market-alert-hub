@@ -44,3 +44,21 @@ class ChannelProvider:
     is_active: bool
     created_at: datetime
     updated_at: datetime
+
+@dataclass(frozen=True)
+class ChannelMessage:
+    target: str
+    title: str
+    body: str
+    data: dict[str, str] | None = None
+
+@dataclass(frozen=True)
+class ChannelMessageResult:
+    success: bool
+    message_id: str | None = None
+    error: str | None = None
+
+@dataclass(slots=True, frozen=True)
+class ChannelSendItem:
+    delivery_id: int
+    message: ChannelMessage

@@ -89,7 +89,7 @@ class SqlOutboxRepo(OutboxRepo):
 
         return int(getattr(result, "rowcount", 0) or 0)
 
-    def list_outboxs_by_filter(
+    def list_outbox_by_filter(
         self,
         filters: OutboxDTO.OutboxFilter,
         *,

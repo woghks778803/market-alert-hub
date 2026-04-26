@@ -6,11 +6,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Any
 from app.core.constants import (
     OutboxEventType,
-    ExchangeCode,
-    SNAP,
-    META,
-    SYMBOLS,
-    EXCHANGES,
 )
 
 
@@ -131,6 +126,9 @@ class Settings(BaseSettings):
     REDIS_STREAM_ALERTS: str = Field(default="alerts")
     REDIS_STREAM_DELIVERIES: str = Field(default="deliveries")
 
+    # tickers
+    SYNC_TICKERS_BATCH_SIZE: int = 500
+
     # exchanges
     SYNC_EXCHANGES_BATCH_SIZE: int = 500
     SYNC_EXCHANGES_TTL_SEC: int = 600
@@ -142,6 +140,13 @@ class Settings(BaseSettings):
     # alerts
     SYNC_ALERTS_BATCH_SIZE: int = 500
     SYNC_ALERTS_TTL_SEC: int = 600
+    DISPATCH_ALERT_EVENTS_BATCH_SIZE: int = 500
+
+    # FCM
+    FCM_SCOPE: str = "https://www.googleapis.com/auth/firebase.messaging"
+    FCM_REST_BASE_URL: str = "https://fcm.googleapis.com"
+    FCM_PROJECT_ID: str | None = None
+    FCM_SERVICE_ACCOUNT_PATH: str | None = None
 
     # --- Collector ---
     COLLECTOR_LOG_LEVEL: str = Field(default="INFO")
@@ -198,10 +203,11 @@ class Settings(BaseSettings):
 
     # Schedule interval
     SCHEDULER_CLEANUP_INTERVAL_SEC: int = 86400
-    SCHEDULER_SYNC_INTERVAL_SEC: int = 1800  # 30분
+    SCHEDULER_EXCHANGES_INTERVAL_SEC: int = 1800
+    SCHEDULER_SYMBOLS_INTERVAL_SEC: int = 1800
     SCHEDULER_TICKERS_INTERVAL_SEC: int = 60  # 1분
     SCHEDULER_ALERTS_INTERVAL_SEC: int = 300 # 5분
-    SCHEDULER_TRIG_INTERVAL_SEC: int = 3  # 3초
+    SCHEDULER_DISPATCH_INTERVAL_SEC: int = 10
     SCHEDULER_SNAPSHOT_INTERVALS: list[int] = Field(
         default_factory=lambda: [60, 3600, 86400]
     )
@@ -252,6 +258,10 @@ class Settings(BaseSettings):
         event_type dict로 묶음
         """
         return {
+            OutboxEventType.DISPATCH_ALERT_EVENTS.value: {
+                "run_key": OutboxEventType.DISPATCH_ALERT_EVENTS.value,
+                "batch_size": self.DISPATCH_ALERT_EVENTS_BATCH_SIZE,
+            },
             OutboxEventType.CLEANUP_DELETED_USERS.value: {
                 "run_key": OutboxEventType.CLEANUP_DELETED_USERS.value,
             },
@@ -259,17 +269,18 @@ class Settings(BaseSettings):
                 "run_key": OutboxEventType.PERSIST_SNAPSHOTS.value,
             },
             OutboxEventType.SYNC_EXCHANGES.value: {
-                "run_key": EXCHANGES,
+                "run_key": OutboxEventType.SYNC_EXCHANGES.value,
                 "batch_size": self.SYNC_EXCHANGES_BATCH_SIZE,
                 "ttl_sec": self.SYNC_EXCHANGES_TTL_SEC,
             },
             OutboxEventType.SYNC_SYMBOLS.value: {
-                "run_key": SYMBOLS,
+                "run_key": OutboxEventType.SYNC_SYMBOLS.value,
                 "batch_size": self.SYNC_SYMBOLS_BATCH_SIZE,
                 "ttl_sec": self.SYNC_SYMBOLS_TTL_SEC,
             },
             OutboxEventType.SYNC_TICKERS.value: {
                 "run_key": OutboxEventType.SYNC_TICKERS.value,
+                "batch_size": self.SYNC_TICKERS_BATCH_SIZE,
             },
             OutboxEventType.SYNC_ALERTS.value: {
                 "run_key": OutboxEventType.SYNC_ALERTS.value,

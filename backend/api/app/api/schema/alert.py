@@ -2,7 +2,7 @@ from typing import Literal, Any
 from datetime import datetime
 from decimal import Decimal
 from pydantic import BaseModel, ConfigDict
-from app.core.constants import AlertStatus, AlertScope, AlertFormType, IndicatorType, DirectionType, ThrottleTimeframe
+from app.core.constants import AlertStatus, AlertFormType, IndicatorType, DirectionType, ThrottleTimeframe
 
 _model_cfg = ConfigDict(from_attributes=True, use_enum_values=True)
 

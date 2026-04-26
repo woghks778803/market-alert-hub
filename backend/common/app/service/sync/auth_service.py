@@ -126,7 +126,7 @@ class AuthService:
 
         # 3) outbox fingerprint (중복 방지)
         fp_dict: dict[str, Any] = {
-            "event_type": OutboxEventType.AUTH_EMAIL_VERIFY,
+            "event_type": OutboxEventType.AUTH_EMAIL_VERIFY.value,
             "aggregate_type": "user",
             "aggregate_id": user_id,
             "email_verification_id": email_verification.id,
@@ -641,7 +641,7 @@ class AuthService:
             )
 
             outbox_fingerprint_dict = {
-                "event_type": OutboxEventType.AUTH_PASSWORD_RESET,
+                "event_type": OutboxEventType.AUTH_PASSWORD_RESET.value,
                 "aggregate_type": "user",
                 "aggregate_id": user.id,
                 "password_reset_id": password_reset.id,

@@ -1,4 +1,4 @@
-from .channel import dto as ChannelDTO, rules as ChannelRule
+from .channel import dto as ChannelDTO, ports as ChannelPort, rules as ChannelRule
 from .market import dto as MarketDTO, ports as MarketPort, rules as MarketRule
 from .auth import dto as AuthDTO, ports as AuthPort, rules as AuthRule
 from .watchlist import dto as WatchlistDTO
@@ -12,6 +12,7 @@ from .alert import dto as AlertDTO, ports as AlertPort, rules as AlertRule
 
 __all__ = [
     "ChannelDTO",
+    "ChannelPort",
     "ChannelRule",
     "MarketDTO",
     "MarketRule",

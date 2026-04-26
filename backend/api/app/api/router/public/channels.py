@@ -28,7 +28,7 @@ router = APIRouter(prefix="/channels")
 #     svcs: ServiceFactory = Depends(get_services),
 #     meta: RequestMeta = Depends(get_request_meta),
 # ):
-#     rows = svcs.channels.list_channel_by_filter(limit=limit, offset=offset)
+#     rows = svcs.channels.list_provider_by_filter(limit=limit, offset=offset)
 #     return ok(rows, request_id=meta.request_id)
 
 

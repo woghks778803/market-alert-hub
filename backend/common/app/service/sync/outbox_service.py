@@ -62,7 +62,7 @@ class OutboxService:
             outbox_filter = OutboxDTO.OutboxFilter(
                 status=OutboxStatus.PENDING, next_run_at=utcnow()
             )
-            ids = uow.outboxs.list_outboxs_by_filter(outbox_filter, limit=limit)
+            ids = uow.outboxs.list_outbox_by_filter(outbox_filter, limit=limit)
             if not ids:
                 return 0
 

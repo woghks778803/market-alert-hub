@@ -12,7 +12,7 @@ class SqlChannelRepo(ChannelRepo):
     def __init__(self, db: DbSession):
         self._db = db
 
-    def list_channel_by_filter(
+    def list_provider_by_filter(
         self,
         *,
         is_active: bool = True,

@@ -5,7 +5,3 @@ WORKDIR /app
 COPY common/requirements.txt .
 RUN pip install --upgrade pip && pip install -r /app/requirements.txt
 
-COPY ./collector /app
-
-RUN chmod +x /app/entrypoint.sh
-ENTRYPOINT ["/app/entrypoint.sh"]

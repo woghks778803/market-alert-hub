@@ -30,10 +30,15 @@ watchfiles
 boto3>=1.34,<2.0
 botocore>=1.34,<2.0  # (boto3 설치 시 함께 설치됨)
 
-# --- fro email ---
+# --- Google API / Auth ---
+requests==2.32.5
+google-auth==2.52.0
+firebase-admin==7.4.0
+
+# --- frontend template ---
 jinja2>=3.1         # (옵션) HTML 템플릿 렌더링용
 
-# --- Exchange WS/REST ---
+# --- WS/REST ---
 aiohttp>=3.9
 websockets>=12
 httpx[http2]==0.28.1

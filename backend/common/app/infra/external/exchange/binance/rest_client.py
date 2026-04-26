@@ -10,26 +10,29 @@ from .shared.types import BinanceMarket
 
 from app.infra.external.transport.port.http import SyncHttpTransport
 from app.infra.external.transport.impl.httpx import (
-    HttpxSyncTransport,
+    HttpxTransport,
     HttpxTransportConfig,
 )
 
 
 @dataclass(frozen=True)
 class BinanceRestClientConfig:
-    base_url: str = "https://api.binance.com"
+    base_url: str
     timeout_sec: float = 10.0
 
 
 class BinanceRestClient:
     def __init__(
         self,
-        config: BinanceRestClientConfig | None = None,
+        config: BinanceRestClientConfig,
         *,
         transport: SyncHttpTransport | None = None,
     ) -> None:
-        self._config = config or BinanceRestClientConfig()
-        self._transport = transport or HttpxSyncTransport(
+        if not config.base_url:
+            raise RuntimeError("Binance base_url is required")
+
+        self._config = config
+        self._transport = transport or HttpxTransport(
             HttpxTransportConfig(
                 base_url=self._config.base_url,
                 timeout_sec=self._config.timeout_sec,
@@ -149,5 +152,7 @@ class BinanceRestClient:
         return out
 
 
-def get_binance_rest_client(config: BinanceRestClientConfig) -> BinanceRestClient:
+def get_binance_rest_client(
+    config: BinanceRestClientConfig,
+) -> BinanceRestClient:
     return BinanceRestClient(config)
