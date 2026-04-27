@@ -7,6 +7,7 @@ from app.core.constants import AlertStatus, AlertSort
 from app.domain import AlertDTO
 from app.infra.db.model import AlertModel, AlertTypeModel, AlertEventModel, ExchangeInstrumentModel, ExchangeModel, UserModel
 from app.infra.db.repository.protocol.aio.alert_repo import AlertRepo
+from app.infra.db.utils import to_row_dict
 
 a = AlertModel
 at = AlertTypeModel
@@ -22,31 +23,27 @@ class AsyncAlertRepo(AlertRepo):
     async def upsert_alert_events(
         self,
         events: Sequence[AlertDTO.AlertEventCreate],
+        *,
+        chunk_size: int = 1000,
     ) -> int:
+        total = 0
+
         if not events:
-            return 0
+            return total
 
-        rows = [
-            {
-                "alert_id": event.alert_id,
-                "exchange_instrument_id": event.exchange_instrument_id,
-                "status": event.status,
-                "detected_at": event.detected_at,
-                "queued_at": event.queued_at,
-                "trigger_value": event.trigger_value,
-                "context": event.context,
-                "dedup_key": event.dedup_key,
-            }
-            for event in events
-        ]
+        for i in range(0, len(events), chunk_size):
+            chunk = events[i : i + chunk_size]
+            values = [to_row_dict(r) for r in chunk]
 
-        stmt = mysql_insert(ae).values(rows)
+            stmt = mysql_insert(ae).values(values)
 
-        # 중복 발생 후 실행할 update 내용
-        stmt = stmt.on_duplicate_key_update(
-            id=ae.id, # 중복이면 수정 무시
-        )
+            # 중복 발생 후 실행할 update 내용
+            stmt = stmt.on_duplicate_key_update(
+                id=ae.id, # 중복이면 수정 무시
+            )
 
-        result = await self._db.execute(stmt)
+            result = await self._db.execute(stmt)
 
-        return int(result.rowcount or 0)
+            total += int(result.rowcount or 0)
+
+        return total

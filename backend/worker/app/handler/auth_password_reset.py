@@ -1,5 +1,5 @@
 from typing import Any, Mapping
-from app.core.constants import LOCK
+from app.core.constants import OutboxEventType, LOCK
 from app.core.util.datetime import utcnow, ensure_utc
 from app.runtime.app_context import WorkerContext
 from app.util.utils import require, try_acquire_lock, release_lock
@@ -31,7 +31,7 @@ def handle_auth_password_reset(
     if expires_at <= now:
         raise SkipHandler("expired")
 
-    lock_key = f"{app_name}:{deploy_env}:{LOCK}:password_reset_send:{password_reset_id}"
+    lock_key = f"{app_name}:{deploy_env}:{LOCK}:{OutboxEventType.AUTH_PASSWORD_RESET.value}:{password_reset_id}"
     token = try_acquire_lock(
         ctx.redis_client, lock_key, ttl_sec=ctx.config.outbox_send_lock_ttl_sec
     )

@@ -2,16 +2,31 @@ from typing import Sequence
 from datetime import datetime
 from sqlalchemy.orm import Session as DbSession
 from sqlalchemy import update, insert, select, and_, or_, asc, desc, func, case
-from app.core.constants import UserStatus, AlertStatus, AlertSort
+from app.core.constants import UserStatus, AlertStatus, AlertSort, AlertEventStatus, AlertDeliveryStatus
 from app.domain import AlertDTO
-from app.infra.db.model import AlertModel, AlertTypeModel, ExchangeInstrumentModel, ExchangeModel, UserModel
+from app.infra.db.model import (
+    AlertModel, 
+    AlertTypeModel, 
+    AlertEventModel,
+    AlertDeliveryModel, 
+    ExchangeInstrumentModel, 
+    ExchangeModel, 
+    UserModel,
+    UserChannelModel,
+    ChannelProviderModel,
+)
 from app.infra.db.repository.protocol.alert_repo import AlertRepo
+from app.infra.db.utils import to_row_dict
 
 a = AlertModel
 at = AlertTypeModel
+ae = AlertEventModel
+ad = AlertDeliveryModel
 e = ExchangeModel
 ei = ExchangeInstrumentModel
 u = UserModel
+uc = UserChannelModel
+cp = ChannelProviderModel
 
 class SqlAlertRepo(AlertRepo):
     def __init__(self, db: DbSession) -> None:
@@ -211,11 +226,15 @@ class SqlAlertRepo(AlertRepo):
         stmt = (
             select(
                 a.id.label("alert_id"),
+                a.name.label("alert_name"),
                 a.user_id.label("user_id"),
+
                 a.status.label("status"),
 
                 a.alert_type_id.label("alert_type_id"),
                 at.code.label("alert_type_code"),
+                at.name.label("alert_type_name"),
+
                 at.scope.label("scope"),
                 at.indicator.label("indicator"),
                 at.direction.label("direction"),
@@ -226,6 +245,7 @@ class SqlAlertRepo(AlertRepo):
                 ei.exchange_symbol.label("exchange_symbol"),
 
                 a.params.label("params"),
+                at.param_schema.label("param_schema"),
 
                 a.throttle_seconds.label("throttle_seconds"),
                 a.valid_from.label("valid_from"),
@@ -308,6 +328,145 @@ class SqlAlertRepo(AlertRepo):
         return [row.to_dto() for row in rows]
     
 
+    def list_alert_event_by_status(
+        self,
+        *,
+        status: AlertEventStatus | None,
+        limit: int, 
+        offset: int
+    ) -> Sequence[AlertDTO.AlertEvent]:
+        stmt = (
+            select(ae)
+            .select_from(ae)
+            .join(a, a.id == ae.alert_id)
+            .order_by(ae.detected_at.asc(), ae.id.asc())
+            .limit(limit)
+            .offset(offset)
+        )
+
+        if status:
+            stmt = stmt.where(ae.status == status)
+
+        rows = self._db.execute(stmt).scalars().all()
+        return [row.to_dto() for row in rows]
+
+    def list_alert_event_by_filter(
+        self,
+        *,
+        alert_event_ids: Sequence[int],
+        status: AlertEventStatus,
+    ) -> Sequence[AlertDTO.AlertEvent]:
+
+        stmt = (
+            select(ae)
+            .where(
+                ae.id.in_(alert_event_ids),
+                ae.status == status,
+            )
+            .order_by(ae.id.asc())
+        )
+
+        rows = self._db.execute(stmt).scalars().all()
+        return [row.to_dto() for row in rows]
+
+    def list_alert_delivery_by_filter(
+        self,
+        *,
+        alert_event_ids: Sequence[int],
+        status: AlertDeliveryStatus,
+    ) -> Sequence[AlertDTO.AlertDelivery]:
+        stmt = (
+            select(ad)
+            .where(
+                ad.alert_event_id.in_(alert_event_ids),
+                ad.status == status,
+            )
+            .order_by(ad.id.asc())
+        )
+
+        rows = self._db.execute(stmt).scalars().all()
+        return [row.to_dto() for row in rows]
+
+    def list_alert_delivery_targets(
+        self,
+        *,
+        alert_delivery_ids: Sequence[int],
+        status: AlertDeliveryStatus,
+    ) -> Sequence[AlertDTO.AlertDeliveryTarget]:
+        stmt = (
+            select(
+                ad.id.label("alert_delivery_id"),
+                ad.alert_event_id.label("alert_event_id"),
+                ad.user_channel_id.label("user_channel_id"),
+                ad.status.label("delivery_status"),
+
+                ae.alert_id.label("alert_id"),
+                ae.exchange_instrument_id.label("exchange_instrument_id"),
+                ae.trigger_value.label("trigger_value"),
+                ae.context.label("context"),
+                ae.detected_at.label("detected_at"),
+
+                uc.channel_provider_id.label("channel_provider_id"),
+                uc.address.label("address"),
+                uc.config.label("channel_config"),
+
+                cp.code.label("channel_provider_code"),
+            )
+            .select_from(ad)
+            .join(ae, ae.id == ad.alert_event_id)
+            .join(uc, uc.id == ad.user_channel_id)
+            .join(cp, cp.id == uc.channel_provider_id)
+            .where(
+                ad.id.in_(alert_delivery_ids),
+                ad.status == status,
+                uc.is_active.is_(True),
+                uc.deleted_at.is_(None),
+                uc.address.is_not(None),
+                cp.is_active.is_(True),
+            )
+            .order_by(ad.id.asc())
+        )
+
+        rows = self._db.execute(stmt).mappings().all()
+        return [AlertDTO.AlertDeliveryTarget(**row) for row in rows]
+
+    def list_user_channel_by_filter(
+        self,
+        *,
+        alert_event_ids: Sequence[int],
+        status: AlertEventStatus,
+    ) -> Sequence[AlertDTO.AlertEventChannel]:
+        stmt = (
+            select(
+                ae.id.label("alert_event_id"),
+                ae.alert_id.label("alert_id"),
+                a.user_id.label("user_id"),
+                uc.id.label("user_channel_id"),
+                uc.channel_provider_id.label("channel_provider_id"),
+                cp.code.label("channel_provider_code"),
+                uc.address.label("address"),
+                uc.config.label("config"),
+            )
+            .select_from(ae)
+            .join(a, a.id == ae.alert_id)
+            .join(uc, uc.user_id == a.user_id)
+            .join(cp, cp.id == uc.channel_provider_id)
+            .where(
+                ae.id.in_(alert_event_ids),
+                ae.status == status,
+
+                uc.is_active.is_(True),
+                uc.deleted_at.is_(None),
+                uc.address.is_not(None),
+                cp.is_active.is_(True),
+
+            )
+            .order_by(ae.id.asc(), uc.id.asc())
+        )
+
+        rows = self._db.execute(stmt).mappings().all()
+        return [AlertDTO.AlertEventChannel(**row) for row in rows]
+
     def list_alert_snapshot_by_status(
         self,
         *,
@@ -321,11 +480,14 @@ class SqlAlertRepo(AlertRepo):
         stmt = (
             select(
                 a.id.label("alert_id"),
+                a.name.label("alert_name"),
                 a.user_id.label("user_id"),
                 a.status.label("status"),
 
                 a.alert_type_id.label("alert_type_id"),
                 at.code.label("alert_type_code"),
+                at.name.label("alert_type_name"),
+
                 at.scope.label("scope"),
                 at.indicator.label("indicator"),
                 at.direction.label("direction"),
@@ -336,6 +498,8 @@ class SqlAlertRepo(AlertRepo):
                 ei.exchange_symbol.label("exchange_symbol"),
 
                 a.params.label("params"),
+                at.param_schema.label("param_schema"),
+
                 a.throttle_seconds.label("throttle_seconds"),
                 a.valid_from.label("valid_from"),
                 a.valid_to.label("valid_to"),
@@ -511,6 +675,32 @@ class SqlAlertRepo(AlertRepo):
         self._db.flush()
         return alert.to_dto()
 
+    def add_alert_deliveries(
+        self,
+        alert_deliveries: Sequence[AlertDTO.AlertDeliveryCreate],
+        *,
+        chunk_size: int = 1000,
+    ) -> int:
+        total = 0
+
+        if not alert_deliveries:
+            return total
+
+        for i in range(0, len(alert_deliveries), chunk_size):
+            chunk = alert_deliveries[i : i + chunk_size]
+            values = [
+                to_row_dict(delivery)
+                for delivery in alert_deliveries
+            ]
+
+            stmt = insert(ad).values(values)
+
+            result = self._db.execute(stmt)
+
+            total += int(result.rowcount or 0)
+
+        return total
+
     
     def update_alert(
         self,
@@ -566,6 +756,63 @@ class SqlAlertRepo(AlertRepo):
             stmt = stmt.where(a.deleted_at.is_(None))
             
         self._db.execute(stmt)
+
+    def update_alert_events_by_status(
+        self,
+        *,
+        alert_event_ids: Sequence[int],
+        from_status: AlertEventStatus,
+        to_status: AlertEventStatus,
+    ) -> None:
+        stmt = (
+            update(ae)
+            .where(
+                ae.id.in_(alert_event_ids),
+                ae.status == from_status,
+            )
+            .values(
+                status=to_status,
+            )
+        )
+
+        self._db.execute(stmt)
+
+
+    def update_alert_deliveries_status(
+        self,
+        *,
+        send_results: Sequence[AlertDTO.AlertDeliverySendResult],
+        from_status: AlertDeliveryStatus,
+        to_status: AlertDeliveryStatus,
+        sent_at: datetime | None = None,
+    ) -> int:
+        total = 0
+        if not send_results:
+            return total
+        
+        for result in send_results:
+            values = {
+                "status": to_status,
+                "response_code": result.response_code,
+                "response_body": result.response_body,
+            }
+
+            if sent_at is not None:
+                values["sent_at"] = sent_at
+
+            stmt = (
+                update(ad)
+                .where(
+                    ad.id == result.alert_delivery_id,
+                    ad.status == from_status,
+                )
+                .values(**values)
+            )
+
+            executed = self._db.execute(stmt)
+            total += int(executed.rowcount or 0)
+
+        return total
 
 
     def delete_alert(

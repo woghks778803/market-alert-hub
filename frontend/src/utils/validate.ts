@@ -9,6 +9,10 @@ export function minLength(value: string, n: number): boolean {
     return value.trim().length >= n
 }
 
+export function maxLength(value: string, n: number): boolean {
+    return value.trim().length <= n
+}
+
 export function isStrongPassword(v: string): boolean {
     const s = v.trim();
     if (s.length < 8) return false;

@@ -1,7 +1,7 @@
 from datetime import datetime
 from sqlalchemy import DateTime, String, Index, Integer, Boolean, text, Enum as SAEnum, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from app.core.constants import AlertScope
+from app.core.constants import ConditionType
 from app.core.util.datetime import utcnow
 from app.infra.db.base import Base
 from app.domain import AlertDTO

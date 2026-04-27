@@ -210,7 +210,7 @@ def upgrade() -> None:
     op.create_index(op.f('ix_deliveries_alert_event_id'), 'deliveries', ['alert_event_id'], unique=False)
     op.create_index('ix_deliveries_status', 'deliveries', ['status'], unique=False)
     op.create_index(op.f('ix_deliveries_user_channel_id'), 'deliveries', ['user_channel_id'], unique=False)
-    op.add_column('alerts', sa.Column('scope', sa.Enum('single', 'cross', name='alertscope', create_constraint=True), nullable=False))
+    op.add_column('alerts', sa.Column('scope', sa.Enum('single', 'cross', name='ConditionType', create_constraint=True), nullable=False))
     op.add_column('alerts', sa.Column('exchange_id', sa.Integer(), nullable=True))
     op.add_column('alerts', sa.Column('instrument_id', sa.Integer(), nullable=True))
     op.add_column('alerts', sa.Column('throttle_seconds', sa.Integer(), nullable=False))

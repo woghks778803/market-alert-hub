@@ -1,6 +1,8 @@
 from typing import Any
+from decimal import Decimal, InvalidOperation
+
 from app.core.util.serialization import json_safe
-from app.core.constants import AlertStatus
+from app.core.constants import AlertStatus, AlertFormType, IndicatorType, DirectionType
 import app.domain.alert.dto as AlertDTO
 
 MAX_ARCHIVED_ALERTS_PER_USER = 200
@@ -16,12 +18,15 @@ def alert_snapshot_to_payload(
     """
     return {
         "alert_id": json_safe(alert_snapshot.alert_id),
+        "alert_name": json_safe(alert_snapshot.alert_name),
         "user_id": json_safe(alert_snapshot.user_id),
 
         "status": json_safe(alert_snapshot.status),
 
         "alert_type_id": json_safe(alert_snapshot.alert_type_id),
         "alert_type_code": json_safe(alert_snapshot.alert_type_code),
+        "alert_type_name": json_safe(alert_snapshot.alert_type_name),
+
         "scope": json_safe(alert_snapshot.scope),
         "indicator": json_safe(alert_snapshot.indicator),
         "direction": json_safe(alert_snapshot.direction),
@@ -32,6 +37,7 @@ def alert_snapshot_to_payload(
         "exchange_symbol": json_safe(alert_snapshot.exchange_symbol),
 
         "params": json_safe(alert_snapshot.params or {}),
+        "param_schema": json_safe(alert_snapshot.param_schema or {}),
 
         "is_once": json_safe(alert_snapshot.is_once),
         "throttle_seconds": json_safe(alert_snapshot.throttle_seconds),
@@ -42,26 +48,251 @@ def alert_snapshot_to_payload(
         "bucket_key": None,
     }
 
-# TODO: 미사용
-def alert_to_snapshot(
-    alert: AlertDTO.Alert,
-    alert_type: AlertDTO.AlertType,
-) -> AlertDTO.AlertSnapshot:
-    return AlertDTO.AlertSnapshot(
-        alert_id=alert.id,
-        user_id=alert.user_id,
-        alert_type_id=alert.alert_type_id,
-        alert_type_code=alert_type.code,
-        indicator=alert_type.indicator,
-        direction=alert_type.direction,
-        form_type=alert_type.form_type,
-        exchange_instrument_id=alert.exchange_instrument_id,
-        exchange_code=alert.exchange_code,
-        exchange_symbol=alert.exchange_symbol,
-        params=alert.params,
-        throttle_seconds=alert.throttle_seconds,
-        valid_from=alert.valid_from,
-        valid_to=alert.valid_to,
-        is_once=alert.is_once,
-        last_fired_at=alert.last_fired_at,
-    )
+class AlertMessageBuilder:
+    def __init__(self):
+        self._form_builders = {
+            AlertFormType.THRESHOLD.value: ThresholdMessageBuilder(),
+            AlertFormType.RANGE.value: RangeMessageBuilder(),
+            AlertFormType.PERCENT.value: PercentMessageBuilder(),
+            AlertFormType.CROSS.value: CrossMessageBuilder(),
+            AlertFormType.BAND.value: BandMessageBuilder(),
+            AlertFormType.PATTERN.value: PatternMessageBuilder(),
+        }
+        self._default_builder = DefaultMessageBuilder()
+
+    def build(
+        self,
+        *,
+        context: dict,
+        trigger_value,
+        alert_event_id: int,
+    ) -> AlertDTO.AlertMessageContent:
+        title = self._make_title(context)
+
+        form_type = str(context.get("form_type") or "")
+        
+        print("context", context)
+        print("form_type", form_type)
+        builder = self._form_builders.get(form_type, self._default_builder)
+
+        trigger_value
+
+        body = builder.build_body(
+            context=context,
+            trigger_value=trigger_value,
+        )
+
+        return AlertDTO.AlertMessageContent(
+            title=title,
+            body=body,
+            data={
+                "alert_event_id": str(alert_event_id),
+            },
+        )
+
+    def _make_title(self, context: dict) -> str:
+        title = context.get("alert_name")
+
+        title = str(title).strip()
+        title = " ".join(title.split())
+
+        if not title:
+            return "알림"
+
+        return title[:40]
+
+class AlertMessageBuildHelper:
+    @staticmethod
+    def get_symbol(context: dict) -> str:
+        return str(context.get("exchange_symbol") or "대상")
+
+    @staticmethod
+    def get_alert_type_name(context: dict) -> str:
+        return str(context.get("alert_type_name") or "알림")
+
+    @staticmethod
+    def get_param_value(context: dict, key: str):
+        params = context.get("params") or {}
+        return params.get(key)
+
+    @staticmethod
+    def get_field_label(context: dict, key: str) -> str:
+        schema = context.get("param_schema") or {}
+        fields = schema.get("fields") or []
+
+        for field in fields:
+            if field.get("key") == key:
+                return str(field.get("label") or key)
+
+        return key
+
+    @staticmethod
+    def make_base_body(context: dict) -> str:
+        symbol = AlertMessageBuildHelper.get_symbol(context)
+        alert_type_name = AlertMessageBuildHelper.get_alert_type_name(context)
+
+        return f"{symbol} [{alert_type_name}] 조건이 발생했습니다."
+
+    @staticmethod
+    def append_parts(body: str, parts: list[str]) -> str:
+        if not parts:
+            return body
+
+        return body + " " + ", ".join(parts)
+
+    @staticmethod
+    def append_trigger_value(parts: list[str], trigger_value) -> None:
+        if trigger_value is not None:
+            parts.append(f"발생값: {trigger_value}")
+
+    @staticmethod
+    def format_value(value) -> str:
+        if value is None:
+            return ""
+
+        try:
+            decimal_value = Decimal(str(value))
+        except (InvalidOperation, ValueError):
+            return str(value)
+
+        normalized = decimal_value.normalize()
+
+        # 1E+3 같은 과학적 표기 방지
+        text = format(normalized, "f")
+
+        # 소수점 뒤 0 제거
+        if "." in text:
+            text = text.rstrip("0").rstrip(".")
+
+        return text
+
+class ThresholdMessageBuilder:
+    def build_body(self, *, context: dict, trigger_value) -> str:
+        body = AlertMessageBuildHelper.make_base_body(context)
+
+        parts = []
+
+        threshold = AlertMessageBuildHelper.get_param_value(context, AlertFormType.THRESHOLD.value)
+        if threshold is not None:
+            label = AlertMessageBuildHelper.get_field_label(context, AlertFormType.THRESHOLD.value)
+            parts.append(f"{label}: {threshold}")
+
+        trigger_text = AlertMessageBuildHelper.format_value(trigger_value)
+        AlertMessageBuildHelper.append_trigger_value(parts, trigger_text)
+
+        return AlertMessageBuildHelper.append_parts(body, parts)
+
+class RangeMessageBuilder:
+    def build_body(self, *, context: dict, trigger_value) -> str:
+        body = AlertMessageBuildHelper.make_base_body(context)
+
+        parts = []
+
+        for key in ("min", "max", "min_value", "max_value"):
+            value = AlertMessageBuildHelper.get_param_value(context, key)
+            if value is None:
+                continue
+
+            label = AlertMessageBuildHelper.get_field_label(context, key)
+            parts.append(f"{label}: {value}")
+
+        trigger_text = AlertMessageBuildHelper.format_value(trigger_value)
+        AlertMessageBuildHelper.append_trigger_value(parts, trigger_text)
+
+        return AlertMessageBuildHelper.append_parts(body, parts)
+
+class PercentMessageBuilder:
+    def build_body(self, *, context: dict, trigger_value) -> str:
+        body = AlertMessageBuildHelper.make_base_body(context)
+
+        parts = []
+
+        threshold = AlertMessageBuildHelper.get_param_value(context, AlertFormType.PERCENT.value)
+        if threshold is not None:
+            label = AlertMessageBuildHelper.get_field_label(context, AlertFormType.PERCENT.value)
+            parts.append(f"{label}: {threshold}%")
+
+        trigger_text = AlertMessageBuildHelper.format_value(trigger_value)
+        AlertMessageBuildHelper.append_trigger_value(parts, trigger_text)
+
+        return AlertMessageBuildHelper.append_parts(body, parts)
+
+class CrossMessageBuilder:
+    def build_body(self, *, context: dict, trigger_value) -> str:
+        body = AlertMessageBuildHelper.make_base_body(context)
+
+        parts = []
+
+        for key in ("base", "base_value", "signal", "target"):
+            value = AlertMessageBuildHelper.get_param_value(context, key)
+            if value is None:
+                continue
+
+            label = AlertMessageBuildHelper.get_field_label(context, key)
+            parts.append(f"{label}: {value}")
+
+        trigger_text = AlertMessageBuildHelper.format_value(trigger_value)
+        AlertMessageBuildHelper.append_trigger_value(parts, trigger_text)
+
+        return AlertMessageBuildHelper.append_parts(body, parts)
+
+class BandMessageBuilder:
+    def build_body(self, *, context: dict, trigger_value) -> str:
+        body = AlertMessageBuildHelper.make_base_body(context)
+
+        parts = []
+
+        for key in ("period", "stddev", "band_value", "target_band"):
+            value = AlertMessageBuildHelper.get_param_value(context, key)
+            if value is None:
+                continue
+
+            label = AlertMessageBuildHelper.get_field_label(context, key)
+            parts.append(f"{label}: {value}")
+
+        trigger_text = AlertMessageBuildHelper.format_value(trigger_value)
+        AlertMessageBuildHelper.append_trigger_value(parts, trigger_text)
+
+        return AlertMessageBuildHelper.append_parts(body, parts)
+
+class PatternMessageBuilder:
+    def build_body(self, *, context: dict, trigger_value) -> str:
+        body = AlertMessageBuildHelper.make_base_body(context)
+
+        parts = []
+
+        pattern = AlertMessageBuildHelper.get_param_value(context, AlertFormType.PATTERN.value)
+        if pattern is not None:
+            label = AlertMessageBuildHelper.get_field_label(context, AlertFormType.PATTERN.value)
+            parts.append(f"{label}: {pattern}")
+
+        trigger_text = AlertMessageBuildHelper.format_value(trigger_value)
+        AlertMessageBuildHelper.append_trigger_value(parts, trigger_text)
+
+        return AlertMessageBuildHelper.append_parts(body, parts)
+
+class DefaultMessageBuilder:
+    def build_body(self, *, context: dict, trigger_value) -> str:
+        body = AlertMessageBuildHelper.make_base_body(context)
+
+        schema = context.get("param_schema") or {}
+        fields = schema.get("fields") or []
+
+        parts = []
+
+        for field in sorted(fields, key=lambda item: item.get("order", 999)):
+            key = field.get("key")
+            if not key:
+                continue
+
+            value = AlertMessageBuildHelper.get_param_value(context, key)
+            if value is None:
+                continue
+
+            label = field.get("label") or key
+            parts.append(f"{label}: {value}")
+
+        trigger_text = AlertMessageBuildHelper.format_value(trigger_value)
+        AlertMessageBuildHelper.append_trigger_value(parts, trigger_text)
+
+        return AlertMessageBuildHelper.append_parts(body, parts)

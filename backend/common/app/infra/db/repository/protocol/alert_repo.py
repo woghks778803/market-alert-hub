@@ -1,6 +1,6 @@
 from typing import Protocol, Sequence
 from datetime import datetime
-from app.core.constants import AlertStatus, AlertSort
+from app.core.constants import AlertStatus, AlertSort, AlertEventStatus, AlertDeliveryStatus
 from app.domain import AlertDTO
 
 class AlertRepo(Protocol):
@@ -59,6 +59,41 @@ class AlertRepo(Protocol):
         offset: int
     ) -> Sequence[AlertDTO.AlertType]: ...
 
+    def list_alert_event_by_status(
+        self,
+        *,
+        status: AlertEventStatus | None,
+        limit: int, 
+        offset: int
+    ) -> Sequence[AlertDTO.AlertEvent]: ...
+
+    def list_alert_event_by_filter(
+        self,
+        *,
+        alert_event_ids: Sequence[int],
+        status: AlertEventStatus,
+    ) -> Sequence[AlertDTO.AlertEvent]: ...
+
+    def list_alert_delivery_by_filter(
+        self,
+        *,
+        alert_event_ids: Sequence[int],
+        status: AlertDeliveryStatus,
+    ) -> Sequence[AlertDTO.AlertDelivery]: ...
+
+    def list_alert_delivery_targets(
+        self,
+        *,
+        alert_delivery_ids: Sequence[int],
+    ) -> Sequence[AlertDTO.AlertDeliveryTarget]: ...
+
+    def list_user_channel_by_filter(
+        self,
+        *,
+        alert_event_ids: Sequence[int],
+        status: AlertEventStatus,
+    ) -> Sequence[AlertDTO.AlertEventChannel]: ...
+
     def list_alert_snapshot_by_status(
         self,
         *,
@@ -83,6 +118,14 @@ class AlertRepo(Protocol):
     ) -> Sequence[AlertDTO.AlertSimple]: ...
     
     def add_alert(self, row: AlertDTO.AlertCreate) -> AlertDTO.Alert: ...
+    def add_alert_deliveries(
+        self,
+        alert_deliveries: Sequence[AlertDTO.AlertDeliveryCreate],
+        *,
+        chunk_size: int = 1000,
+    ) -> int: ...
+
+    
     def update_alert(
         self,
         row: AlertDTO.Alert,
@@ -90,4 +133,20 @@ class AlertRepo(Protocol):
     ) -> None: ...
 
     def update_alert_status(self, alert_id: int, user_id: int, status: AlertStatus ) -> None: ...
+    def update_alert_events_by_status(
+        self,
+        *,
+        alert_event_ids: Sequence[int],
+        from_status: AlertEventStatus,
+        to_status: AlertEventStatus,
+    ) -> None: ...
+    def update_alert_deliveries_status(
+        self,
+        *,
+        send_results: Sequence[AlertDTO.AlertDeliverySendResult],
+        from_status: AlertDeliveryStatus,
+        to_status: AlertDeliveryStatus,
+        sent_at: datetime | None = None,
+    ) -> int: ...
+
     def delete_alert(self, alert_id: int, user_id: int, deleted_at: datetime) -> None: ...

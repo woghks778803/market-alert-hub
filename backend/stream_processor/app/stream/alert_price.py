@@ -8,7 +8,7 @@ from decimal import Decimal
 from app.core.util.datetime import utcnow
 from app.core.constants import (
     AlertStatus, 
-    AlertScope, 
+    ConditionType, 
     AlertFormType, 
     IndicatorType,
     DirectionType, 
@@ -221,7 +221,7 @@ async def evaluate_price_candle(
             threshold
         )
 
-        print("alert", alert)
+        # print("alert", alert)
 
         event = _make_price_alert_event(
             alert=alert,
@@ -263,16 +263,20 @@ def _make_price_alert_event(
         "trigger_value": price_close,
         "dedup_key": f"{bucket_key}:{alert_id}:{bucket_ts}",
         "context": {
-            "source": "price_alert",
+            # "source": "",
+            "alert_name": alert.get("alert_name"),
             "exchange_code": exchange_code,
             "exchange_symbol": exchange_symbol,
             "alert_type_id": alert.get("alert_type_id"),
             "alert_type_code": alert.get("alert_type_code"),
+            "alert_type_name": alert.get("alert_type_name"),
+            "params": alert.get("params"),
+            "param_schema": alert.get("param_schema"),
             "scope": alert.get("scope"),
             "indicator": alert.get("indicator"),
             "direction": alert.get("direction"),
             "form_type": alert.get("form_type"),
-            "threshold": str(threshold),
+            "threshold": str(threshold), # 제거 대상
             "prev_close": str(prev_close) if prev_close is not None else None,
             "price_close": str(price_close),
             "candle": candle,
@@ -310,26 +314,26 @@ def _evaluate_price_threshold(
     scope = alert.get("scope")
     direction = alert.get("direction")
 
-    if scope == AlertScope.SINGLE.value:
+    if scope == ConditionType.SINGLE.value:
         if direction == DirectionType.UP.value:
             return price_close >= threshold
 
         if direction == DirectionType.DOWN.value:
             return price_close <= threshold
 
-        if direction == DirectionType.REACH.value:
+        if direction == DirectionType.BOTH.value:
             return price_close == threshold
 
         return False
 
-    if scope == AlertScope.CROSS.value:
+    if scope == ConditionType.CROSS.value:
         if direction == DirectionType.UP.value:
             return prev_close < threshold <= price_close
 
         if direction == DirectionType.DOWN.value:
             return prev_close > threshold >= price_close
 
-        if direction == DirectionType.REACH.value:
+        if direction == DirectionType.BOTH.value:
             low = min(prev_close, price_close)
             high = max(prev_close, price_close)
             return low <= threshold <= high
@@ -369,25 +373,25 @@ def build_price_eval_bucket_keys(
 
     # single 조건은 현재 상태 조건이라 상승/하락과 무관하게 둘 다 후보로 본다.
     keys.append(
-        f"{base}:{AlertFormType.THRESHOLD.value}:{AlertScope.SINGLE.value}:{DirectionType.UP.value}"
+        f"{base}:{AlertFormType.THRESHOLD.value}:{ConditionType.SINGLE.value}:{DirectionType.UP.value}"
     )
     keys.append(
-        f"{base}:{AlertFormType.THRESHOLD.value}:{AlertScope.SINGLE.value}:{DirectionType.DOWN.value}"
+        f"{base}:{AlertFormType.THRESHOLD.value}:{ConditionType.SINGLE.value}:{DirectionType.DOWN.value}"
     )
 
     # cross both = 가격 도달
     keys.append(
-        f"{base}:{AlertFormType.THRESHOLD.value}:{AlertScope.CROSS.value}:{DirectionType.REACH.value}"
+        f"{base}:{AlertFormType.THRESHOLD.value}:{ConditionType.CROSS.value}:{DirectionType.BOTH.value}"
     )
 
     # 방향성 cross
     if price_close > prev_close:
         keys.append(
-            f"{base}:{AlertFormType.THRESHOLD.value}:{AlertScope.CROSS.value}:{DirectionType.UP.value}"
+            f"{base}:{AlertFormType.THRESHOLD.value}:{ConditionType.CROSS.value}:{DirectionType.UP.value}"
         )
     elif price_close < prev_close:
         keys.append(
-            f"{base}:{AlertFormType.THRESHOLD.value}:{AlertScope.CROSS.value}:{DirectionType.DOWN.value}"
+            f"{base}:{AlertFormType.THRESHOLD.value}:{ConditionType.CROSS.value}:{DirectionType.DOWN.value}"
         )
 
     return keys

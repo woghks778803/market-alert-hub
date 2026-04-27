@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
-from sqlalchemy import DECIMAL, DateTime, String, JSON, ForeignKey, Index, Integer, Enum as SAEnum
+from sqlalchemy import DECIMAL, DateTime, String, JSON, ForeignKey, Index, Integer, Enum as SAEnum, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.util.datetime import utcnow
 from app.core.constants import AlertEventStatus
@@ -34,7 +34,6 @@ class AlertEvent(Base):
     )
 
     detected_at:   Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    queued_at:   Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     trigger_value: Mapped[Decimal | None] = mapped_column(DECIMAL(32, 16))
     context:       Mapped[dict | None] = mapped_column(JSON)
@@ -43,6 +42,9 @@ class AlertEvent(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
         default=utcnow, 
         nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
     )
 
     alert: Mapped["Alert"] = relationship(back_populates="events")
@@ -59,11 +61,11 @@ class AlertEvent(Base):
             exchange_instrument_id=self.exchange_instrument_id,
             status=self.status,
             detected_at=self.detected_at,
-            queued_at=self.queued_at,
             trigger_value=self.trigger_value,
             context=self.context,
             dedup_key=self.dedup_key,
             created_at=self.created_at,
+            updated_at=self.updated_at,
         )
 
     @classmethod

@@ -5,4 +5,6 @@ class AlertRepo(Protocol):
     async def upsert_alert_events(
         self,
         events: Sequence[AlertDTO.AlertEventCreate],
+        *,
+        chunk_size: int = 1000,
     ) -> int: ...

@@ -26,6 +26,7 @@ TICKERS = "tickers"
 BUCKET= "bucket"
 COOLDOWN = "cooldown"
 STATE = "state"
+SYSTEM = "system"
 
 SYMBOLS = "symbols"
 EXCHANGES = "exchanges"
@@ -91,10 +92,6 @@ class AlertFormType(str, enum.Enum):
     BAND = "band"                    # 밴드 기준: Bollinger upper/lower/middle
     COMPARE = "compare"              # A/B 비교: volume > volume_ma
 
-class AlertScope(str, enum.Enum):
-    SINGLE = "single"
-    CROSS = "cross"
-
 class OutboxEventType(str, enum.Enum):
     AUTH_EMAIL_VERIFY = "AUTH_EMAIL_VERIFY"
     AUTH_PASSWORD_RESET = "AUTH_PASSWORD_RESET"
@@ -106,7 +103,7 @@ class OutboxEventType(str, enum.Enum):
     SYNC_TICKERS = "SYNC_TICKERS"
     SYNC_ALERTS = "SYNC_ALERTS"
 
-    TRIGGER_ALERTS = "TRIGGER_ALERTS"
+    DISPATCH_ALERT_EVENTS = "DISPATCH_ALERT_EVENTS"
     PERSIST_SNAPSHOTS = "PERSIST_SNAPSHOTS"
 
 class StreamType(str, enum.Enum):
@@ -200,9 +197,11 @@ class AlertStatus(str, enum.Enum):
 class AlertEventStatus(str, enum.Enum):
     PENDING = "pending"
     QUEUED = "queued"
+    DISPATCHED = "dispatched"
+    SKIPPED = "skipped"
 
 
-class DeliveryStatus(str, enum.Enum):
+class AlertDeliveryStatus(str, enum.Enum):
     QUEUED = "queued"
     SENT = "sent"
     FAILED = "failed"
@@ -217,6 +216,8 @@ class AssetType(str, enum.Enum):
 
 class IndicatorType(str, enum.Enum):
     PRICE = "price"
+    VOLUME = "volume"
+    CHANGE_RATE = "change_rate"
     RSI = "rsi"
     MACD = "macd"
     MA = "ma"
@@ -228,7 +229,11 @@ class IndicatorType(str, enum.Enum):
 class DirectionType(str, enum.Enum):
     UP = "up"
     DOWN = "down"
-    REACH = "both"
+    BOTH = "both"
+
+class ConditionType(str, enum.Enum):
+    SINGLE = "single"
+    CROSS = "cross"
 
 class NoticeCategory(str, enum.Enum):
     UPDATE = "update"
@@ -253,3 +258,4 @@ THROTTLE_SECONDS = {
     ThrottleTimeframe.HOUR_12: 43200,
     ThrottleTimeframe.DAY_1: 86400,
 }
+

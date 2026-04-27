@@ -1,6 +1,6 @@
 
 import type { AlertSummaryInfo, AlertInfo, AlertTypeInfo, ArchivedAlertListRequest, AlertListRequest, AlertTypeListRequest, AlertSaveRequest } from "@/api/alert.api"
-import type { AlertSummaryDto, AlertDto, AlertTypeDto, ArchivedAlertListQuery, AlertListQuery, AlertTypeListQuery, AlertSaveQuery, AlertStatus, AlertScope, FormType } from "@/services/alert.types"
+import type { AlertSummaryDto, AlertDto, AlertTypeDto, ArchivedAlertListQuery, AlertListQuery, AlertTypeListQuery, AlertSaveQuery, AlertStatus, ConditionType, FormType } from "@/services/alert.types"
 
 export function toAlertSummaryDto(data: AlertSummaryInfo): AlertSummaryDto {
     return {

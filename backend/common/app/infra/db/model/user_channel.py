@@ -16,15 +16,17 @@ class UserChannel(Base):
         nullable=False, index=True
     )
 
-    address:      Mapped[str | None] = mapped_column(String(255))
+    address:      Mapped[str] = mapped_column(String(255), nullable=False)
     config:       Mapped[dict | None] = mapped_column(JSON)
-    config_hash: Mapped[bytes | None] = mapped_column(BINARY(32), nullable=True, index=True)
+    config_hash: Mapped[bytes | None] = mapped_column(BINARY(32), index=True)
     verified_at:  Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), 
         default=utcnow, 
         nullable=False
     )
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), 
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), 
         default=utcnow, 
         onupdate=utcnow, 
         nullable=False

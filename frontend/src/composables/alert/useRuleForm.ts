@@ -1,6 +1,7 @@
 import { computed, reactive, ref, type Ref } from 'vue'
 
 import { toNumberOrNull } from '@/utils/numbers'
+import { minLength, maxLength } from '@/utils/validate'
 import {
     FormType,
     ThrottleTimeframe,
@@ -160,7 +161,7 @@ export function useRuleForm(params: UseRuleFormParams) {
     }
 
     const canSubmit = computed(() => {
-        if (!form.name.trim()) return false
+        if (!form.name.trim() || (!minLength(form.name, 4) || !maxLength(form.name, 40))) return false
         if (!form.exchangeInstrumentId) return false
         if (form.useValidity && (!form.validFrom || !form.validTo)) return false
         if (!selectedAlertType.value) return false
@@ -254,6 +255,8 @@ export function useRuleForm(params: UseRuleFormParams) {
 
         if (!form.name.trim()) {
             errors.name = '알림 이름을 입력해주세요.'
+        } else if (!minLength(form.name, 4) || !maxLength(form.name, 40)) {
+            errors.name = '알림 이름은 4자이상 40자 이하로 입력해주세요.'
         }
 
         if (!form.exchangeInstrumentId) {

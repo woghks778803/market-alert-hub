@@ -1,8 +1,8 @@
 from typing import Callable, Sequence
 from datetime import datetime
-from app.core.constants import AlertStatus, AlertSort, ThrottleTimeframe, THROTTLE_SECONDS
+from app.core.constants import AlertDeliveryStatus, AlertEventStatus, AlertStatus, AlertSort, ThrottleTimeframe, THROTTLE_SECONDS
 from app.core.util.datetime import utcnow
-from app.domain import AlertDTO, AlertRule, AlertPort
+from app.domain import AlertDTO, AlertRule, AlertPort, ChannelDTO, ChannelPort
 from app.domain.shared.uow import UnitOfWork
 from app.domain.shared.errors import (
     NotFoundError,
@@ -13,12 +13,15 @@ class AlertService:
     def __init__(
         self, 
         uow_factory: Callable[[], UnitOfWork],
+        channel_message_providers: dict[str, ChannelPort.ChannelMessage],
         alert_snapshot: AlertPort.AlertSnapshot,
         alert_bucket: AlertPort.AlertBucket,
     ) -> None:
         self._uow_factory = uow_factory
+        self._channel_message_providers = channel_message_providers
         self._alert_snapshot = alert_snapshot
         self._alert_bucket = alert_bucket
+        self._alert_message_builder = AlertRule.AlertMessageBuilder()
 
     def get_alert_summary(
         self,
@@ -379,6 +382,315 @@ class AlertService:
         return {"ok": True}
 
 
+    def dispatch_alert_events(
+        self,
+        batch_size: int,
+    ):
+        started_at = utcnow()
+        batch_size=10
+
+        selected_count = 0
+        queued_count = 0
+        delivery_count = 0
+        sent_count = 0
+        failed_count = 0
+        skipped_count = 0
+
+        with self._uow_factory() as uow:
+            # 1. PENDING alert_events 조회
+            alert_events = uow.alerts.list_alert_event_by_status(
+                status=AlertEventStatus.PENDING,
+                limit=batch_size,
+                offset=0,
+            )
+
+            if not alert_events:
+                return {
+                    "selected_count": 0,
+                    "queued_count": 0,
+                    "delivery_count": 0,
+                    "sent_count": 0,
+                    "failed_count": 0,
+                    "skipped_count": 0,
+                }
+
+            selected_count = len(alert_events)
+            alert_event_ids = [event.id for event in alert_events]
+
+            # 2. alert_events QUEUED 선점
+            uow.alerts.update_alert_events_by_status(
+                alert_event_ids=alert_event_ids,
+                from_status=AlertEventStatus.PENDING,
+                to_status=AlertEventStatus.QUEUED,
+            )
+
+            # 3. 선점한 alert_events 재조회
+            queued_events = uow.alerts.list_alert_event_by_filter(
+                alert_event_ids=alert_event_ids,
+                status=AlertEventStatus.QUEUED,
+            )
+
+            if not queued_events:
+                uow.commit()
+                return {
+                    "selected_count": selected_count,
+                    "queued_count": 0,
+                    "delivery_count": 0,
+                    "sent_count": 0,
+                    "failed_count": 0,
+                    "skipped_count": 0,
+                }
+
+            queued_count = len(queued_events)
+            queued_event_ids = [event.id for event in queued_events]
+            # print("queued_event_ids", queued_event_ids)
+
+            # 4. 선점한 alert_events 기준 user_channel 조회
+            user_channels = uow.alerts.list_user_channel_by_filter(
+                alert_event_ids=queued_event_ids,
+                status=AlertEventStatus.QUEUED,
+            )
+
+            event_ids_with_channel = {
+                channel.alert_event_id
+                for channel in user_channels
+            }
+
+            skipped_event_ids = [
+                event.id
+                for event in queued_events
+                if event.id not in event_ids_with_channel
+            ]
+
+            # print("AlertEventChannel", user_channels)
+
+            user_channels_by_event_id = {}
+
+            for channel in user_channels:
+                user_channels_by_event_id.setdefault(channel.alert_event_id, []).append(channel)
+
+            # print("user_channels_by_event_id", user_channels_by_event_id)
+            # 5. alert_deliveries 생성
+            deliveries = []
+
+            for event in queued_events:
+                event_channels = user_channels_by_event_id.get(event.id, [])
+
+                for channel in event_channels:
+                    deliveries.append(
+                        AlertDTO.AlertDeliveryCreate(
+                            alert_event_id=event.id,
+                            user_channel_id=channel.user_channel_id,
+                            status=AlertDeliveryStatus.QUEUED,
+                        )
+                    )
+
+            # print("deliveries", deliveries)
+            if not deliveries:
+                uow.alerts.update_alert_events_by_status(
+                    alert_event_ids=queued_event_ids,
+                    from_status=AlertEventStatus.QUEUED,
+                    to_status=AlertEventStatus.SKIPPED,
+                )
+                uow.commit()
+
+                return {
+                    "selected_count": selected_count,
+                    "queued_count": queued_count,
+                    "delivery_count": 0,
+                    "sent_count": 0,
+                    "failed_count": 0,
+                    "skipped_count": queued_count,
+                }
+
+            if skipped_event_ids:
+                uow.alerts.update_alert_events_by_status(
+                    alert_event_ids=skipped_event_ids,
+                    from_status=AlertEventStatus.QUEUED,
+                    to_status=AlertEventStatus.SKIPPED,
+                )
+
+            dispatched_event_ids = list({
+                delivery.alert_event_id
+                for delivery in deliveries
+            })
+
+            if dispatched_event_ids:
+                uow.alerts.update_alert_events_by_status(
+                    alert_event_ids=dispatched_event_ids,
+                    from_status=AlertEventStatus.QUEUED,
+                    to_status=AlertEventStatus.DISPATCHED,
+                )
+
+            skipped_count = len(skipped_event_ids)
+            delivery_count = uow.alerts.add_alert_deliveries(deliveries)
+
+            print("delivery_count", delivery_count)
+
+            # 6. alert_events DISPATCHED 처리
+            uow.alerts.update_alert_events_by_status(
+                alert_event_ids=queued_event_ids,
+                from_status=AlertEventStatus.QUEUED,
+                to_status=AlertEventStatus.DISPATCHED,
+            )
+
+            # 7. 방금 만든 delivery를 event/channel과 함께 조회
+            alert_deliveries = uow.alerts.list_alert_delivery_by_filter(
+                alert_event_ids=queued_event_ids,
+                status=AlertDeliveryStatus.QUEUED,
+            )
+
+            alert_delivery_ids = [delivery.id for delivery in alert_deliveries]
+
+            dispatch_targets = uow.alerts.list_alert_delivery_targets(
+                alert_delivery_ids=alert_delivery_ids,
+                status=AlertDeliveryStatus.QUEUED,
+            )
+
+            # print("alert_deliveries", alert_deliveries)
+            # print("dispatch_targets", dispatch_targets)
+
+            uow.commit()
+
+        send_items: dict[str, list[ChannelDTO.ChannelSendItem]] = {}
+        failed_delivery_ids: list[int] = []
+
+        for target in dispatch_targets:
+            if not target.address:
+                failed_delivery_ids.append(target.alert_delivery_id)
+                continue
+
+            provider_code = target.channel_provider_code
+            if provider_code not in self._channel_message_providers:
+                failed_delivery_ids.append(target.alert_delivery_id)
+                continue
+
+            content = self._alert_message_builder.build(
+                context=target.context or {},
+                trigger_value=target.trigger_value,
+                alert_event_id=target.alert_event_id,
+            )
+
+            message = ChannelDTO.ChannelMessage(
+                target=target.address,
+                title=content.title,
+                body=content.body,
+                data=content.data,
+            )
+
+            send_items.setdefault(provider_code, []).append(
+                ChannelDTO.ChannelSendItem(
+                    delivery_id=target.alert_delivery_id,
+                    message=message
+                )
+            )
+
+        send_results: list[AlertDTO.AlertDeliverySendResult] = []
+
+        for provider_code, items in send_items.items():
+            message_provider = self._channel_message_providers[provider_code]
+            messages = [item.message for item in items]
+
+            # print("message_provider", message_provider)
+            # print("messages", messages)
+
+            # results = []
+            try:
+                results = message_provider.send_messages(messages)
+            except Exception as e:
+                for item in items:
+                    send_results.append(
+                        AlertDTO.AlertDeliverySendResult(
+                            alert_delivery_id=item.delivery_id,
+                            success=False,
+                            response_code=None,
+                            response_body=str(e),
+                        )
+                    )
+                continue
+
+            # print("messages results", results)
+            # fcm의 경우 send_each의 응답 순서 보장에 의존하는 구조이기 때문에 확인 필요
+            # TODO: 추후 수동, 자동 재시도 정책
+            if len(results) != len(items):
+                # raise RuntimeError(
+                #     f"invalid send result length provider={provider_code} "
+                #     f"messages={len(items)} results={len(results)}"
+                # )
+                for item in items:
+                    send_results.append(
+                        AlertDTO.AlertDeliverySendResult(
+                            alert_delivery_id=item.delivery_id,
+                            success=False,
+                            response_code=None,
+                            response_body=(
+                                f"invalid send result length provider={provider_code} "
+                                f"messages={len(items)} results={len(results)}"
+                            ),
+                        )
+                    )
+                continue
+
+
+            for idx, result in enumerate(results):
+                delivery_id = items[idx].delivery_id
+
+                send_results.append(
+                    AlertDTO.AlertDeliverySendResult(
+                        alert_delivery_id=delivery_id,
+                        success=result.success,
+                        response_code=None,
+                        response_body=result.message_id if result.success else result.error,
+                    )
+                )
+
+        for delivery_id in failed_delivery_ids:
+            send_results.append(
+                AlertDTO.AlertDeliverySendResult(
+                    alert_delivery_id=delivery_id,
+                    success=False,
+                    response_code=None,
+                    response_body="message provider or address not found",
+                )
+            )
+        
+        success_results = [result for result in send_results if result.success]
+        failed_results = [result for result in send_results if not result.success]
+
+        # print("success_results", success_results)
+        # print("failed_results", failed_results)
+
+        sent_count = len(success_results)
+        failed_count = len(failed_results)
+
+        with self._uow_factory() as uow:
+            if success_results:
+                uow.alerts.update_alert_deliveries_status(
+                    send_results=success_results,
+                    from_status=AlertDeliveryStatus.QUEUED,
+                    to_status=AlertDeliveryStatus.SENT,
+                    sent_at=utcnow(),
+                )
+
+            if failed_results:
+                uow.alerts.update_alert_deliveries_status(
+                    send_results=failed_results,
+                    from_status=AlertDeliveryStatus.QUEUED,
+                    to_status=AlertDeliveryStatus.FAILED,
+                )
+
+            uow.commit()
+
+        return {
+            "selected_count": selected_count,
+            "queued_count": queued_count,
+            "delivery_count": delivery_count,
+            "sent_count": sent_count,
+            "failed_count": failed_count,
+            "skipped_count": skipped_count,
+        }
+
+
     def sync_alerts(
         self,
         *,
@@ -462,3 +774,4 @@ class AlertService:
             alert_id=alert_snapshot.alert_id,
             payload=payload,
         )
+

@@ -120,7 +120,7 @@ export enum AlertStatusFilter {
     PAUSED = "paused",
 }
 
-export enum AlertScope {
+export enum ConditionType {
     SINGLE = "single",
     CROSS = "cross",
 }

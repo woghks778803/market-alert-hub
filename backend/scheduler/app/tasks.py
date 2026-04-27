@@ -8,7 +8,7 @@ from app.handlers import (
     handle_sync_symbols,
     handle_sync_tickers,
     handle_sync_alerts,
-    handle_trigger_alerts,
+    handle_dispatch_alert_events,
 )
 
 
@@ -53,12 +53,12 @@ def build_default_tasks(config):
         ),
         IntervalTask(
             OutboxEventType.SYNC_EXCHANGES,
-            config.sync_interval_sec,
+            config.exchanges_interval_sec,
             handle_sync_exchanges,
         ),
         IntervalTask(
             OutboxEventType.SYNC_SYMBOLS,
-            config.sync_interval_sec,
+            config.symbols_interval_sec,
             handle_sync_symbols,
         ),
         IntervalTask(
@@ -71,11 +71,11 @@ def build_default_tasks(config):
             config.alerts_interval_sec,
             handle_sync_alerts,
         ),
-        # IntervalTask(
-        #     OutboxEventType.TRIGGER_ALERTS,
-        #     config.trig_interval_sec,
-        #     handle_trigger_alerts,
-        # ),
+        IntervalTask(
+            OutboxEventType.DISPATCH_ALERT_EVENTS,
+            config.dispatch_interval_sec,
+            handle_dispatch_alert_events,
+        ),
         *[
             IntervalTask(
                 OutboxEventType.PERSIST_SNAPSHOTS,

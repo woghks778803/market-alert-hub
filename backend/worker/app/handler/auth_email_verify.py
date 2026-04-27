@@ -1,5 +1,5 @@
 from typing import Any, Mapping
-from app.core.constants import EmailVerificationStatus, LOCK
+from app.core.constants import OutboxEventType, EmailVerificationStatus, LOCK
 from app.core.util.datetime import utcnow, ensure_utc
 from app.runtime.app_context import WorkerContext
 from app.util.utils import require, try_acquire_lock, release_lock
@@ -35,7 +35,7 @@ def handle_auth_email_verify(
         raise SkipHandler("expired")
 
     lock_key = (
-        f"{app_name}:{deploy_env}:{LOCK}:email_verify_send:{email_verification_id}"
+        f"{app_name}:{deploy_env}:{LOCK}:{OutboxEventType.AUTH_EMAIL_VERIFY.value}:{email_verification_id}"
     )
     token = try_acquire_lock(
         ctx.redis_client, lock_key, ttl_sec=ctx.config.outbox_send_lock_ttl_sec
