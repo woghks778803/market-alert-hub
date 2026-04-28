@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from typing import Protocol
 import app.domain.channel.dto as ChannelDTO
 

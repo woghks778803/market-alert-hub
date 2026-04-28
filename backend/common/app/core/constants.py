@@ -49,7 +49,6 @@ class BaseQuote(str, enum.Enum):
     ETH = "ETH"
     KRW = "KRW"
 
-
 class ExchangeCode(str, enum.Enum):
     UPBIT = "UPBIT"
     BINANCE = "BINANCE"
@@ -81,6 +80,13 @@ class AlertSort(str, enum.Enum):
     MARKET_ASC = "market_asc"          
     STATUS = "status"    
 
+class LanguageCode(str, enum.Enum):
+    KO="ko" # Korean
+    EN="en" # English
+    JA="ja" # Japanese
+    ZH="zh" # Chinese
+    UNKNOWN="unknown"
+
 class AlertFormType(str, enum.Enum):
     THRESHOLD = "threshold"          # 기준값 1개: price >= threshold, RSI > 70
     RANGE = "range"                  # 범위 입력: 30 <= RSI <= 70
@@ -97,6 +103,8 @@ class OutboxEventType(str, enum.Enum):
     AUTH_PASSWORD_RESET = "AUTH_PASSWORD_RESET"
 
     CLEANUP_DELETED_USERS = "CLEANUP_DELETED_USERS"
+
+    FETCH_RSS_SOURCES = "FETCH_RSS_SOURCES"
 
     SYNC_EXCHANGES = "SYNC_EXCHANGES"
     SYNC_SYMBOLS = "SYNC_SYMBOLS"
@@ -170,8 +178,8 @@ class UserRole(str, enum.Enum):
 
 class OutboxStatus(str, enum.Enum):
     PENDING = "pending"
-    SENDING = "sending"
-    SENT = "sent"
+    SENDING = "sending" # processing
+    SENT = "sent" # done
     FAILED = "failed"
 
 
@@ -205,6 +213,20 @@ class AlertDeliveryStatus(str, enum.Enum):
     QUEUED = "queued"
     SENT = "sent"
     FAILED = "failed"
+
+
+class NewsItemStatus(str, enum.Enum):
+    ACTIVE = "active"
+    HIDDEN = "hidden"
+    DELETED = "deleted"
+
+
+class NewsItemTranslationStatus(str, enum.Enum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    DONE = "done"
+    FAILED = "failed"
+    SKIPPED = "skipped"
 
 
 class AssetType(str, enum.Enum):

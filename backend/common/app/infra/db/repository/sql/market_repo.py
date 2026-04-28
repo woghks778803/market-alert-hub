@@ -1,4 +1,3 @@
-from cProfile import label
 from decimal import Decimal
 from typing import cast, Sequence, Tuple
 from sqlalchemy.engine import CursorResult

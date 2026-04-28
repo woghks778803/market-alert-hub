@@ -98,9 +98,6 @@ class Settings(BaseSettings):
     API_DB_POOL_SIZE: int = 1
     API_DB_MAX_OVERFLOW: int = 0
 
-    # Translation
-    GOOGLE_TRANSLATION_REST_BASE_URL: str = "https://translation.googleapis.com"
-
     # --- WS ---
     WS_LOG_LEVEL: str = Field(default="INFO")
     WS_ASYNC_DB_POOL_SIZE: int = 1
@@ -224,6 +221,14 @@ class Settings(BaseSettings):
     WS_PING_INTERVAL_SEC: float = 20.0  # WS ping 간격 (None이면 비활성)
     WS_CLOSE_TIMEOUT_SEC: float = 5.0  # WS close 타임아웃
 
+    # --- RSS ---
+    RSS_USER_AGENT: str = "market-alert-hub-rss/1.0"
+
+    # --- Translation ---
+    GOOGLE_TRANSLATION_REST_BASE_URL: str = "https://translation.googleapis.com"
+    GOOGLE_TRANSLATE_API_KEY: str
+    GOOGLE_TRANSLATE_BATCH_SIZE: int = 50
+
     # --- Exchange: Binance endpoints (REST/WS) ---
     BINANCE_REST_BASE_URL: str = "https://api.binance.com"  # 업비트 REST API base url
     BINANCE_WS_URL: str = (
@@ -262,6 +267,9 @@ class Settings(BaseSettings):
         event_type dict로 묶음
         """
         return {
+            OutboxEventType.FETCH_RSS_SOURCES.value: {
+                "run_key": OutboxEventType.FETCH_RSS_SOURCES.value,
+            },
             OutboxEventType.DISPATCH_ALERT_EVENTS.value: {
                 "run_key": OutboxEventType.DISPATCH_ALERT_EVENTS.value,
                 "batch_size": self.DISPATCH_ALERT_EVENTS_BATCH_SIZE,

@@ -7,7 +7,7 @@ from app.domain import (
     EmailPort, CryptoPort, 
     MarketPort, AlertPort, 
     AuthPort, ThrottlePort,
-    ChannelPort
+    ChannelPort, NewsPort
 )
 
 from .auth_service import AuthService
@@ -19,6 +19,7 @@ from .channel_service import ChannelService
 from .email_service import EmailService
 from .outbox_service import OutboxService
 from .support_service import SupportService
+from .news_service import NewsService
 
 # TODO: 서비스가 20개 이상으로 증가할 경우 서비스 팩토리를 각 서비스의 팩토리로 분리 필요
 class ServiceFactory:
@@ -26,24 +27,36 @@ class ServiceFactory:
         self,
         *,
         uow: Callable[[], UnitOfWork],
+
+        exchange_symbol_providers: dict[str, Callable[[], MarketPort.ExchangeSymbol]],
+        channel_message_providers: dict[str, Callable[[], ChannelPort.ChannelMessage]],
+
+        kakao_oauth: Callable[[], AuthPort.KakaoOAuth],
+        google_translation: Callable[[], NewsPort.GoogleTranslation],
+        news_feed: Callable[[], NewsPort.NewsFeed],
+
         candle_store: Callable[[], MarketPort.CandleStore],
         market_snapshot: Callable[[], MarketPort.MarketSnapshot],
         alert_snapshot: Callable[[], AlertPort.AlertSnapshot],
         alert_bucket: Callable[[], AlertPort.AlertBucket],
+
         state: Callable[[], AuthPort.AuthState],
         cooldown: Callable[[], ThrottlePort.Cooldown],
+
         email_client: Callable[[], EmailPort.EmailClient],
         email_renderer: Callable[[], EmailPort.EmailTemplateRenderer],
         password_hasher: Callable[[], CryptoPort.PasswordHasher],
         hmac_hasher: Callable[[], CryptoPort.TokenHasher],
         jwt_signer: Callable[[], CryptoPort.TokenSigner],
         secret_crypto: Callable[[], CryptoPort.SecretCrypto],
-        kakao_oauth: Callable[[], AuthPort.KakaoOAuth],
-        exchange_symbol_providers: dict[str, Callable[[], MarketPort.ExchangeSymbol]],
-        channel_message_providers: dict[str, Callable[[], ChannelPort.ChannelMessage]],
         config: CoreDTO.ServiceConfigBag,
     ) -> None:
         self._uow = uow
+        self._exchange_symbol_providers = exchange_symbol_providers
+        self._channel_message_providers = channel_message_providers
+        self._kakao_oauth = kakao_oauth
+        self._google_translation = google_translation
+        self._news_feed = news_feed
         self._candle_store = candle_store
         self._market_snapshot = market_snapshot
         self._alert_snapshot = alert_snapshot
@@ -56,9 +69,6 @@ class ServiceFactory:
         self._hmac_hasher = hmac_hasher
         self._jwt_signer = jwt_signer
         self._secret_crypto = secret_crypto
-        self._kakao_oauth = kakao_oauth
-        self._exchange_symbol_providers = exchange_symbol_providers
-        self._channel_message_providers = channel_message_providers
         self._config = config
 
     @cached_property
@@ -68,6 +78,18 @@ class ServiceFactory:
     @cached_property
     def channel_message_providers(self):
         return {k: v() for k, v in self._channel_message_providers.items()}
+
+    @cached_property
+    def google_translation(self):
+        return self._google_translation()
+
+    @cached_property
+    def news_feed(self):
+        return self._news_feed()
+
+    @cached_property
+    def kakao_oauth(self):
+        return self._kakao_oauth()
 
     @cached_property
     def candle_store(self):
@@ -92,10 +114,6 @@ class ServiceFactory:
     @cached_property
     def state(self):
         return self._state()
-
-    @cached_property
-    def kakao_oauth(self):
-        return self._kakao_oauth()
 
     @cached_property
     def password(self):
@@ -187,4 +205,12 @@ class ServiceFactory:
             uow_factory=self._uow,
             cooldown=self.cooldown,
             config=self._config,
+        )
+
+    @cached_property
+    def newses(self) -> NewsService:
+        return NewsService(
+            uow_factory=self._uow,
+            google_translation=self.google_translation,
+            news_feed=self.news_feed,
         )

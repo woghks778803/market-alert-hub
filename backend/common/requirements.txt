@@ -35,6 +35,9 @@ requests==2.32.5
 google-auth==2.52.0
 firebase-admin==7.4.0
 
+# --- RSS ---
+feedparser==6.0.12
+
 # --- frontend template ---
 jinja2>=3.1         # (옵션) HTML 템플릿 렌더링용
 

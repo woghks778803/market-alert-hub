@@ -62,7 +62,10 @@ class MarketService:
             return result
 
     def list_exchange_by_filter(
-        self, *, limit: int, offset: int
+        self, 
+        *, 
+        limit: int = 100,
+        offset: int = 0,
     ) -> Sequence[MarketDTO.Exchange]:
         with self._uow_factory() as uow:
             return uow.markets.list_exchange_by_filter(limit=limit, offset=offset)

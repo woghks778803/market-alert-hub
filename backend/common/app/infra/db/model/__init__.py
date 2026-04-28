@@ -26,6 +26,12 @@ from .outbox_attempt import OutboxAttempt as OutboxAttemptModel
 from .email_verification import EmailVerification as EmailVerificationModel
 from .faq import FAQ as FAQModel
 from .notice import Notice as NoticeModel
+from .rss_provider import RssProvider as RssProviderModel
+from .rss_source import RssSource as RssSourceModel
+from .news_item import NewsItem as NewsItemModel
+from .news_item_stat import NewsItemStat as NewsItemStatModel
+from .news_item_translation import NewsItemTranslation as NewsItemTranslationModel
+
 
 __all__ = [
     "UserModel",
@@ -54,4 +60,9 @@ __all__ = [
     "OutboxAttemptModel",
     "FAQModel",
     "NoticeModel",
+    "RssProviderModel",
+    "RssSourceModel",
+    "NewsItemModel",
+    "NewsItemStatModel",
+    "NewsItemTranslationModel",
 ]

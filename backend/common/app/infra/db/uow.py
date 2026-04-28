@@ -12,6 +12,7 @@ from app.infra.db.repository.protocol.watchlist_repo import WatchlistRepo
 from app.infra.db.repository.protocol.channel_repo import ChannelRepo
 from app.infra.db.repository.protocol.outbox_repo import OutboxRepo
 from app.infra.db.repository.protocol.support_repo import SupportRepo
+from app.infra.db.repository.protocol.news_repo import NewsRepo
 
 from app.infra.db.repository.sql.user_repo import SqlUserRepo
 from app.infra.db.repository.sql.session_repo import SqlSessionRepo
@@ -21,7 +22,7 @@ from app.infra.db.repository.sql.watchlist_repo import SqlWatchlistRepo
 from app.infra.db.repository.sql.channel_repo import SqlChannelRepo
 from app.infra.db.repository.sql.outbox_repo import SqlOutboxRepo
 from app.infra.db.repository.sql.support_repo import SqlSupportRepo
-
+from app.infra.db.repository.sql.news_repo import SqlNewsRepo
 
 class UnitOfWork(UnitOfWorkPort):
     def __init__(
@@ -39,6 +40,7 @@ class UnitOfWork(UnitOfWorkPort):
         self._providers = None
         self._outboxs = None
         self._supports = None
+        self._news = None
 
         self._done = False
         self._owns = owns_session
@@ -137,3 +139,9 @@ class UnitOfWork(UnitOfWorkPort):
         if self._supports is None:
             self._supports = SqlSupportRepo(self.db)
         return self._supports
+
+    @property
+    def newses(self) -> NewsRepo:
+        if self._news is None:
+            self._news = SqlNewsRepo(self.db)
+        return self._news

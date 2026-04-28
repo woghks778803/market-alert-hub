@@ -39,7 +39,7 @@ class KakaoRestClient:
                 # "prompt": "login",
             }
         )
-        # transport base_url은 bootstrap에서 이미 세팅됨
+
         return f"/oauth/authorize?{query}"
 
     # -------------------------

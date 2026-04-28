@@ -36,6 +36,19 @@ from app.infra.external.notify.fcm.rest_client import (
     get_fcm_rest_client,
 )
 
+from app.infra.external.rss.provider.news_feed import NewsFeed
+from app.infra.external.rss.parser import RssFeedParser
+from app.infra.external.rss.rest_client import (
+    RssRequestConfig,
+    get_rss_rest_client,
+)
+
+from app.infra.external.translation.google.provider.translation import GoogleTranslation
+from app.infra.external.translation.google.rest_client import (
+    GoogleTranslationRestClientConfig,
+    get_google_translation_rest_client,
+)
+
 from app.infra.external.oauth.kakao.provider.oauth import KakaoOAuth
 from app.infra.external.oauth.kakao.rest_client import (
     KakaoRestClientConfig,
@@ -219,6 +232,34 @@ class Providers:
         return lambda: RedisAsyncCooldown(redis=get_async_redis_client(settings.REDIS_URL), prefix=prefix)
 
     @staticmethod
+    def google_translation_provider() -> Callable[[], GoogleTranslation]:
+        config = GoogleTranslationRestClientConfig(
+            api_key=settings.GOOGLE_TRANSLATE_API_KEY,
+            base_url=settings.GOOGLE_TRANSLATION_REST_BASE_URL,
+            timeout_sec=settings.HTTP_TIMEOUT_SEC,
+        )
+
+        return lambda: GoogleTranslation(
+            rest_client=get_google_translation_rest_client(
+                config=config,
+            ),
+            max_batch_size=settings.GOOGLE_TRANSLATE_BATCH_SIZE
+        )
+
+    @staticmethod
+    def news_feed_provider() -> Callable[[], NewsFeed]:
+        config = RssRequestConfig(
+            user_agent=settings.RSS_USER_AGENT,
+        )
+
+        return lambda: NewsFeed(
+            rest_client=get_rss_rest_client(
+                config=config,
+            ),
+            parser=RssFeedParser(),
+        )
+
+    @staticmethod
     def fcm_push_provider() -> Callable[[], FcmPush]:
         config = FcmRestClientConfig(
             service_account_path=settings.FCM_SERVICE_ACCOUNT_PATH,
@@ -243,7 +284,7 @@ class Providers:
         auth_transport = HttpxTransport(
             HttpxTransportConfig(
                 base_url=settings.KAKAO_AUTH_REST_BASE_URL,
-                timeout_sec=10.0,
+                timeout_sec=settings.HTTP_TIMEOUT_SEC,
             )
         )
 
@@ -592,6 +633,13 @@ def create_service_factory(prefix: str, pool_size: int, max_overflow: int) -> Se
             max_overflow
         ),
 
+        exchange_symbol_providers=_build_symbol_provider_registry(),
+        channel_message_providers=_build_message_provider_registry(),
+
+        kakao_oauth=providers.kakao_oauth_provider(),
+        google_translation=providers.google_translation_provider(),
+        news_feed=providers.news_feed_provider(),
+
         candle_store=providers.candle_store_provider(prefix),
         market_snapshot=providers.market_snapshot_provider(prefix),
         alert_snapshot=providers.alert_snapshot_provider(prefix),
@@ -606,9 +654,6 @@ def create_service_factory(prefix: str, pool_size: int, max_overflow: int) -> Se
         hmac_hasher=providers.hmac_hasher_provider(),
         jwt_signer=providers.jwt_signer_provider(),
         secret_crypto=providers.secret_crypto_provider(),
-        exchange_symbol_providers=_build_symbol_provider_registry(),
-        channel_message_providers=_build_message_provider_registry(),
-        kakao_oauth=providers.kakao_oauth_provider(),
         config=build_service_config_bag(prefix),
     )
 
