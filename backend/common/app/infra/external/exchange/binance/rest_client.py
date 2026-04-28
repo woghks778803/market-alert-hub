@@ -6,7 +6,7 @@ from .shared.errors import (
     BinanceHttpError,
     BinanceRateLimitError,
 )
-from .shared.types import BinanceMarket
+from .shared.dto import BinanceMarket
 
 from app.infra.external.transport.port.http import SyncHttpTransport
 from app.infra.external.transport.impl.httpx import (

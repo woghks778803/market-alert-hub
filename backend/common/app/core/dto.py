@@ -118,13 +118,13 @@ class SchedulerConfigBag:
 
     # exchange
     # exchange: str
-
+    rss_interval_sec: int
     cleanup_interval_sec: int
     exchanges_interval_sec: int
     symbols_interval_sec: int
     tickers_interval_sec: int
     alerts_interval_sec: int
-    dispatch_interval_sec: int
+    alert_events_interval_sec: int
     snapshot_intervals_sec: list[int]
 
     # restart policy (supervisor)

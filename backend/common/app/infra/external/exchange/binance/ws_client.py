@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any, AsyncIterator
 
 from .shared.errors import BinanceWsError, BinanceDecodeError
-from .shared.types import BinanceWsSubscribe
+from .shared.dto import BinanceWsSubscribe
 
 from app.infra.external.exchange.port.ws_client import (
     WsClient,

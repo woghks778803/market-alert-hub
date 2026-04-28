@@ -62,8 +62,8 @@ from app.infra.external.redis.provider import (
 )
 
 
-from app.infra.external.exchange.upbit.shared.types import UpbitWsSubscribe
-from app.infra.external.exchange.binance.shared.types import BinanceWsSubscribe
+from app.infra.external.exchange.upbit.shared.dto import UpbitWsSubscribe
+from app.infra.external.exchange.binance.shared.dto import BinanceWsSubscribe
 from app.infra.external.exchange.port.ws_client import (
     WsFactoryRegistry,
     WsClient,
@@ -250,7 +250,7 @@ class Providers:
         api_transport = HttpxTransport(
             HttpxTransportConfig(
                 base_url=settings.KAKAO_API_REST_BASE_URL,
-                timeout_sec=10.0,
+                timeout_sec=settings.HTTP_TIMEOUT_SEC,
             )
         )
 
@@ -522,12 +522,13 @@ def build_scheduler_config_bag() -> CoreDTO.SchedulerConfigBag:
         sample_rate=settings.SAMPLE_RATE,
         traces_sample_rate=settings.TRACES_SAMPLE_RATE,
         redis_url=settings.REDIS_URL,
+        rss_interval_sec=settings.SCHEDULER_RSS_INTERVAL_SEC,
         cleanup_interval_sec=settings.SCHEDULER_CLEANUP_INTERVAL_SEC,
         exchanges_interval_sec=settings.SCHEDULER_EXCHANGES_INTERVAL_SEC,
         symbols_interval_sec=settings.SCHEDULER_SYMBOLS_INTERVAL_SEC,
         tickers_interval_sec=settings.SCHEDULER_TICKERS_INTERVAL_SEC,
         alerts_interval_sec=settings.SCHEDULER_ALERTS_INTERVAL_SEC,
-        dispatch_interval_sec=settings.SCHEDULER_DISPATCH_INTERVAL_SEC,
+        alert_events_interval_sec=settings.SCHEDULER_ALERT_EVENTS_INTERVAL_SEC,
         snapshot_intervals_sec=settings.SCHEDULER_SNAPSHOT_INTERVALS,
         restart_base_backoff_sec=settings.SCHEDULER_RESTART_BASE_BACKOFF_SEC,
         restart_max_backoff_sec=settings.SCHEDULER_RESTART_MAX_BACKOFF_SEC,

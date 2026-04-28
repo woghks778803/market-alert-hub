@@ -22,7 +22,7 @@ class AlertDelivery(Base):
             native_enum=True, create_constraint=True, validate_strings=True
         ), 
         default=AlertDeliveryStatus.QUEUED, 
-        server_default=AlertDeliveryStatus.QUEUED, 
+        server_default=AlertDeliveryStatus.QUEUED.value, 
         nullable=False
     )
     sent_at:       Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

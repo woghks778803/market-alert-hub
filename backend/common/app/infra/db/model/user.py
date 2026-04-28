@@ -42,7 +42,7 @@ class User(Base):
         ),
         nullable=False,
         default=UserRole.USER,
-        server_default=UserRole.USER,
+        server_default=UserRole.USER.value,
     )
     status: Mapped[UserStatus] = mapped_column(
         SAEnum(
@@ -54,7 +54,7 @@ class User(Base):
         ),
         nullable=False,
         default=UserStatus.ACTIVE,
-        server_default=UserStatus.ACTIVE,
+        server_default=UserStatus.ACTIVE.value,
     )
 
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

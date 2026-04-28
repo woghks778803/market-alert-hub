@@ -42,7 +42,7 @@ class Alert(Base):
             native_enum=True, create_constraint=True, validate_strings=True
         ),
         default=AlertStatus.ACTIVE,
-        server_default=AlertStatus.ACTIVE,
+        server_default=AlertStatus.ACTIVE.value,
         nullable=False,
     )
 

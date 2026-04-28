@@ -6,9 +6,7 @@ from dataclasses import dataclass
 from typing import Any, AsyncIterator, AsyncIterable
 
 from .shared.errors import UpbitWsError, UpbitDecodeError
-from .shared.types import (
-    UpbitWsSubscribe,
-)
+from .shared.dto import UpbitWsSubscribe
 
 from app.infra.external.exchange.port.ws_client import (
     WsStreamItem,

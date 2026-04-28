@@ -29,7 +29,7 @@ class AlertEvent(Base):
             native_enum=True, create_constraint=True, validate_strings=True
         ),
         default=AlertEventStatus.PENDING,
-        server_default=AlertEventStatus.PENDING,
+        server_default=AlertEventStatus.PENDING.value,
         nullable=False,
     )
 

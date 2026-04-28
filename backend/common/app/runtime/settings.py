@@ -98,6 +98,9 @@ class Settings(BaseSettings):
     API_DB_POOL_SIZE: int = 1
     API_DB_MAX_OVERFLOW: int = 0
 
+    # Translation
+    GOOGLE_TRANSLATION_REST_BASE_URL: str = "https://translation.googleapis.com"
+
     # --- WS ---
     WS_LOG_LEVEL: str = Field(default="INFO")
     WS_ASYNC_DB_POOL_SIZE: int = 1
@@ -202,12 +205,13 @@ class Settings(BaseSettings):
     SCHEDULER_CHECKPOINT_FILE_PATH: str = "/tmp/scheduler_checkpoint.json"
 
     # Schedule interval
+    SCHEDULER_RSS_INTERVAL_SEC: int = 60
     SCHEDULER_CLEANUP_INTERVAL_SEC: int = 86400
     SCHEDULER_EXCHANGES_INTERVAL_SEC: int = 1800
     SCHEDULER_SYMBOLS_INTERVAL_SEC: int = 1800
     SCHEDULER_TICKERS_INTERVAL_SEC: int = 60  # 1분
     SCHEDULER_ALERTS_INTERVAL_SEC: int = 300 # 5분
-    SCHEDULER_DISPATCH_INTERVAL_SEC: int = 10
+    SCHEDULER_ALERT_EVENTS_INTERVAL_SEC: int = 10
     SCHEDULER_SNAPSHOT_INTERVALS: list[int] = Field(
         default_factory=lambda: [60, 3600, 86400]
     )

@@ -20,7 +20,7 @@ class Outbox(Base):
     status: Mapped[OutboxStatus] = mapped_column(
                                         SAEnum(OutboxStatus, name="outbox_status", values_callable=lambda e: [m.value for m in e],
                                         native_enum=True, create_constraint=True, validate_strings=True),
-                                        nullable=False, default=OutboxStatus.PENDING, server_default=OutboxStatus.PENDING)
+                                        nullable=False, default=OutboxStatus.PENDING, server_default=OutboxStatus.PENDING.value)
     
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 

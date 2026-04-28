@@ -23,7 +23,7 @@ class Instrument(Base):
             validate_strings=True,
         ),
         default=AssetType.CRYPTO,
-        server_default=AssetType.CRYPTO,
+        server_default=AssetType.CRYPTO.value,
         nullable=False,
     )
 
