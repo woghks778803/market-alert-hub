@@ -1,4 +1,5 @@
 from decimal import Decimal
+from datetime import datetime
 from typing import cast, Sequence, Tuple
 from sqlalchemy.engine import CursorResult
 from sqlalchemy import update, insert, select, and_, or_, asc, desc, func, tuple_
@@ -17,7 +18,6 @@ from app.infra.db.model import (
 from app.core.util.datetime import utcnow, get_days_ago
 from app.core.constants import MarketSort
 from app.domain import MarketDTO
-from datetime import datetime
 from app.infra.db.repository.protocol.market_repo import MarketRepo
 from app.infra.db.utils import to_row_dict
 
@@ -826,16 +826,16 @@ class SqlMarketRepo(MarketRepo):
             self._db.execute(stmt)
 
     def upsert_exchange_instruments(
-        self, exchange_instruments: list[MarketDTO.ExchangeInstrumentSync]
-    ) -> int:
-        if not exchange_instruments:
-            return 0
+        self, 
+        rows: list[MarketDTO.ExchangeInstrumentSync]
+        *,
+        chunk_size: int = 1000,
+    ) -> None:
+        if not rows:
+            return 
 
-        total = 0
-        CHUNK = 1000
-
-        for i in range(0, len(exchange_instruments), CHUNK):
-            chunk = exchange_instruments[i : i + CHUNK]
+        for i in range(0, len(rows), chunk_size):
+            chunk = rows[i : i + chunk_size]
 
             values = [
                 {
@@ -866,11 +866,7 @@ class SqlMarketRepo(MarketRepo):
                 # deleted_at=None # soft delete 살릴거면
             )
 
-            result = self._db.execute(stmt)
-            rowcount = result.rowcount or 0
-            total += rowcount
-
-        return total
+            self._db.execute(stmt)
 
     def upsert_exchange_instruments_by_pairs(
         self,

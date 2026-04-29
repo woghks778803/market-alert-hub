@@ -18,7 +18,9 @@ class SqlOutboxRepo(OutboxRepo):
         self._db.add(outbox)
         if is_flush:
             self._db.flush()
-        return outbox.to_dto()
+
+        # 주의) is_flush에서 에러 발생시 데이터가 달라질수있음
+        return outbox.to_dto() 
 
     def add_outbox_attempt(
         self, row: OutboxDTO.OutboxAttemptCreate, is_flush: bool
@@ -27,6 +29,8 @@ class SqlOutboxRepo(OutboxRepo):
         self._db.add(outbox_attempt)
         if is_flush:
             self._db.flush()
+
+        # 주의) is_flush에서 에러 발생시 데이터가 달라질수있음
         return outbox_attempt.to_dto()
 
     def get_by_outbox_id(self, id: int) -> OutboxDTO.Outbox | None:

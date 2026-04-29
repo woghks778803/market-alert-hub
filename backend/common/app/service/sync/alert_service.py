@@ -525,7 +525,7 @@ class AlertService:
             skipped_count = len(skipped_event_ids)
             delivery_count = uow.alerts.add_alert_deliveries(deliveries)
 
-            print("delivery_count", delivery_count)
+            # print("delivery_count", delivery_count)
 
             # 6. alert_events DISPATCHED 처리
             uow.alerts.update_alert_events_by_status(

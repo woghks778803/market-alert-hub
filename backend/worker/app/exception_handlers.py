@@ -7,6 +7,7 @@ from app.core.error.error_model import (
     from_exception_minimal,
     build_log_fields,
 )
+from app.core.util.trace import get_trace_id
 
 log = logging.getLogger(__name__)
 
@@ -119,6 +120,7 @@ def run_task(
     deploy_env: DeploymentEnvironment,
     fn: Callable[[], Any],
 ) -> HandlerResult:
+    trace_id = get_trace_id()
     """
     - 핸들러(fn)를 실행하고
     - worker 공통 규약으로 Outcome 생성
@@ -183,6 +185,7 @@ def run_task(
         # 완전 미분류: 기본은 retry 후보로 두는 게 보수적(원하면 False로)
         spec = from_exception_minimal(
             e,
+            trace_id=trace_id,
             include_stack=(deploy_env != DeploymentEnvironment.PROD),
         )
         _log_spec(
@@ -191,7 +194,7 @@ def run_task(
         )
         return HandlerResult(
             success=False,
-            retryable=True,
+            retryable=False,
             result_code=spec.code,
             result_message=spec.message,
             result_payload=spec.meta if isinstance(spec.meta, dict) else None,

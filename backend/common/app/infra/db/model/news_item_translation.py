@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.constants import LanguageCode, NewsItemTranslationStatus
+from app.core.constants import TranslationCode, LanguageCode, NewsItemTranslationStatus
 from app.core.util.datetime import utcnow
 from app.domain import NewsDTO
 from app.infra.db.base import Base
@@ -33,7 +33,14 @@ class NewsItemTranslation(Base):
     title: Mapped[str | None] = mapped_column(String(500))
     description: Mapped[str | None] = mapped_column(Text)
 
-    provider: Mapped[str | None] = mapped_column(String(50))
+    provider: Mapped[TranslationCode | None] = mapped_column(
+        SAEnum(
+            TranslationCode, values_callable=lambda e: [m.value for m in e], 
+            native_enum=True, create_constraint=True, validate_strings=True
+        ),
+        default=None,
+        server_default=None,
+    )
 
     status: Mapped[NewsItemTranslationStatus] = mapped_column(
         SAEnum(

@@ -34,7 +34,8 @@ class GoogleTranslation(NewsPort.GoogleTranslation):
             if len(response.translated_texts) != len(chunk):
                 raise RuntimeError("translation response count mismatch")
 
-            for source_item, translated_text in zip(chunk, response.translated_texts):
+            # 같은 순서끼리 묶어서 하나씩 꺼내는 함수 (zip)
+            for source_item, translated_text in zip(chunk, response.translated_texts): 
                 results.append(
                     NewsDTO.TranslatedTextItem(
                         ref_id=source_item.ref_id,

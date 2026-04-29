@@ -135,8 +135,11 @@ class MarketRepo(Protocol):
         chunk_size: int = 1000,
     ) -> int: ...
     def upsert_exchange_instruments(
-        self, exchange_instruments: list[MarketDTO.ExchangeInstrumentSync]
-    ) -> int: ...
+        self, 
+        rows: list[MarketDTO.ExchangeInstrumentSync]
+        *,
+        chunk_size: int = 1000,
+    ) -> None: ...
     def upsert_exchange_instruments_by_pairs(
         self,
         exchange_id: int,

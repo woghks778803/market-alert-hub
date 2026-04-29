@@ -32,7 +32,7 @@ class OutboxService:
         aggregate_type: str,
         aggregate_id: int,
         payload: dict[str, Any],
-    ) -> OutboxDTO.Outbox:
+    ) -> None:
         with self._uow_factory() as uow:
             outbox_fingerprint = to_canonical_json(outbox_fingerprint_dict)
             if outbox_fingerprint:
@@ -40,7 +40,7 @@ class OutboxService:
             else:
                 outbox_fingerprint = None
 
-            row = uow.outboxs.add_outbox(
+            uow.outboxs.add_outbox(
                 OutboxDTO.OutboxCreate(
                     trace_id=trace_id,
                     event_type=event_type,
@@ -55,7 +55,6 @@ class OutboxService:
             )
 
             uow.commit_outbox_idempotent()
-            return row
 
     def enqueue_outbox_pending(self, limit: int, q_outbox):
         with self._uow_factory() as uow:
@@ -134,9 +133,9 @@ class OutboxService:
             else:
                 outbox_attempt.success = result.success
                 outbox_attempt.retryable = result.retryable
-                outbox_attempt.result_message = "Done"
                 if result.success:
                     outbox_update.status = OutboxStatus.SENT
+                    outbox_attempt.result_message = "Done"
                 else:
                     outbox_update.status = OutboxStatus.FAILED
 

@@ -5,27 +5,26 @@ from app.core.util.trace import get_trace_id
 logger = logging.getLogger(__name__)
 
 
-def handle_fetch_rss(ctx, slot, now_epoch, interval_sec):
-    rss_sources = ctx.svcs.newses.list_rss_source_by_filter()
-
-    for rss_source in rss_sources:
+def handle_fetch_news_feeds(ctx, slot, now_epoch, interval_sec):
+    news_feeds = ctx.svcs.newses.list_news_feed_by_filter()
+    for news_feed in news_feeds:
         outbox_fingerprint_dict = {
-            "event_type": OutboxEventType.FETCH_RSS_SOURCES.value,
-            "aggregate_type": "rss_source",
-            "aggregate_id": rss_source.id,
+            "event_type": OutboxEventType.FETCH_NEWS_FEED.value,
+            "aggregate_type": "news_feed",
+            "aggregate_id": news_feed.rss_source_id,
             "slot": slot,
         }
         payload = {
             "slot": slot,
             "requested_at_epoch": now_epoch,
             "interval_sec": interval_sec,
-            "rss": {
-                "id": rss_source.id,
-                "code": rss_source.code,
+            "news_feed": {
+                "rss_source_id": news_feed.rss_source_id,
+                "rss_source_code": news_feed.rss_source_code,
             },
         }
         _insert_outbox(
-            ctx, OutboxEventType.FETCH_RSS_SOURCES, outbox_fingerprint_dict, payload
+            ctx, OutboxEventType.FETCH_NEWS_FEED, outbox_fingerprint_dict, payload
         )
 
 def handle_cleanup_deleted_users(ctx, slot, now_epoch, interval_sec):

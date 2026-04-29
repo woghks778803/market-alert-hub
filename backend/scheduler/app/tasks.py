@@ -9,7 +9,7 @@ from app.handlers import (
     handle_sync_tickers,
     handle_sync_alerts,
     handle_dispatch_alert_events,
-    handle_fetch_rss,
+    handle_fetch_news_feeds,
 )
 
 
@@ -48,9 +48,9 @@ def build_default_tasks(config):
 
     return [
         IntervalTask(
-            OutboxEventType.FETCH_RSS_SOURCES,
+            OutboxEventType.FETCH_NEWS_FEED,
             config.rss_interval_sec,
-            handle_fetch_rss,
+            handle_fetch_news_feeds,
         ),
         IntervalTask(
             OutboxEventType.CLEANUP_DELETED_USERS,

@@ -213,4 +213,5 @@ class ServiceFactory:
             uow_factory=self._uow,
             google_translation=self.google_translation,
             news_feed=self.news_feed,
+            hmac=self.hmac,
         )

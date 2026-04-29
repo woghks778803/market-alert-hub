@@ -8,6 +8,7 @@ from app.infra.external.transport.port.http import HttpResponse, SyncHttpTranspo
 class HttpxTransportConfig:
     base_url: str
     timeout_sec: float = 10.0
+    follow_redirects: bool = False
 
 
 class HttpxTransport(SyncHttpTransport):
@@ -28,6 +29,7 @@ class HttpxTransport(SyncHttpTransport):
         self._client = httpx.Client(
             base_url=self._config.base_url,
             timeout=httpx.Timeout(self._config.timeout_sec),
+            follow_redirects=self._config.follow_redirects,
         )
 
     def _get_client(self) -> httpx.Client:

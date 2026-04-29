@@ -1,6 +1,11 @@
 from dataclasses import dataclass
 from datetime import datetime
-from app.core.constants import LanguageCode, NewsItemStatus, NewsItemTranslationStatus
+from app.core.constants import (
+    TranslationCode,
+    LanguageCode, 
+    NewsItemStatus, 
+    NewsItemTranslationStatus
+)
 
 @dataclass(frozen=True)
 class ParsedNewsFeedItem:
@@ -36,7 +41,7 @@ class TranslateTextItem:
 
 @dataclass(frozen=True)
 class TranslateBatchRequest:
-    source_language: str
+    source_language: str | None
     target_language: str
     items: list[TranslateTextItem]
 
@@ -102,15 +107,40 @@ class NewsItem:
     published_at: datetime | None
     fetched_at: datetime
 
-    title_hash: str
-    link_hash: str
-    content_hash: str | None
+    title_fingerprint: bytes
+    link_fingerprint: bytes
+    content_fingerprint: bytes | None
 
     status: NewsItemStatus
 
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None
+
+@dataclass(frozen=True)
+class NewsItemCreate:
+    rss_source_id: int
+
+    guid: str | None
+    link: str
+    canonical_link: str | None
+
+    title_original: str
+    description_original: str | None
+    content_original: str | None
+
+    image_url: str | None
+    author: str | None
+    language: LanguageCode
+
+    published_at: datetime | None
+    fetched_at: datetime
+
+    title_fingerprint: bytes
+    link_fingerprint: bytes
+    content_fingerprint: bytes | None
+
+    status: NewsItemStatus = NewsItemStatus.ACTIVE
 
 @dataclass(frozen=True)
 class NewsItemStat:
@@ -123,6 +153,13 @@ class NewsItemStat:
     deleted_at: datetime | None
 
 @dataclass(frozen=True)
+class NewsItemStatCreate:
+    news_item_id: int
+    click_count: int = 0
+    share_count: int = 0
+    last_clicked_at: datetime | None = None
+
+@dataclass(frozen=True)
 class NewsItemTranslation:
     id: int
     news_item_id: int
@@ -131,7 +168,7 @@ class NewsItemTranslation:
     title: str | None
     description: str | None
 
-    provider: str | None
+    provider: TranslationCode | None
     status: NewsItemTranslationStatus
 
     requested_at: datetime | None
@@ -144,3 +181,42 @@ class NewsItemTranslation:
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None
+
+@dataclass(frozen=True)
+class NewsItemTranslationCreate:
+    news_item_id: int
+    locale: LanguageCode
+    status: NewsItemTranslationStatus = NewsItemTranslationStatus.PENDING
+
+@dataclass(frozen=True)
+class NewsItemTranslationTarget:
+    translation_id: int
+    news_item_id: int
+    title_original: str
+    description_original: str | None
+    provider_language: LanguageCode
+    item_language: LanguageCode
+
+@dataclass(frozen=True)
+class NewsItemTranslationDone:
+    translation_id: int
+    title: str | None
+    description: str | None
+
+@dataclass(frozen=True)
+class NewsFeed:
+    rss_source_id: int
+    rss_provider_id: int
+
+    rss_source_code: str
+    rss_source_name: str
+    feed_url: str
+    etag: str | None
+    last_modified: str | None
+
+    rss_provider_code: str
+    rss_provider_name: str
+    language: LanguageCode
+    request_timeout_sec: int
+    rate_limit_policy: dict | None
+    retry_policy: dict | None

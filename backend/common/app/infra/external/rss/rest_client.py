@@ -40,6 +40,7 @@ class RssRestClient:
             HttpxTransportConfig(
                 base_url=base_url,
                 timeout_sec=timeout_sec,
+                follow_redirects=True,
             )
         )
 

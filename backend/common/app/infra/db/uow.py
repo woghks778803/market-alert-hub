@@ -75,6 +75,7 @@ class UnitOfWork(UnitOfWorkPort):
         except IntegrityError as e:
 
             if is_mysql_duplicate_key(e):
+                # 같은 outbox가 등록되어있으면 예외를 삼킴
                 # 이미 같은 fingerprint가 존재 → 정상 처리
                 self.db.rollback()
                 self._done = True

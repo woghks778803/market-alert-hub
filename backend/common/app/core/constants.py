@@ -59,6 +59,9 @@ class ChannelCode(str, enum.Enum):
     TELEGRAM = "TELEGRAM"
     DISCORD = "DISCORD"
 
+class TranslationCode(str, enum.Enum):
+    GOOGLE = "GOOGLE"
+
 class OAuthCode(str, enum.Enum):
     KAKAO = "KAKAO"
 
@@ -104,7 +107,8 @@ class OutboxEventType(str, enum.Enum):
 
     CLEANUP_DELETED_USERS = "CLEANUP_DELETED_USERS"
 
-    FETCH_RSS_SOURCES = "FETCH_RSS_SOURCES"
+    FETCH_NEWS_FEED = "FETCH_NEWS_FEED"
+    TRANSLATE_NEWS_ITEMS = "TRANSLATE_NEWS_ITEMS"
 
     SYNC_EXCHANGES = "SYNC_EXCHANGES"
     SYNC_SYMBOLS = "SYNC_SYMBOLS"

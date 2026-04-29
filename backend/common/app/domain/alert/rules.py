@@ -71,8 +71,6 @@ class AlertMessageBuilder:
 
         form_type = str(context.get("form_type") or "")
         
-        print("context", context)
-        print("form_type", form_type)
         builder = self._form_builders.get(form_type, self._default_builder)
 
         trigger_value

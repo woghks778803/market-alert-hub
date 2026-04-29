@@ -48,7 +48,7 @@ def handle_auth_password_reset(
 
     except (TimeoutError, ConnectionError) as e:
         raise RetryHandler(
-            "email_send_failed",
+            "email_send_retry",
             meta={"provider": "EMAIL", "error": str(e)},
         ) from e
 

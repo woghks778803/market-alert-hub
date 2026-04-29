@@ -223,6 +223,7 @@ class Settings(BaseSettings):
 
     # --- RSS ---
     RSS_USER_AGENT: str = "market-alert-hub-rss/1.0"
+    RSS_SOURCES_BATCH_SIZE: int = 50
 
     # --- Translation ---
     GOOGLE_TRANSLATION_REST_BASE_URL: str = "https://translation.googleapis.com"
@@ -267,8 +268,13 @@ class Settings(BaseSettings):
         event_type dict로 묶음
         """
         return {
-            OutboxEventType.FETCH_RSS_SOURCES.value: {
-                "run_key": OutboxEventType.FETCH_RSS_SOURCES.value,
+            OutboxEventType.TRANSLATE_NEWS_ITEMS.value: {
+                "run_key": OutboxEventType.TRANSLATE_NEWS_ITEMS.value,
+                "batch_size": self.GOOGLE_TRANSLATE_BATCH_SIZE,
+            },
+            OutboxEventType.FETCH_NEWS_FEED.value: {
+                "run_key": OutboxEventType.FETCH_NEWS_FEED.value,
+                "batch_size": self.RSS_SOURCES_BATCH_SIZE,
             },
             OutboxEventType.DISPATCH_ALERT_EVENTS.value: {
                 "run_key": OutboxEventType.DISPATCH_ALERT_EVENTS.value,
