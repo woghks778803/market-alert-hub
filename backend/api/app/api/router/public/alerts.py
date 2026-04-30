@@ -46,7 +46,7 @@ def get_alert(
         OpenApi.ERR_409,
     ),
 )
-def list_types(
+def list_type(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     search: str | None = Query(None),

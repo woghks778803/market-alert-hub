@@ -77,14 +77,6 @@ export type CandlesListRequest = {
 
 export const marketApi = {
 
-    // GET /markets/{exchange_instrument_id}
-    // async getMarket(id: number) {
-    //     const { data } = await http.get<Envelope<MarketInfo>>(
-    //         `/markets/${id}`
-    //     );
-    //     return data;
-    // },
-
     // GET /markets/{exchange_code}/{symbol}
     async getMarket(exchange_code: string, symbol: string) {
         const { data } = await http.get<Envelope<MarketInfo>>(

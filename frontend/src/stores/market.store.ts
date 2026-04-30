@@ -4,7 +4,7 @@ import { marketWs } from "@/services/ws/market.ws"
 import * as marketService from "@/services/market.service"
 import { createWatchlist, removeWatchlist } from "@/services/watchlist.service"
 import type { SimpleMarketDto, MarketDto, ExchangeDto, CandleDto, SimpleMarketListQuery, MarketListQuery, ExchangeListQuery, CandlesListQuery } from "@/services/market.types"
-import { MarketSort, ChartTimeframe, CandleInterval, TickerInterval, WsChannelType, MarketSortLabel, CANDLES_LIMIT, TIMEFRAME_SECONDS } from "@/services/market.types"
+import { MarketSort, ChartTimeframe, CandleInterval, TickerInterval, WsChannelType, MarketSortLabel, CANDLES_MAX_LIMIT, CANDLES_LIMIT, TIMEFRAME_SECONDS } from "@/services/market.types"
 
 export const useMarketStore = defineStore("market", () => {
     let searchTimer: any
@@ -63,11 +63,11 @@ export const useMarketStore = defineStore("market", () => {
     async function fetchCandles() {
         // console.log("Fetching candles for market:", market.value)
         if (!market.value) return
-        if (candles.value.length >= CANDLES_LIMIT) return
+        if (candles.value.length >= CANDLES_MAX_LIMIT) return
 
         candlesListQuery.value.exchangeInstrumentId = market.value.exchangeInstrumentId
         candlesListQuery.value.output = currentTimeframe.value
-        candlesListQuery.value.limit = 500
+        candlesListQuery.value.limit = CANDLES_LIMIT
         candlesListQuery.value.order = "desc"
 
         const data = await marketService.getCandles(candlesListQuery.value as CandlesListQuery)
@@ -108,7 +108,6 @@ export const useMarketStore = defineStore("market", () => {
     }
 
     function setMarketFilter(codes: string[]) {
-        // console.log(codes)
 
         // 마지막 선택값
         const last = codes[codes.length - 1]
@@ -351,25 +350,24 @@ export const useMarketStore = defineStore("market", () => {
         exchanges.value = []
         currentTimeframe.value = ChartTimeframe.MIN_1
         candlesListQuery.value = {}
-        // console.log("Market reset, clearing candles", candles.value)
     }
 
     return {
-        currentCandle,
-        currentSortLabel,
-        currentTimeframe,
-        currentSystemTab,
         candles,
         market,
         markets,
         simpleMarkets,
         exchanges,
 
+        currentCandle,
+        currentSortLabel,
+        currentTimeframe,
+        currentSystemTab,
+        openSort,
+
         marketListQuery,
         candlesListQuery,
         simpleMarketListQuery,
-
-        openSort,
 
         fetchMarket,
         fetchMarkets,

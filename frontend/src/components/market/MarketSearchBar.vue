@@ -1,13 +1,16 @@
 <template>
   <v-text-field
+    :model-value="marketListQuery.search"
+    @update:model-value="onInput"
     placeholder="심볼/마켓 검색"
     prepend-inner-icon="mdi-magnify"
     variant="solo"
     density="comfortable"
+    rounded="lg"
     hide-details
+    clearable
+    flat
     class="mk-search"
-    :model-value="marketListQuery.search"
-    @update:model-value="onInput"
   />
 </template>
 

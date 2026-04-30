@@ -14,6 +14,7 @@
           color="primary"
           class="sd-alert-btn"
           prepend-icon="mdi-bell-outline"
+          @click="goSetting"
         >
           알림 만들기
         </v-btn>
@@ -38,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { useRoute } from "vue-router"
+import { useRoute, useRouter } from "vue-router"
 import { onMounted, onUnmounted, onDeactivated, watch, ref } from "vue"
 import { storeToRefs } from "pinia"
 import AppLoading from "@/components/common/AppLoading.vue"
@@ -49,6 +50,7 @@ import { useMarketStore } from "@/stores/market.store"
 import { WsChannelType, CandleInterval, TickerInterval } from "@/services/market.types"
 
 const route = useRoute()
+const router = useRouter()
 const marketStore = useMarketStore()
 const { market, currentTimeframe } = storeToRefs(marketStore)
 const marketAction = useAsyncAction()
@@ -86,6 +88,10 @@ async function toggleWatchlist() {
 
 async function toggleCollapsed() {
   collapsed.value = !collapsed.value
+}
+
+function goSetting(){
+  router.push({ name: "RuleSetting"})
 }
 
 watch(

@@ -70,6 +70,9 @@ class OAuthResultType(str, enum.Enum):
     ERROR = "error"
     SUCCESS = "success"
 
+class NewsPostsort(str, enum.Enum):
+    RECENT_UPDATED = "recent_updated"
+
 class MarketSort(str, enum.Enum):
     VOLUME_DESC = "volume_desc"
     CHANGE_DESC = "change_desc"

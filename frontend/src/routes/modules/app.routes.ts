@@ -12,6 +12,8 @@ import ArchivesView from "@/views/app/alert/ArchivesView.vue"
 import LogsView from "@/views/app/alert/LogsView.vue"
 // import ChannelsView from "@/views/app/alert/ChannelsView.vue"
 
+import PostView from "@/views/app/news/IndexView.vue"
+
 import MoreView from "@/views/app/more/MoreView.vue"
 import AppSettingView from "@/views/app/more/AppSettingView.vue"
 import ProfileView from "@/views/app/user/ProfileView.vue"
@@ -21,9 +23,9 @@ export const appRoutes: RouteRecordRaw[] = [
     {
         path: "",
         name: "Home",
-        component: HomeView,
+        component: MarketView,
         meta: {
-            title: "홈", allows: ["verified"], showBack: false, tab: "home"
+            title: "마켓", allows: ["verified"], showBack: false, tab: "market"
         },
     },
 
@@ -107,6 +109,16 @@ export const appRoutes: RouteRecordRaw[] = [
             tab: "alert",
         },
     },
+
+    {
+        path: "news",
+        name: "News",
+        component: PostView,
+        meta: {
+            title: "피드", allows: ["verified"], showBack: false, tab: "news"
+        },
+    },
+
     {
         path: "more",
         name: "More",

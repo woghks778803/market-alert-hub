@@ -61,14 +61,14 @@ export const useSupportStore = defineStore("notice", () => {
     }
 
     return {
+        notices,
+        notice,
+        faqs,
+
         activeTab,
 
         noticeListQuery,
         FAQListQuery,
-
-        notices,
-        notice,
-        faqs,
 
         fetchNotices,
         fetchNotice,

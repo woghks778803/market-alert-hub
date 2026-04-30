@@ -220,3 +220,27 @@ class NewsFeed:
     request_timeout_sec: int
     rate_limit_policy: dict | None
     retry_policy: dict | None
+
+@dataclass(frozen=True)
+class NewsPost:
+    news_item_id: int
+    title_original: str
+    description_original: str | None
+    guid: str | None
+    link: str
+    published_at: datetime
+    fetched_at: datetime
+
+    translation_id: int
+    translation_local: LanguageCode
+    translation_provider: TranslationCode | None
+    title: str | None
+    description: str | None
+    translated_at: datetime
+
+    click_count: int
+    share_count: int
+
+    item_language: LanguageCode
+    provider_language: LanguageCode
+    provider_name: str

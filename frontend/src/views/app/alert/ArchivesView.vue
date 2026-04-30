@@ -3,39 +3,34 @@
 
   <div class="alert-rules-container">
 
-    <!-- <RuleFilter 
-      :sort="currentAlertSort" 
-      @change-sort="handleChangeSort" 
-    /> -->
-
     <div v-if="!initialLoaded" class="alert-list-loading">
-      불러오는 중...
+        불러오는 중...
     </div>
-    
+
     <v-infinite-scroll
-      class="alert-rule-list"
-      :disabled="!initialLoaded || !alertHasMore || alertLoadingMore"
-      @load="handleLoadMore"
+        class="alert-rule-list"
+        :disabled="!alertHasMore || alertLoadingMore"
+        @load="handleLoadMore"
     >
-      <RuleCard
-        v-for="alert in alerts"
-        :key="alert.id"
-        :alert="alert"
-        @restore="handleRestore"
-        @delete="handleDelete"
-      />
+        <RuleCard
+            v-for="alert in alerts"
+            :key="alert.id"
+            :alert="alert"
+            @restore="handleRestore"
+            @delete="handleDelete"
+        />
 
-      <template #loading>
-        <div class="alert-list-loading">
-          불러오는 중...
-        </div>
-      </template>
+        <template #loading>
+            <div class="alert-list-loading">
+                불러오는 중...
+            </div>
+        </template>
 
-      <template #empty>
-        <div class="alert-list-empty">
-          더 이상 보관된 알림이 없습니다.
-        </div>
-      </template>
+        <template #empty>
+            <div class="alert-list-empty">
+                더 이상 보관된 알림이 없습니다.
+            </div>
+        </template>
     </v-infinite-scroll>
 
   </div>
@@ -146,6 +141,11 @@ const handleConfirmDelete = async () => {
 const handleLoadMore = async ({ done }: { done: (status: "ok" | "empty" | "error") => void }) => {
   if (!initialLoaded.value) {
     done("ok")
+    return
+  }
+
+  if (!alertHasMore.value) {
+    done("empty")
     return
   }
 

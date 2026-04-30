@@ -115,7 +115,7 @@ class MarketService:
             )
             return rows
 
-    def list_candles_by_filter(
+    def list_candle_by_filter(
         self,
         *,
         exchange_instrument_id: int,

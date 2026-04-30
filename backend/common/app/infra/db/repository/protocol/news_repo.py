@@ -4,6 +4,7 @@ from datetime import datetime
 from app.core.constants import (
     TranslationCode, 
     LanguageCode, 
+    NewsPostsort,
     NewsItemTranslationStatus, 
     NewsItemStatus
 )
@@ -34,6 +35,22 @@ class NewsRepo(Protocol):
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[NewsDTO.NewsFeed]: ...
+
+    def list_news_post_by_filter(
+        self,
+        *,
+        locale: LanguageCode,
+        translation_status: NewsItemTranslationStatus,
+        item_status: NewsItemStatus,
+        search: str | None,
+        cursor_at: datetime | None,
+        cursor_id: int | None,
+        start: datetime | None,
+        end: datetime | None,
+        limit: int = 100,
+        sort: NewsPostsort | None,
+        deleted_is_null: bool = True,
+    ) -> Sequence[NewsDTO.NewsPost]: ...
 
     def get_news_feed_by_id(
         self,

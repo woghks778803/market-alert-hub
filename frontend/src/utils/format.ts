@@ -30,7 +30,7 @@ export function formatVolume(value: number | null) {
     return value.toFixed(0)
 }
 
-export function formatDateTime(dateStr: string): string {
+export function formatDateTime(dateStr: string | null): string {
     if (!dateStr) return ''
 
     const d = new Date(dateStr)
@@ -45,7 +45,7 @@ export function formatDateTime(dateStr: string): string {
     return `${yyyy}.${mm}.${dd} ${hh}:${min}`
 }
 
-export function formatDate(dateStr: string): string {
+export function formatDate(dateStr: string | null): string {
     if (!dateStr) return ''
 
     const d = new Date(dateStr)

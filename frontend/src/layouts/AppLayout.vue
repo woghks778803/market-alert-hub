@@ -10,10 +10,10 @@
   <v-bottom-navigation 
     :model-value="activeTab" 
     grow mandatory height="64">
-    <v-btn value="home" @click="handleTabClick">
+    <!-- <v-btn value="home" @click="handleTabClick">
       <v-icon icon="mdi-home-outline" />
       <span>홈</span>
-    </v-btn>
+    </v-btn> -->
 
     <v-btn value="market" @click="handleTabClick">
       <v-icon icon="mdi-format-list-bulleted" />
@@ -23,6 +23,13 @@
     <v-btn value="alert" @click="handleTabClick">
       <v-icon icon="mdi-bell-outline" />
       <span>알림</span>
+    </v-btn>
+
+    <v-btn value="news" @click="handleTabClick">
+      <v-icon icon="mdi-rss" />
+      <span>피드</span>
+      <!-- <v-icon icon="mdi-newspaper-variant-outline" /> -->
+      <!-- <span>뉴스</span> -->
     </v-btn>
 
     <v-btn value="more" @click="handleTabClick">
@@ -51,9 +58,10 @@ const handleTabClick = (e: any) => {
   if (!tabValue) return;
 
   const routeNames: Record<string, string> = {
-    home: 'Home',
+    // home: 'Home',
     market: 'Markets',
     alert: 'Rules',
+    news: 'News',
     more: 'More'
   };
 

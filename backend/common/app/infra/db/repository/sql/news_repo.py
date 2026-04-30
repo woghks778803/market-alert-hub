@@ -5,9 +5,11 @@ from sqlalchemy import update, insert, select, and_, or_, asc, desc, func, tuple
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.orm import aliased, Session as DbSession
 
+from app.core.util.datetime import utcnow, get_days_ago
 from app.core.constants import (
     TranslationCode,
     LanguageCode, 
+    NewsPostsort,
     NewsItemTranslationStatus, 
     NewsItemStatus
 )
@@ -146,6 +148,120 @@ class SqlNewsRepo(NewsRepo):
                 retry_policy=provider.retry_policy,
             )
             for source, provider in rows
+        ]
+
+    def list_news_post_by_filter(
+        self,
+        *,
+        locale: LanguageCode,
+        translation_status: NewsItemTranslationStatus,
+        item_status: NewsItemStatus,
+        search: str | None,
+        cursor_at: datetime | None,
+        cursor_id: int | None,
+        start: datetime | None,
+        end: datetime | None,
+        limit: int = 100,
+        sort: NewsPostsort | None,
+        deleted_is_null: bool = True,
+    ) -> Sequence[NewsDTO.NewsPost]:
+        
+        stmt = (
+            select(
+                ni.id.label("news_item_id"),
+                ni.title_original.label("title_original"),
+                ni.description_original.label("description_original"),
+                ni.guid.label("guid"),
+                ni.link.label("link"),
+                ni.published_at.label("published_at"),
+                ni.fetched_at.label("fetched_at"),
+
+                nit.id.label("translation_id"),
+                nit.locale.label("translation_local"),
+                nit.provider.label("translation_provider"),
+                nit.title.label("title"),
+                nit.description.label("description"),
+                nit.translated_at.label("translated_at"),
+
+                nis.click_count.label("click_count"),
+                nis.share_count.label("share_count"),
+
+                ni.language.label("item_language"),
+                rp.language.label("provider_language"),
+                rp.name.label("provider_name"),
+            )
+            .select_from(ni)
+            .join(nit, nit.news_item_id == ni.id)
+            .join(nis, nis.news_item_id == ni.id)
+            .join(rs, rs.id == ni.rss_source_id)
+            .join(rp, rp.id == rs.rss_provider_id)
+            .where(
+                and_(
+                    ni.published_at.is_not(None),
+                    ni.published_at >= get_days_ago(utcnow(), 2),
+                    ni.status == item_status,
+                    
+                    nit.locale == locale,
+                    nit.status == translation_status,
+
+                    nit.deleted_at.is_(None),
+                    nis.deleted_at.is_(None),
+                    rs.is_active.is_(True),
+                    rs.deleted_at.is_(None),
+                    rp.is_active.is_(True),
+                    rp.deleted_at.is_(None),
+                )
+            )
+            .limit(limit)
+        )
+        
+        if sort == NewsPostsort.RECENT_UPDATED:
+            order_dt = func.coalesce(ni.published_at, ni.fetched_at)
+            stmt = stmt.order_by(
+                desc(order_dt),
+                desc(ni.id),
+            )
+        else: 
+            order_dt = func.coalesce(ni.published_at, ni.fetched_at)
+            stmt = stmt.order_by(
+                desc(order_dt),
+                desc(ni.id),
+            )
+
+        
+        if cursor_at is not None and cursor_id is not None:
+            stmt = stmt.where(
+                or_(
+                    order_dt < cursor_at,
+                    and_(
+                        order_dt == cursor_at,
+                        ni.id < cursor_id,
+                    ),
+                )
+            )
+        else:
+            if start is not None:
+                stmt = stmt.where(ni.fetched_at >= start)
+            if end is not None:
+                stmt = stmt.where(ni.fetched_at < end)
+
+        if search:
+            stmt = stmt.where(
+                or_(
+                    ni.title_original.ilike(f"%{search}%"),
+                    nit.title.ilike(f"%{search}%"),
+                    rp.name.ilike(f"%{search}%"),
+                )
+            )
+
+        if deleted_is_null:
+            stmt = stmt.where(ni.deleted_at.is_(None))
+        
+        rows = self._db.execute(stmt)
+        
+        return [
+            NewsDTO.NewsPost(**row)
+            for row in rows.mappings().all() 
         ]
 
 

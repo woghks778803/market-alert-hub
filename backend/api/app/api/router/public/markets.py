@@ -74,7 +74,7 @@ def get_market(
         OpenApi.ERR_409,
     ),
 )
-def list_markets(
+def list_market(
     limit: int = Query(100, ge=1, le=200),
     offset: int = Query(0, ge=0),
     exchange_codes: list[str] | None = Query(default=[]),
@@ -108,7 +108,7 @@ def list_markets(
         OpenApi.ERR_409,
     ),
 )
-def list_exchanges(
+def list_exchange(
     limit: int = Query(10, ge=1, le=20),
     offset: int = Query(0, ge=0),
     user: AuthSchema.CurrentUser = Security(get_current_user),
@@ -131,7 +131,7 @@ def list_exchanges(
         OpenApi.ERR_409,
     ),
 )
-def list_exchange_instruments(
+def list_exchange_instrument(
     search: str | None = Query(None),
     exchange_id: int | None = Query(None, ge=1),
     limit: int = Query(50, ge=1, le=200),
@@ -161,7 +161,7 @@ def list_exchange_instruments(
         OpenApi.ERR_409,
     ),
 )
-def list_candles(
+def list_candle(
     exchange_instrument_id: int = Query(..., ge=1),
     output: CandleOutputInterval = Query(None),
     cursor: datetime | None = Query(None, description="UTC ISO8601"),
@@ -172,7 +172,7 @@ def list_candles(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    rows = svcs.markets.list_candles_by_filter(
+    rows = svcs.markets.list_candle_by_filter(
         exchange_instrument_id=exchange_instrument_id,
         output=output,
         cursor=cursor,

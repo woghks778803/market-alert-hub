@@ -1,17 +1,18 @@
 <template>
   <div class="faq-container flex-grow-1 d-flex flex-column">
     <v-container class="pa-4 bg-surface">
-      <v-text-field
-        :model-value="FAQListQuery.search"
-        @update:model-value="supportStore.setSearch"
-        prepend-inner-icon="mdi-magnify"
-        label="궁금한 점을 검색해보세요"
-        variant="solo"
-        flat
-        hide-details
-        rounded="lg"
-        class="border"
-      />
+        <v-text-field
+            :model-value="FAQListQuery.search"
+            @update:model-value="supportStore.setSearch"
+            prepend-inner-icon="mdi-magnify"
+            label="궁금한 점을 검색해보세요"
+            variant="solo"
+            density="comfortable"
+            rounded="lg"
+            hide-details
+            clearable
+            flat
+        />
     </v-container>
 
     <v-container class="pa-0 mt-2 flex-grow-1 d-flex flex-column">

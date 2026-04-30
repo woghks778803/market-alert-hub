@@ -122,4 +122,5 @@ export const TIMEFRAME_SECONDS: Record<ChartTimeframe, number> = {
     [ChartTimeframe.DAY_1]: 86400,
 }
 
-export const CANDLES_LIMIT: number = 3000
+export const CANDLES_MAX_LIMIT: number = 3000
+export const CANDLES_LIMIT: number = 500

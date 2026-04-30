@@ -827,7 +827,7 @@ class SqlMarketRepo(MarketRepo):
 
     def upsert_exchange_instruments(
         self, 
-        rows: list[MarketDTO.ExchangeInstrumentSync]
+        rows: list[MarketDTO.ExchangeInstrumentSync],
         *,
         chunk_size: int = 1000,
     ) -> None:

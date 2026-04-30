@@ -1,4 +1,4 @@
-from typing import Callable, Any
+from typing import Callable, Any, Sequence
 import logging
 from datetime import datetime
 
@@ -6,6 +6,7 @@ from app.core import dto as CoreDTO
 from app.core.constants import (
     TranslationCode, 
     LanguageCode, 
+    NewsPostsort,
     NewsItemStatus, 
     NewsItemTranslationStatus, 
     OutboxStatus, 
@@ -19,7 +20,7 @@ from app.core.util.text import normalize_spaces, normalize_nullable_text
 from app.core.util.url import canonicalize_url
 
 from app.domain.shared.uow import UnitOfWork
-from app.domain.shared.errors import InternalServerError, ValidationAppError
+from app.domain.shared.errors import ValidationAppError, NotFoundError
 from app.domain import NewsPort, NewsDTO, CryptoPort, OutboxDTO
 
 logger = logging.getLogger(__name__)
@@ -46,6 +47,34 @@ class NewsService:
     ):
         with self._uow_factory() as uow:
             return uow.newses.list_news_feed_by_filter(limit=limit, offset=offset)
+
+    def list_news_post_by_filter(
+        self, 
+        *, 
+        search: str | None,
+        cursor_at: datetime | None,
+        cursor_id: int | None,
+        start: datetime | None,
+        end: datetime | None,
+        limit: int = 100,
+        sort: NewsPostsort | None, 
+    ) -> Sequence[NewsDTO.NewsPost]:
+        if (cursor_at is None) != (cursor_id is None):
+            raise ValidationAppError(f"cursor_at and cursor_id must be provided together.", target="cursor")
+
+        with self._uow_factory() as uow:
+            return uow.newses.list_news_post_by_filter(
+                locale=LanguageCode.KO,
+                translation_status=NewsItemTranslationStatus.DONE,
+                item_status=NewsItemStatus.ACTIVE,
+                search=search,
+                cursor_at=cursor_at,
+                cursor_id=cursor_id,
+                start=start,
+                end=end,
+                limit=limit, 
+                sort=sort,
+            )
 
     def fetch_news_feed(
         self,
