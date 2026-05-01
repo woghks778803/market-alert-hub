@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from app.core.constants import (
+    NewsPostsort,
     TranslationCode,
     LanguageCode, 
     NewsItemStatus, 
@@ -244,3 +245,16 @@ class NewsPost:
     item_language: LanguageCode
     provider_language: LanguageCode
     provider_name: str
+
+@dataclass(slots=True, frozen=True)
+class NewsPostListResult:
+    items: list[NewsPost]
+    has_next: bool
+    next_cursor: str | None
+    limit: int
+
+@dataclass(slots=True, frozen=True)
+class NewsPostListCursor:
+    news_item_id: int
+    sort: NewsPostsort
+    cursor_at: datetime | None

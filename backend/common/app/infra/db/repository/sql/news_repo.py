@@ -150,6 +150,33 @@ class SqlNewsRepo(NewsRepo):
             for source, provider in rows
         ]
 
+
+    def apply_news_post_cursor(self, stmt, *, sort, cursor, order_dt, news_item):
+        if cursor is None:
+            return stmt
+
+        cursor_id = cursor.news_item_id
+        if sort == NewsPostsort.RECENT_UPDATED:
+            return stmt.where(
+                or_(
+                    order_dt < cursor.cursor_at,
+                    and_(
+                        order_dt == cursor.cursor_at,
+                        news_item.id < cursor_id,
+                    ),
+                )
+            )
+        else:
+            return stmt.where(
+                or_(
+                    order_dt < cursor.cursor_at,
+                    and_(
+                        order_dt == cursor.cursor_at,
+                        news_item.id < cursor_id,
+                    ),
+                )
+            )
+
     def list_news_post_by_filter(
         self,
         *,
@@ -157,12 +184,9 @@ class SqlNewsRepo(NewsRepo):
         translation_status: NewsItemTranslationStatus,
         item_status: NewsItemStatus,
         search: str | None,
-        cursor_at: datetime | None,
-        cursor_id: int | None,
-        start: datetime | None,
-        end: datetime | None,
-        limit: int = 100,
         sort: NewsPostsort | None,
+        cursor: NewsDTO.NewsPostListCursor | None,
+        limit: int = 100,
         deleted_is_null: bool = True,
     ) -> Sequence[NewsDTO.NewsPost]:
         
@@ -214,7 +238,7 @@ class SqlNewsRepo(NewsRepo):
             )
             .limit(limit)
         )
-        
+
         if sort == NewsPostsort.RECENT_UPDATED:
             order_dt = func.coalesce(ni.published_at, ni.fetched_at)
             stmt = stmt.order_by(
@@ -228,22 +252,13 @@ class SqlNewsRepo(NewsRepo):
                 desc(ni.id),
             )
 
-        
-        if cursor_at is not None and cursor_id is not None:
-            stmt = stmt.where(
-                or_(
-                    order_dt < cursor_at,
-                    and_(
-                        order_dt == cursor_at,
-                        ni.id < cursor_id,
-                    ),
-                )
-            )
-        else:
-            if start is not None:
-                stmt = stmt.where(ni.fetched_at >= start)
-            if end is not None:
-                stmt = stmt.where(ni.fetched_at < end)
+        stmt = self.apply_news_post_cursor(
+            stmt,
+            cursor=cursor,
+            sort=sort, 
+            order_dt=order_dt, 
+            news_item=ni
+        )
 
         if search:
             stmt = stmt.where(
@@ -450,7 +465,6 @@ class SqlNewsRepo(NewsRepo):
         self,
         *,
         rows: list[NewsDTO.NewsItemTranslationDone],
-        status: NewsItemTranslationStatus,
         translated_at: datetime,
         deleted_is_null: bool = True,
     ) -> None:
@@ -469,9 +483,9 @@ class SqlNewsRepo(NewsRepo):
                 .values(
                     title=row.title,
                     description=row.description,
-                    status=status,
                     translated_at=translated_at,
                     updated_at=translated_at,
+                    status=NewsItemTranslationStatus.DONE,
                     failed_at=None,
                     error_code=None,
                     error_message=None,

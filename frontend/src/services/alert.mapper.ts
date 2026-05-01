@@ -1,6 +1,6 @@
 
-import type { AlertSummaryInfo, AlertInfo, AlertTypeInfo, ArchivedAlertListRequest, AlertListRequest, AlertTypeListRequest, AlertSaveRequest } from "@/api/alert.api"
-import type { AlertSummaryDto, AlertDto, AlertTypeDto, ArchivedAlertListQuery, AlertListQuery, AlertTypeListQuery, AlertSaveQuery, AlertStatus, ConditionType, FormType } from "@/services/alert.types"
+import type { AlertSummaryInfo, AlertInfo, AlertLogInfo, AlertTypeInfo, ArchivedAlertListRequest, AlertListRequest, AlertLogListRequest, AlertTypeListRequest, AlertSaveRequest } from "@/api/alert.api"
+import type { AlertSummaryDto, AlertDto, AlertLogDto, AlertTypeDto, ArchivedAlertListQuery, AlertListQuery, AlertLogListQuery, AlertTypeListQuery, AlertSaveQuery, AlertStatus, AlertEventStatus, ConditionType, FormType } from "@/services/alert.types"
 
 export function toAlertSummaryDto(data: AlertSummaryInfo): AlertSummaryDto {
     return {
@@ -37,6 +37,19 @@ export function toAlertDto(data: AlertInfo): AlertDto {
     }
 }
 
+export function toAlertLogDto(data: AlertLogInfo): AlertLogDto {
+    return {
+        alertEventId: data.alert_event_id,
+        alertId: data.alert_id,
+        title: data.title,
+        body: data.body,
+        exchangeCode: data.exchange_code,
+        exchangeSymbol: data.exchange_symbol,
+        status: data.status as AlertEventStatus,
+        detectedAt: data.detected_at,
+    }
+}
+
 export function toAlertTypeDto(data: AlertTypeInfo): AlertTypeDto {
     return {
         id: data.id,
@@ -52,7 +65,7 @@ export function toAlertTypeDto(data: AlertTypeInfo): AlertTypeDto {
 export function toAlertListRequest(q: AlertListQuery): AlertListRequest {
     return {
         limit: q.limit,
-        offset: q.offset,
+        cursor: q.cursor,
         status: q.status,
         sort: q.sort,
     }
@@ -63,8 +76,18 @@ export function toArchivedAlertListRequest(
 ): ArchivedAlertListRequest {
     return {
         limit: q.limit,
-        offset: q.offset,
+        cursor: q.cursor,
         sort: q.sort,
+    }
+}
+
+export function toAlertLogListRequest(
+    q: AlertLogListQuery,
+): AlertLogListRequest {
+    return {
+        limit: q.limit,
+        cursor: q.cursor,
+        status: q.status,
     }
 }
 

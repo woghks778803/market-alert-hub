@@ -28,11 +28,7 @@ export type NewsPostInfo = {
 export type NewsPostListRequest = {
     search: string
 
-    cursor_at?: string
-    cursor_id?: number
-    start?: string
-    end?: string
-
+    cursor?: string
     limit?: number
     sort?: string
 }

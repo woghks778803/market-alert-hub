@@ -25,11 +25,7 @@ export type NewsPostDto = {
 export type NewsPostListQuery = {
     search: string
 
-    cursorAt?: string
-    cursorId?: number
-    start?: string
-    end?: string
-
+    cursor?: string
     limit?: number
     sort?: NewsPostSort
 }
@@ -50,5 +46,4 @@ export enum LanguageCode {
     UNKNOWN = "unknown",
 }
 
-export const POSTS_MAX_LIMIT: number = 300
-export const POSTS_LIMIT: number = 20
+export const MAX_POSTS_LIMIT: number = 300

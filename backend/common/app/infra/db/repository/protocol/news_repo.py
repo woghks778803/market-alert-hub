@@ -43,12 +43,9 @@ class NewsRepo(Protocol):
         translation_status: NewsItemTranslationStatus,
         item_status: NewsItemStatus,
         search: str | None,
-        cursor_at: datetime | None,
-        cursor_id: int | None,
-        start: datetime | None,
-        end: datetime | None,
-        limit: int = 100,
         sort: NewsPostsort | None,
+        cursor: NewsDTO.NewsPostListCursor | None,
+        limit: int = 100,
         deleted_is_null: bool = True,
     ) -> Sequence[NewsDTO.NewsPost]: ...
 
@@ -106,7 +103,6 @@ class NewsRepo(Protocol):
         self,
         *,
         rows: list[NewsDTO.NewsItemTranslationDone],
-        status: NewsItemTranslationStatus,
         translated_at: datetime,
         deleted_is_null: bool = True,
     ) -> None: ...

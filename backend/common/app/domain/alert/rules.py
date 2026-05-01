@@ -1,13 +1,105 @@
+import json
+import base64
+from datetime import datetime
 from typing import Any
 from decimal import Decimal, InvalidOperation
 
 from app.core.util.serialization import json_safe
-from app.core.constants import AlertStatus, AlertFormType, IndicatorType, DirectionType
+from app.core.constants import AlertSort, AlertStatus, AlertEventStatus, AlertFormType, IndicatorType, DirectionType
 import app.domain.alert.dto as AlertDTO
 
 MAX_ARCHIVED_ALERTS_PER_USER = 200
 MAX_NON_ARCHIVED_ALERTS_PER_USER = 30
 MAX_ACTIVE_ALERTS_PER_USER = 5
+
+def decode_alert_cursor(cursor: str) -> AlertDTO.AlertListCursor:
+    raw = base64.urlsafe_b64decode(cursor.encode()).decode()
+    payload = json.loads(raw)
+
+    return AlertDTO.AlertListCursor(
+        sort=AlertSort(payload["sort"]),
+        alert_id=int(payload["alert_id"]),
+        updated_at=(
+            datetime.fromisoformat(payload["updated_at"])
+            if payload.get("updated_at")
+            else None
+        ),
+        created_at=(
+            datetime.fromisoformat(payload["created_at"])
+            if payload.get("created_at")
+            else None
+        ),
+        exchange_symbol=payload.get("exchange_symbol"),
+        status=(
+            AlertStatus(payload["status"])
+            if payload.get("status")
+            else None
+        ),
+    )
+
+def decode_alert_log_cursor(cursor: str) -> AlertDTO.AlertLogListCursor:
+    raw = base64.urlsafe_b64decode(cursor.encode()).decode()
+    payload = json.loads(raw)
+
+    return AlertDTO.AlertLogListCursor(
+        alert_event_id=int(payload["alert_event_id"]),
+        cursor_at=(
+            datetime.fromisoformat(payload["cursor_at"])
+            if payload.get("cursor_at")
+            else None
+        ),
+    )
+
+def make_alert_cursor(*, sort: AlertSort, item) -> str:
+    payload = {
+        "sort": sort.value,
+        "alert_id": item.alert_id,
+    }
+
+    if sort == AlertSort.RECENT_CREATED:
+        payload["created_at"] = item.created_at.isoformat()
+
+    elif sort == AlertSort.MARKET_ASC:
+        payload["exchange_symbol"] = item.exchange_symbol
+
+    elif sort == AlertSort.STATUS:
+        payload["status"] = item.status.value
+        payload["updated_at"] = item.updated_at.isoformat()
+
+    else:
+        payload["updated_at"] = item.updated_at.isoformat()
+
+    raw = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
+    return base64.urlsafe_b64encode(raw.encode()).decode()
+
+def make_alert_log_cursor(*, item) -> str: 
+    cursor_at = item.detected_at
+
+    payload = {
+        "alert_event_id": item.alert_event_id,
+        "cursor_at": cursor_at.isoformat(),
+    }
+
+    raw = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
+    return base64.urlsafe_b64encode(raw.encode()).decode()
+
+def make_alert_log(
+    *,
+    event: AlertDTO.AlertEvent,
+    content: AlertDTO.AlertMessageContent,
+) -> AlertDTO.AlertLog:
+    context = event.context or {}
+
+    return AlertDTO.AlertLog(
+        alert_event_id=event.id,
+        alert_id=event.alert_id,
+        title=content.title,
+        body=content.body,
+        exchange_code=context.get("exchange_code"),
+        exchange_symbol=context.get("exchange_symbol"),
+        status=event.status,
+        detected_at=event.detected_at,
+    )
 
 def alert_snapshot_to_payload(
     alert_snapshot: AlertDTO.AlertSnapshot,
@@ -34,6 +126,7 @@ def alert_snapshot_to_payload(
 
         "exchange_instrument_id": json_safe(alert_snapshot.exchange_instrument_id),
         "exchange_code": json_safe(alert_snapshot.exchange_code),
+        "exchange_name": json_safe(alert_snapshot.exchange_name),
         "exchange_symbol": json_safe(alert_snapshot.exchange_symbol),
 
         "params": json_safe(alert_snapshot.params or {}),

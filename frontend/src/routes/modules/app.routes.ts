@@ -10,7 +10,6 @@ import RulesView from "@/views/app/alert/RulesView.vue"
 import RuleSettingView from "@/views/app/alert/RuleSettingView.vue"
 import ArchivesView from "@/views/app/alert/ArchivesView.vue"
 import LogsView from "@/views/app/alert/LogsView.vue"
-// import ChannelsView from "@/views/app/alert/ChannelsView.vue"
 
 import PostView from "@/views/app/news/IndexView.vue"
 
@@ -74,18 +73,12 @@ export const appRoutes: RouteRecordRaw[] = [
                     title: "알림 보관", allows: ["verified"], showBack: false, tab: "alert", mode: "archives"
                 },
             },
-            // {
-            //     path: "channels",
-            //     name: "Channels",
-            //     component: ChannelsView,
-            //     meta: { title: "알림 채널", allows: ["verified"], showBack: false, tab: "alert" },
-            // },
             {
                 path: "log",
                 name: "Logs",
                 component: LogsView,
                 meta: {
-                    title: "알림 로그", allows: ["verified"], showBack: false, tab: "alert"
+                    title: "알림 기록", allows: ["verified"], showBack: false, tab: "alert"
                 },
             }
         ]
@@ -95,7 +88,10 @@ export const appRoutes: RouteRecordRaw[] = [
         name: "RuleSetting",
         component: RuleSettingView,
         meta: {
-            title: "알림 설정", allows: ["verified"], showBack: true, tab: "alert"
+            title: "알림 설정",
+            allows: ["verified"],
+            showBack: true,
+            tab: "alert"
         },
     },
     {

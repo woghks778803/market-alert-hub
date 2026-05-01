@@ -1,25 +1,25 @@
 <template>
-  <div class="alert-rule-filter">
-    <v-select
-      :model-value="status"
-      :items="statusItems"
-      label="상태"
-      variant="outlined"
-      density="comfortable"
-      hide-details
-      @update:model-value="onChangeStatus"
-    />
+    <div class="alert-filter">
+        <v-select
+            :model-value="status"
+            :items="statusItems"
+            label="상태"
+            variant="outlined"
+            density="comfortable"
+            hide-details
+            @update:model-value="onChangeStatus"
+        />
 
-    <v-select
-      :model-value="sort"
-      :items="sortItems"
-      label="정렬"
-      variant="outlined"
-      density="comfortable"
-      hide-details
-      @update:model-value="onChangeSort"
-    />
-  </div>
+        <v-select
+            :model-value="sort"
+            :items="sortItems"
+            label="정렬"
+            variant="outlined"
+            density="comfortable"
+            hide-details
+            @update:model-value="onChangeSort"
+        />
+    </div>
 </template>
 
 <script setup lang="ts">

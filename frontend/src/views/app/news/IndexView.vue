@@ -24,14 +24,10 @@
                 </div>
 
                 <div class="news-post-meta">
-                    최근 48시간 · {{ POSTS_MAX_LIMIT }}개
+                    최근 48시간 · {{ MAX_POSTS_LIMIT }}개
                 </div>
             </section>
             
-                <div v-if="!initialLoaded" class="alert-list-loading">
-                    불러오는 중...
-                </div>
-                
             <v-infinite-scroll
                 :key="currentNewsPostListKey"
                 class="news-post-list"
@@ -69,7 +65,7 @@ import PostCard from "@/components/news/PostCard.vue"
 
 import { useAsyncAction } from "@/composables/common/useAsyncAction"
 
-import { POSTS_MAX_LIMIT } from "@/services/news.types"
+import { MAX_POSTS_LIMIT } from "@/services/news.types"
 import { useNewsStore } from "@/stores/news.store"
 
 const newsStore = useNewsStore()

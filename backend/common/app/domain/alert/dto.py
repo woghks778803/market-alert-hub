@@ -2,7 +2,7 @@ from typing import Any
 from datetime import datetime
 from decimal import Decimal
 from dataclasses import dataclass
-from app.core.constants import AlertStatus, AlertEventStatus, AlertDeliveryStatus, ConditionType, AlertFormType, IndicatorType, DirectionType
+from app.core.constants import AlertSort, AlertStatus, AlertEventStatus, AlertDeliveryStatus, ConditionType, AlertFormType, IndicatorType, DirectionType
 
 @dataclass(slots=True, frozen=True)
 class AlertSummary:
@@ -30,11 +30,21 @@ class AlertSimple:
 
     exchange_instrument_id: int
     exchange_symbol: str
-    ei_is_active: bool
     exchange_code: str
     exchange_name: str
+    ei_is_active: bool
     e_is_active: bool
 
+@dataclass(slots=True)
+class AlertLog:
+    alert_event_id: int
+    alert_id: int
+    title: str
+    body: str
+    exchange_code: str
+    exchange_symbol: str
+    status: AlertEventStatus
+    detected_at: datetime
 
 @dataclass(slots=True, frozen=True)
 class Alert:
@@ -124,6 +134,7 @@ class AlertSnapshot:
 
     exchange_instrument_id: int
     exchange_code: str
+    exchange_name: str
     exchange_symbol: str
 
     params: dict
@@ -176,6 +187,7 @@ class AlertEventChannel:
     address: str
     config: dict | None
 
+
 @dataclass(slots=True, frozen=True)
 class AlertDelivery:
     id: int
@@ -215,6 +227,7 @@ class AlertDeliveryTarget:
     channel_config: dict | None
     channel_provider_code: str
 
+
 @dataclass(slots=True, frozen=True)
 class AlertDeliverySendResult:
     alert_delivery_id: int
@@ -222,8 +235,38 @@ class AlertDeliverySendResult:
     response_code: int | None = None
     response_body: str | None = None
 
+
 @dataclass(slots=True, frozen=True)
 class AlertMessageContent:
     title: str
     body: str
     data: dict[str, str]
+
+
+@dataclass(slots=True, frozen=True)
+class AlertListResult:
+    items: list[AlertSimple]
+    has_next: bool
+    next_cursor: str | None
+    limit: int
+
+@dataclass(slots=True, frozen=True)
+class AlertListCursor:
+    alert_id: int
+    sort: AlertSort
+    created_at: datetime | None
+    updated_at: datetime | None
+    exchange_symbol: str | None
+    status: AlertStatus | None
+
+@dataclass(slots=True, frozen=True)
+class AlertLogListResult:
+    items: list[AlertLog]
+    has_next: bool
+    next_cursor: str | None
+    limit: int
+
+@dataclass(slots=True, frozen=True)
+class AlertLogListCursor:
+    alert_event_id: int
+    cursor_at: datetime | None

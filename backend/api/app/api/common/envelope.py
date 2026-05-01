@@ -16,10 +16,16 @@ class Pagination(BaseModel):
     has_next: bool
 
 
+class CursorPagination(BaseModel):
+    limit: int = Field(..., ge=1)
+    has_next: bool
+    next_cursor: str | None = None
+
+
 class Meta(BaseModel):
     request_id: str
     timestamp: datetime
-    pagination: Pagination | None = None
+    pagination: Pagination | CursorPagination | None = None
 
 
 class ErrorBody(BaseModel):
@@ -37,7 +43,7 @@ class Envelope(BaseModel, Generic[T]):
 
 
 def ok(
-    data: Any, *, request_id: str, pagination: Pagination | None = None
+    data: Any, *, request_id: str, pagination: Pagination | CursorPagination | None = None
 ) -> Envelope[Any]:
     return Envelope(
         success=True,

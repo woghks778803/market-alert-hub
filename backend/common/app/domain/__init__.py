@@ -9,7 +9,7 @@ from .user import dto as UserDTO
 from .throttle import ports as ThrottlePort
 from .support import dto as SupportDTO
 from .alert import dto as AlertDTO, ports as AlertPort, rules as AlertRule
-from .news import dto as NewsDTO, ports as NewsPort
+from .news import dto as NewsDTO, ports as NewsPort, rules as NewsRule
 
 __all__ = [
     "ChannelDTO",
@@ -35,4 +35,5 @@ __all__ = [
     "AlertRule",
     "NewsDTO",
     "NewsPort",
+    "NewsRule",
 ]

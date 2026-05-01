@@ -21,7 +21,7 @@ from app.core.util.url import canonicalize_url
 
 from app.domain.shared.uow import UnitOfWork
 from app.domain.shared.errors import ValidationAppError, NotFoundError
-from app.domain import NewsPort, NewsDTO, CryptoPort, OutboxDTO
+from app.domain import NewsPort, NewsDTO, NewsRule, CryptoPort, OutboxDTO
 
 logger = logging.getLogger(__name__)
 
@@ -52,29 +52,47 @@ class NewsService:
         self, 
         *, 
         search: str | None,
-        cursor_at: datetime | None,
-        cursor_id: int | None,
-        start: datetime | None,
-        end: datetime | None,
-        limit: int = 100,
+        cursor: str | None,
         sort: NewsPostsort | None, 
-    ) -> Sequence[NewsDTO.NewsPost]:
-        if (cursor_at is None) != (cursor_id is None):
-            raise ValidationAppError(f"cursor_at and cursor_id must be provided together.", target="cursor")
+        limit: int = 100,
+    ) -> NewsDTO.NewsPostListResult:
+
+        sort = sort or NewsPostsort.RECENT_UPDATED
+
+        decode_cursor = None
+        if cursor:
+            decode_cursor = NewsRule.decode_news_post_cursor(cursor)
+
+            if decode_cursor.sort != sort:
+                decode_cursor = None
 
         with self._uow_factory() as uow:
-            return uow.newses.list_news_post_by_filter(
+            rows = uow.newses.list_news_post_by_filter(
                 locale=LanguageCode.KO,
                 translation_status=NewsItemTranslationStatus.DONE,
                 item_status=NewsItemStatus.ACTIVE,
                 search=search,
-                cursor_at=cursor_at,
-                cursor_id=cursor_id,
-                start=start,
-                end=end,
-                limit=limit, 
+                cursor=decode_cursor,
+                limit=limit+1, 
                 sort=sort,
             )
+        
+        has_next = len(rows) > limit
+        items = list(rows[:limit])
+
+        next_cursor = None
+        if has_next and items:
+            next_cursor = NewsRule.make_news_post_cursor(
+                sort=sort,
+                item=items[-1],
+            )
+
+        return NewsDTO.NewsPostListResult(
+            items=items,
+            limit=limit,
+            has_next=has_next,
+            next_cursor=next_cursor,
+        )
 
     def fetch_news_feed(
         self,
@@ -330,7 +348,6 @@ class NewsService:
                 with self._uow_factory() as uow:
                     uow.newses.update_news_item_translations_done(
                         rows=done_rows,
-                        status=NewsItemTranslationStatus.DONE,
                         translated_at=utcnow()
                     )
                     uow.commit()

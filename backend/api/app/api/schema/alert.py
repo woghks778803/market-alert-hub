@@ -2,7 +2,7 @@ from typing import Literal, Any
 from datetime import datetime
 from decimal import Decimal
 from pydantic import BaseModel, ConfigDict
-from app.core.constants import AlertStatus, AlertFormType, IndicatorType, DirectionType, ThrottleTimeframe
+from app.core.constants import AlertEventStatus, AlertStatus, AlertFormType, IndicatorType, DirectionType, ThrottleTimeframe
 
 _model_cfg = ConfigDict(from_attributes=True, use_enum_values=True)
 
@@ -64,6 +64,17 @@ class AlertRead(BaseModel):
     ei_is_active: bool
     e_is_active: bool
 
+class AlertLogRead(BaseModel):
+    model_config = _model_cfg
+
+    alert_event_id: int
+    alert_id: int
+    title: str
+    body: str
+    exchange_code: str
+    exchange_symbol: str
+    status: AlertEventStatus
+    detected_at: datetime
 
 class AlertTypeRead(BaseModel):
     id: int

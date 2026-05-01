@@ -1,7 +1,7 @@
 <template>
-  <div class="alert-rule-summary">
+  <div class="alert-summary">
 
-    <div class="alert-rule-summary-left">
+    <div class="alert-summary-left">
       <span class="alert-rule-title">야간 알림 허용</span>
 
       <v-switch
@@ -13,7 +13,7 @@
       />
     </div>
 
-    <div class="alert-rule-summary-right">
+    <div class="alert-summary-right">
       전체 {{ alertSummary?.totalCount ?? 0 }} · 활성 {{ alertSummary?.activeCount ?? 0 }} · 일시정지 {{ alertSummary?.pausedCount ?? 0 }}
     </div>
 

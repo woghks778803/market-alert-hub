@@ -1,73 +1,64 @@
 import { defineStore } from "pinia"
 import { ref, computed } from "vue"
-import * as newsService from "@/services/news.service"
 import type { NewsPostDto, NewsPostListQuery } from "@/services/news.types"
-import { NewsPostSort, POSTS_MAX_LIMIT, POSTS_LIMIT } from "@/services/news.types"
-import { } from "@/services/news.types"
+import { NewsPostSort, MAX_POSTS_LIMIT } from "@/services/news.types"
+import * as newsService from "@/services/news.service"
 
 export const useNewsStore = defineStore("news", () => {
     let searchTimer: any
     const newsPosts = ref<NewsPostDto[]>([])
 
+    const currentNewsPostListKey = ref<number>(0)
+
+    const newsNextCursor = ref<string | null>(null)
     const newsHasMore = ref(true)
     const newsLoadingMore = ref(false)
 
     const newsPostListQuery = ref<NewsPostListQuery>({
         search: "",
         sort: NewsPostSort.RECENT_UPDATED,
-        cursorAt: undefined,
-        cursorId: undefined
+        limit: 20,
+        cursor: undefined,
     })
-
-    const currentNewsPostListKey = ref<number>(0)
 
     async function fetchNewsPosts(options?: { append?: boolean }) {
         const append = options?.append ?? false
 
         if (newsLoadingMore.value) return
         if (append && !newsHasMore.value) return
-        if (newsPosts.value.length >= POSTS_MAX_LIMIT) {
+        if (newsPosts.value.length >= MAX_POSTS_LIMIT) {
             newsHasMore.value = false
             return
         }
 
         newsLoadingMore.value = true
 
-        try {
-            newsPostListQuery.value.limit = POSTS_LIMIT
+        const prevCursor = newsPostListQuery.value.cursor ?? undefined
 
+        try {
             if (!append) {
                 currentNewsPostListKey.value += 1
                 newsPosts.value = []
                 newsHasMore.value = true
-                newsPostListQuery.value.cursorAt = undefined
-                newsPostListQuery.value.cursorId = undefined
-            }
-
-            const data = await newsService.getNewsPosts(newsPostListQuery.value)
-
-            if (data.length === 0) {
-                newsHasMore.value = false
-                return
-            }
-
-            if (append) {
-                newsPosts.value.push(...data)
+                newsPostListQuery.value.cursor = undefined
             } else {
-                newsPosts.value = data
+                newsPostListQuery.value.cursor = newsNextCursor.value ?? undefined
             }
 
-            if (data.length < POSTS_LIMIT || newsPosts.value.length >= POSTS_MAX_LIMIT) {
-                newsHasMore.value = false
-            }
+            const result = await newsService.getNewsPosts(newsPostListQuery.value)
 
-            const last = newsPosts.value[newsPosts.value.length - 1]
+            const rows = result.items
 
-            if (last) {
-                newsPostListQuery.value.cursorAt = last.publishedAt
-                newsPostListQuery.value.cursorId = last.newsItemId
-            }
+            newsPosts.value = append
+                ? [
+                    ...newsPosts.value, ...rows,
+                ] : rows
 
+            newsNextCursor.value = result.page?.next_cursor ?? null
+            newsHasMore.value = result.page?.has_next ?? false
+        } catch (err) {
+            newsPostListQuery.value.cursor = prevCursor
+            throw err
         } finally {
             newsLoadingMore.value = false
         }

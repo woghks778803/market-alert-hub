@@ -32,11 +32,7 @@ export function toNewsPostListRequest(q: NewsPostListQuery): NewsPostListRequest
     return {
         search: q.search,
 
-        cursor_at: q.cursorAt,
-        cursor_id: q.cursorId,
-        end: q.end,
-        start: q.start,
-
+        cursor: q.cursor,
         limit: q.limit,
         sort: q.sort as NewsPostSort,
     }

@@ -1,8 +1,30 @@
+import type { CursorListResult, CursorPagination } from "@/api/types"
 import {
     alertApi
 } from "@/api/alert.api"
-import { toAlertSummaryDto, toAlertSaveRequest, toArchivedAlertListRequest, toAlertListRequest, toAlertTypeListRequest, toAlertDto, toAlertTypeDto } from "@/services/alert.mapper"
-import type { ArchivedAlertListQuery, AlertListQuery, AlertTypeListQuery, AlertSaveQuery, AlertSummaryDto, AlertDto, AlertTypeDto, AlertStatus } from "@/services/alert.types"
+import {
+    toAlertSummaryDto,
+    toAlertSaveRequest,
+    toArchivedAlertListRequest,
+    toAlertListRequest,
+    toAlertLogListRequest,
+    toAlertTypeListRequest,
+    toAlertDto,
+    toAlertLogDto,
+    toAlertTypeDto
+} from "@/services/alert.mapper"
+import type {
+    ArchivedAlertListQuery,
+    AlertListQuery,
+    AlertLogListQuery,
+    AlertTypeListQuery,
+    AlertSaveQuery,
+    AlertSummaryDto,
+    AlertDto,
+    AlertLogDto,
+    AlertTypeDto,
+    AlertStatus
+} from "@/services/alert.types"
 
 
 export async function getAlert(id: number): Promise<AlertDto> {
@@ -15,14 +37,30 @@ export async function getAlert(id: number): Promise<AlertDto> {
     return toAlertDto(env.data)
 }
 
-export async function getAlerts(payload: AlertListQuery): Promise<AlertDto[]> {
+export async function getAlerts(payload: AlertListQuery): Promise<CursorListResult<AlertDto>> {
     const env = await alertApi.getAlerts(toAlertListRequest(payload))
 
     if (!env.success || !env.data) {
         throw env.error ?? new Error("invalid_alert_list_response")
     }
 
-    return env.data.map(toAlertDto)
+    return {
+        items: env.data.map(toAlertDto),
+        page: env.meta.pagination as CursorPagination
+    }
+}
+
+export async function getAlertLogs(payload: AlertLogListQuery): Promise<CursorListResult<AlertLogDto>> {
+    const env = await alertApi.getAlertLogs(toAlertLogListRequest(payload))
+
+    if (!env.success || !env.data) {
+        throw env.error ?? new Error("invalid_alert_log_list_response")
+    }
+
+    return {
+        items: env.data.map(toAlertLogDto),
+        page: env.meta.pagination as CursorPagination
+    }
 }
 
 export async function getAlertTypes(payload: AlertTypeListQuery): Promise<AlertTypeDto[]> {
@@ -35,14 +73,17 @@ export async function getAlertTypes(payload: AlertTypeListQuery): Promise<AlertT
     return env.data.map(toAlertTypeDto)
 }
 
-export async function getArchivedAlerts(payload: ArchivedAlertListQuery): Promise<AlertDto[]> {
+export async function getArchivedAlerts(payload: ArchivedAlertListQuery): Promise<CursorListResult<AlertDto>> {
     const env = await alertApi.getArchivedAlerts(toArchivedAlertListRequest(payload))
 
     if (!env.success || !env.data) {
         throw env.error ?? new Error("invalid_archived_alert_list_response")
     }
 
-    return env.data.map(toAlertDto)
+    return {
+        items: env.data.map(toAlertDto),
+        page: env.meta.pagination as CursorPagination
+    }
 }
 
 export async function getAlertSummary(): Promise<AlertSummaryDto> {

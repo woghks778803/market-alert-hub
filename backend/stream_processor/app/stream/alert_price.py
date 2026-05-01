@@ -250,6 +250,7 @@ def _make_price_alert_event(
 ) -> dict[str, Any]:
     alert_id = int(alert["alert_id"])
     exchange_code = str(alert["exchange_code"])
+    exchange_name = str(alert["exchange_name"])
     exchange_symbol = str(alert["exchange_symbol"])
     bucket_key = str(alert["bucket_key"])
 
@@ -267,6 +268,7 @@ def _make_price_alert_event(
             # "source": "",
             "alert_name": alert.get("alert_name"),
             "exchange_code": exchange_code,
+            "exchange_name": exchange_name,
             "exchange_symbol": exchange_symbol,
             "alert_type_id": alert.get("alert_type_id"),
             "alert_type_code": alert.get("alert_type_code"),

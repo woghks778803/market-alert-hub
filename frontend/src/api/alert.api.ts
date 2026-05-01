@@ -32,6 +32,17 @@ export type AlertInfo = {
     e_is_active: boolean
 }
 
+export type AlertLogInfo = {
+    alert_event_id: number
+    alert_id: number
+    title: string
+    body: string
+    exchange_code: string
+    exchange_symbol: string
+    status: string
+    detected_at: string
+}
+
 export type AlertTypeInfo = {
     id: number
     code: string
@@ -44,15 +55,21 @@ export type AlertTypeInfo = {
 
 export type ArchivedAlertListRequest = {
     limit?: number
-    offset?: number
+    cursor?: string
     sort?: string
 }
 
 export type AlertListRequest = {
     limit?: number
-    offset?: number
+    cursor?: string
     status?: string
     sort?: string
+}
+
+export type AlertLogListRequest = {
+    limit?: number
+    cursor?: string
+    status?: string
 }
 
 export type AlertTypeListRequest = {
@@ -95,6 +112,12 @@ export const alertApi = {
     // GET /alerts/archives
     async getArchivedAlerts(params: ArchivedAlertListRequest) {
         const { data } = await http.get<Envelope<AlertInfo[]>>("/alerts/archives", { params })
+        return data
+    },
+
+    // GET /alerts/logs
+    async getAlertLogs(params: AlertLogListRequest) {
+        const { data } = await http.get<Envelope<AlertLogInfo[]>>("/alerts/logs", { params })
         return data
     },
 

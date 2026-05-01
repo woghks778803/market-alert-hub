@@ -10,11 +10,11 @@
         <div>
 
           <div class="mk-symbol">
-            {{ item.symbol }}
+            {{ item.exchangeSymbol }}
           </div>
 
           <div class="mk-exchange">
-            {{ item.exchange }} · {{ item.quoteSymbol }}
+            {{ item.exchangeCode }} · {{ item.quoteSymbol }}
           </div>
 
           <div class="mk-name">
@@ -81,8 +81,8 @@ const emit = defineEmits<{
 
 function goDetail() {
   emit('select', {
-    exchange: props.item.exchange,
-    symbol: props.item.symbol,
+    exchange: props.item.exchangeCode,
+    symbol: props.item.exchangeSymbol,
   })
 }
 

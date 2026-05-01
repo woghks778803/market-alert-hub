@@ -1,7 +1,7 @@
 export type MarketDto = {
     exchangeInstrumentId: number
-    symbol: string
-    exchange: string
+    exchangeSymbol: string
+    exchangeCode: string
     exchangeName: string
 
     baseSymbol: string
@@ -26,8 +26,8 @@ export type MarketDto = {
 export type SimpleMarketDto = {
     label: string
     exchangeInstrumentId: number
-    symbol: string
-    exchange: string
+    exchangeSymbol: string
+    exchangeName: string
     baseSymbol: string
     quoteSymbol: string
 }

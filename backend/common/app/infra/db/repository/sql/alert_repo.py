@@ -2,6 +2,8 @@ from typing import Sequence
 from datetime import datetime
 from sqlalchemy.orm import Session as DbSession
 from sqlalchemy import update, insert, select, and_, or_, asc, desc, func, case
+
+from app.core.util.datetime import utcnow, get_days_ago
 from app.core.constants import UserStatus, AlertStatus, AlertSort, AlertEventStatus, AlertDeliveryStatus
 from app.domain import AlertDTO
 from app.infra.db.model import (
@@ -242,6 +244,7 @@ class SqlAlertRepo(AlertRepo):
 
                 a.exchange_instrument_id.label("exchange_instrument_id"),
                 e.code.label("exchange_code"),
+                e.name.label("exchange_name"),
                 ei.exchange_symbol.label("exchange_symbol"),
 
                 a.params.label("params"),
@@ -290,7 +293,7 @@ class SqlAlertRepo(AlertRepo):
 
         return AlertDTO.AlertSnapshot(**row) if row else None
 
-    def list_type_by_filter(
+    def list_alert_type_by_filter(
         self, 
         *, 
         search: str | None, 
@@ -327,6 +330,46 @@ class SqlAlertRepo(AlertRepo):
         rows = self._db.execute(stmt).scalars().all()
         return [row.to_dto() for row in rows]
     
+    
+
+    def list_alert_event_by_filter(
+        self,
+        *,
+        user_id: int,
+        status: AlertEventStatus | None,
+        cursor: AlertDTO.AlertListCursor,
+        limit: int,
+    ) -> Sequence[AlertDTO.AlertEvent]:
+        stmt = (
+            select(ae)
+            .select_from(ae)
+            .join(a, a.id == ae.alert_id)
+            .join(u, u.id == a.user_id)
+            .where(
+                u.id == user_id,
+                ae.detected_at >= get_days_ago(utcnow(), 7),
+            )
+            .order_by(ae.detected_at.desc(), ae.id.desc())
+            .limit(limit)
+        )
+
+        stmt = self.apply_alert_event_cursor(
+            stmt,
+            cursor=cursor,
+            alert_event=ae
+        )
+
+        if status:
+            stmt = stmt.where(ae.status == status)
+        else:
+            # TODO: 현재 사용처가 적기때문에 옵션 분기는 추후에
+            stmt = stmt.where(
+                ae.status != AlertEventStatus.PENDING,
+                ae.status != AlertEventStatus.QUEUED,
+            )
+
+        rows = self._db.execute(stmt).scalars().all()
+        return [row.to_dto() for row in rows]
 
     def list_alert_event_by_status(
         self,
@@ -350,7 +393,7 @@ class SqlAlertRepo(AlertRepo):
         rows = self._db.execute(stmt).scalars().all()
         return [row.to_dto() for row in rows]
 
-    def list_alert_event_by_filter(
+    def list_alert_event_from_ids(
         self,
         *,
         alert_event_ids: Sequence[int],
@@ -369,7 +412,7 @@ class SqlAlertRepo(AlertRepo):
         rows = self._db.execute(stmt).scalars().all()
         return [row.to_dto() for row in rows]
 
-    def list_alert_delivery_by_filter(
+    def list_alert_delivery_from_ids(
         self,
         *,
         alert_event_ids: Sequence[int],
@@ -495,6 +538,7 @@ class SqlAlertRepo(AlertRepo):
 
                 a.exchange_instrument_id.label("exchange_instrument_id"),
                 e.code.label("exchange_code"),
+                e.name.label("exchange_name"),
                 ei.exchange_symbol.label("exchange_symbol"),
 
                 a.params.label("params"),
@@ -549,17 +593,16 @@ class SqlAlertRepo(AlertRepo):
             for row in rows
         ]
 
-
     def list_alert_by_filter(
         self,
         *,
         user_id: int,
         status: AlertStatus | None,
         sort: AlertSort | None,
-        deleted_is_null: bool = True,
-        archived_only: bool = False,
+        cursor: AlertDTO.AlertListCursor,
         limit: int,
-        offset: int,
+        archived_only: bool = False,
+        deleted_is_null: bool = True,
     ) -> Sequence[AlertDTO.AlertSimple]:
         
         exchange_instrument = (
@@ -571,6 +614,7 @@ class SqlAlertRepo(AlertRepo):
             )
             .select_from(ei)
             .where(
+                # is_active는 false도 허용(사용자 화면에서 구분)
                 ei.deleted_at.is_(None),
             )
             .subquery()
@@ -630,7 +674,6 @@ class SqlAlertRepo(AlertRepo):
                 a.user_id == user_id,
             )
             .limit(limit)
-            .offset(offset)
         )
 
         if deleted_is_null:
@@ -642,25 +685,21 @@ class SqlAlertRepo(AlertRepo):
             stmt = stmt.where(a.status == status)
         else:
             stmt = stmt.where(a.status != AlertStatus.ARCHIVED)
-
-        if sort == AlertSort.RECENT_UPDATED:
-            stmt = stmt.order_by(a.updated_at.desc(), a.id.desc())
-
-        elif sort == AlertSort.RECENT_CREATED:
-            stmt = stmt.order_by(a.created_at.desc(), a.id.desc())
-
-        elif sort == AlertSort.MARKET_ASC:
-            stmt = stmt.order_by(exchange_instrument.c.exchange_symbol.asc(), a.id.desc())
-
-        elif sort == AlertSort.STATUS:
-            stmt = stmt.order_by(
-                a.status.asc(),
-                a.updated_at.desc(),
-                a.id.desc(),
-            )
-
-        else:
-            stmt = stmt.order_by(a.updated_at.desc(), a.id.desc())
+        
+        stmt = self.apply_alert_cursor(
+            stmt,
+            cursor=cursor,
+            sort=sort, 
+            alert=a, 
+            exchange_instrument=exchange_instrument
+        )
+        
+        stmt = self.apply_alert_sort(
+            stmt, 
+            sort=sort, 
+            alert=a, 
+            exchange_instrument=exchange_instrument
+        )
 
         rows = self._db.execute(stmt)
         return [
@@ -836,3 +875,114 @@ class SqlAlertRepo(AlertRepo):
 
         self._db.execute(stmt)
         
+
+    def apply_alert_cursor(
+        self, stmt, *, sort, cursor, alert, exchange_instrument
+    ):
+        if cursor is None:
+            return stmt
+
+        cursor_id = cursor.alert_id
+
+        if sort == AlertSort.RECENT_UPDATED:
+            return stmt.where(
+                or_(
+                    alert.updated_at < cursor.updated_at,
+                    and_(
+                        alert.updated_at == cursor.updated_at,
+                        alert.id < cursor_id,
+                    ),
+                )
+            )
+
+        if sort == AlertSort.RECENT_CREATED:
+            return stmt.where(
+                or_(
+                    alert.created_at < cursor.created_at,
+                    and_(
+                        alert.created_at == cursor.created_at,
+                        alert.id < cursor_id,
+                    ),
+                )
+            )
+
+        if sort == AlertSort.MARKET_ASC:
+            return stmt.where(
+                or_(
+                    exchange_instrument.c.exchange_symbol > cursor.exchange_symbol,
+                    and_(
+                        exchange_instrument.c.exchange_symbol == cursor.exchange_symbol,
+                        alert.id < cursor_id,
+                    ),
+                )
+            )
+
+        if sort == AlertSort.STATUS:
+            return stmt.where(
+                or_(
+                    alert.status > cursor.status,
+                    and_(
+                        alert.status == cursor.status,
+                        alert.updated_at < cursor.updated_at,
+                    ),
+                    and_(
+                        alert.status == cursor.status,
+                        alert.updated_at == cursor.updated_at,
+                        alert.id < cursor_id,
+                    ),
+                )
+            )
+
+        return stmt.where(
+            or_(
+                alert.updated_at < cursor.updated_at,
+                and_(
+                    alert.updated_at == cursor.updated_at,
+                    alert.id < cursor_id,
+                ),
+            )
+        )
+    
+    def apply_alert_sort(
+        self, stmt, *, sort, alert, exchange_instrument
+    ):
+        if sort == AlertSort.RECENT_CREATED:
+            return stmt.order_by(
+                alert.created_at.desc(),
+                alert.id.desc(),
+            )
+
+        if sort == AlertSort.MARKET_ASC:
+            return stmt.order_by(
+                exchange_instrument.c.exchange_symbol.asc(),
+                alert.id.desc(),
+            )
+
+        if sort == AlertSort.STATUS:
+            return stmt.order_by(
+                alert.status.asc(),
+                alert.updated_at.desc(),
+                alert.id.desc(),
+            )
+
+        return stmt.order_by(
+            alert.updated_at.desc(),
+            alert.id.desc(),
+        )
+
+
+    def apply_alert_event_cursor(self, stmt, *, cursor, alert_event):
+        if cursor is None:
+            return stmt
+
+        cursor_id = cursor.alert_event_id
+
+        return stmt.where(
+            or_(
+                alert_event.detected_at < cursor.cursor_at,
+                and_(
+                    alert_event.detected_at == cursor.cursor_at,
+                    alert_event.id < cursor_id,
+                ),
+            )
+        )

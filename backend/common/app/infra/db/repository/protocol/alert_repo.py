@@ -48,7 +48,7 @@ class AlertRepo(Protocol):
         deleted_is_null: bool = True,
     ) -> AlertDTO.AlertSnapshot | None: ...
 
-    def list_type_by_filter(
+    def list_alert_type_by_filter(
         self, 
         *, 
         search: str | None, 
@@ -59,6 +59,15 @@ class AlertRepo(Protocol):
         offset: int
     ) -> Sequence[AlertDTO.AlertType]: ...
 
+    def list_alert_event_by_filter(
+        self,
+        *,
+        user_id: int,
+        status: AlertEventStatus | None,
+        cursor: AlertDTO.AlertListCursor,
+        limit: int,
+    ) -> Sequence[AlertDTO.AlertEvent]: ...
+
     def list_alert_event_by_status(
         self,
         *,
@@ -67,14 +76,14 @@ class AlertRepo(Protocol):
         offset: int
     ) -> Sequence[AlertDTO.AlertEvent]: ...
 
-    def list_alert_event_by_filter(
+    def list_alert_event_from_ids(
         self,
         *,
         alert_event_ids: Sequence[int],
         status: AlertEventStatus,
     ) -> Sequence[AlertDTO.AlertEvent]: ...
 
-    def list_alert_delivery_by_filter(
+    def list_alert_delivery_from_ids(
         self,
         *,
         alert_event_ids: Sequence[int],
@@ -111,10 +120,10 @@ class AlertRepo(Protocol):
         user_id: int,
         status: AlertStatus | None,
         sort: AlertSort,
-        deleted_is_null: bool = True,
-        archived_only: bool = False,
+        cursor: AlertDTO.AlertListCursor,
         limit: int,
-        offset: int,
+        archived_only: bool = False,
+        deleted_is_null: bool = True,
     ) -> Sequence[AlertDTO.AlertSimple]: ...
     
     def add_alert(self, row: AlertDTO.AlertCreate) -> AlertDTO.Alert: ...

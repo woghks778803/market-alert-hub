@@ -1,6 +1,13 @@
 from typing import Callable, Sequence
 from datetime import datetime
-from app.core.constants import AlertDeliveryStatus, AlertEventStatus, AlertStatus, AlertSort, ThrottleTimeframe, THROTTLE_SECONDS
+from app.core.constants import (
+    AlertDeliveryStatus, 
+    AlertEventStatus, 
+    AlertStatus, 
+    AlertSort, 
+    ThrottleTimeframe, 
+    THROTTLE_SECONDS
+)
 from app.core.util.datetime import utcnow
 from app.domain import AlertDTO, AlertRule, AlertPort, ChannelDTO, ChannelPort
 from app.domain.shared.uow import UnitOfWork
@@ -49,9 +56,9 @@ class AlertService:
 
             return alert
 
-    def list_type_by_filter(self, *, search: str | None, limit: int, offset: int) -> Sequence[AlertDTO.AlertType]: 
+    def list_alert_type_by_filter(self, *, search: str | None, limit: int, offset: int) -> Sequence[AlertDTO.AlertType]: 
         with self._uow_factory() as uow:
-            rows = uow.alerts.list_type_by_filter(
+            rows = uow.alerts.list_alert_type_by_filter(
                 search=search, is_active=True, asc_order=True,
                 limit=limit, offset=offset
             )
@@ -65,17 +72,98 @@ class AlertService:
         status: AlertStatus | None = None,
         archived_only: bool = False,
         limit: int,
-        offset: int,
-    ):
+        cursor: str | None
+    ) -> AlertDTO.AlertListResult:
+
+        sort = sort or AlertSort.RECENT_UPDATED
+
+        decode_cursor = None
+        if cursor:
+            decode_cursor = AlertRule.decode_alert_cursor(cursor)
+
+            if decode_cursor.sort != sort:
+                decode_cursor = None
+
+
         with self._uow_factory() as uow:
-            return uow.alerts.list_alert_by_filter(
+            rows = uow.alerts.list_alert_by_filter(
                 user_id=user_id,
                 status=status,
                 archived_only=archived_only,
+                cursor=decode_cursor,
+                limit=limit+1,
                 sort=sort,
-                limit=limit,
-                offset=offset,
             )
+        
+        has_next = len(rows) > limit
+        items = list(rows[:limit])
+
+        next_cursor = None
+        if has_next and items:
+            next_cursor = AlertRule.make_alert_cursor(
+                sort=sort,
+                item=items[-1],
+            )
+
+        return AlertDTO.AlertListResult(
+            items=items,
+            limit=limit,
+            has_next=has_next,
+            next_cursor=next_cursor,
+        )
+
+    def list_alert_log_by_filter(
+        self,
+        *,
+        user_id: int,
+        status: AlertEventStatus | None = None,
+        limit: int,
+        cursor: str | None
+    ) -> AlertDTO.AlertLogListResult:
+
+        decode_cursor = None
+        if cursor:
+            decode_cursor = AlertRule.decode_alert_log_cursor(cursor)
+
+        with self._uow_factory() as uow:
+            rows = uow.alerts.list_alert_event_by_filter(
+                user_id=user_id,
+                status=status,
+                cursor=decode_cursor,
+                limit=limit+1,
+            )
+
+        logs: list[AlertDTO.AlertLog] = []
+        for row in rows:
+            content = self._alert_message_builder.build(
+                context=row.context or {},
+                trigger_value=row.trigger_value,
+                alert_event_id=row.id,
+            )
+
+            log = AlertRule.make_alert_log(
+                event=row,
+                content=content,
+            )
+
+            logs.append(log)
+
+        has_next = len(logs) > limit
+        items = list(logs[:limit])
+
+        next_cursor = None
+        if has_next and items:
+            next_cursor = AlertRule.make_alert_log_cursor(
+                item=items[-1],
+            )
+
+        return AlertDTO.AlertLogListResult(
+            items=items,
+            limit=limit,
+            has_next=has_next,
+            next_cursor=next_cursor,
+        )
+
 
     def create_alert(
         self,
@@ -387,7 +475,6 @@ class AlertService:
         batch_size: int,
     ):
         started_at = utcnow()
-        batch_size=10
 
         selected_count = 0
         queued_count = 0
@@ -425,7 +512,7 @@ class AlertService:
             )
 
             # 3. 선점한 alert_events 재조회
-            queued_events = uow.alerts.list_alert_event_by_filter(
+            queued_events = uow.alerts.list_alert_event_from_ids(
                 alert_event_ids=alert_event_ids,
                 status=AlertEventStatus.QUEUED,
             )
@@ -535,7 +622,7 @@ class AlertService:
             )
 
             # 7. 방금 만든 delivery를 event/channel과 함께 조회
-            alert_deliveries = uow.alerts.list_alert_delivery_by_filter(
+            alert_deliveries = uow.alerts.list_alert_delivery_from_ids(
                 alert_event_ids=queued_event_ids,
                 status=AlertDeliveryStatus.QUEUED,
             )

@@ -1,13 +1,10 @@
 <template>
   <AppLoading :show="ruleAction.loading.value" overlay />
 
-  <div class="alert-rules-container">
-
-    <div v-if="!initialLoaded" class="alert-list-loading">
-        불러오는 중...
-    </div>
+  <div class="alert-container">
 
     <v-infinite-scroll
+        :key="currentAlertListKey"
         class="alert-rule-list"
         :disabled="!alertHasMore || alertLoadingMore"
         @load="handleLoadMore"
@@ -78,7 +75,7 @@ const route = useRoute()
 const mode = route.meta.mode as AlertListMode
 const ruleAction = useAsyncAction()
 const alertStore = useAlertStore()
-const { alerts, alertHasMore, alertLoadingMore } = storeToRefs(alertStore)
+const { alerts, currentAlertListKey, alertHasMore, alertLoadingMore } = storeToRefs(alertStore)
 
 const initialLoaded = ref(false)
 const showConfirmDialog = ref(false)

@@ -1,9 +1,9 @@
 from fastapi import Response, APIRouter, Depends, Query, Security
 
-from app.core.constants import AlertStatus, AlertSort
+from app.core.constants import AlertStatus, AlertSort, AlertEventStatus
 from app.api.deps import get_current_user, get_services, get_request_meta, RequestMeta
 from app.api.schema import AuthSchema, AlertSchema
-from app.api.common.envelope import Envelope, ok, created
+from app.api.common.envelope import Envelope, CursorPagination, ok, created
 from app.service.sync.factory import ServiceFactory
 import app.api.openapi as OpenApi
 
@@ -46,7 +46,7 @@ def get_alert(
         OpenApi.ERR_409,
     ),
 )
-def list_type(
+def list_alert_type(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     search: str | None = Query(None),
@@ -54,7 +54,7 @@ def list_type(
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    rows = svcs.alerts.list_type_by_filter(
+    rows = svcs.alerts.list_alert_type_by_filter(
         search=search,
         limit=limit, 
         offset=offset
@@ -75,22 +75,30 @@ def list_type(
 )
 def list_alert(
     limit: int = Query(50, ge=1, le=100),
-    offset: int = Query(0, ge=0),
+    cursor: str | None = Query(None),
     status: AlertStatus | None = Query(None),
     sort: AlertSort | None = Query(None),
     user: AuthSchema.CurrentUser = Security(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    rows = svcs.alerts.list_alert_by_filter(
+    result = svcs.alerts.list_alert_by_filter(
         user_id=user.id,
         status=status,
         sort=sort,
         limit=limit,
-        offset=offset,
+        cursor=cursor,
     )
 
-    return ok(rows, request_id=meta.request_id)
+    return ok(
+        data=result.items,
+        request_id=meta.request_id,
+        pagination=CursorPagination(
+            limit=result.limit,
+            has_next=result.has_next,
+            next_cursor=result.next_cursor,
+        ),
+    )
 
 @router.get(
     "/archives",
@@ -105,22 +113,67 @@ def list_alert(
     ),
 )
 def list_archived_alert(
+    cursor: str | None = Query(None),
     limit: int = Query(50, ge=1, le=100),
-    offset: int = Query(0, ge=0),
     sort: AlertSort | None = Query(None),
     user: AuthSchema.CurrentUser = Security(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),
 ):
-    rows = svcs.alerts.list_alert_by_filter(
+    result = svcs.alerts.list_alert_by_filter(
         user_id=user.id,
         sort=sort,
         archived_only=True,
         limit=limit,
-        offset=offset,
+        cursor=cursor,
     )
 
-    return ok(rows, request_id=meta.request_id)
+    return ok(
+        data=result.items,
+        request_id=meta.request_id,
+        pagination=CursorPagination(
+            limit=result.limit,
+            has_next=result.has_next,
+            next_cursor=result.next_cursor,
+        ),
+    )
+
+@router.get(
+    "/logs",
+    response_model=Envelope[list[AlertSchema.AlertLogRead]],
+    summary="알림 기록 목록",
+    responses=OpenApi.combine(
+        OpenApi.OK(
+            Envelope[list[AlertSchema.AlertLogRead]],
+            description="리스트 조회 성공",
+        ),
+        OpenApi.ERR_409,
+    ),
+)
+def list_alert_log(
+    cursor: str | None = Query(None),
+    limit: int = Query(50, ge=1, le=100),
+    status: AlertEventStatus | None = Query(None),
+    user: AuthSchema.CurrentUser = Security(get_current_user),
+    svcs: ServiceFactory = Depends(get_services),
+    meta: RequestMeta = Depends(get_request_meta),
+):
+    result = svcs.alerts.list_alert_log_by_filter(
+        user_id=user.id,
+        status=status,
+        limit=limit,
+        cursor=cursor,
+    )
+
+    return ok(
+        data=result.items,
+        request_id=meta.request_id,
+        pagination=CursorPagination(
+            limit=result.limit,
+            has_next=result.has_next,
+            next_cursor=result.next_cursor,
+        ),
+    )
 
 @router.get(
     "/summary",

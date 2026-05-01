@@ -4,8 +4,8 @@ import type { SimpleMarketDto, MarketDto, ExchangeDto, CandleDto, MarketListQuer
 export function toMarketDto(data: MarketInfo): MarketDto {
     return {
         exchangeInstrumentId: data.exchange_instrument_id,
-        symbol: data.exchange_symbol,
-        exchange: data.exchange_code,
+        exchangeSymbol: data.exchange_symbol,
+        exchangeCode: data.exchange_code,
         exchangeName: data.exchange_name,
 
         baseSymbol: data.base_symbol,
@@ -32,8 +32,8 @@ export function toSimpleMarketDto(data: SimpleMarketInfo): SimpleMarketDto {
     return {
         label: data.exchange_name + " · " + data.exchange_symbol,
         exchangeInstrumentId: data.exchange_instrument_id,
-        symbol: data.exchange_symbol,
-        exchange: data.exchange_name,
+        exchangeSymbol: data.exchange_symbol,
+        exchangeName: data.exchange_name,
         baseSymbol: data.base_symbol,
         quoteSymbol: data.quote_symbol,
     }

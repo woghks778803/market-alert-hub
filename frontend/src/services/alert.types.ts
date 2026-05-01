@@ -30,6 +30,17 @@ export type AlertDto = {
     exchangeIsActive: boolean
 }
 
+export type AlertLogDto = {
+    alertEventId: number
+    alertId: number
+    title: string
+    body: string
+    exchangeCode: string
+    exchangeSymbol: string
+    status: AlertEventStatus
+    detectedAt: string
+}
+
 export type AlertTypeDto = {
     id: number,
     code: string
@@ -43,15 +54,21 @@ export type AlertTypeDto = {
 
 export type AlertListQuery = {
     limit?: number
-    offset?: number
+    cursor?: string
     status?: AlertStatus
     sort?: AlertSort
 }
 
 export type ArchivedAlertListQuery = {
     limit?: number
-    offset?: number
+    cursor?: string
     sort?: AlertSort
+}
+
+export type AlertLogListQuery = {
+    limit?: number
+    cursor?: string
+    status?: AlertEventStatus
 }
 
 export type AlertTypeListQuery = {
@@ -114,10 +131,21 @@ export enum AlertStatus {
     ARCHIVED = "archived",
 }
 
+export enum AlertEventStatus {
+    DISPATCHED = "dispatched",
+    SKIPPED = "skipped",
+}
+
 export enum AlertStatusFilter {
     ALL = "all",
     ACTIVE = "active",
     PAUSED = "paused",
+}
+
+export enum AlertEventStatusFilter {
+    ALL = "all",
+    DISPATCHED = "dispatched",
+    SKIPPED = "skipped",
 }
 
 export enum ConditionType {
@@ -148,6 +176,17 @@ export enum ThrottleTimeframe {
 export enum AlertListMode {
     ALERTS = "alerts",
     ARCHIVES = "archives",
+}
+
+export const AlertEventStatusLabel: Record<AlertEventStatus, string> = {
+    [AlertEventStatus.DISPATCHED]: "발생",
+    [AlertEventStatus.SKIPPED]: "미전송",
+}
+
+export const AlertEventStatusFilterLabel: Record<AlertEventStatusFilter, string> = {
+    [AlertEventStatusFilter.ALL]: "전체",
+    [AlertEventStatusFilter.DISPATCHED]: "발생",
+    [AlertEventStatusFilter.SKIPPED]: "미전송",
 }
 
 export const AlertStatusLabel: Record<AlertStatus, string> = {
@@ -184,3 +223,7 @@ export const THROTTLE_TIMEFRAME_ITEMS = Object.values(ThrottleTimeframe).map((va
     title: ThrottleTimeframeLabel[value],
     value,
 }))
+
+export const MAX_ARCHIVED_ALERTS_LIMIT: number = 200
+export const MAX_NON_ARCHIVED_ALERTS_LIMIT: number = 30
+export const MAX_ALERT_LOGS_LIMIT: number = 500
