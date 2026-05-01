@@ -1,5 +1,6 @@
 import json
 from typing import Any
+from collections.abc import Collection
 
 from app.core.constants import OutboxEventType, SNAP
 from app.domain import AlertPort
@@ -56,6 +57,25 @@ class RedisAlertSnapshot(AlertPort.AsyncAlertSnapshot):
                 result.append(data)
 
         return result
+
+    async def remove_alert(self, alert_id: int) -> None:
+        """
+        단일 알림 Redis snapshot 제거
+        """
+        redis_key = self._snapshot_key()
+        await self._redis.hdel(redis_key, str(alert_id))
+
+    async def remove_alerts(self, alert_ids: Collection[int]) -> None:
+        """
+        여러 알림 Redis snapshot 제거
+        """
+        if not alert_ids:
+            return
+
+        redis_key = self._snapshot_key()
+        fields = [str(alert_id) for alert_id in set(alert_ids)]
+
+        await self._redis.hdel(redis_key, *fields)
 
     def _snapshot_key(self) -> str:
         return f"{self._prefix}:{SNAP}:{OutboxEventType.SYNC_ALERTS.value}"

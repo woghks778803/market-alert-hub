@@ -26,7 +26,7 @@ async def run_alert_price_loop(
     ctx: Any,
 ) -> None:
     """
-    1s candle pub/sub을 소비해서 가격 알림을 평가한다.
+    1s candle pub/sub을 소비해서 가격 알림을 평가
 
     역할:
     - RedisCandleStore의 1s candle publish 구독
@@ -262,6 +262,7 @@ def _make_price_alert_event(
         "detected_at": detected_at,
         "trigger_value": price_close,
         "dedup_key": f"{bucket_key}:{alert_id}:{bucket_ts}",
+        "bucket_key": bucket_key,
         "context": {
             # "source": "",
             "alert_name": alert.get("alert_name"),
@@ -282,6 +283,7 @@ def _make_price_alert_event(
             "candle": candle,
         },
         "throttle_seconds": throttle_seconds,
+        "is_once": alert.get("is_once"),
     }
 
 def _can_fire_alert(

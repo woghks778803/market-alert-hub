@@ -1,4 +1,5 @@
 from typing import Sequence
+from collections.abc import Collection
 from datetime import datetime
 from sqlalchemy import update, insert, select, and_, or_, asc, desc, func, case
 from sqlalchemy.dialects.mysql import insert as mysql_insert
@@ -25,11 +26,9 @@ class AsyncAlertRepo(AlertRepo):
         events: Sequence[AlertDTO.AlertEventCreate],
         *,
         chunk_size: int = 1000,
-    ) -> int:
-        total = 0
-
+    ) -> None:
         if not events:
-            return total
+            return
 
         for i in range(0, len(events), chunk_size):
             chunk = events[i : i + chunk_size]
@@ -42,8 +41,29 @@ class AsyncAlertRepo(AlertRepo):
                 id=ae.id, # 중복이면 수정 무시
             )
 
-            result = await self._db.execute(stmt)
+            await self._db.execute(stmt)
 
-            total += int(result.rowcount or 0)
 
-        return total
+    async def upsert_alerts_status(
+        self,
+        alert_ids: Collection[int],
+        *,
+        status: AlertStatus,
+        chunk_size: int = 1000,
+    ) -> None:
+        if not alert_ids:
+            return
+
+        alert_ids = list(set(alert_ids))
+        for i in range(0, len(alert_ids), chunk_size):
+            chunk = alert_ids[i : i + chunk_size]
+
+            stmt = (
+                update(a)
+                .where(a.id.in_(chunk))
+                .values(
+                    status=status,
+                )
+            )
+
+            await self._db.execute(stmt)

@@ -1,4 +1,5 @@
 from typing import Protocol, Any
+from collections.abc import Collection, Mapping
 
 class AlertSnapshot(Protocol):
     def upsert_alert(self, alert_id: int, payload: dict[str, Any], ttl_sec: int | None = None) -> None:
@@ -38,12 +39,23 @@ class AsyncAlertSnapshot(Protocol):
     async def mget_alert(self, alert_ids: list[int]) -> list[dict[str, Any]]:
         raise NotImplementedError
 
+    async def remove_alert(self, alert_id: int) -> None:
+        raise NotImplementedError
+
+    async def remove_alerts(self, alert_ids: Collection[int]) -> None:
+        raise NotImplementedError
 
 class AsyncAlertBucket(Protocol):
     async def list_alert_id(self, *, bucket_key: str) -> list[int]: 
         raise NotImplementedError
         
     async def list_alert_ids(self, *, bucket_keys: list[str]) -> list[int]:
+        raise NotImplementedError
+
+    async def remove_alerts_by_bucket(
+        self,
+        items: Mapping[str, Collection[int]],
+    ) -> None:
         raise NotImplementedError
 
 class AsyncAlertEvent(Protocol):

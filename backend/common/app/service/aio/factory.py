@@ -66,4 +66,6 @@ class AsyncServiceFactory:
         return AlertService(
             uow_factory=self._uow,
             alert_event=self.alert_event,
+            alert_snapshot=self.alert_snapshot,
+            alert_bucket=self.alert_bucket,
         )

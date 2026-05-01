@@ -1,3 +1,5 @@
+from collections.abc import Collection, Mapping
+
 from app.core.constants import OutboxEventType, BUCKET
 from app.domain import AlertPort
 from app.infra.external.redis.async_redis_client import RedisClientAsync
@@ -58,6 +60,37 @@ class RedisAlertBucket(AlertPort.AsyncAlertBucket):
                     continue
 
         return list(alert_ids)
+
+    async def remove_alerts_by_bucket(
+        self,
+        items: Mapping[str, Collection[int]],
+    ) -> None:
+        """
+        bucket_key별 alert_id bulk 제거
+
+        items 예:
+        {
+            "price:UPBIT:KRW-BTC:...": [1, 2, 3],
+            "price:BINANCE:BTCUSDT:...": [4, 5],
+        }
+        """
+        if not items:
+            return
+
+        pipe = self._redis.pipeline(transaction=False)
+
+        for bucket_key, alert_ids in items.items():
+            if not alert_ids:
+                continue
+
+            redis_key = self._bucket_key(bucket_key)
+            values = [str(alert_id) for alert_id in set(alert_ids)]
+
+            if values:
+                pipe.srem(redis_key, *values)
+
+        await pipe.execute()
+
 
     def _bucket_key(self, bucket_key: str) -> str:
         return f"{self._prefix}:{BUCKET}:{OutboxEventType.SYNC_ALERTS.value}:{bucket_key}"

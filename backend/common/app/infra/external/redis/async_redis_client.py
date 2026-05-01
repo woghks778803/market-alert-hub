@@ -98,6 +98,15 @@ class RedisClientAsync:
             log.exception("redis hget failed: key=%s field=%s", key, field)
             raise
 
+    async def hdel(self, key: str, *fields: str) -> int:
+        try:
+            if not fields:
+                return 0
+            return await self._client.hdel(key, *fields)
+        except RedisError:
+            log.exception("redis hdel failed: key=%s fields=%s", key, fields)
+            raise
+
     async def hmget(self, key: str, fields: list[str]) -> list[bytes | None]:
         try:
             return await self._client.hmget(name=key, keys=fields)
@@ -111,6 +120,15 @@ class RedisClientAsync:
             return result or {}
         except RedisError as e:
             log.exception("redis hgetall failed: key=%s", key)
+            raise
+
+    async def srem(self, key: str, *values: str) -> int:
+        try:
+            if not values:
+                return 0
+            return await self._client.srem(key, *values)
+        except RedisError:
+            log.exception("redis srem failed: key=%s values=%s", key, values)
             raise
 
     async def smembers(self, key: str) -> set[bytes]:

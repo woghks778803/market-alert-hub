@@ -95,8 +95,11 @@ class RedisClient:
             log.exception("redis hset failed: key=%s", key)
             raise
 
+    # *fields = tuple[str, str....]
     def hdel(self, key: str, *fields: str) -> int:
         try:
+            if not fields:
+                return 0
             return cast(int, self._client.hdel(key, *fields))
         except RedisError:
             log.exception("redis hdel failed: key=%s fields=%s", key, fields)
@@ -116,7 +119,7 @@ class RedisClient:
                 return 0
             return cast(int, self._client.sadd(key, *values))
         except RedisError:
-            log.exception("redis sadd failed: key=%s", key)
+            log.exception("redis sadd failed: key=%s values=%s", key, values)
             raise
 
 
@@ -126,7 +129,7 @@ class RedisClient:
                 return 0
             return cast(int, self._client.srem(key, *values))
         except RedisError:
-            log.exception("redis srem failed: key=%s", key)
+            log.exception("redis srem failed: key=%s values=%s", key, values)
             raise
 
 
