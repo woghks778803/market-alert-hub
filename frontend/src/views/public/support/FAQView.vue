@@ -1,18 +1,23 @@
 <template>
+  <AppLoading
+    :show="supportAction.loading.value"
+    overlay
+  />
+
   <div class="faq-container flex-grow-1 d-flex flex-column">
     <v-container class="pa-4 bg-surface">
-        <v-text-field
-            :model-value="FAQListQuery.search"
-            @update:model-value="supportStore.setSearch"
-            prepend-inner-icon="mdi-magnify"
-            label="궁금한 점을 검색해보세요"
-            variant="solo"
-            density="comfortable"
-            rounded="lg"
-            hide-details
-            clearable
-            flat
-        />
+      <v-text-field
+        :model-value="FAQListQuery.search"
+        prepend-inner-icon="mdi-magnify"
+        label="궁금한 점을 검색해보세요"
+        variant="solo"
+        density="comfortable"
+        rounded="lg"
+        hide-details
+        clearable
+        flat
+        @update:model-value="supportStore.setSearch"
+      />
     </v-container>
 
     <v-container class="pa-0 mt-2 flex-grow-1 d-flex flex-column">
@@ -40,18 +45,31 @@
       </v-expansion-panels>
     </v-container>
   </div>
+
+  <ScrollTopButton
+    :bottom-offset="100"
+    :show-after="300"
+  />
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from "vue"
-import { storeToRefs } from "pinia"
-import { useSupportStore } from "@/stores/support.store"
+import { onMounted, onUnmounted } from 'vue'
+import { storeToRefs } from 'pinia'
+
+import AppLoading from '@/components/common/AppLoading.vue'
+import ScrollTopButton from '@/components/common/ScrollTopButton.vue'
+
+import { useAsyncAction } from '@/composables/common/useAsyncAction'
+import { useSupportStore } from '@/stores/support.store'
 
 const supportStore = useSupportStore()
 const { faqs, FAQListQuery } = storeToRefs(supportStore)
+const supportAction = useAsyncAction()
 
 onMounted(() => {
-  supportStore.fetchFAQs()
+  supportAction.run(async () => {
+    await supportStore.fetchFAQs()
+  })
 })
 
 onUnmounted(() => {

@@ -1,14 +1,22 @@
 <template>
-  <AppLoading :show="marketAction.loading.value" overlay />
-  
+  <AppLoading
+    :show="marketAction.loading.value"
+    overlay
+  />
+
   <v-container class="app-container">
     <MarketSearchBar @search="handleSearch" />
 
-    <MarketFilterTabs :exchangeTabs="exchanges" @change="handleFilter" />
+    <MarketFilterTabs
+      :exchange-tabs="exchanges"
+      @change="handleFilter"
+    />
 
     <div class="mk-header">
-
-      <div class="mk-sort" @click="openSort = true">
+      <div
+        class="mk-sort"
+        @click="openSort = true"
+      >
         {{ marketStore.currentSortLabel }}
         <v-icon size="16">mdi-chevron-down</v-icon>
       </div>
@@ -25,34 +33,37 @@
         </v-list>
       </v-menu>
 
-      <div class="mk-count">
-        {{ markets.length }}개 결과
-      </div>
-
+      <div class="mk-count">{{ markets.length }}개 결과</div>
     </div>
 
-    <MarketList :items="markets"/>
+    <MarketList :items="markets" />
   </v-container>
+
+  <ScrollTopButton
+    :bottom-offset="100"
+    :show-after="300"
+  />
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, onDeactivated } from "vue"
-import { storeToRefs } from "pinia"
+import { onMounted, onUnmounted, onDeactivated } from 'vue'
+import { storeToRefs } from 'pinia'
 
-import AppLoading from "@/components/common/AppLoading.vue"
-import MarketSearchBar from "@/components/market/MarketSearchBar.vue"
-import MarketFilterTabs from "@/components/market/MarketFilterTabs.vue"
-import MarketList from "@/components/market/MarketList.vue"
+import AppLoading from '@/components/common/AppLoading.vue'
+import ScrollTopButton from '@/components/common/ScrollTopButton.vue'
+import MarketSearchBar from '@/components/market/MarketSearchBar.vue'
+import MarketFilterTabs from '@/components/market/MarketFilterTabs.vue'
+import MarketList from '@/components/market/MarketList.vue'
 
-import { useAsyncAction } from "@/composables/common/useAsyncAction"
-import { useMarketStore } from "@/stores/market.store"
-import { MarketSortLabel, MarketSort } from "@/services/market.types"
+import { useAsyncAction } from '@/composables/common/useAsyncAction'
+import { useMarketStore } from '@/stores/market.store'
+import { MarketSortLabel, MarketSort } from '@/services/market.types'
 
 const marketStore = useMarketStore()
 const { markets, exchanges, openSort } = storeToRefs(marketStore)
 const marketAction = useAsyncAction()
 
-onMounted(async () => {
+onMounted(() => {
   marketStore.resetMarket()
 
   marketAction.run(async () => {
@@ -73,22 +84,15 @@ function cleanup() {
 }
 
 function handleSort(sort: MarketSort) {
-  marketAction.run(() => {
-    marketStore.setSort(sort)
-    openSort.value = false
-  })
+  marketStore.setSort(sort)
+  openSort.value = false
 }
 
 const handleSearch = (keyword: string) => {
-  marketAction.run(() => {
-    marketStore.setMarketSearch(keyword)
-  })
+  marketStore.setMarketSearch(keyword)
 }
 
 const handleFilter = (filter: string[]) => {
-  marketAction.run(() => {
-    marketStore.setMarketFilter(filter)
-  })
+  marketStore.setMarketFilter(filter)
 }
-
 </script>
