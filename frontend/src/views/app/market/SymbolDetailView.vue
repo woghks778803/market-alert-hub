@@ -1,10 +1,22 @@
 <template>
-  <AppLoading :show="marketAction.loading.value || candleAction.loading.value" overlay />
+  <AppLoading
+    :show="marketAction.loading.value || candleAction.loading.value"
+    overlay
+  />
 
   <v-container class="app-container">
-    <SymbolSummaryCard v-if="market" :market="market" :collapsed="collapsed" @toggle="toggleCollapsed" />
+    <SymbolSummaryCard
+      v-if="market"
+      :market="market"
+      :collapsed="collapsed"
+      @toggle="toggleCollapsed"
+    />
 
-    <SymbolChartCard :market="market" :collapsed="collapsed" :candleRun="candleAction.run"/>
+    <SymbolChartCard
+      :market="market"
+      :collapsed="collapsed"
+      :candle-run="candleAction.run"
+    />
 
     <v-row class="sd-actions mt-4">
       <v-col cols="12">
@@ -34,25 +46,24 @@
         </v-btn>
       </v-col>
     </v-row>
-
   </v-container>
 </template>
 
 <script setup lang="ts">
-import { useRoute, useRouter } from "vue-router"
-import { onMounted, onUnmounted, onDeactivated, watch, ref } from "vue"
-import { storeToRefs } from "pinia"
-import AppLoading from "@/components/common/AppLoading.vue"
-import SymbolSummaryCard from "@/components/market/SymbolSummaryCard.vue"
-import SymbolChartCard from "@/components/market/SymbolChartCard.vue"
-import { useAsyncAction } from "@/composables/common/useAsyncAction"
-import { useMarketStore } from "@/stores/market.store"
-import { WsChannelType, CandleInterval, TickerInterval } from "@/services/market.types"
+import { useRoute, useRouter } from 'vue-router'
+import { onMounted, onUnmounted, onDeactivated, watch, ref } from 'vue'
+import { storeToRefs } from 'pinia'
+import AppLoading from '@/components/common/AppLoading.vue'
+import SymbolSummaryCard from '@/components/market/SymbolSummaryCard.vue'
+import SymbolChartCard from '@/components/market/SymbolChartCard.vue'
+import { useAsyncAction } from '@/composables/common/useAsyncAction'
+import { WsChannelType, CandleInterval, TickerInterval } from '@/services/market.types'
+import { useMarketStore } from '@/stores/market.store'
 
 const route = useRoute()
 const router = useRouter()
 const marketStore = useMarketStore()
-const { market, currentTimeframe } = storeToRefs(marketStore)
+const { market } = storeToRefs(marketStore)
 const marketAction = useAsyncAction()
 const candleAction = useAsyncAction()
 
@@ -90,8 +101,8 @@ async function toggleCollapsed() {
   collapsed.value = !collapsed.value
 }
 
-function goSetting(){
-  router.push({ name: "RuleSetting"})
+function goSetting() {
+  router.push({ name: 'RuleSetting' })
 }
 
 watch(
@@ -108,7 +119,7 @@ watch(
   { immediate: true }
 )
 
-// watch( () => marketAction.loading.value, (v) => { console.log('[market loading]', v) } ) 
+// watch( () => marketAction.loading.value, (v) => { console.log('[market loading]', v) } )
 // watch( () => candleAction.loading.value, (v) => { console.log('[candle loading]', v) } )
 // watch( () => marketAction.loading.value || candleAction.loading.value, (v) => { console.log('[page loading]', v) } )
 </script>

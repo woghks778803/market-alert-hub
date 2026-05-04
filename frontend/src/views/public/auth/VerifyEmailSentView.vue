@@ -9,10 +9,16 @@
       <div class="verify-hint">메일이 안 보이면 스팸함을 확인해주세요</div>
     </div>
 
-    <div v-if="successMessage" class="auth-success">
+    <div
+      v-if="successMessage"
+      class="auth-success"
+    >
       {{ successMessage }}
     </div>
-    <div v-if="errorMessage" class="auth-error">
+    <div
+      v-if="errorMessage"
+      class="auth-error"
+    >
       {{ errorMessage }}
     </div>
 
@@ -26,94 +32,81 @@
       :disabled="!isReady || isCooldown"
       @click="onSubmit"
     >
-      <template v-if="isCooldown">
-        {{ cooldownSec }}초 후 다시 시도
-      </template>
-      <template v-else>
-        인증 메일 다시 보내기
-      </template>
+      <template v-if="isCooldown"> {{ cooldownSec }}초 후 다시 시도 </template>
+      <template v-else> 인증 메일 다시 보내기 </template>
     </v-btn>
 
-    <button class="auth-link verify-login" type="button" @click="goLogin">
+    <button
+      class="auth-link verify-login"
+      type="button"
+      @click="goLogin"
+    >
       다른 계정으로 로그인
     </button>
   </AppCenterCard>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from "vue";
-import AppCenterCard from "@/components/common/AppCenterCard.vue"
-import { useRouter } from "vue-router"
-import { useCooldown } from "@/composables/common/useCooldown"
-import { useUserStore } from "@/stores/user.store";
-import { useAuthStore } from "@/stores/auth.store";
-import { useAuthFlow } from "@/composables/auth/useAuthFlow"
-import { useVerifyEmailSent } from "@/composables/auth/useVerifyEmailSent";
-import { useAsyncAction } from "@/composables/common/useAsyncAction";
-import { mapCommonError } from "@/composables/error/error.mapper"
-import { mapVerifyEmailSentError } from "@/composables/error/verifyEmailSentError.mapper"
+import { onMounted } from 'vue'
+import AppCenterCard from '@/components/common/AppCenterCard.vue'
+import { useRouter } from 'vue-router'
+import { useCooldown } from '@/composables/common/useCooldown'
+import { useUserStore } from '@/stores/user.store'
+import { useAuthStore } from '@/stores/auth.store'
+import { useAuthFlow } from '@/composables/auth/useAuthFlow'
+import { useVerifyEmailSent } from '@/composables/auth/useVerifyEmailSent'
+import { useAsyncAction } from '@/composables/common/useAsyncAction'
+import { getVerifyEmailSentError } from '@/composables/error/authError.message'
 
 const router = useRouter()
-const userStore = useUserStore();
-const authStore = useAuthStore();
-const { successMessage, errorMessage, resetMessages } = useVerifyEmailSent();
+const userStore = useUserStore()
+const authStore = useAuthStore()
+const { successMessage, errorMessage, resetMessages } = useVerifyEmailSent()
 const { run, loading, isReady } = useAsyncAction()
 const { logout } = useAuthFlow()
 
-const { cooldownSec, isCooldown, startCooldown } =
-  useCooldown();
+const { cooldownSec, isCooldown, startCooldown } = useCooldown()
 
 onMounted(async () => {
-  try{
+  try {
     await run(async () => {
       await userStore.fetchMe()
     })
-  } catch (err: any){
+  } catch {
     userStore.clearMe()
   }
-});
+})
 
 async function onSubmit() {
-  if (isCooldown.value || !isReady.value) return;
+  if (isCooldown.value || !isReady.value) return
 
   resetMessages()
   try {
     await run(async () => {
-      await authStore.resendEmailVerification();
-      successMessage.value = "인증 메일이 전송되었습니다. 메일함을 확인해주세요.";
-    });
-  } catch (err: any) {
-    const apiError = err?.response?.data?.error
+      await authStore.resendEmailVerification()
+      successMessage.value = '인증 메일이 전송되었습니다. 메일함을 확인해주세요.'
+    })
+  } catch (err) {
+    const result = getVerifyEmailSentError(err)
 
-    const r = mapVerifyEmailSentError(apiError)
-    if(r){
-      if (r.kind === "cooldown") {
-        startCooldown(r.cooldownSec)
-        errorMessage.value = r.message
-        return
-      }
-
-      if (r.kind === "logout") {
-        await logout()
-        await router.push({ name: "Login" }).catch(() => {})
-        return
-      }
-
-      errorMessage.value = r.message
+    if (result.kind === 'cooldown') {
+      startCooldown(result.cooldownSec)
+      errorMessage.value = result.message
       return
     }
 
-    const commonMessage = mapCommonError(apiError)
-    if (commonMessage) {
-      errorMessage.value = commonMessage
+    if (result.kind === 'logout') {
+      await logout()
+      await router.push({ name: 'Login' }).catch(() => {})
       return
     }
-    
+
+    errorMessage.value = result.message
   }
 }
 
 async function goLogin() {
   await logout()
-  router.push({ name: "Login" }).catch(() => {})
+  router.push({ name: 'Login' }).catch(() => {})
 }
 </script>

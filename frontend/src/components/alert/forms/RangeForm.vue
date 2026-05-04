@@ -4,7 +4,7 @@
       <div class="rs-field-col">
         <div class="rs-field-label">최소값</div>
         <v-text-field
-          v-model="modelValue.minValue"
+          :model-value="modelValue.minValue"
           variant="solo-filled"
           flat
           rounded="lg"
@@ -20,7 +20,7 @@
       <div class="rs-field-col">
         <div class="rs-field-label">최대값</div>
         <v-text-field
-          v-model="modelValue.maxValue"
+          :model-value="modelValue.maxValue"
           variant="solo-filled"
           flat
           rounded="lg"
@@ -37,24 +37,17 @@
 </template>
 
 <script setup lang="ts">
-import type { RangeFormValue } from "@/services/alert.types"
+import type { RangeFormValue } from '@/services/alert.types'
 
-const props = defineProps<{
+defineProps<{
   modelValue: RangeFormValue
   error?: Record<string, string> | null
 }>()
 
-const emit = defineEmits<{
+defineEmits<{
   (e: 'update:modelValue', value: RangeFormValue): void
-  (e: "blur"): void
-  (e: "input"): void
+  (e: 'blur'): void
+  (e: 'input'): void
 }>()
 
-function onBlur() {
-  emit('blur')
-}
-
-function onInput() {
-  emit('input')
-}
 </script>

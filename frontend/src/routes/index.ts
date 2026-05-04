@@ -1,40 +1,40 @@
-import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router"
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 
-import PublicLayout from "@/layouts/PublicLayout.vue"
-import AppLayout from "@/layouts/AppLayout.vue"
+import PublicLayout from '@/layouts/PublicLayout.vue'
+import AppLayout from '@/layouts/AppLayout.vue'
 
-import { authRoutes } from "@/routes/modules/auth.routes"
-import { legalRoutes } from "@/routes/modules/legal.routes"
-import { supportRoutes } from "@/routes/modules/support.routes"
-import { appRoutes } from "@/routes/modules/app.routes"
-import { systemRoutes } from "@/routes/modules/system.routes"
-import type { StatusDto } from "@/services/auth.types"
-import { useAuthStore } from "@/stores/auth.store"
+import { authRoutes } from '@/routes/modules/auth.routes'
+import { legalRoutes } from '@/routes/modules/legal.routes'
+import { supportRoutes } from '@/routes/modules/support.routes'
+import { appRoutes } from '@/routes/modules/app.routes'
+import { systemRoutes } from '@/routes/modules/system.routes'
+import type { StatusDto } from '@/services/auth.types'
+import { useAuthStore } from '@/stores/auth.store'
 
 // NOTE: 여긴 "조립"만 한다.
 // - 레이아웃(공개/앱) 트리 만들고
 // - children은 modules에서 가져온다.
 const routes: RouteRecordRaw[] = [
   {
-    path: "/auth",
+    path: '/auth',
     component: PublicLayout,
     children: authRoutes,
     meta: { hideHeader: true },
   },
   {
-    path: "/legal",
+    path: '/legal',
     component: PublicLayout,
     children: legalRoutes,
     meta: { showBack: true },
   },
   {
-    path: "/support",
+    path: '/support',
     component: PublicLayout,
     children: supportRoutes,
     meta: { showBack: true },
   },
   {
-    path: "/",
+    path: '/',
     component: AppLayout,
     children: appRoutes,
   },
@@ -57,17 +57,17 @@ export const router = createRouter({
 })
 
 function getAuthState(status: StatusDto | null) {
-  if (!status) return "guest"
+  if (!status) return 'guest'
 
   if (!status.emaileEnrolled) {
-    return "unenrolled"
+    return 'unenrolled'
   }
 
   if (!status.emailVerified) {
-    return "unverified"
+    return 'unverified'
   }
 
-  return "verified"
+  return 'verified'
 }
 
 let authBootstrapped = false
@@ -89,7 +89,7 @@ router.beforeEach(async (to, _from, next) => {
     }
   }
 
-  console.log("Global Guard:", { to: to.fullPath, authState, allows, hasStatus: status })
+  console.log('Global Guard:', { to: to.fullPath, authState, allows, hasStatus: status })
 
   // if (token && isTokenExpired(token)) {
   // authStore.clearStatus()
@@ -100,16 +100,13 @@ router.beforeEach(async (to, _from, next) => {
   }
 
   if (!allows.includes(authState)) {
-    if (authState == "guest")
-      return next({ name: "Login", query: { next: to.fullPath } })
-    else if (authState == "unenrolled")
-      return next({ name: "VerifyEmail", query: { next: to.fullPath } })
-    else if (authState == "unverified")
-      return next({ name: "VerifyEmailSent", query: { next: to.fullPath } })
-    else if (authState == "verified")
-      return next({ name: "Home", query: { next: to.fullPath } })
+    if (authState == 'guest') return next({ name: 'Login', query: { next: to.fullPath } })
+    else if (authState == 'unenrolled')
+      return next({ name: 'VerifyEmail', query: { next: to.fullPath } })
+    else if (authState == 'unverified')
+      return next({ name: 'VerifyEmailSent', query: { next: to.fullPath } })
+    else if (authState == 'verified') return next({ name: 'Home', query: { next: to.fullPath } })
   }
 
   return next()
-
 })

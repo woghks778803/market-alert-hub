@@ -28,7 +28,6 @@
           :error-messages="fieldErrors.email ? [fieldErrors.email] : []"
           @update:model-value="onInputChanged"
           @blur="onBlurValidate"
-          
         />
       </div>
 
@@ -58,10 +57,10 @@
           density="comfortable"
           hide-details="auto"
           :append-inner-icon="showPassword ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
-          @click:append-inner="showPassword = !showPassword"
           autocomplete="new-password"
           :error="!!fieldErrors.password"
           :error-messages="fieldErrors.password ? [fieldErrors.password] : []"
+          @click:append-inner="showPassword = !showPassword"
           @update:model-value="onInputChanged"
           @blur="onBlurValidate"
         />
@@ -77,10 +76,10 @@
           density="comfortable"
           hide-details="auto"
           :append-inner-icon="showPasswordConfirm ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
-          @click:append-inner="showPasswordConfirm = !showPasswordConfirm"
           autocomplete="new-password"
           :error="!!fieldErrors.passwordConfirm"
           :error-messages="fieldErrors.passwordConfirm ? [fieldErrors.passwordConfirm] : []"
+          @click:append-inner="showPasswordConfirm = !showPasswordConfirm"
           @update:model-value="onInputChanged"
           @blur="onBlurValidate"
         />
@@ -102,27 +101,32 @@
 
     <div class="auth-bottom auth-bottom--center">
       <span class="auth-bottom__text">이미 계정이 있나요?</span>
-      <button class="auth-link" type="button" @click="goLogin">로그인</button>
+      <button
+        class="auth-link"
+        type="button"
+        @click="goLogin"
+      >
+        로그인
+      </button>
     </div>
   </AppCenterCard>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from "vue";
-import { useRoute, useRouter } from "vue-router";
-import AppCenterCard from "@/components/common/AppCenterCard.vue"
-import { useRegisterEmailForm } from "@/composables/auth/useRegisterEmailForm";
-import { useAsyncAction } from "@/composables/common/useAsyncAction";
-import { useTermsConsent } from "@/composables/auth/useTermsConsent";
-import { useAuthStore } from "@/stores/auth.store";
-import { mapCommonError } from "@/composables/error/error.mapper"
-import { mapRegisterError } from "@/composables/error/registerError.mapper"
+import { onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import AppCenterCard from '@/components/common/AppCenterCard.vue'
+import { useRegisterEmailForm } from '@/composables/auth/useRegisterEmailForm'
+import { useAsyncAction } from '@/composables/common/useAsyncAction'
+import { useTermsConsent } from '@/composables/auth/useTermsConsent'
+import { useAuthStore } from '@/stores/auth.store'
+import { getRegisterError } from '@/composables/error/authError.message'
 
-const router = useRouter();
-const route = useRoute();
-const authStore = useAuthStore();
+const router = useRouter()
+const route = useRoute()
+const authStore = useAuthStore()
 
-const { canProceed, consentPayload, resetTermsConsent } = useTermsConsent();
+const { canProceed, consentPayload, resetTermsConsent } = useTermsConsent()
 const { run, loading, isReady } = useAsyncAction()
 const {
   email,
@@ -131,7 +135,7 @@ const {
   passwordConfirm,
   showPassword,
   showPasswordConfirm,
-  
+
   fieldErrors,
   errorMessage,
 
@@ -140,28 +144,32 @@ const {
 
   onInputChanged,
   onBlurValidate,
-} = useRegisterEmailForm();
+} = useRegisterEmailForm()
 
 onMounted(() => {
   if (!canProceed.value) {
-    router.replace({
-      name: "SignupTerms",
-      query: {
-        source: "email",
-        next: route.fullPath,
-      },
-    }).catch(() => {});
+    router
+      .replace({
+        name: 'SignupTerms',
+        query: {
+          source: 'email',
+          next: route.fullPath,
+        },
+      })
+      .catch(() => {})
   }
-});
+})
 
 async function onSubmit() {
   if (!canProceed.value) {
-    errorMessage.value = "약관 동의가 필요합니다.";
-    await router.push({ name: "SignupTerms", query: { source: "email", next: "/auth/signup/email" } }).catch(() => {});
-    return;
+    errorMessage.value = '약관 동의가 필요합니다.'
+    await router
+      .push({ name: 'SignupTerms', query: { source: 'email', next: '/auth/signup/email' } })
+      .catch(() => {})
+    return
   }
 
-  try{
+  try {
     await handleSubmit(async () => {
       await run(async () => {
         const payload = {
@@ -169,35 +177,29 @@ async function onSubmit() {
           nickname: nickname.value,
           password: password.value,
           ...consentPayload.value,
-        };
+        }
         await authStore.register(payload)
-      });
+      })
 
       resetTermsConsent()
-      await router.push({
-        name: "VerifyEmailSent",
-        query: { email: email.value },
-      }).catch(() => {})
+      await router
+        .push({
+          name: 'VerifyEmailSent',
+          query: { email: email.value },
+        })
+        .catch(() => {})
     })
-  }catch (err: any) {
-    const apiError = err?.response?.data?.error
-
-    const r = mapRegisterError(apiError)
-    if(r){
-      errorMessage.value = r
-      return
-    }
-
-    const commonMessage = mapCommonError(apiError)
-    if (commonMessage) {
-      errorMessage.value = commonMessage
+  } catch (err) {
+    const result = getRegisterError(err)
+    if(result){
+      errorMessage.value = result
       return
     }
   }
-};
+}
 
 function goLogin() {
-  resetTermsConsent();
-  router.push({ name: "Login" }).catch(() => {})
-};
+  resetTermsConsent()
+  router.push({ name: 'Login' }).catch(() => {})
+}
 </script>

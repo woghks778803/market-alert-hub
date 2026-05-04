@@ -53,8 +53,6 @@ class RedisCandleStore(MarketPort.AsyncCandleStore):
             "ts_open": int(raw.get(b"ts_open", b"0")),
         }
 
-    async def list_1s(self): ...
-
     async def subscribe(self, interval_type: str):
         pubsub = await self._redis.psubscribe(f"{self._prefix}:{CANDLE}:{interval_type}:*")
         return pubsub

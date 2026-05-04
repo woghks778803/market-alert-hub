@@ -32,7 +32,5 @@ class RedisCandleStore(MarketPort.CandleStore):
             "ts_open": int(raw.get(b"ts_open", b"0")),
         }
 
-    def list_1s(self): ...
-
     def _symbols_1s_key(self, ex, symbol) -> str:
         return f"{self._prefix}:{CANDLE}:{CandleInterval.SEC_1.value}:{ex}:{symbol}"

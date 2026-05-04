@@ -3,7 +3,7 @@
     <div class="rs-field-block">
       <div class="rs-field-label">기준값</div>
       <v-text-field
-        v-model="modelValue.threshold"
+        :model-value="modelValue.threshold"
         variant="solo-filled"
         flat
         rounded="lg"
@@ -21,7 +21,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ThresholdFormValue } from "@/services/alert.types" 
+import type { ThresholdFormValue } from '@/services/alert.types'
 
 const props = defineProps<{
   modelValue: ThresholdFormValue
@@ -30,15 +30,20 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: ThresholdFormValue): void
-  (e: "blur"): void
-  (e: "input"): void
+  (e: 'blur'): void
+  (e: 'input'): void
 }>()
 
 function onBlur() {
   emit('blur')
 }
 
-function onInput() {
+function onInput(value: string) {
+  emit('update:modelValue', {
+    ...props.modelValue,
+    threshold: value,
+  })
+
   emit('input')
 }
 </script>

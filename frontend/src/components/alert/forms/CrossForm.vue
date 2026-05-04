@@ -35,7 +35,7 @@
 
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
-import type { CrossFormValue } from "@/services/alert.types"
+import type { CrossFormValue } from '@/services/alert.types'
 
 const props = defineProps<{
   modelValue: CrossFormValue
@@ -44,8 +44,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: CrossFormValue): void
-  (e: "blur"): void
-  (e: "input"): void
+  (e: 'blur'): void
+  (e: 'input'): void
 }>()
 
 const confirmBarOptions = [
@@ -67,7 +67,7 @@ watch(
     localValue.threshold = value.threshold
     localValue.confirmBars = value.confirmBars
   },
-  { deep: true },
+  { deep: true }
 )
 
 watch(
@@ -78,14 +78,6 @@ watch(
       confirmBars: localValue.confirmBars,
     })
   },
-  { deep: true },
+  { deep: true }
 )
-
-function onBlur() {
-  emit('blur')
-}
-
-function onInput() {
-  emit('input')
-}
 </script>

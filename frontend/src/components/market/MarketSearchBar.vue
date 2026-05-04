@@ -1,7 +1,6 @@
 <template>
   <v-text-field
     :model-value="marketListQuery.search"
-    @update:model-value="onInput"
     placeholder="심볼/마켓 검색"
     prepend-inner-icon="mdi-magnify"
     variant="solo"
@@ -11,21 +10,22 @@
     clearable
     flat
     class="mk-search"
+    @update:model-value="onInput"
   />
 </template>
 
 <script setup lang="ts">
-import { storeToRefs } from "pinia"
-import { useMarketStore } from "@/stores/market.store"
+import { storeToRefs } from 'pinia'
+import { useMarketStore } from '@/stores/market.store'
 
 const marketStore = useMarketStore()
 const { marketListQuery } = storeToRefs(marketStore)
 
 const emit = defineEmits<{
-  (e: "search", value: string): void
+  (e: 'search', value: string): void
 }>()
 
 function onInput(v: string) {
-  emit("search", v)
+  emit('search', v)
 }
 </script>

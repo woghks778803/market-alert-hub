@@ -1,7 +1,5 @@
 <template>
-
-<div class="mk-tabs">
-
+  <div class="mk-tabs">
     <v-chip-group
       mandatory
       selected-class="mk-tab-active"
@@ -16,23 +14,21 @@
         {{ tab.label }}
       </v-chip>
     </v-chip-group>
-
   </div>
-
 </template>
 
 <script setup lang="ts">
-import { storeToRefs } from "pinia"
-import type { ChartTimeframe } from "@/services/market.types"
-import { useMarketStore } from "@/stores/market.store"
+import { storeToRefs } from 'pinia'
+import type { ChartTimeframe } from '@/services/market.types'
+import { useMarketStore } from '@/stores/market.store'
 
 const marketStore = useMarketStore()
 const { currentTimeframe } = storeToRefs(marketStore)
 
 const tabs = [
-  { label: "1m", value: "1m" },
-  { label: "1h", value: "1h" },
-  { label: "1d", value: "1d" },
+  { label: '1m', value: '1m' },
+  { label: '1h', value: '1h' },
+  { label: '1d', value: '1d' },
 ]
 
 async function onUpdate(val: ChartTimeframe) {

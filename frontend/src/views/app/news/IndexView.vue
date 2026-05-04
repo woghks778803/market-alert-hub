@@ -103,7 +103,6 @@ const handleLoadMore = async ({ done }: { done: (status: 'ok' | 'empty' | 'error
   }
 
   try {
-    console.log('handleLoadMore')
     await newsStore.fetchNewsPosts({ append: true })
 
     done(newsHasMore.value ? 'ok' : 'empty')

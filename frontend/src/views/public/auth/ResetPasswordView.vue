@@ -19,8 +19,14 @@
         {{ errorMessage }}
       </v-alert>
 
-      <v-form ref="formRef" @submit.prevent="onSubmit">
-        <v-card class="auth-card__inner" variant="outlined">
+      <v-form
+        ref="formRef"
+        @submit.prevent="onSubmit"
+      >
+        <v-card
+          class="auth-card__inner"
+          variant="outlined"
+        >
           <v-card-text>
             <div class="auth-label">새 비밀번호</div>
             <v-text-field
@@ -32,9 +38,9 @@
               variant="outlined"
               hide-details="auto"
               :append-inner-icon="showPassword ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
-              @click:append-inner="showPassword = !showPassword"
               :error="!!fieldErrors.password"
               :error-messages="fieldErrors.password ? [fieldErrors.password] : []"
+              @click:append-inner="showPassword = !showPassword"
               @update:model-value="onInputChanged"
               @blur="onBlurValidate"
             />
@@ -49,9 +55,9 @@
               variant="outlined"
               hide-details="auto"
               :append-inner-icon="showPasswordConfirm ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
-              @click:append-inner="showPasswordConfirm = !showPasswordConfirm"
               :error="!!fieldErrors.passwordConfirm"
               :error-messages="fieldErrors.passwordConfirm ? [fieldErrors.passwordConfirm] : []"
+              @click:append-inner="showPasswordConfirm = !showPasswordConfirm"
               @update:model-value="onInputChanged"
               @blur="onBlurValidate"
             />
@@ -73,7 +79,11 @@
       </v-form>
 
       <div class="auth-footer">
-        <button class="auth-link auth-link--muted" type="button" @click="goLogin">
+        <button
+          class="auth-link auth-link--muted"
+          type="button"
+          @click="goLogin"
+        >
           로그인 화면으로 돌아가기
         </button>
       </div>
@@ -82,7 +92,10 @@
     <!-- 성공 -->
     <template v-else-if="viewMode === 'success'">
       <div class="verify-cb-icon verify-cb-icon--success">
-        <v-icon icon="mdi-check" size="30" />
+        <v-icon
+          icon="mdi-check"
+          size="30"
+        />
       </div>
 
       <div class="verify-cb-msg">
@@ -105,7 +118,10 @@
     <!-- 실패 -->
     <template v-else>
       <div class="verify-cb-icon verify-cb-icon--fail">
-        <v-icon icon="mdi-close" size="30" />
+        <v-icon
+          icon="mdi-close"
+          size="30"
+        />
       </div>
 
       <div class="verify-cb-msg">
@@ -116,77 +132,79 @@
         <div class="verify-cb-msg__desc">인증메일을 다시 받아주세요</div>
       </div>
 
-      <button class="auth-link verify-cb-link" type="button" @click="goPasswordForgot">
+      <button
+        class="auth-link verify-cb-link"
+        type="button"
+        @click="goPasswordForgot"
+      >
         비밀번호 찾기
       </button>
     </template>
-    
   </AppCenterCard>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from "vue"
-import AppCenterCard from "@/components/common/AppCenterCard.vue"
-import { useRoute, useRouter } from "vue-router";
-import { useAuthStore } from "@/stores/auth.store";
-import { useAuthFlow } from "@/composables/auth/useAuthFlow";
-import { useResetPasswordForm } from "@/composables/auth/useResetPasswordForm";
-import { useAsyncAction } from "@/composables/common/useAsyncAction";
-import { useMode } from "@/composables/common/useMode"
-import { mapCommonError } from "@/composables/error/error.mapper"
-import { mapResetPasswordError } from "@/composables/error/resetPasswordError.mapper"
+import { computed, onMounted } from 'vue'
+import AppCenterCard from '@/components/common/AppCenterCard.vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth.store'
+import { useAuthFlow } from '@/composables/auth/useAuthFlow'
+import { useResetPasswordForm } from '@/composables/auth/useResetPasswordForm'
+import { useAsyncAction } from '@/composables/common/useAsyncAction'
+import { useMode } from '@/composables/common/useMode'
+import { getResetPasswordError } from '@/composables/error/authError.message'
 
-const router = useRouter();
-const route = useRoute();
-const authStore = useAuthStore();
+const router = useRouter()
+const route = useRoute()
+const authStore = useAuthStore()
 
-const { mode, setMode } = useMode();
-const { resetPassword } = useAuthFlow();
+const { mode, setMode } = useMode()
+const { resetPassword } = useAuthFlow()
 
 const {
   password,
   passwordConfirm,
   showPassword,
   showPasswordConfirm,
-  
+
   fieldErrors,
   errorMessage,
-  
+
   canSubmit,
   handleSubmit,
 
   onInputChanged,
   onBlurValidate,
-} = useResetPasswordForm();
+} = useResetPasswordForm()
 const { run, loading, isReady } = useAsyncAction()
 
 const viewMode = computed(() => mode.value)
 
 function readToken(): string {
   const q = route.query?.token
-  return typeof q === "string" ? q : ""
+  return typeof q === 'string' ? q : ''
 }
 
 onMounted(async () => {
-  setMode("default")
+  setMode('default')
   try {
     const token = readToken()
     if (!token) {
-      throw new Error("invalid_verify_token")
+      throw new Error('invalid_verify_token')
     }
     await authStore.verifyPasswordReset({ token })
 
-    console.log("verify success")
-  } catch (err: any) {
-    setMode("fail")
+    console.log('verify success')
+  } catch {
+    setMode('fail')
   }
-});
+})
 
 async function onSubmit() {
   try {
     const token = readToken()
     if (!token) {
-      throw new Error("invalid_verify_token")
+      throw new Error('invalid_verify_token')
     }
 
     await handleSubmit(async () => {
@@ -194,44 +212,27 @@ async function onSubmit() {
         await resetPassword({
           token: token,
           newPassword: password.value,
-        });
-      });
+        })
+      })
     })
 
-    setMode("success")
-  } catch (err: any) {
-    if (err?.message === "invalid_verify_token") {
-      setMode("fail")
-      return
-    }
-
-    const apiError = err?.response?.data?.error
-
-    const r = mapResetPasswordError(apiError)
-    if(r){
-      if (r.kind === "fail_mode") {
-        setMode("fail")
+    setMode('success')
+  } catch (err) {
+    const result = getResetPasswordError(err)
+    if (result.kind === 'fail_mode') {
+        setMode('fail')
         return
-      }
+    }
 
-      errorMessage.value = r.message
-      return
-    }
-    
-    const commonMessage = mapCommonError(apiError)
-    if (commonMessage) {
-      errorMessage.value = commonMessage
-      return
-    }
+    errorMessage.value = result.message
   }
 }
 
 function goLogin() {
-  router.push({ name: "Login" }).catch(() => {});
+  router.push({ name: 'Login' }).catch(() => {})
 }
 
 function goPasswordForgot() {
-  router.push({ name: "ForgotPassword" }).catch(() => {});
+  router.push({ name: 'ForgotPassword' }).catch(() => {})
 }
 </script>
-

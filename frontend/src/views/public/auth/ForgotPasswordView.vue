@@ -1,8 +1,8 @@
 <template>
   <AuthFormCard
     title="비밀번호 찾기"
-    :successMessage="successMessage"
-    :errorMessage="errorMessage"
+    :success-message="successMessage"
+    :error-message="errorMessage"
     :loading="loading"
     :disabled="!canSend || !isReady"
     @submit="onSubmit"
@@ -25,41 +25,38 @@
     />
 
     <template #button>
-      <template v-if="isCooldown">
-        {{ cooldownSec }}초 후 다시 시도
-      </template>
-      <template v-else>
-        재설정 메일 보내기
-      </template>
+      <template v-if="isCooldown"> {{ cooldownSec }}초 후 다시 시도 </template>
+      <template v-else> 재설정 메일 보내기 </template>
     </template>
 
     <template #footer>
-      <button class="auth-link auth-link--muted" @click="goLogin">
+      <button
+        class="auth-link auth-link--muted"
+        @click="goLogin"
+      >
         로그인 화면으로 돌아가기
       </button>
     </template>
   </AuthFormCard>
 </template>
 
-
 <script setup lang="ts">
-import { useRouter } from "vue-router"
-import AuthFormCard from "@/components/auth/AuthFormCard.vue"
-import { useAuthStore } from "@/stores/auth.store";
-import { useAsyncAction } from "@/composables/common/useAsyncAction";
-import { useEmailActionForm } from "@/composables/auth/useEmailActionForm";
-import { mapCommonError } from "@/composables/error/error.mapper"
-import { mapForgotPasswordError } from "@/composables/error/forgotPasswordError.mapper"
+import { useRouter } from 'vue-router'
+import AuthFormCard from '@/components/auth/AuthFormCard.vue'
+import { useAuthStore } from '@/stores/auth.store'
+import { useAsyncAction } from '@/composables/common/useAsyncAction'
+import { useEmailActionForm } from '@/composables/auth/useEmailActionForm'
+import { getForgotPasswordError } from '@/composables/error/authError.message'
 
 const router = useRouter()
-const authStore = useAuthStore();
+const authStore = useAuthStore()
 const {
   fields,
 
   fieldErrors,
   errorMessage,
   successMessage,
-  
+
   canSend,
   handleSubmit,
 
@@ -68,39 +65,31 @@ const {
   startCooldown,
   onInputChanged,
   onBlurValidate,
-} = useEmailActionForm();
+} = useEmailActionForm()
 const { run, loading, isReady } = useAsyncAction()
 
 async function onSubmit() {
   try {
     await handleSubmit(async () => {
       await run(async () => {
-        await authStore.requestPasswordReset({ email: fields.value.email });
-        successMessage.value = "재설정 링크를 전송했습니다. 메일함을 확인해주세요.";
-      });
+        await authStore.requestPasswordReset({ email: fields.value.email })
+        successMessage.value = '재설정 링크를 전송했습니다. 메일함을 확인해주세요.'
+      })
     })
-  } catch (err: any) {
-    console.error(err);
-    const apiError = err?.response?.data?.error
+  } catch (err) {
 
-    const r = mapForgotPasswordError(apiError)
-    if(r){
-      if (r.kind === "cooldown") {
-        startCooldown(r.cooldownSec)
-      }
-      errorMessage.value = r.message
+    const result = getForgotPasswordError(err)
+    if (result?.kind === 'cooldown') {
+      startCooldown(result.cooldownSec)
+      errorMessage.value = result.message
       return
     }
 
-    const commonMessage = mapCommonError(apiError)
-    if (commonMessage) {
-      errorMessage.value = commonMessage
-      return
-    }
+    errorMessage.value = result.message
   }
 }
 
 function goLogin() {
-  router.push({ name: "Login" }).catch(() => {})
+  router.push({ name: 'Login' }).catch(() => {})
 }
 </script>

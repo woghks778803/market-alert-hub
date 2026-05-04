@@ -3,7 +3,7 @@
     <div class="rs-field-block">
       <div class="rs-field-label">패턴</div>
       <v-select
-        v-model="modelValue.pattern"
+        :model-value="modelValue.pattern"
         :items="patternItems"
         item-title="title"
         item-value="value"
@@ -19,7 +19,7 @@
     <div class="rs-field-block">
       <div class="rs-field-label">기간</div>
       <v-select
-        v-model="modelValue.period"
+        :model-value="modelValue.period"
         :items="periodItems"
         item-title="title"
         item-value="value"
@@ -34,17 +34,17 @@
 </template>
 
 <script setup lang="ts">
-import type { PatternFormValue } from "@/services/alert.types"
+import type { PatternFormValue } from '@/services/alert.types'
 
-const props = defineProps<{
+defineProps<{
   modelValue: PatternFormValue
   error?: Record<string, string> | null
 }>()
 
-const emit = defineEmits<{
+defineEmits<{
   (e: 'update:modelValue', value: PatternFormValue): void
-  (e: "blur"): void
-  (e: "input"): void
+  (e: 'blur'): void
+  (e: 'input'): void
 }>()
 
 const patternItems = [
@@ -61,12 +61,4 @@ const periodItems = [
   { title: '4시간', value: 240 },
   { title: '1일', value: 1440 },
 ]
-
-function onBlur() {
-  emit('blur')
-}
-
-function onInput() {
-  emit('input')
-}
 </script>

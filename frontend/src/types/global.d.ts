@@ -1,11 +1,11 @@
 interface AppBridge {
-    postMessage: (message: string) => void
+  postMessage: (message: string) => void
 }
 
 declare global {
-    interface Window {
-        AppBridge?: AppBridge
-    }
+  interface Window {
+    AppBridge?: AppBridge
+  }
 }
 
-export { }
+export {}

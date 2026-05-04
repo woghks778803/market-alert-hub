@@ -7,11 +7,17 @@
       </div>
     </div>
 
-    <div v-if="successMessage" class="auth-success">
+    <div
+      v-if="successMessage"
+      class="auth-success"
+    >
       {{ successMessage }}
     </div>
 
-    <div v-if="errorMessage" class="auth-error">
+    <div
+      v-if="errorMessage"
+      class="auth-error"
+    >
       {{ errorMessage }}
     </div>
 
@@ -38,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import AppCenterCard from "@/components/common/AppCenterCard.vue"
+import AppCenterCard from '@/components/common/AppCenterCard.vue'
 defineProps<{
   title: string
   successMessage?: string | null
@@ -48,6 +54,6 @@ defineProps<{
 }>()
 
 defineEmits<{
-  (e: "submit"): void
+  (e: 'submit'): void
 }>()
 </script>

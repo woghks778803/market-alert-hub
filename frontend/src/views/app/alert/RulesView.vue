@@ -79,8 +79,7 @@ import RuleCard from '@/components/alert/RuleCard.vue'
 import RuleAddFab from '@/components/alert/RuleAddFab.vue'
 
 import { useAsyncAction } from '@/composables/common/useAsyncAction'
-import { mapCommonError } from '@/composables/error/error.mapper'
-import { mapAlertUpdateStatusError } from '@/composables/error/alertError.mapper'
+import { getChangeAlertStatusError } from '@/composables/error/alertError.message'
 
 import {
   type AlertDto,
@@ -153,20 +152,10 @@ const handleArchive = async (alert: AlertDto) => {
     await ruleAction.run(async () => {
       await alertStore.changeAlertStatus(alert, AlertStatus.ARCHIVED, mode)
     })
-  } catch (err: any) {
-    const apiError = err?.response?.data?.error
-
-    const r = mapAlertUpdateStatusError(apiError)
-    if (r) {
-      toast.error(r, {
-        toastId: 'alert-status-update-failed',
-      })
-      return
-    }
-
-    const commonMessage = mapCommonError(apiError)
-    if (commonMessage) {
-      toast.error(commonMessage, {
+  } catch (err) {
+    const result = getChangeAlertStatusError(err)
+    if (result) {
+      toast.error(result, {
         toastId: 'alert-status-update-failed',
       })
       return
@@ -179,20 +168,10 @@ const handleAlertStatus = async (alert: AlertDto) => {
 
   try {
     await alertStore.changeAlertStatus(alert, nextStatus, mode)
-  } catch (err: any) {
-    const apiError = err?.response?.data?.error
-
-    const r = mapAlertUpdateStatusError(apiError)
-    if (r) {
-      toast.error(r, {
-        toastId: 'alert-status-update-failed',
-      })
-      return
-    }
-
-    const commonMessage = mapCommonError(apiError)
-    if (commonMessage) {
-      toast.error(commonMessage, {
+  } catch (err) {
+    const result = getChangeAlertStatusError(err)
+    if (result) {
+      toast.error(result, {
         toastId: 'alert-status-update-failed',
       })
       return

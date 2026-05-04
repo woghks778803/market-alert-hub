@@ -1,5 +1,9 @@
 <template>
-  <v-card rounded="lg" variant="flat" class="mb-4">
+  <v-card
+    rounded="lg"
+    variant="flat"
+    class="mb-4"
+  >
     <v-card-title>계정</v-card-title>
     <v-card-text class="pt-0">
       <v-list lines="one">
@@ -13,7 +17,11 @@
     </v-card-text>
   </v-card>
 
-  <v-card rounded="lg" variant="flat" class="mb-4">
+  <v-card
+    rounded="lg"
+    variant="flat"
+    class="mb-4"
+  >
     <v-card-title>설정</v-card-title>
     <v-card-text class="pt-0">
       <v-list lines="one">
@@ -27,7 +35,11 @@
     </v-card-text>
   </v-card>
 
-  <v-card rounded="lg" variant="flat" class="mb-4">
+  <v-card
+    rounded="lg"
+    variant="flat"
+    class="mb-4"
+  >
     <v-card-title>고객 지원</v-card-title>
     <v-card-text class="pt-0">
       <v-list lines="one">
@@ -57,7 +69,11 @@
     </v-card-text>
   </v-card>
 
-  <v-card rounded="lg" variant="flat" class="mb-4">
+  <v-card
+    rounded="lg"
+    variant="flat"
+    class="mb-4"
+  >
     <v-card-title>약관 및 정책</v-card-title>
     <v-card-text class="pt-0">
       <v-list lines="one">
@@ -87,13 +103,25 @@
     </v-card-text>
   </v-card>
 
-  <v-card rounded="lg" variant="flat">
+  <v-card
+    rounded="lg"
+    variant="flat"
+  >
     <v-card-title>기타</v-card-title>
     <v-card-text class="pt-0">
       <v-list lines="one">
-        <v-list-item title="버전" subtitle="0.0.0" />
+        <v-list-item
+          title="버전"
+          subtitle="0.0.0"
+        />
       </v-list>
-      <v-btn class="mt-3" block variant="tonal" color="error" @click="goLogin">
+      <v-btn
+        class="mt-3"
+        block
+        variant="tonal"
+        color="error"
+        @click="goLogin"
+      >
         로그아웃
       </v-btn>
     </v-card-text>
@@ -101,14 +129,14 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from "vue-router"
-import { useAuthFlow } from "@/composables/auth/useAuthFlow"
+import { useRouter } from 'vue-router'
+import { useAuthFlow } from '@/composables/auth/useAuthFlow'
 
 const router = useRouter()
 const { logout } = useAuthFlow()
 
 async function goLogin() {
-  await logout() 
-  router.replace({ name: "Login" })
+  await logout()
+  router.replace({ name: 'Login' })
 }
 </script>

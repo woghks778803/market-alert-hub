@@ -1,5 +1,4 @@
 <template>
-
   <v-card
     rounded="lg"
     variant="flat"
@@ -7,23 +6,20 @@
   >
     <v-card-text>
       <div class="sd-row">
-        
         <div class="sd-left">
           <div class="sd-top">
             <div class="sd-name">
               {{ market.name }}
-              <v-chip size="x-small">{{ market.exchange }}</v-chip>
+              <v-chip size="x-small">{{ market.exchangeCode }}</v-chip>
             </div>
-    
+
             <div class="sd-base">
               {{ market.baseSymbol }}
             </div>
           </div>
-    
-          <div class="sd-price">
-            {{ formatPrice(market.closePrice) }} {{ market.quoteSymbol }}
-          </div>
-    
+
+          <div class="sd-price">{{ formatPrice(market.closePrice) }} {{ market.quoteSymbol }}</div>
+
           <div
             class="sd-change"
             :class="market.changeRate && market.changeRate < 0 ? 'sd-change-down' : 'sd-change-up'"
@@ -31,19 +27,23 @@
             {{ formatChange(market.changeRate) }}%
           </div>
         </div>
-  
+
         <div class="sd-actions">
-          <v-btn icon size="small" variant="tonal">
-            <v-icon 
-              size="25" 
-              :icon="market.isWatchlisted ? 'mdi-star' : 'mdi-star-outline'" 
-              :color="market.isWatchlisted ? 'amber' : 'grey'" 
+          <v-btn
+            icon
+            size="small"
+            variant="tonal"
+          >
+            <v-icon
+              size="25"
+              :icon="market.isWatchlisted ? 'mdi-star' : 'mdi-star-outline'"
+              :color="market.isWatchlisted ? 'amber' : 'grey'"
               @click.stop="toggleWatchlist"
             >
               mdi-star
             </v-icon>
           </v-btn>
-          
+
           <v-btn
             icon
             size="small"
@@ -56,10 +56,12 @@
             </v-icon>
           </v-btn>
         </div>
-
       </div>
 
-      <div class="sd-stats" v-show="!props.collapsed">
+      <div
+        v-show="!props.collapsed"
+        class="sd-stats"
+      >
         <div>
           <div class="label">고가</div>
           <div>{{ formatPrice(market.high) }}</div>
@@ -75,27 +77,24 @@
           <div>{{ formatVolume(market.normalizedVolume) }}</div>
         </div>
       </div>
-
     </v-card-text>
-
   </v-card>
-
 </template>
 
 <script setup lang="ts">
-import type { MarketDto } from "@/services/market.types"
-import { useMarketStore } from "@/stores/market.store"
-import { formatPrice, formatChange, formatVolume } from "@/utils/format"
+import type { MarketDto } from '@/services/market.types'
+import { useMarketStore } from '@/stores/market.store'
+import { formatPrice, formatChange, formatVolume } from '@/utils/format'
 
 const marketStore = useMarketStore()
 
 const props = defineProps<{
-  market: MarketDto,
+  market: MarketDto
   collapsed: boolean
 }>()
 
 const emit = defineEmits<{
-  (e: "toggle"): void
+  (e: 'toggle'): void
 }>()
 
 async function toggleWatchlist() {
@@ -103,6 +102,6 @@ async function toggleWatchlist() {
 }
 
 async function toggleCollapsed() {
-  emit("toggle")
+  emit('toggle')
 }
 </script>

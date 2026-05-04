@@ -1,5 +1,8 @@
 <template>
-  <v-card class="alert-log-card" elevation="0">
+  <v-card
+    class="alert-log-card"
+    elevation="0"
+  >
     <div class="alert-log-header">
       <div class="alert-log-title-group">
         <span class="alert-log-symbol">
@@ -10,7 +13,10 @@
           {{ log.exchangeCode }}
         </span>
 
-        <span class="alert-log-status" :class="log.status">
+        <span
+          class="alert-log-status"
+          :class="log.status"
+        >
           {{ AlertEventStatusLabel[log.status] }}
         </span>
       </div>
@@ -31,11 +37,11 @@
 </template>
 
 <script setup lang="ts">
-import type { AlertLogDto } from "@/services/alert.types"
-import { AlertEventStatusLabel } from "@/services/alert.types"
-import { formatDateTime } from "@/utils/format"
+import type { AlertLogDto } from '@/services/alert.types'
+import { AlertEventStatusLabel } from '@/services/alert.types'
+import { formatDateTime } from '@/utils/format'
 
-const props = defineProps<{
+defineProps<{
   log: AlertLogDto
 }>()
 </script>

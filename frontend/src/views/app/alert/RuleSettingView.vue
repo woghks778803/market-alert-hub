@@ -1,12 +1,18 @@
 <template>
-  <AppLoading :show="ruleAction.loading.value" overlay />
+  <AppLoading
+    :show="ruleAction.loading.value"
+    overlay
+  />
 
-  <v-container class="rs-form-view pa-0" fluid>
+  <v-container
+    class="rs-form-view pa-0"
+    fluid
+  >
     <div class="rs-form-page">
       <div class="rs-form-body">
         <section class="rs-section">
           <div class="rs-section-title">기본 정보</div>
-          
+
           <v-alert
             v-if="errorMessage"
             type="error"
@@ -17,7 +23,11 @@
             {{ errorMessage }}
           </v-alert>
 
-          <v-card class="rs-section-card" rounded="xl" elevation="0">
+          <v-card
+            class="rs-section-card"
+            rounded="xl"
+            elevation="0"
+          >
             <v-card-text class="pa-4">
               <div class="rs-field-block">
                 <div class="rs-field-label">알림 이름</div>
@@ -44,7 +54,9 @@
                   readonly
                   label="선택된 알림 대상"
                   :error="!!fieldErrors.exchangeInstrumentId"
-                  :error-messages="fieldErrors.exchangeInstrumentId ? [fieldErrors.exchangeInstrumentId] : []"
+                  :error-messages="
+                    fieldErrors.exchangeInstrumentId ? [fieldErrors.exchangeInstrumentId] : []
+                  "
                 />
 
                 <v-text-field
@@ -67,7 +79,6 @@
                     {{ item.label }}
                   </div>
                 </div>
-
               </div>
 
               <div class="rs-field-block">
@@ -97,7 +108,11 @@
         <section class="rs-section">
           <div class="rs-section-title">알림 조건</div>
 
-          <v-card class="rs-section-card" rounded="xl" elevation="0">
+          <v-card
+            class="rs-section-card"
+            rounded="xl"
+            elevation="0"
+          >
             <v-card-text class="pa-4">
               <ThresholdForm
                 v-if="selectedAlertType?.formType === FormType.THRESHOLD"
@@ -144,7 +159,10 @@
                 @blur="onBlurValidate"
               />
 
-              <div v-else class="rs-empty-guide">
+              <div
+                v-else
+                class="rs-empty-guide"
+              >
                 알림 타입을 선택하면 조건 입력 폼이 표시됩니다.
               </div>
             </v-card-text>
@@ -154,16 +172,22 @@
         <section class="rs-section">
           <div class="rs-section-title">발동 정책</div>
 
-          <v-card class="rs-section-card" rounded="xl" elevation="0">
+          <v-card
+            class="rs-section-card"
+            rounded="xl"
+            elevation="0"
+          >
             <v-card-text class="pa-4">
               <div class="rs-field-block">
-                <v-checkbox v-model="form.isOnce" hide-details density="comfortable">
+                <v-checkbox
+                  v-model="form.isOnce"
+                  hide-details
+                  density="comfortable"
+                >
                   <template #label>
                     <div class="rs-checkbox-label-wrap">
                       <div class="rs-checkbox-title">1회 알림</div>
-                      <div class="rs-checkbox-caption">
-                        조건 충족 시 한 번만 알림을 보냅니다
-                      </div>
+                      <div class="rs-checkbox-caption">조건 충족 시 한 번만 알림을 보냅니다</div>
                     </div>
                   </template>
                 </v-checkbox>
@@ -189,21 +213,27 @@
         <section class="rs-section">
           <div class="rs-section-title">유효 기간</div>
 
-          <v-card class="rs-section-card" rounded="xl" elevation="0">
+          <v-card
+            class="rs-section-card"
+            rounded="xl"
+            elevation="0"
+          >
             <v-card-text class="pa-4">
               <div class="rs-field-block">
-                <v-checkbox v-model="form.useValidity" hide-details density="comfortable">
+                <v-checkbox
+                  v-model="form.useValidity"
+                  hide-details
+                  density="comfortable"
+                >
                   <template #label>
                     <div class="rs-checkbox-label-wrap">
                       <div class="rs-checkbox-title">유효 기간 제한</div>
-                      <div class="rs-checkbox-caption">
-                        특정 기간 동안만 알림이 동작합니다
-                      </div>
+                      <div class="rs-checkbox-caption">특정 기간 동안만 알림이 동작합니다</div>
                     </div>
                   </template>
                 </v-checkbox>
               </div>
-              
+
               <div class="rs-field-block">
                 <div class="rs-field-row">
                   <div class="rs-field-col">
@@ -218,12 +248,12 @@
                       hide-details="auto"
                       :error="!!fieldErrors.validFrom"
                       :error-messages="fieldErrors.validFrom ? [fieldErrors.validFrom] : []"
+                      :disabled="!form.useValidity"
                       @update:model-value="onInputChanged"
                       @blur="onBlurValidate"
-                      :disabled="!form.useValidity"
                     />
                   </div>
-  
+
                   <div class="rs-field-col">
                     <div class="rs-field-label">종료 일시</div>
                     <v-text-field
@@ -236,9 +266,9 @@
                       hide-details="auto"
                       :error="!!fieldErrors.validTo"
                       :error-messages="fieldErrors.validTo ? [fieldErrors.validTo] : []"
+                      :disabled="!form.useValidity"
                       @update:model-value="onInputChanged"
                       @blur="onBlurValidate"
-                      :disabled="!form.useValidity"
                     />
                   </div>
                 </div>
@@ -281,32 +311,31 @@
 
 <script setup lang="ts">
 import { onMounted, nextTick, computed } from 'vue'
-import { useRouter, useRoute } from "vue-router"
+import { useRouter, useRoute } from 'vue-router'
 import { toast } from 'vue3-toastify'
-import { storeToRefs } from "pinia"
+import { storeToRefs } from 'pinia'
 
-import AppLoading from "@/components/common/AppLoading.vue"
+import AppLoading from '@/components/common/AppLoading.vue'
 import ThresholdForm from '@/components/alert/forms/ThresholdForm.vue'
 import CrossForm from '@/components/alert/forms/CrossForm.vue'
 import RangeForm from '@/components/alert/forms/RangeForm.vue'
 import PercentForm from '@/components/alert/forms/PercentForm.vue'
 import PatternForm from '@/components/alert/forms/PatternForm.vue'
 
-import { useAsyncAction } from "@/composables/common/useAsyncAction"
+import { useAsyncAction } from '@/composables/common/useAsyncAction'
 import { useRuleForm } from '@/composables/alert/useRuleForm'
-import { mapCommonError } from "@/composables/error/error.mapper"
-import { mapAlertCreateError, mapAlertUpdateError } from "@/composables/error/alertError.mapper"
+import { getChangeAlertError, getCreateAlertError } from '@/composables/error/alertError.message'
 
 import { FormType, THROTTLE_TIMEFRAME_ITEMS } from '@/services/alert.types'
 import type { SimpleMarketDto } from '@/services/market.types'
-import { useAlertStore } from "@/stores/alert.store"
-import { useMarketStore } from "@/stores/market.store"
+import { useAlertStore } from '@/stores/alert.store'
+import { useMarketStore } from '@/stores/market.store'
 
 const router = useRouter()
 const route = useRoute()
 const alertId = computed(() => {
   const value = route.params.alertId
-  return typeof value === "string" ? Number(value) : null
+  return typeof value === 'string' ? Number(value) : null
 })
 const isEditMode = computed(() => alertId.value !== null)
 
@@ -323,7 +352,7 @@ const {
   rangeForm,
   percentForm,
   patternForm,
-  
+
   fieldErrors,
   errorMessage,
 
@@ -334,13 +363,13 @@ const {
 
   buildAlertSavePayload,
   applyAlertToForm,
-  
+
   onAlertTypeChanged,
   onInputChanged,
   onBlurValidate,
 
   handleSubmit,
-} = useRuleForm({alertTypes})
+} = useRuleForm({ alertTypes })
 
 onMounted(() => {
   ruleAction.run(async () => {
@@ -356,10 +385,10 @@ onMounted(() => {
 
 const submitLabel = computed(() => {
   if (!ruleAction.isReady) {
-    return isEditMode.value ? "수정 중..." : "등록 중..."
+    return isEditMode.value ? '수정 중...' : '등록 중...'
   }
 
-  return isEditMode.value ? "알림 수정" : "알림 생성"
+  return isEditMode.value ? '알림 수정' : '알림 생성'
 })
 
 async function onUpdate() {
@@ -374,29 +403,19 @@ async function onUpdate() {
 
       await nextTick()
 
-      router.replace({ name: "Rules" })
+      router.replace({ name: 'Rules' })
 
       setTimeout(() => {
-        toast.success("알림이 수정되었습니다.", {
-          toastId: "alert-update-success",
+        toast.success('알림이 수정되었습니다.', {
+          toastId: 'alert-update-success',
         })
       }, 0)
     })
-  } catch (err: any) {
-    const apiError = err?.response?.data?.error
-
-    const r = mapAlertUpdateError(apiError)
-    if (r) {
-      toast.error(r, {
-        toastId: "alert-update-failed",
-      })
-      return
-    }
-
-    const commonMessage = mapCommonError(apiError)
-    if (commonMessage) {
-      toast.error(commonMessage, {
-        toastId: "alert-update-failed",
+  } catch (err) {
+    const result = getChangeAlertError(err)
+    if(result){
+      toast.error(result, {
+        toastId: 'alert-update-failed',
       })
       return
     }
@@ -412,28 +431,18 @@ async function onCreate() {
 
       await nextTick()
 
-      router.replace({ name: "Rules" })
+      router.replace({ name: 'Rules' })
       setTimeout(() => {
-        toast.success("알림이 등록되었습니다.", {
-          toastId: "alert-create-success",
+        toast.success('알림이 등록되었습니다.', {
+          toastId: 'alert-create-success',
         })
       }, 0)
     })
-  } catch (err: any) {
-    const apiError = err?.response?.data?.error;
-
-    const r = mapAlertCreateError(apiError)
-    if(r){
-      toast.error(r, {
-        toastId: "alert-create-failed",
-      })
-      return 
-    }
-
-    const commonMessage = mapCommonError(apiError)
-    if (commonMessage) {
-      toast.error(commonMessage, {
-        toastId: "alert-create-failed",
+  } catch (err) {
+    const result = getCreateAlertError(err)
+    if(result){
+      toast.error(result, {
+        toastId: 'alert-create-failed',
       })
       return
     }
@@ -454,5 +463,4 @@ function onSimpleMarketSearchChanged(value: string) {
   isSimpleMarketOpen.value = true
   marketStore.setSimpleMarketSearch(value)
 }
-
 </script>

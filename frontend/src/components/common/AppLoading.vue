@@ -1,9 +1,21 @@
-```vue
 <template>
-  <div v-if="show" class="app-loading" :class="{ overlay }">
+  <div
+    v-if="show"
+    class="app-loading"
+    :class="{ overlay }"
+  >
     <div class="loading-content">
-      <v-progress-circular indeterminate size="36" width="3" />
-      <div v-if="text" class="loading-text">{{ text }}</div>
+      <v-progress-circular
+        indeterminate
+        size="36"
+        width="3"
+      />
+      <div
+        v-if="text"
+        class="loading-text"
+      >
+        {{ text }}
+      </div>
     </div>
   </div>
 </template>
@@ -15,4 +27,3 @@ defineProps<{
   text?: string
 }>()
 </script>
-```

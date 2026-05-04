@@ -1,8 +1,8 @@
 <template>
   <AuthFormCard
     title="이메일 인증"
-    :successMessage="successMessage"
-    :errorMessage="errorMessage"
+    :success-message="successMessage"
+    :error-message="errorMessage"
     :loading="loading"
     :disabled="!canSend || !isReady"
     @submit="onSubmit"
@@ -25,16 +25,15 @@
     />
 
     <template #button>
-      <template v-if="isCooldown">
-        {{ cooldownSec }}초 후 다시 시도
-      </template>
-      <template v-else>
-        인증 메일 보내기
-      </template>
+      <template v-if="isCooldown"> {{ cooldownSec }}초 후 다시 시도 </template>
+      <template v-else> 인증 메일 보내기 </template>
     </template>
 
     <template #footer>
-      <button class="auth-link auth-link--muted" @click="goLogin">
+      <button
+        class="auth-link auth-link--muted"
+        @click="goLogin"
+      >
         로그인 화면으로 돌아가기
       </button>
     </template>
@@ -42,24 +41,23 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from "vue-router"
-import AuthFormCard from "@/components/auth/AuthFormCard.vue"
-import { useAuthStore } from "@/stores/auth.store";
-import { useAsyncAction } from "@/composables/common/useAsyncAction";
-import { useEmailActionForm } from "@/composables/auth/useEmailActionForm";
-import { useAuthFlow } from "@/composables/auth/useAuthFlow"
-import { mapCommonError } from "@/composables/error/error.mapper"
-import { mapEmailVerifyError } from "@/composables/error/emailVerifyError.mapper"
+import { useRouter } from 'vue-router'
+import AuthFormCard from '@/components/auth/AuthFormCard.vue'
+import { useAuthStore } from '@/stores/auth.store'
+import { useAsyncAction } from '@/composables/common/useAsyncAction'
+import { useEmailActionForm } from '@/composables/auth/useEmailActionForm'
+import { useAuthFlow } from '@/composables/auth/useAuthFlow'
+import { getEmailVerifyError } from '@/composables/error/authError.message'
 
 const router = useRouter()
-const authStore = useAuthStore();
+const authStore = useAuthStore()
 const {
   fields,
 
   fieldErrors,
   errorMessage,
   successMessage,
-  
+
   canSend,
   handleSubmit,
 
@@ -68,7 +66,8 @@ const {
   startCooldown,
   onInputChanged,
   onBlurValidate,
-} = useEmailActionForm();
+} = useEmailActionForm()
+
 const { run, loading, isReady } = useAsyncAction()
 const { logout } = useAuthFlow()
 
@@ -76,34 +75,24 @@ async function onSubmit() {
   try {
     await handleSubmit(async () => {
       await run(async () => {
-        await authStore.changeEmail({ newEmail: fields.value.email });
-        router.push({ name: "VerifyEmailSent" }).catch(() => {})
-      });
+        await authStore.changeEmail({ newEmail: fields.value.email })
+        router.push({ name: 'VerifyEmailSent' }).catch(() => {})
+      })
     })
-  } catch (err: any) {
-    
-    const apiError = err?.response?.data?.error
-
-    const r = mapEmailVerifyError(apiError)
-    console.log("err", r)
-    if(r){
-      if (r.kind === "cooldown") {
-        startCooldown(r.cooldownSec)
-      }
-      errorMessage.value = r.message
+  } catch (err) {
+    const result = getEmailVerifyError(err)
+    if (result?.kind === 'cooldown') {
+      startCooldown(result.cooldownSec)
+      errorMessage.value = result.message
       return
     }
 
-    const commonMessage = mapCommonError(apiError)
-    if (commonMessage) {
-      errorMessage.value = commonMessage
-      return
-    }
+    errorMessage.value = result.message
   }
 }
 
 async function goLogin() {
   await logout()
-  router.push({ name: "Login" }).catch(() => {})
+  router.push({ name: 'Login' }).catch(() => {})
 }
 </script>

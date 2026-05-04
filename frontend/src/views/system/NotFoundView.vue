@@ -16,12 +16,23 @@
       variant="flat"
       @click="goHome"
     >
-      <v-icon icon="mdi-home-outline" class="mr-2" />
+      <v-icon
+        icon="mdi-home-outline"
+        class="mr-2"
+      />
       홈으로 돌아가기
     </v-btn>
 
-    <button class="nf-link" type="button" @click="goBack">
-      <v-icon icon="mdi-arrow-left" class="mr-1" size="18" />
+    <button
+      class="nf-link"
+      type="button"
+      @click="goBack"
+    >
+      <v-icon
+        icon="mdi-arrow-left"
+        class="mr-1"
+        size="18"
+      />
       이전 화면으로
     </button>
 
@@ -30,14 +41,14 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from "vue-router"
-import AppCenterCard from "@/components/common/AppCenterCard.vue"
+import { useRouter } from 'vue-router'
+import AppCenterCard from '@/components/common/AppCenterCard.vue'
 
 const router = useRouter()
 
 function goHome() {
   // 로그인 필요 여부는 beforeEach가 처리
-  router.push({ name: "Home" }).catch(() => {})
+  router.push({ name: 'Home' }).catch(() => {})
 }
 
 function goBack() {

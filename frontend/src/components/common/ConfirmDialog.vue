@@ -11,7 +11,10 @@
       </v-card-title>
 
       <!-- 내용 -->
-      <v-card-text class="text-body-2 text-medium-emphasis" style="white-space: pre-line; line-height: 1.6;">
+      <v-card-text
+        class="text-body-2 text-medium-emphasis"
+        style="white-space: pre-line; line-height: 1.6"
+      >
         {{ message }}
       </v-card-text>
 
@@ -37,34 +40,37 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue"
+import { computed } from 'vue'
 
-const props = withDefaults(defineProps<{
-  modelValue: boolean,
-  title: string,
-  message: string,
-  confirmText: string,
-  cancelText: string,
-  danger: boolean,
-  loading: boolean,
-  isReady: boolean,
-}>(), {
-  title: "확인",
-  message: "",
-  confirmText: "확인",
-  cancelText: "취소",
-  danger: false,
-  loading: false,
-})
+const props = withDefaults(
+  defineProps<{
+    modelValue: boolean
+    isReady: boolean
+    title?: string
+    message?: string
+    confirmText?: string
+    cancelText?: string
+    danger?: boolean
+    loading?: boolean
+  }>(),
+  {
+    title: '확인',
+    message: '',
+    confirmText: '확인',
+    cancelText: '취소',
+    danger: false,
+    loading: false,
+  }
+)
 
 const emit = defineEmits<{
-  (e: "update:modelValue", v: boolean): void
-  (e: "confirm"): void
+  (e: 'update:modelValue', v: boolean): void
+  (e: 'confirm'): void
 }>()
 
 const model = computed({
   get: () => props.modelValue,
-  set: (v) => emit("update:modelValue", v),
+  set: (v) => emit('update:modelValue', v),
 })
 
 function onCancel() {
@@ -72,6 +78,6 @@ function onCancel() {
 }
 
 const onConfirm = () => {
-  emit("confirm")
+  emit('confirm')
 }
 </script>

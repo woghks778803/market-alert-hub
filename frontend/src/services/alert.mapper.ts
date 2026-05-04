@@ -1,123 +1,138 @@
-
-import type { AlertSummaryInfo, AlertInfo, AlertLogInfo, AlertTypeInfo, ArchivedAlertListRequest, AlertListRequest, AlertLogListRequest, AlertTypeListRequest, AlertSaveRequest } from "@/api/alert.api"
-import type { AlertSummaryDto, AlertDto, AlertLogDto, AlertTypeDto, ArchivedAlertListQuery, AlertListQuery, AlertLogListQuery, AlertTypeListQuery, AlertSaveQuery, AlertStatus, AlertEventStatus, ConditionType, FormType } from "@/services/alert.types"
+import type {
+  AlertSummaryInfo,
+  AlertInfo,
+  AlertLogInfo,
+  AlertTypeInfo,
+  ArchivedAlertListRequest,
+  AlertListRequest,
+  AlertLogListRequest,
+  AlertTypeListRequest,
+  AlertSaveRequest,
+} from '@/api/alert.api'
+import type {
+  AlertSummaryDto,
+  AlertDto,
+  AlertLogDto,
+  AlertTypeDto,
+  ArchivedAlertListQuery,
+  AlertListQuery,
+  AlertLogListQuery,
+  AlertTypeListQuery,
+  AlertSaveQuery,
+  AlertStatus,
+  AlertEventStatus,
+  FormType,
+} from '@/services/alert.types'
 
 export function toAlertSummaryDto(data: AlertSummaryInfo): AlertSummaryDto {
-    return {
-        totalCount: data.total_count,
-        activeCount: data.active_count,
-        pausedCount: data.paused_count,
-    }
+  return {
+    totalCount: data.total_count,
+    activeCount: data.active_count,
+    pausedCount: data.paused_count,
+  }
 }
 
 export function toAlertDto(data: AlertInfo): AlertDto {
-    return {
-        id: data.id,
-        alertTypeId: data.alert_type_id,
-        name: data.name,
-        status: data.status as AlertStatus,
+  return {
+    id: data.id,
+    alertTypeId: data.alert_type_id,
+    name: data.name,
+    status: data.status as AlertStatus,
 
-        timezone: data.timezone,
-        timeframe: data.timeframe,
-        period: data.period,
-        params: data.params,
+    timezone: data.timezone,
+    timeframe: data.timeframe,
+    period: data.period,
+    params: data.params,
 
-        throttleSeconds: data.throttle_seconds,
-        isOnce: data.is_once,
-        validFrom: data.valid_from,
-        validTo: data.valid_to,
-        updatedAt: data.updated_at,
+    throttleSeconds: data.throttle_seconds,
+    isOnce: data.is_once,
+    validFrom: data.valid_from,
+    validTo: data.valid_to,
+    updatedAt: data.updated_at,
 
-        exchangeInstrumentId: data.exchange_instrument_id,
-        exchangeSymbol: data.exchange_symbol,
-        exchangeCode: data.exchange_code,
-        exchangeName: data.exchange_name,
-        exchangeInstrumentIsActive: data.ei_is_active,
-        exchangeIsActive: data.e_is_active,
-    }
+    exchangeInstrumentId: data.exchange_instrument_id,
+    exchangeSymbol: data.exchange_symbol,
+    exchangeCode: data.exchange_code,
+    exchangeName: data.exchange_name,
+    exchangeInstrumentIsActive: data.ei_is_active,
+    exchangeIsActive: data.e_is_active,
+  }
 }
 
 export function toAlertLogDto(data: AlertLogInfo): AlertLogDto {
-    return {
-        alertEventId: data.alert_event_id,
-        alertId: data.alert_id,
-        title: data.title,
-        body: data.body,
-        exchangeCode: data.exchange_code,
-        exchangeSymbol: data.exchange_symbol,
-        status: data.status as AlertEventStatus,
-        detectedAt: data.detected_at,
-    }
+  return {
+    alertEventId: data.alert_event_id,
+    alertId: data.alert_id,
+    title: data.title,
+    body: data.body,
+    exchangeCode: data.exchange_code,
+    exchangeSymbol: data.exchange_symbol,
+    status: data.status as AlertEventStatus,
+    detectedAt: data.detected_at,
+  }
 }
 
 export function toAlertTypeDto(data: AlertTypeInfo): AlertTypeDto {
-    return {
-        id: data.id,
-        code: data.code,
-        name: data.name,
-        indicator: data.indicator,
-        direction: data.direction,
-        formType: data.form_type as FormType,
-        paramSchema: data.param_schema,
-    }
+  return {
+    id: data.id,
+    code: data.code,
+    name: data.name,
+    indicator: data.indicator,
+    direction: data.direction,
+    formType: data.form_type as FormType,
+    paramSchema: data.param_schema,
+  }
 }
 
 export function toAlertListRequest(q: AlertListQuery): AlertListRequest {
-    return {
-        limit: q.limit,
-        cursor: q.cursor,
-        status: q.status,
-        sort: q.sort,
-    }
+  return {
+    limit: q.limit,
+    cursor: q.cursor,
+    status: q.status,
+    sort: q.sort,
+  }
 }
 
-export function toArchivedAlertListRequest(
-    q: ArchivedAlertListQuery,
-): ArchivedAlertListRequest {
-    return {
-        limit: q.limit,
-        cursor: q.cursor,
-        sort: q.sort,
-    }
+export function toArchivedAlertListRequest(q: ArchivedAlertListQuery): ArchivedAlertListRequest {
+  return {
+    limit: q.limit,
+    cursor: q.cursor,
+    sort: q.sort,
+  }
 }
 
-export function toAlertLogListRequest(
-    q: AlertLogListQuery,
-): AlertLogListRequest {
-    return {
-        limit: q.limit,
-        cursor: q.cursor,
-        status: q.status,
-    }
+export function toAlertLogListRequest(q: AlertLogListQuery): AlertLogListRequest {
+  return {
+    limit: q.limit,
+    cursor: q.cursor,
+    status: q.status,
+  }
 }
 
 export function toAlertTypeListRequest(q: AlertTypeListQuery): AlertTypeListRequest {
-    return {
-        limit: q.limit,
-        offset: q.offset,
-        search: q.search
-    }
+  return {
+    limit: q.limit,
+    offset: q.offset,
+    search: q.search,
+  }
 }
 
 export function toAlertSaveRequest(q: AlertSaveQuery): AlertSaveRequest {
-    return {
-        name: q.name,
-        exchange_instrument_id: q.exchangeInstrumentId,
-        alert_type_id: q.alertTypeId,
+  return {
+    name: q.name,
+    exchange_instrument_id: q.exchangeInstrumentId,
+    alert_type_id: q.alertTypeId,
 
-        is_once: q.isOnce,
-        status: q.status,
+    is_once: q.isOnce,
+    status: q.status,
 
-        throttle_timeframe: q.throttleTimeframe,
-        timezone: q.timezone,
+    throttle_timeframe: q.throttleTimeframe,
+    timezone: q.timezone,
 
-        use_validity: q.useValidity,
-        valid_from: q.validFrom,
-        valid_to: q.validTo,
+    use_validity: q.useValidity,
+    valid_from: q.validFrom,
+    valid_to: q.validTo,
 
-        params: q.params,
-    }
+    params: q.params,
+  }
 }
-
-
-

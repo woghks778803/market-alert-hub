@@ -29,28 +29,37 @@
       :ripple="false"
       @click="goTerms('kakao')"
     >
-      <v-icon class="mr-2" icon="mdi-message" />
+      <v-icon
+        class="mr-2"
+        icon="mdi-message"
+      />
       카카오로 가입
     </v-btn>
 
     <div class="auth-bottom">
       <span class="auth-bottom__text">이미 계정이 있나요?</span>
-      <button class="auth-link" type="button" @click="goLogin">로그인</button>
+      <button
+        class="auth-link"
+        type="button"
+        @click="goLogin"
+      >
+        로그인
+      </button>
     </div>
   </AppCenterCard>
 </template>
 
 <script setup lang="ts">
-import { useRouter } from "vue-router"
-import AppCenterCard from "@/components/common/AppCenterCard.vue"
+import { useRouter } from 'vue-router'
+import AppCenterCard from '@/components/common/AppCenterCard.vue'
 
 const router = useRouter()
 
 function goTerms(source: string) {
-  router.push({ name: "SignupTerms", query: { source } }).catch(() => {})
+  router.push({ name: 'SignupTerms', query: { source } }).catch(() => {})
 }
 
 function goLogin() {
-  router.push({ name: "Login" }).catch(() => {})
+  router.push({ name: 'Login' }).catch(() => {})
 }
 </script>

@@ -1,82 +1,89 @@
-import { defineStore } from "pinia"
-import { ref } from "vue"
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
 
-import * as supportService from "@/services/support.service"
-import type { NoticeDto, NoticeDatailDto, NoticeListQuery, FAQDto, FAQListQuery } from "@/services/support.types"
-import { NoticeCategory } from "@/services/support.types"
+import * as supportService from '@/services/support.service'
+import type {
+  NoticeDto,
+  NoticeDatailDto,
+  NoticeListQuery,
+  FAQDto,
+  FAQListQuery,
+} from '@/services/support.types'
+import { NoticeCategory } from '@/services/support.types'
 
-export const useSupportStore = defineStore("notice", () => {
-    let searchTimer: any
-    const faqs = ref<FAQDto[]>([])
-    const notices = ref<NoticeDto[]>([])
-    const notice = ref<NoticeDatailDto | null>(null)
-    const activeTab = ref<NoticeCategory>(NoticeCategory.UPDATE)
+export const useSupportStore = defineStore('notice', () => {
+  let searchTimer: ReturnType<typeof setTimeout> | null = null
+  const faqs = ref<FAQDto[]>([])
+  const notices = ref<NoticeDto[]>([])
+  const notice = ref<NoticeDatailDto | null>(null)
+  const activeTab = ref<NoticeCategory>(NoticeCategory.UPDATE)
 
-    const noticeListQuery = ref<NoticeListQuery>({
-        category: NoticeCategory.UPDATE,
-        limit: 20,
-        offset: 0,
-    })
+  const noticeListQuery = ref<NoticeListQuery>({
+    category: NoticeCategory.UPDATE,
+    limit: 20,
+    offset: 0,
+  })
 
-    const FAQListQuery = ref<FAQListQuery>({
-        search: "",
-        category: undefined,
-        limit: 20,
-        offset: 0,
-    })
+  const FAQListQuery = ref<FAQListQuery>({
+    search: '',
+    category: undefined,
+    limit: 20,
+    offset: 0,
+  })
 
-    async function fetchNotices() {
-        notices.value = await supportService.getNotices(noticeListQuery.value)
-    }
+  async function fetchNotices() {
+    notices.value = await supportService.getNotices(noticeListQuery.value)
+  }
 
-    async function fetchNotice(id: number) {
-        notice.value = await supportService.getNotice(id)
-    }
+  async function fetchNotice(id: number) {
+    notice.value = await supportService.getNotice(id)
+  }
 
-    async function fetchFAQs() {
-        faqs.value = await supportService.getFAQs(FAQListQuery.value)
-    }
+  async function fetchFAQs() {
+    faqs.value = await supportService.getFAQs(FAQListQuery.value)
+  }
 
-    function setSearch(value: string) {
-        clearTimeout(searchTimer)
+  function setSearch(value: string) {
+    if (searchTimer)
+      clearTimeout(searchTimer)
 
-        searchTimer = setTimeout(() => {
-            FAQListQuery.value.search = value
-            fetchFAQs()
-        }, 500)
-    }
+    searchTimer = setTimeout(() => {
+      FAQListQuery.value.search = value
+      fetchFAQs()
+    }, 500)
+  }
 
-    function setNoticeCategory(category: NoticeCategory) {
-        noticeListQuery.value.category = category
-        noticeListQuery.value.offset = 0
+  function setNoticeCategory(category: NoticeCategory) {
+    noticeListQuery.value.category = category
+    noticeListQuery.value.offset = 0
 
-        fetchNotices()
-    }
+    fetchNotices()
+  }
 
-    function resetSupport() {
-        notice.value = null
-        notices.value = []
-        faqs.value = []
-        activeTab.value = NoticeCategory.UPDATE
-    }
+  function resetSupport() {
+    notice.value = null
+    notices.value = []
+    faqs.value = []
+    activeTab.value = NoticeCategory.UPDATE
+  }
 
-    return {
-        notices,
-        notice,
-        faqs,
+  return {
+    notices,
+    notice,
+    faqs,
 
-        activeTab,
+    activeTab,
 
-        noticeListQuery,
-        FAQListQuery,
+    noticeListQuery,
+    FAQListQuery,
 
-        fetchNotices,
-        fetchNotice,
-        fetchFAQs,
+    fetchNotices,
+    fetchNotice,
+    fetchFAQs,
 
-        resetSupport,
+    resetSupport,
 
-        setSearch,
-        setNoticeCategory,
-    }
+    setSearch,
+    setNoticeCategory,
+  }
 })

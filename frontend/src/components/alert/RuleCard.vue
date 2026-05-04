@@ -24,23 +24,22 @@
             {{ AlertStatusLabel[alert.status] }}
           </span>
         </div>
-
       </div>
 
       <div class="alert-rule-actions">
         <v-switch
           v-if="!isArchived"
           :model-value="alert.status === AlertStatus.ACTIVE"
-          @click.stop.prevent="onChangeStatus"
           density="compact"
           hide-details
           inset
+          @click.stop.prevent="onChangeStatus"
         />
 
         <v-menu location="bottom end">
-          <template #activator="{ props }">
+          <template #activator="{ props: activatorProps }">
             <v-btn
-              v-bind="props"
+              v-bind="activatorProps"
               icon
               variant="text"
               size="small"
@@ -50,8 +49,11 @@
             </v-btn>
           </template>
 
-          <v-list density="compact" class="alert-rule-menu">
-            <v-list-item 
+          <v-list
+            density="compact"
+            class="alert-rule-menu"
+          >
+            <v-list-item
               v-if="!isArchived"
               @click="goDetail"
             >
@@ -61,7 +63,7 @@
               <v-list-item-title>상세 보기</v-list-item-title>
             </v-list-item>
 
-            <v-list-item 
+            <v-list-item
               v-if="!isArchived"
               @click="onArchive"
             >
@@ -89,7 +91,6 @@
             </v-list-item>
           </v-list>
         </v-menu>
-
       </div>
     </div>
 
@@ -104,49 +105,46 @@
         {{ formatThrottleSeconds(alert.isOnce, alert.throttleSeconds) }}
       </div>
 
-      <div class="alert-rule-meta-date">
-        마지막 수정 {{ formatDate(alert.updatedAt) }}
-      </div>
+      <div class="alert-rule-meta-date">마지막 수정 {{ formatDate(alert.updatedAt) }}</div>
     </div>
   </v-card>
 </template>
 
 <script setup lang="ts">
-import {computed} from "vue"
-import type { AlertDto } from "@/services/alert.types"
-import { AlertStatus, AlertStatusLabel } from "@/services/alert.types"
-import { formatDate, formatThrottleSeconds, formatTimeFrame } from "@/utils/format"
+import { computed } from 'vue'
+import type { AlertDto } from '@/services/alert.types'
+import { AlertStatus, AlertStatusLabel } from '@/services/alert.types'
+import { formatDate, formatThrottleSeconds, formatTimeFrame } from '@/utils/format'
 const isArchived = computed(() => props.alert.status === AlertStatus.ARCHIVED)
 const props = defineProps<{
   alert: AlertDto
 }>()
 
 const emit = defineEmits<{
-  (e: "detail", value: { alertId: number }): void,
-  (e: "delete", value: AlertDto): void,
-  (e: "archive", value: AlertDto): void,
-  (e: "restore", value: AlertDto): void,
-  (e: "changeStatus", value: AlertDto): void,
+  (e: 'detail', value: { alertId: number }): void
+  (e: 'delete', value: AlertDto): void
+  (e: 'archive', value: AlertDto): void
+  (e: 'restore', value: AlertDto): void
+  (e: 'changeStatus', value: AlertDto): void
 }>()
 
 const goDetail = () => {
-  emit("detail", { alertId: props.alert.id })
+  emit('detail', { alertId: props.alert.id })
 }
 
 const onChangeStatus = () => {
-  emit("changeStatus", props.alert)
+  emit('changeStatus', props.alert)
 }
 
 const onArchive = () => {
-  emit("archive", props.alert)
+  emit('archive', props.alert)
 }
 
 const onRestore = () => {
-  emit("restore", props.alert)
+  emit('restore', props.alert)
 }
 
 const onDelete = () => {
-  emit("delete", props.alert)
+  emit('delete', props.alert)
 }
-
 </script>

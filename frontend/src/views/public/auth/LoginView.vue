@@ -1,7 +1,10 @@
 <template>
   <AppCenterCard>
     <div class="auth-logo-wrap">
-      <img :src="Logo" class="auth-logo" />
+      <img
+        :src="Logo"
+        class="auth-logo"
+      />
     </div>
     <v-alert
       v-if="errorMessage"
@@ -40,10 +43,10 @@
           density="comfortable"
           hide-details="auto"
           :append-inner-icon="showPassword ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
-          @click:append-inner="showPassword = !showPassword"
           autocomplete="current-password"
           :error="!!fieldErrors.password"
           :error-messages="fieldErrors.password ? [fieldErrors.password] : []"
+          @click:append-inner="showPassword = !showPassword"
           @update:model-value="onInputChanged"
           @blur="onBlurValidate"
         />
@@ -61,7 +64,6 @@
       >
         로그인
       </v-btn>
-
     </v-form>
 
     <div class="auth-divider">
@@ -78,16 +80,29 @@
       :ripple="false"
       @click="onKakaoLogin"
     >
-      <v-icon class="mr-2" icon="mdi-message" />
+      <v-icon
+        class="mr-2"
+        icon="mdi-message"
+      />
       카카오로 로그인
     </v-btn>
 
     <div class="auth-links">
-      <button class="auth-link" type="button" @click="goSignup">회원가입</button>
+      <button
+        class="auth-link"
+        type="button"
+        @click="goSignup"
+      >
+        회원가입
+      </button>
     </div>
 
     <div class="auth-footer">
-      <button class="auth-link auth-link--muted" type="button" @click="goForgotPassword">
+      <button
+        class="auth-link auth-link--muted"
+        type="button"
+        @click="goForgotPassword"
+      >
         비밀번호를 잊으셨나요?
       </button>
     </div>
@@ -96,19 +111,18 @@
 
 <script setup lang="ts">
 import Logo from '@/assets/logo/alertping-logo.svg'
-import AppCenterCard from "@/components/common/AppCenterCard.vue"
-import { useRoute, useRouter } from "vue-router"
-import { useLoginForm } from "@/composables/auth/useLoginForm"
-import { useAsyncAction } from "@/composables/common/useAsyncAction"
-import { useAppSettings } from "@/composables/common/useAppSettings"
-import { mapCommonError } from "@/composables/error/error.mapper"
-import { mapLoginError } from "@/composables/error/loginError.mapper"
-import { useAuthStore } from "@/stores/auth.store"
-import { OAuthCode } from "@/services/auth.types"
+import AppCenterCard from '@/components/common/AppCenterCard.vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useLoginForm } from '@/composables/auth/useLoginForm'
+import { useAsyncAction } from '@/composables/common/useAsyncAction'
+import { useAppSettings } from '@/composables/common/useAppSettings'
+import { getLoginError } from '@/composables/error/authError.message'
+import { useAuthStore } from '@/stores/auth.store'
+import { OAuthCode } from '@/services/auth.types'
 
-const router = useRouter();
-const route = useRoute();
-const authStore = useAuthStore();
+const router = useRouter()
+const route = useRoute()
+const authStore = useAuthStore()
 const {
   email,
   password,
@@ -122,14 +136,13 @@ const {
 
   onInputChanged,
   onBlurValidate,
-} = useLoginForm();
+} = useLoginForm()
 const { run, loading, isReady } = useAsyncAction()
 const { applyLogin } = useAppSettings()
 
-
 function getNextPath(): string | null {
-  const next = route.query.next;
-  return typeof next === "string" && next.trim() ? next : null;
+  const next = route.query.next
+  return typeof next === 'string' && next.trim() ? next : null
 }
 
 async function onSubmit() {
@@ -139,47 +152,40 @@ async function onSubmit() {
         const authStatus = await authStore.login({
           email: email.value,
           password: password.value,
-        });
+        })
 
-        applyLogin();
+        applyLogin()
 
-        const next = getNextPath();
+        const next = getNextPath()
         if (!authStatus?.emailVerified) {
-          await router.push({
-            name: "VerifyEmailSent",
-            query: { email: email.value, ...(next ? { next } : {}) },
-          }).catch(() => {});
-          return;
+          await router
+            .push({
+              name: 'VerifyEmailSent',
+              query: { email: email.value, ...(next ? { next } : {}) },
+            })
+            .catch(() => {})
+          return
         }
 
-        if (next) await router.push(next).catch(() => {});
-        else await router.push({ name: "Home" }).catch(() => {});
-      });
-    });
-  } catch (err: any) {
-    console.error("Login error:", err);
-    const apiError = err?.response?.data?.error;
-
-    const r = mapLoginError(apiError)
-    if(r){
-      errorMessage.value = r
-      return 
-    }
-
-    const commonMessage = mapCommonError(apiError)
-    if (commonMessage) {
-      errorMessage.value = commonMessage
+        if (next) await router.push(next).catch(() => {})
+        else await router.push({ name: 'Home' }).catch(() => {})
+      })
+    })
+  } catch (err) {
+    const result = getLoginError(err)
+    if(result){
+      errorMessage.value = result
       return
     }
   }
 }
 
 function goSignup() {
-  router.push({ name: "Signup" }).catch(() => {})
+  router.push({ name: 'Signup' }).catch(() => {})
 }
 
 function goForgotPassword() {
-  router.push({ name: "ForgotPassword" }).catch(() => {})
+  router.push({ name: 'ForgotPassword' }).catch(() => {})
 }
 
 function onKakaoLogin() {
@@ -187,10 +193,8 @@ function onKakaoLogin() {
     provider: OAuthCode.KAKAO,
   })
 
-  window.location.href =
-    `${import.meta.env.VITE_API_BASE_URL}/auth/oauth/start?${params.toString()}`
-  
+  window.location.href = `${import.meta.env.VITE_API_BASE_URL}/auth/oauth/start?${params.toString()}`
+
   return
 }
 </script>
-

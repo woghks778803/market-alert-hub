@@ -1,89 +1,89 @@
-import { computed, ref } from "vue"
-import { isEmail } from "@/utils/validate";
+import { computed, ref } from 'vue'
+import { isEmail } from '@/utils/validate'
 
 type FieldErrors = {
-    email: string | null;
-    password: string | null;
-};
+  email: string | null
+  password: string | null
+}
 
 function emptyErrors(): FieldErrors {
-    return {
-        email: null,
-        password: null,
-    };
+  return {
+    email: null,
+    password: null,
+  }
 }
 
 export function useLoginForm() {
-    const errorMessage = ref<string | null>(null);
-    const email = ref("")
-    const password = ref("")
-    const showPassword = ref(false)
+  const errorMessage = ref<string | null>(null)
+  const email = ref('')
+  const password = ref('')
+  const showPassword = ref(false)
 
-    const fieldErrors = ref<FieldErrors>(emptyErrors()); // 필드 에러용
+  const fieldErrors = ref<FieldErrors>(emptyErrors()) // 필드 에러용
 
-    function validate(): boolean {
-        const e = email.value.trim();
-        const p = password.value.trim();
+  function validate(): boolean {
+    const e = email.value.trim()
+    const p = password.value.trim()
 
-        const errs = emptyErrors();
+    const errs = emptyErrors()
 
-        if (!e) {
-            errs.email = "이메일을 입력해주세요.";
-        } else if (!isEmail(e)) {
-            errs.email = "올바른 이메일 형식이 아닙니다.";
-        }
-
-        if (!p) {
-            errs.password = "비밀번호를 입력해주세요.";
-        }
-
-        fieldErrors.value = errs;
-
-        return !errs.email && !errs.password;
+    if (!e) {
+      errs.email = '이메일을 입력해주세요.'
+    } else if (!isEmail(e)) {
+      errs.email = '올바른 이메일 형식이 아닙니다.'
     }
 
-    function onInputChanged() {
-        fieldErrors.value = emptyErrors();
-        errorMessage.value = null;
+    if (!p) {
+      errs.password = '비밀번호를 입력해주세요.'
     }
 
-    function onBlurValidate() {
-        validate();
-    }
+    fieldErrors.value = errs
 
-    const canSubmit = computed(() => {
-        const e = email.value.trim();
-        const p = password.value.trim();
+    return !errs.email && !errs.password
+  }
 
-        if (!e) return false
-        if (!isEmail(e)) return false
-        if (!p) return false
-        return true
-    })
+  function onInputChanged() {
+    fieldErrors.value = emptyErrors()
+    errorMessage.value = null
+  }
 
-    async function handleSubmit(onSuccess: () => Promise<void> | void) {
-        if (!canSubmit.value) return
-        fieldErrors.value = emptyErrors();
-        errorMessage.value = null;
+  function onBlurValidate() {
+    validate()
+  }
 
-        if (!validate()) return;
+  const canSubmit = computed(() => {
+    const e = email.value.trim()
+    const p = password.value.trim()
 
-        await onSuccess();
-    }
+    if (!e) return false
+    if (!isEmail(e)) return false
+    if (!p) return false
+    return true
+  })
 
-    return {
-        email,
-        password,
-        showPassword,
+  async function handleSubmit(onSuccess: () => Promise<void> | void) {
+    if (!canSubmit.value) return
+    fieldErrors.value = emptyErrors()
+    errorMessage.value = null
 
-        fieldErrors,
-        errorMessage,
+    if (!validate()) return
 
-        validate,
-        onInputChanged,
-        onBlurValidate,
+    await onSuccess()
+  }
 
-        canSubmit,
-        handleSubmit
-    }
+  return {
+    email,
+    password,
+    showPassword,
+
+    fieldErrors,
+    errorMessage,
+
+    validate,
+    onInputChanged,
+    onBlurValidate,
+
+    canSubmit,
+    handleSubmit,
+  }
 }
