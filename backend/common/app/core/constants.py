@@ -183,6 +183,12 @@ class UserRole(str, enum.Enum):
     ADMIN = "admin"
 
 
+class UserStatus(str, enum.Enum):
+    ACTIVE = "active"
+    SUSPENDED = "suspended"
+    DELETED = "deleted"
+
+
 class OutboxStatus(str, enum.Enum):
     PENDING = "pending"
     SENDING = "sending" # processing
@@ -195,12 +201,6 @@ class EmailVerificationStatus(str, enum.Enum):
     SENT = "sent"
     CONSUMED = "consumed"
     CANCELLED = "cancelled"
-
-
-class UserStatus(str, enum.Enum):
-    ACTIVE = "active"
-    SUSPENDED = "suspended"
-    DELETED = "deleted"
 
 
 class AlertStatus(str, enum.Enum):

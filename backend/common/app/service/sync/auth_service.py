@@ -329,7 +329,7 @@ class AuthService:
             email_fingerprint = self._hmac.fp_hash(email)
             user = uow.users.get_user_by_email_fingerprint(email_fingerprint)
             if not user:
-                raise NotFoundError("User not found", target="user")
+                raise AuthError("User not found", target="user")
 
             if user.status == UserStatus.DELETED:
                 raise PermissionError("User status deleted", target="status.deleted")
@@ -496,7 +496,9 @@ class AuthService:
             if not email_verification:
                 return urlencode({"code": "not_found", "target": "token"})
 
+            print("email_verification", email_verification)
             if email_verification.status != EmailVerificationStatus.SENT:
+                print("email_verification status", email_verification.status)
                 return urlencode({"code": "validation_error", "target": "status"})
 
             expires_at = ensure_utc(email_verification.expires_at)

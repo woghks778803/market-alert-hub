@@ -25,7 +25,7 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('alert_event_id', sa.Integer(), nullable=False),
     sa.Column('user_channel_id', sa.Integer(), nullable=False),
-    sa.Column('status', sa.Enum('QUEUED', 'SENT', 'FAILED', name='alertdeliverystatus', create_constraint=True), server_default='queued', nullable=False),
+    sa.Column('status', sa.Enum('queued', 'sent', 'failed', name='alertdeliverystatus', create_constraint=True), server_default='queued', nullable=False),
     sa.Column('sent_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('response_code', sa.Integer(), nullable=True),
     sa.Column('response_body', sa.Text(), nullable=True),

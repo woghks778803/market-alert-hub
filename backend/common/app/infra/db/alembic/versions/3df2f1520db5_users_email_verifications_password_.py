@@ -29,7 +29,7 @@ def upgrade() -> None:
     sa.Column('email_nonce', sa.BINARY(length=12), nullable=False),
     sa.Column('email_key_version', sa.SMALLINT(), nullable=False),
     sa.Column('token_hash', sa.BINARY(length=32), nullable=False),
-    sa.Column('status', sa.Enum('pending', 'consumed', 'cancelled', name='emailverificationstatus', create_constraint=True), nullable=False),
+    sa.Column('status', sa.Enum('pending', 'sent','consumed', 'cancelled', name='emailverificationstatus', create_constraint=True), nullable=False),
     sa.Column('expires_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('sent_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('consumed_at', sa.DateTime(timezone=True), nullable=True),
