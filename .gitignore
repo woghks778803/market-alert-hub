@@ -37,6 +37,8 @@ pnpm-debug.log*
 # Vite / Vue build
 frontend/dist/
 *.local
+*.dev
+*.prod
 
 # ======================
 # Docker
@@ -44,6 +46,8 @@ frontend/dist/
 # DO NOT ignore Dockerfile / .dockerignore (tracked as source!)
 docker-compose.override.yml
 docker-compose.local.yml
+docker-compose.dev.yml
+docker-compose.prod.yml
 db_data/
 redis_data/
 

@@ -2,7 +2,6 @@ name: mah
 
 services:
   gateway:
-    build: ../../gateway
     depends_on:
       api:
         condition: service_started
@@ -14,9 +13,6 @@ services:
       - mahnet
 
   api:
-    build:
-      context: ../../backend
-      dockerfile: api/Dockerfile
     working_dir: /app
     command: ["/app/entrypoint.sh"]
     expose:
@@ -29,9 +25,6 @@ services:
       - mahnet
 
   worker:
-    build:
-      context: ../../backend
-      dockerfile: worker/Dockerfile
     working_dir: /app
     entrypoint: ["sh", "/app/entrypoint.sh"]
     env_file:
@@ -42,9 +35,6 @@ services:
       - mahnet
 
   dispatcher:
-    build:
-      context: ../../backend
-      dockerfile: dispatcher/Dockerfile
     working_dir: /app
     entrypoint: ["sh", "/app/entrypoint.sh"]
     env_file:
@@ -55,9 +45,6 @@ services:
       - mahnet
 
   scheduler:
-    build:
-      context: ../../backend
-      dockerfile: scheduler/Dockerfile
     working_dir: /app
     entrypoint: ["sh", "/app/entrypoint.sh"]
     env_file:
@@ -68,9 +55,6 @@ services:
       - mahnet
 
   collector:
-    build:
-      context: ../../backend
-      dockerfile: collector/Dockerfile
     working_dir: /app
     entrypoint: ["sh", "/app/entrypoint.sh"]
     env_file:
@@ -81,9 +65,6 @@ services:
       - mahnet
 
   stream_processor:
-    build:
-      context: ../../backend
-      dockerfile: stream_processor/Dockerfile
     working_dir: /app
     entrypoint: ["sh", "/app/entrypoint.sh"]
     env_file:
