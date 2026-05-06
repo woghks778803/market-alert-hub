@@ -296,6 +296,7 @@ def _can_fire_alert(
     valid_from = alert.get("valid_from")
     valid_to = alert.get("valid_to")
     last_fired_at = alert.get("last_fired_at")
+    is_once = alert.get("is_once")
 
     if valid_from is not None and now < valid_from:
         return False
@@ -303,7 +304,7 @@ def _can_fire_alert(
     if valid_to is not None and now > valid_to:
         return False
 
-    if alert.get("is_once") is True and last_fired_at is not None:
+    if is_once is True and last_fired_at is not None:
         return False
 
     return True

@@ -189,12 +189,11 @@ const initChart = async () => {
         }
       }, 300)
     })
-  } catch (error) {
+  } catch {
     cleanup()
 
     // 2. 실패하면 DOM 자체 제거
     chartMounted.value = false
-    console.error(error)
   }
 }
 

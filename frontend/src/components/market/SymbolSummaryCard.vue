@@ -11,10 +11,7 @@
             <div class="sd-name">
               {{ market.name }}
               <v-chip size="x-small">{{ market.exchangeCode }}</v-chip>
-            </div>
-
-            <div class="sd-base">
-              {{ market.baseSymbol }}
+              <v-chip size="x-small">{{ market.baseSymbol }}</v-chip>
             </div>
           </div>
 

@@ -819,11 +819,6 @@ html.dark {
   align-items: center;
 }
 
-.sd-base {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
 .sd-price {
   font-size: 26px;
   font-weight: 700;

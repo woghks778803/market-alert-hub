@@ -11,6 +11,7 @@ class Instrument(Base):
     __tablename__ = "instruments"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(64), nullable=False)
+    name_ko: Mapped[str | None] = mapped_column(String(64))
     symbol: Mapped[str] = mapped_column(
         String(64), unique=True, nullable=False
     )  # 내부 표준 심볼

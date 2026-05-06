@@ -11,6 +11,7 @@ class Exchange(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     code: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
+    name_ko: Mapped[str | None] = mapped_column(String(100))
     country: Mapped[str | None] = mapped_column(String(64))
     timezone: Mapped[str] = mapped_column(String(64), default="UTC", nullable=False)
     base_url: Mapped[str | None] = mapped_column(String(255))

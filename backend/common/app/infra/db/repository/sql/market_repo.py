@@ -375,11 +375,14 @@ class SqlMarketRepo(MarketRepo):
                 or_(
                     base.symbol.ilike(f"%{search}%"),
                     base.name.ilike(f"%{search}%"),
+                    base.name_ko.ilike(f"%{search}%"),
                     quote.symbol.ilike(f"%{search}%"),
                     quote.name.ilike(f"%{search}%"),
-                    ei.exchange_symbol.ilike(f"%{search}%"),
+                    quote.name_ko.ilike(f"%{search}%"),
                     e.code.ilike(f"%{search}%"),
                     e.name.ilike(f"%{search}%"),
+                    e.name_ko.ilike(f"%{search}%"),
+                    ei.exchange_symbol.ilike(f"%{search}%"),
                 )
             )
 
@@ -523,8 +526,14 @@ class SqlMarketRepo(MarketRepo):
             conditions.append(
                 or_(
                     base.symbol.ilike(f"%{search}%"),
+                    base.name.ilike(f"%{search}%"),
+                    base.name_ko.ilike(f"%{search}%"),
                     quote.symbol.ilike(f"%{search}%"),
+                    quote.name.ilike(f"%{search}%"),
+                    quote.name_ko.ilike(f"%{search}%"),
+                    e.code.ilike(f"%{search}%"),
                     e.name.ilike(f"%{search}%"),
+                    e.name_ko.ilike(f"%{search}%"),
                     ei.exchange_symbol.ilike(f"%{search}%"),
                 )
             )
