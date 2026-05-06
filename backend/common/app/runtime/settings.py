@@ -6,6 +6,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Any
 from app.core.constants import (
     OutboxEventType,
+    EXCHANGES,
+    SYMBOLS,
 )
 
 
@@ -287,12 +289,12 @@ class Settings(BaseSettings):
                 "run_key": OutboxEventType.PERSIST_SNAPSHOTS.value,
             },
             OutboxEventType.SYNC_EXCHANGES.value: {
-                "run_key": OutboxEventType.SYNC_EXCHANGES.value,
+                "run_key": EXCHANGES,
                 "batch_size": self.SYNC_EXCHANGES_BATCH_SIZE,
                 "ttl_sec": self.SYNC_EXCHANGES_TTL_SEC,
             },
             OutboxEventType.SYNC_SYMBOLS.value: {
-                "run_key": OutboxEventType.SYNC_SYMBOLS.value,
+                "run_key": SYMBOLS,
                 "batch_size": self.SYNC_SYMBOLS_BATCH_SIZE,
                 "ttl_sec": self.SYNC_SYMBOLS_TTL_SEC,
             },

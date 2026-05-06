@@ -177,10 +177,10 @@ class Providers:
     ) -> Callable[[], RedisAsyncMarketCatalog]:
         return lambda: RedisAsyncMarketCatalog(
             redis=get_async_redis_client(settings.REDIS_URL),
-            exchanges_snap_key=f"{prefix}:{SNAP}:{OutboxEventType.SYNC_EXCHANGES.value}",
-            exchanges_meta_key=f"{prefix}:{META}:{OutboxEventType.SYNC_EXCHANGES.value}",
-            symbols_snap_key_fn=lambda ex: f"{prefix}:{SNAP}:{OutboxEventType.SYNC_SYMBOLS.value}:{ex}",
-            symbols_meta_key_fn=lambda ex: f"{prefix}:{META}:{OutboxEventType.SYNC_SYMBOLS.value}:{ex}",
+            exchanges_snap_key=f"{prefix}:{SNAP}:{EXCHANGES}",
+            exchanges_meta_key=f"{prefix}:{META}:{EXCHANGES}",
+            symbols_snap_key_fn=lambda ex: f"{prefix}:{SNAP}:{SYMBOLS}:{ex}",
+            symbols_meta_key_fn=lambda ex: f"{prefix}:{META}:{SYMBOLS}:{ex}",
         )
 
     @staticmethod
