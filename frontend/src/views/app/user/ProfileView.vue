@@ -154,10 +154,13 @@ import { storeToRefs } from 'pinia'
 
 import AppLoading from '@/components/common/AppLoading.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+
+import type { SubmitPayload } from '@/composables/auth/useChangePasswordForm'
 import PasswordChangeDialog from '@/components/common/PasswordChangeDialog.vue'
 import { useAuthFlow } from '@/composables/auth/useAuthFlow'
 import { useAsyncAction } from '@/composables/common/useAsyncAction'
 import { getChangePasswordError } from '@/composables/error/authError.message'
+
 import { useUserStore } from '@/stores/user.store'
 import { formatDate } from '@/utils/format'
 
@@ -184,7 +187,7 @@ const handleDeactivate = async () => {
   })
 }
 
-const handleChangePassword = async ({ payload, onSuccess, onError }) => {
+const handleChangePassword = async ({ payload, onSuccess, onError }: SubmitPayload) => {
   try {
     await userAction.run(async () => {
       await changePassword(payload)

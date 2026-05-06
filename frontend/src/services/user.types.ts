@@ -14,3 +14,11 @@ export type ChangeUserSettingQuery = {
   isMarketing?: boolean
   isQuietHours?: boolean
 }
+
+export enum LegalLabel {
+  SERVICE = 'service',
+  PRIVACY = 'privacy',
+  MARKETING = 'marketing',
+}
+
+export type LegalType = LegalLabel.SERVICE | LegalLabel.PRIVACY | LegalLabel.MARKETING

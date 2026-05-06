@@ -45,7 +45,7 @@ export const router = createRouter({
   history: createWebHistory(),
   routes,
 
-  scrollBehavior(to, from, savedPosition) {
+  scrollBehavior(_to, _from, savedPosition) {
     // 뒤로가기/앞으로가기를 눌렀을 때는 원래 위치를 기억
     if (savedPosition) {
       return savedPosition

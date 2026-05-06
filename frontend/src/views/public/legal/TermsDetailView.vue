@@ -14,7 +14,7 @@
   />
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import VueMarkdown from 'vue-markdown-render'
@@ -25,15 +25,18 @@ import privacyMd from '@/assets/legal/privacy.md?raw'
 import marketingMd from '@/assets/legal/marketing.md?raw'
 
 import ScrollTopButton from '@/components/common/ScrollTopButton.vue'
+import { LegalLabel, type LegalType } from '@/services/user.types'
 
 const route = useRoute()
 
 const currentContent = computed(() => {
-  const contents = {
-    service: serviceMd,
-    privacy: privacyMd,
-    marketing: marketingMd,
+  const contents: Record<LegalType, string> = {
+    [LegalLabel.SERVICE]: serviceMd,
+    [LegalLabel.PRIVACY]: privacyMd,
+    [LegalLabel.MARKETING]: marketingMd,
   }
-  return contents[route.meta.type] || ''
+
+  const type = route.meta.type as LegalType
+  return contents[type]
 })
 </script>
