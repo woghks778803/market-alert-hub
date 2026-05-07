@@ -5,9 +5,6 @@ services:
     depends_on:
       api:
         condition: service_started
-    env_file:
-      - ./env/common.env
-      - ./env/gateway.env
     restart: unless-stopped
     networks:
       - mahnet
@@ -17,9 +14,6 @@ services:
     command: ["/app/entrypoint.sh"]
     expose:
       - "8000"
-    env_file:
-      - ./env/common.env
-      - ./env/api.env
     restart: unless-stopped
     networks:
       - mahnet
@@ -27,9 +21,6 @@ services:
   worker:
     working_dir: /app
     entrypoint: ["sh", "/app/entrypoint.sh"]
-    env_file:
-      - ./env/common.env
-      - ./env/worker.env
     restart: unless-stopped
     networks:
       - mahnet
@@ -37,9 +28,6 @@ services:
   dispatcher:
     working_dir: /app
     entrypoint: ["sh", "/app/entrypoint.sh"]
-    env_file:
-      - ./env/common.env
-      - ./env/dispatcher.env
     restart: unless-stopped
     networks:
       - mahnet
@@ -47,9 +35,6 @@ services:
   scheduler:
     working_dir: /app
     entrypoint: ["sh", "/app/entrypoint.sh"]
-    env_file:
-      - ./env/common.env
-      - ./env/scheduler.env
     restart: unless-stopped
     networks:
       - mahnet
@@ -57,9 +42,6 @@ services:
   collector:
     working_dir: /app
     entrypoint: ["sh", "/app/entrypoint.sh"]
-    env_file:
-      - ./env/common.env
-      - ./env/collector.env
     restart: unless-stopped
     networks:
       - mahnet
@@ -67,9 +49,6 @@ services:
   stream_processor:
     working_dir: /app
     entrypoint: ["sh", "/app/entrypoint.sh"]
-    env_file:
-      - ./env/common.env
-      - ./env/stream_processor.env
     restart: unless-stopped
     networks:
       - mahnet

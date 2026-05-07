@@ -60,8 +60,12 @@ redis_data/
 .env.*
 !*.env.example
 !**/*.env.example
+ops/local/env/
+ops/local/secrets/
 ops/dev/env/
 ops/dev/secrets/
+ops/prod/env/
+ops/prod/secrets/
 
 # ======================
 # VSCode / IDE

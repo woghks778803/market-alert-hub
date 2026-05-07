@@ -153,11 +153,6 @@ class Settings(BaseSettings):
     # --- Collector ---
     COLLECTOR_LOG_LEVEL: str = Field(default="INFO")
 
-    # COLLECTOR_EXCHANGE: str = "upbit"
-
-    # COLLECTOR_ENABLE_CATALOG_SYNC: bool = True
-    # COLLECTOR_CATALOG_SYNC_INTERVAL_SEC: int = 21600  # 6h
-
     COLLECTOR_ENABLE_STREAM: bool = False
     COLLECTOR_STREAM_RECONNECT_BACKOFF_SEC: float = 3.0
 
