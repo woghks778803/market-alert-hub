@@ -1,0 +1,66 @@
+name: Test Dev Self-hosted Runner
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Verify dev runner
+    runs-on:
+      - self-hosted
+      - Linux
+      - X64
+      - mah-dev-vm
+
+    steps:
+      - name: Check runner information
+        run: |
+          set -e
+
+          echo "RUNNER_NAME=$RUNNER_NAME"
+          echo "RUNNER_OS=$RUNNER_OS"
+          echo "RUNNER_ARCH=$RUNNER_ARCH"
+          echo "RUNNER_TEMP=$RUNNER_TEMP"
+          echo "HOSTNAME=$(hostname)"
+          echo "USER=$(whoami)"
+          echo "HOME=$HOME"
+
+      - name: Checkout ops files
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            ops
+          sparse-checkout-cone-mode: true
+
+      - name: Check checkout result
+        run: |
+          set -e
+
+          pwd
+          test -f ops/docker-compose.base.yml
+          test -f ops/dev/docker-compose.dev.yml
+
+          echo "Compose files checked out successfully"
+
+      - name: Check Docker access
+        run: |
+          set -e
+
+          docker version
+          docker compose version
+          docker ps
+
+      - name: Check deployment directory
+        run: |
+          set -e
+
+          test -d /opt/market-alert-hub/ops
+          test -w /opt/market-alert-hub/ops
+
+          touch /opt/market-alert-hub/ops/.runner-write-test
+          rm /opt/market-alert-hub/ops/.runner-write-test
+
+          echo "Deployment directory is writable"

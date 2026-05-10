@@ -11,7 +11,7 @@ services:
 
   api:
     working_dir: /app
-    command: ["/app/entrypoint.sh"]
+    command: ["sh", "/app/entrypoint.sh"]
     expose:
       - "8000"
     restart: unless-stopped

@@ -1,0 +1,20 @@
+name: Deploy Backend Dev
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-backend-dev
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/reusable-deploy-backend.yml
+    with:
+      environment: dev
+      dockerfile_name: Dockerfile.dev
+      runner_label: mah-dev-vm
+    secrets: inherit

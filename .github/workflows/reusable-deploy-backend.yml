@@ -1,0 +1,169 @@
+name: Reusable Deploy Backend
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: GitHub Environment 및 배포 디렉터리 이름
+        required: true
+        type: string
+
+      dockerfile_name:
+        description: 빌드에 사용할 Dockerfile 이름
+        required: true
+        type: string
+      
+      runner_label:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-push:
+    name: Build and push ${{ matrix.service }}
+    runs-on: ubuntu-latest
+
+    env:
+      IMAGE_TAG_LATEST: ${{ inputs.environment }}-latest
+      IMAGE_TAG_SHA: ${{ inputs.environment }}-${{ github.sha }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: gateway
+            image: mah-gateway
+            context: ./gateway
+            dockerfile_dir: ./gateway
+
+          - service: api
+            image: mah-api
+            context: ./backend
+            dockerfile_dir: ./backend/api
+
+          - service: scheduler
+            image: mah-scheduler
+            context: ./backend
+            dockerfile_dir: ./backend/scheduler
+
+          - service: worker
+            image: mah-worker
+            context: ./backend
+            dockerfile_dir: ./backend/worker
+
+          - service: stream_processor
+            image: mah-stream-processor
+            context: ./backend
+            dockerfile_dir: ./backend/stream_processor
+
+          - service: dispatcher
+            image: mah-dispatcher
+            context: ./backend
+            dockerfile_dir: ./backend/dispatcher
+
+          - service: collector
+            image: mah-collector
+            context: ./backend
+            dockerfile_dir: ./backend/collector
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to ACR
+        run: |
+          printf '%s' "${{ secrets.ACR_PUSH_CLIENT_SECRET }}" \
+            | docker login "${{ vars.ACR_LOGIN_SERVER }}" \
+                -u "${{ secrets.ACR_PUSH_CLIENT_ID }}" \
+                --password-stdin
+
+      - name: Build image
+        run: |
+          docker build \
+            -f "${{ matrix.dockerfile_dir }}/${{ inputs.dockerfile_name }}" \
+            -t "${{ vars.ACR_LOGIN_SERVER }}/${{ matrix.image }}:${IMAGE_TAG_LATEST}" \
+            -t "${{ vars.ACR_LOGIN_SERVER }}/${{ matrix.image }}:${IMAGE_TAG_SHA}" \
+            "${{ matrix.context }}"
+
+      - name: Push image
+        run: |
+          docker push \
+            "${{ vars.ACR_LOGIN_SERVER }}/${{ matrix.image }}:${IMAGE_TAG_LATEST}"
+
+          docker push \
+            "${{ vars.ACR_LOGIN_SERVER }}/${{ matrix.image }}:${IMAGE_TAG_SHA}"
+
+  deploy:
+    name: Deploy to ${{ inputs.environment }} VM
+    needs: build-and-push
+    environment: ${{ inputs.environment }}
+
+    runs-on:
+      - self-hosted
+      - linux
+      - x64
+      - ${{ inputs.runner_label }}
+
+    env:
+      DOCKER_CONFIG: ${{ runner.temp }}/docker-config
+      DEPLOY_ENV: ${{ inputs.environment }}
+      COMPOSE_FILE: docker-compose.${{ inputs.environment }}.yml
+      DEPLOY_ROOT: /opt/market-alert-hub/ops
+
+    steps:
+      - name: Checkout compose files
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            ops
+          sparse-checkout-cone-mode: true
+
+      - name: Login to ACR for pull
+        run: |
+          set -e
+          mkdir -p "$DOCKER_CONFIG"
+
+          printf '%s' "${{ secrets.ACR_PULL_CLIENT_SECRET }}" |
+            docker login "${{ vars.ACR_LOGIN_SERVER }}" \
+              -u "${{ secrets.ACR_PULL_CLIENT_ID }}" \
+              --password-stdin
+
+      - name: Update compose files
+        run: |
+          set -e
+
+          mkdir -p "$DEPLOY_ROOT/$DEPLOY_ENV"
+
+          cp ops/docker-compose.base.yml \
+            "$DEPLOY_ROOT/docker-compose.base.yml"
+
+          cp "ops/$DEPLOY_ENV/$COMPOSE_FILE" \
+            "$DEPLOY_ROOT/$DEPLOY_ENV/$COMPOSE_FILE"
+
+      - name: Deploy containers
+        run: |
+          set -e
+          cd "$DEPLOY_ROOT"
+
+          docker compose \
+            -f docker-compose.base.yml \
+            -f "$DEPLOY_ENV/$COMPOSE_FILE" \
+            config --quiet
+
+          docker compose \
+            -f docker-compose.base.yml \
+            -f "$DEPLOY_ENV/$COMPOSE_FILE" \
+            pull
+
+          docker compose \
+            -f docker-compose.base.yml \
+            -f "$DEPLOY_ENV/$COMPOSE_FILE" \
+            up -d --remove-orphans
+
+          docker image prune -f
+
+      - name: Remove temporary ACR credentials
+        if: always()
+        run: rm -rf "$DOCKER_CONFIG"

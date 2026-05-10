@@ -36,9 +36,9 @@ pnpm-debug.log*
 
 # Vite / Vue build
 frontend/dist/
-*.local
-*.dev
-*.prod
+env.local
+env.dev
+env.prod
 
 # ======================
 # Docker
