@@ -1,6 +1,14 @@
 name: Deploy Frontend Prod
 
 on:
+  # push:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - frontend/**
+  #     - .github/workflows/reusable-deploy-frontend.yml
+  #     - .github/workflows/deploy-frontend-prod.yml
+
   workflow_dispatch:
 
 concurrency:
@@ -11,6 +19,18 @@ permissions:
   contents: read
 
 jobs:
+  validate-branch:
+    name: Validate main branch
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check branch
+        run: |
+          if [ "$GITHUB_REF_NAME" != "main" ]; then
+            echo "Prod 배포는 main 브랜치에서만 실행할 수 있습니다."
+            exit 1
+          fi
+          
   deploy:
     uses: ./.github/workflows/reusable-deploy-frontend-swa.yml
     with:
