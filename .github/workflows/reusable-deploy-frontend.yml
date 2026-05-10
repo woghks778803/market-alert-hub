@@ -18,6 +18,7 @@ permissions:
   contents: read
 
 jobs:
+
   deploy:
     name: Build and deploy frontend
     runs-on: ubuntu-latest
@@ -30,6 +31,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Verify SWA deployment context
+        env:
+          SWA_TOKEN: ${{ secrets.SWA_TOKEN }}
+        run: |
+          set -e
+
+          echo "Environment input: '${{ inputs.environment }}'"
+
+          if [ -z "$SWA_TOKEN" ]; then
+            echo "::error::SWA_TOKEN is empty in environment '${{ inputs.environment }}'"
+            exit 1
+          fi
+
+          echo "SWA_TOKEN is available"
 
       - name: Setup Node
         uses: actions/setup-node@v4
