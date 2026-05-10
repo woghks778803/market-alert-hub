@@ -4,12 +4,12 @@ on:
   push:
     branches:
       - develop
-    paths:
-      - backend/**
-      - gateway/**
-      - ops/**
-      - .github/workflows/reusable-deploy-backend.yml
-      - .github/workflows/deploy-backend-dev.yml
+    # paths:
+    #   - backend/**
+    #   - gateway/**
+    #   - ops/**
+    #   - .github/workflows/reusable-deploy-backend.yml
+    #   - .github/workflows/deploy-backend-dev.yml
 
   workflow_dispatch:
 

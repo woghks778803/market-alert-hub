@@ -4,10 +4,10 @@ on:
   push:
     branches:
       - develop
-    paths:
-      - frontend/**
-      - .github/workflows/reusable-deploy-frontend.yml
-      - .github/workflows/deploy-frontend-dev.yml
+    # paths:
+    #   - frontend/**
+    #   - .github/workflows/reusable-deploy-frontend.yml
+    #   - .github/workflows/deploy-frontend-dev.yml
 
   workflow_dispatch:
 
@@ -37,3 +37,4 @@ jobs:
       environment: dev
       build_command: npm run build:dev
       app_location: frontend/dist
+    secrets: inherit
