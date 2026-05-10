@@ -32,7 +32,7 @@ jobs:
           fi
           
   deploy:
-    uses: ./.github/workflows/reusable-deploy-frontend-swa.yml
+    uses: ./.github/workflows/reusable-deploy-frontend.yml
     with:
       environment: prod
       build_command: npm run build:prod
