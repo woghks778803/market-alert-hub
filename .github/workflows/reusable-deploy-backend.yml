@@ -169,6 +169,13 @@ jobs:
             -f "$DEPLOY_ENV/$COMPOSE_FILE" \
             up -d --remove-orphans
 
+          docker compose \
+            -f docker-compose.base.yml \
+            -f "$DEPLOY_ENV/$COMPOSE_FILE" \
+            exec -T \
+            -w /app/common/app/infra/db \
+            api alembic upgrade head
+
           docker image prune -f
 
       - name: Remove temporary ACR credentials

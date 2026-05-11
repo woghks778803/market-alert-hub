@@ -377,11 +377,12 @@ class Providers:
     @staticmethod
     def uow_provider(
         sqlalchemy_url: str,
+        verify_tls: bool,
         pool_size: int,
         max_overflow: int
     ) -> Callable[[], UnitOfWork]:
         engine = create_sqlalchemy_engine(
-            sqlalchemy_url, pool_size, max_overflow
+            sqlalchemy_url, pool_size, max_overflow, verify_tls
         )
         SessionLocal = create_sessionmaker(engine)
 
@@ -395,12 +396,12 @@ class Providers:
     @staticmethod
     def async_uow_provider(
         sqlalchemy_async_url: str,
+        verify_tls: bool,
         pool_size: int,
         max_overflow: int
-
     ) -> Callable[[], AsyncUnitOfWork]:
         engine = create_async_sqlalchemy_engine(
-            sqlalchemy_async_url, pool_size, max_overflow
+            sqlalchemy_async_url, pool_size, max_overflow, verify_tls
         )
         SessionLocal = create_async_sessionmaker(engine)
 
@@ -627,9 +628,10 @@ def build_stream_processor_config_bag() -> CoreDTO.StreamProcessorConfigBag:
 def create_service_factory(prefix: str, pool_size: int, max_overflow: int) -> ServiceFactory:
     return ServiceFactory(
         uow=providers.uow_provider(
-            settings.SQLALCHEMY_URL, 
-            pool_size, 
-            max_overflow
+            sqlalchemy_url=settings.SQLALCHEMY_URL, 
+            verify_tls=settings.MYSQL_TLS_VERIFY, 
+            pool_size=pool_size, 
+            max_overflow=max_overflow
         ),
 
         exchange_symbol_providers=_build_symbol_provider_registry(),
@@ -660,9 +662,10 @@ def create_service_factory(prefix: str, pool_size: int, max_overflow: int) -> Se
 def create_async_service_factory(prefix: str, pool_size: int, max_overflow: int) -> AsyncServiceFactory:
     return AsyncServiceFactory(
         uow=providers.async_uow_provider(
-            settings.SQLALCHEMY_ASYNC_URL,
-            pool_size, 
-            max_overflow,
+            sqlalchemy_async_url=settings.SQLALCHEMY_ASYNC_URL,
+            verify_tls=settings.MYSQL_TLS_VERIFY, 
+            pool_size=pool_size, 
+            max_overflow=max_overflow,
         ),
 
         alert_snapshot=providers.alert_snapshot_async_provider(

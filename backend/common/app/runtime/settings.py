@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     MYSQL_DATABASE: str
     MYSQL_USER: str
     MYSQL_PASSWORD: str
+    MYSQL_TLS_VERIFY: bool = False
 
     # --- Redis ---
     REDIS_HOST: str = Field(default="redis")
