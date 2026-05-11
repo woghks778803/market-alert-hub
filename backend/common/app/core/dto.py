@@ -80,8 +80,7 @@ class WorkerConfigBag:
     outbox_retry_delay_sec: int
     outbox_send_lock_ttl_sec: int
     outbox_concurrency: int
-    # redis_stream_alerts: str
-    # redis_stream_deliveries: str
+
     worker_jobs: dict[str, dict[str, object]]
 
 

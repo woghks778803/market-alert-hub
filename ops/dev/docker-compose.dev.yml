@@ -1,0 +1,87 @@
+name: mah-dev
+
+services:
+  gateway:
+    image: alertpingacr01.azurecr.io/mah-gateway:dev-latest
+    container_name: mah_gateway
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/www/certbot:/var/www/certbot:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      api:
+        condition: service_started
+    env_file:
+      - ./dev/env/common.env
+      - ./dev/env/gateway.env
+    cpus: 0.15
+    mem_limit: 128m
+
+  api:
+    image: alertpingacr01.azurecr.io/mah-api:dev-latest
+    container_name: mah_api
+    volumes:
+      - ./dev/secrets:/app/secrets:ro
+    env_file:
+      - ./dev/env/common.env
+      - ./dev/env/api.env
+    cpus: 0.70
+    mem_limit: 768m
+
+  worker:
+    image: alertpingacr01.azurecr.io/mah-worker:dev-latest
+    container_name: mah_worker
+    volumes:
+      - ./dev/secrets:/app/secrets:ro
+    env_file:
+      - ./dev/env/common.env
+      - ./dev/env/worker.env
+    cpus: 0.35
+    mem_limit: 384m
+
+  dispatcher:
+    image: alertpingacr01.azurecr.io/mah-dispatcher:dev-latest
+    container_name: mah_dispatcher
+    volumes:
+      - ./dev/secrets:/app/secrets:ro
+    env_file:
+      - ./dev/env/common.env
+      - ./dev/env/dispatcher.env
+    cpus: 0.25
+    mem_limit: 256m
+
+  scheduler:
+    image: alertpingacr01.azurecr.io/mah-scheduler:dev-latest
+    container_name: mah_scheduler
+    volumes:
+      - ./dev/secrets:/app/secrets:ro
+    env_file:
+      - ./dev/env/common.env
+      - ./dev/env/scheduler.env
+    cpus: 0.25
+    mem_limit: 256m
+
+  collector:
+    image: alertpingacr01.azurecr.io/mah-collector:dev-latest
+    container_name: mah_collector
+    volumes:
+      - ./dev/secrets:/app/secrets:ro
+    env_file:
+      - ./dev/env/common.env
+      - ./dev/env/collector.env
+    cpus: 0.45
+    mem_limit: 512m
+
+  stream_processor:
+    image: alertpingacr01.azurecr.io/mah-stream-processor:dev-latest
+    container_name: mah_stream_processor
+    volumes:
+      - ./dev/secrets:/app/secrets:ro
+    env_file:
+      - ./dev/env/common.env
+      - ./dev/env/stream_processor.env
+    cpus: 0.35
+    mem_limit: 384m
+    

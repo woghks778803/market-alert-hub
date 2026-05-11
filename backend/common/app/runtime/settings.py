@@ -1,6 +1,6 @@
 from re import L, S
 from unittest.util import strclass
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, quote
 from pydantic import computed_field, field_validator, Field, EmailStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Any
@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     REDIS_HOST: str = Field(default="redis")
     REDIS_PORT: int = Field(default=6379)
     REDIS_DB: int = Field(default=0)
+    REDIS_SSL: bool = False
+    REDIS_ACCESS_PRIMARY_KEY: str | None = None
+    REDIS_ACCESS_SECONDARY_KEY: str | None = None
 
     # --- version switch ---
     ACTIVE_JWT_KID: int = 1
@@ -124,9 +127,6 @@ class Settings(BaseSettings):
     OUTBOX_RETRY_DELAY_SEC: int = Field(default=60)
     OUTBOX_SEND_LOCK_TTL_SEC: int = Field(default=120)
     OUTBOX_CONCURRENCY: int = Field(default=4)
-
-    REDIS_STREAM_ALERTS: str = Field(default="alerts")
-    REDIS_STREAM_DELIVERIES: str = Field(default="deliveries")
 
     # tickers
     SYNC_TICKERS_BATCH_SIZE: int = 500
@@ -256,6 +256,7 @@ class Settings(BaseSettings):
         # env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,  # MYSQL_HOST / mysql_host 둘 다 허용
+        env_ignore_empty=True, # 빈값이면 무시
         extra="ignore",
     )
 
@@ -307,6 +308,7 @@ class Settings(BaseSettings):
     @computed_field  # pydantic v2
     @property
     def SQLALCHEMY_URL(self) -> str:
+        # URL 비밀번호 인코딩
         pw = quote_plus(self.MYSQL_PASSWORD)  # 특수문자 안전
         return (
             f"mysql+pymysql://{self.MYSQL_USER}:{pw}"
@@ -327,7 +329,17 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def REDIS_URL(self) -> str:
-        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+        scheme = "rediss" if self.REDIS_SSL else "redis"
+
+        auth = ""
+        if self.REDIS_ACCESS_PRIMARY_KEY:
+            password = quote(self.REDIS_ACCESS_PRIMARY_KEY, safe="")
+            auth = f":{password}@"
+
+        return (
+            f"{scheme}://{auth}"
+            f"{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+        )
 
     @field_validator("CORS_ALLOW_ORIGINS", "PASSLIB_SCHEMES", mode="before")
     def split_fields(cls, v):
