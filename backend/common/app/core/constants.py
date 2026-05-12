@@ -123,6 +123,7 @@ class OutboxEventType(str, enum.Enum):
 
 class StreamType(str, enum.Enum):
     PERSIST_ALERT_EVENTS = "PERSIST_ALERT_EVENTS"
+    PERSIST_OUTBOX_EVENTS = "PERSIST_OUTBOX_EVENTS"
 
 class CooldownType(str, enum.Enum):
     ALERT_PRICE = "ALERT_PRICE"

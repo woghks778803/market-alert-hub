@@ -71,10 +71,11 @@ def _install_openapi_with_bearer(app: FastAPI) -> None:
 
 
 def create_app() -> FastAPI:
+    service_name = api_ctx.config.service_name
     if api_ctx.config.deploy_env == DeploymentEnvironment.PROD:
-        setup_logging(level=logging.INFO, service="api")
+        setup_logging(level=logging.INFO, service=service_name)
     else:
-        setup_logging(level=logging.DEBUG, service="api")
+        setup_logging(level=logging.DEBUG, service=service_name)
 
     app = FastAPI(
         title="Market Alert Hub API",
@@ -107,8 +108,8 @@ def create_app() -> FastAPI:
         send_default_pii=True,
         # enable_logs=True,
     )
-    sentry_sdk.set_tag("service", "api")
-    sentry_sdk.capture_message("sentry api connected")
+    sentry_sdk.set_tag("service", service_name)
+    sentry_sdk.capture_message(f"sentry {service_name} connected")
 
     # --- Middleware ---
     # CORSMiddleware가 가장 바깥이어야함

@@ -10,8 +10,7 @@ def handle_auth_password_reset(
     ctx: WorkerContext,
     payload: Mapping[str, Any],
 ) -> dict[str, Any]:
-    app_name = ctx.config.app_name
-    deploy_env = ctx.config.deploy_env
+    redis_key_prefix = f"{{{ctx.config.key_prefix}}}"
 
     user_id = require(payload, "user_id", target="payload.user_id")
     password_reset_id = require(
@@ -31,7 +30,7 @@ def handle_auth_password_reset(
     if expires_at <= now:
         raise SkipHandler("expired")
 
-    lock_key = f"{app_name}:{deploy_env}:{LOCK}:{OutboxEventType.AUTH_PASSWORD_RESET.value}:{password_reset_id}"
+    lock_key = f"{redis_key_prefix}:{LOCK}:{OutboxEventType.AUTH_PASSWORD_RESET.value}:{password_reset_id}"
     token = try_acquire_lock(
         ctx.redis_client, lock_key, ttl_sec=ctx.config.outbox_send_lock_ttl_sec
     )

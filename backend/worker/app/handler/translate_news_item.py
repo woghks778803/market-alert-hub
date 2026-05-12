@@ -13,8 +13,7 @@ def handle_translate_news_items(
     ctx: WorkerContext,
     payload: Mapping[str, Any],
 ) -> dict[str, Any]: 
-    app_name = ctx.config.app_name
-    deploy_env = ctx.config.deploy_env
+    redis_key_prefix = f"{{{ctx.config.key_prefix}}}"
 
     rss_source_id = require(payload, "rss_source_id", target="payload.rss_source_id")
     rss_source_code = require(
@@ -29,7 +28,7 @@ def handle_translate_news_items(
     run_key = job_config["run_key"]
 
     lock_key = (
-        f"{app_name}:{deploy_env}:{LOCK}:{run_key}:{rss_source_id}:{locale_value}"
+        f"{redis_key_prefix}:{LOCK}:{run_key}:{rss_source_id}:{locale_value}"
     )
     token = try_acquire_lock(
         ctx.redis_client, lock_key, ttl_sec=ctx.config.outbox_send_lock_ttl_sec

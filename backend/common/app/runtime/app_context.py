@@ -28,14 +28,6 @@ class ApiContext:
 class SchedulerContext:
     config: CoreDTO.SchedulerConfigBag
     svcs: ServiceFactory
-    redis_client: RedisClient
-
-
-@dataclass(frozen=True)
-class DispatcherContext:
-    config: CoreDTO.DispatcherConfigBag
-    svcs: ServiceFactory
-    redis_client: RedisClient
 
 
 @dataclass(frozen=True)
@@ -43,6 +35,12 @@ class WorkerContext:
     config: CoreDTO.WorkerConfigBag
     svcs: ServiceFactory
     redis_client: RedisClient
+
+
+@dataclass(frozen=True)
+class DispatcherContext:
+    config: CoreDTO.DispatcherConfigBag
+    svcs: AsyncServiceFactory
 
 
 @dataclass(frozen=True)

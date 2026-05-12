@@ -1,6 +1,7 @@
 from typing import Protocol
 
 from app.infra.db.repository.protocol.aio.alert_repo import AlertRepo
+from app.infra.db.repository.protocol.aio.outbox_repo import OutboxRepo
 
 class AsyncUnitOfWork(Protocol):
     async def __aenter__(self): ...
@@ -12,3 +13,6 @@ class AsyncUnitOfWork(Protocol):
 
     @property
     def alerts(self) -> AlertRepo: ...
+
+    @property
+    def outboxs(self) -> OutboxRepo: ...

@@ -17,7 +17,7 @@ from app.infra.db.model import (
     UserChannelModel,
     ChannelProviderModel,
 )
-from app.infra.db.repository.protocol.alert_repo import AlertRepo
+from app.infra.db.repository.protocol.sql.alert_repo import AlertRepo
 from app.infra.db.utils import to_row_dict
 
 a = AlertModel

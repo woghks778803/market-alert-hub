@@ -1,54 +1,67 @@
+import asyncio
 import logging
-import sentry_sdk
 import signal
-import time
 
-from app.core.logging import setup_logging
+import sentry_sdk
+
 from app.core.constants import DeploymentEnvironment
+from app.core.logging import setup_logging
 from .wiring import build_dispatcher_runtime
 
 log = logging.getLogger(__name__)
 
 
-def run() -> None:
+async def run() -> None:
     rt = build_dispatcher_runtime()
+    service_name = rt.config.service_name
+
     if rt.config.deploy_env == DeploymentEnvironment.PROD:
-        setup_logging(level=logging.INFO, service="dispatcher")
+        setup_logging(level=logging.INFO, service=service_name)
     else:
-        setup_logging(level=logging.DEBUG, service="dispatcher")
+        setup_logging(level=logging.DEBUG, service=service_name)
 
     sentry_sdk.init(
         dsn=rt.config.sentry_dsn,
         environment=rt.config.deploy_env,
         sample_rate=rt.config.sample_rate,
         traces_sample_rate=rt.config.traces_sample_rate,
-        # enable_logs=True,
     )
-    sentry_sdk.set_tag("service", "dispatcher")
-    sentry_sdk.capture_message("sentry dispatcher connected")
+    sentry_sdk.set_tag("service", service_name)
+    sentry_sdk.capture_message(f"sentry {service_name} connected")
 
-    stop = {"flag": False}
+    stop_event = asyncio.Event()
+    loop = asyncio.get_running_loop()
 
-    def _handle_stop(signum, frame):  # noqa: ARG001
-        log.warning("dispatcher stopping by signal=%s", signum)
-        stop["flag"] = True
+    def handle_stop() -> None:
+        log.warning(f"{service_name} stopping")
+        stop_event.set()
 
-    signal.signal(signal.SIGTERM, _handle_stop)
-    signal.signal(signal.SIGINT, _handle_stop)
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        loop.add_signal_handler(sig, handle_stop)
 
     poll_limit = rt.config.outbox_poll_limit
     idle_sleep = rt.config.outbox_idle_sleep
 
-    log.info("dispatcher started (poll_limit=%s idle_sleep=%s)", poll_limit, idle_sleep)
-
-    while not stop["flag"]:
+    while not stop_event.is_set():
         try:
-            n = rt.svcs.outboxs.enqueue_outbox_pending(poll_limit, rt.q_outbox)
-            if not n:
-                time.sleep(idle_sleep)
-                continue
-        except Exception:
-            log.exception("dispatcher loop error")
-            time.sleep(idle_sleep)
+            count = await rt.svcs.outboxs.enqueue_outbox_pending(poll_limit)
 
-    log.info("dispatcher stopped")
+            if not count:
+                try:
+                    await asyncio.wait_for(
+                        stop_event.wait(),
+                        timeout=idle_sleep,
+                    )
+                except TimeoutError:
+                    pass
+
+        except Exception:
+            log.exception(f"{service_name} loop error")
+
+            try:
+                await asyncio.wait_for(
+                    stop_event.wait(),
+                    timeout=idle_sleep,
+                )
+            except TimeoutError:
+                pass

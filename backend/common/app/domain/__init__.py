@@ -3,7 +3,7 @@ from .market import dto as MarketDTO, ports as MarketPort, rules as MarketRule
 from .auth import dto as AuthDTO, ports as AuthPort, rules as AuthRule
 from .watchlist import dto as WatchlistDTO
 from .email import dto as EmailDTO, ports as EmailPort
-from .outbox import dto as OutboxDTO, rules as OutboxRule
+from .outbox import dto as OutboxDTO, rules as OutboxRule, ports as OutboxPort
 from .crypto import ports as CryptoPort
 from .user import dto as UserDTO
 from .throttle import ports as ThrottlePort
@@ -26,6 +26,7 @@ __all__ = [
     "EmailPort",
     "OutboxDTO",
     "OutboxRule",
+    "OutboxPort",
     "CryptoPort",
     "UserDTO",
     "ThrottlePort",

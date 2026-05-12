@@ -10,7 +10,7 @@ from app.core.util.datetime import utcnow
 from app.core.util.serialization import to_canonical_json
 from app.domain.shared.uow import UnitOfWork
 from app.domain.shared.errors import InternalServerError, ValidationAppError
-from app.domain import OutboxDTO, OutboxRule, CryptoPort
+from app.domain import OutboxDTO, OutboxRule, OutboxPort, CryptoPort
 
 logger = logging.getLogger(__name__)
 
@@ -20,9 +20,11 @@ class OutboxService:
         self,
         uow_factory: Callable[[], UnitOfWork],
         hmac: CryptoPort.TokenHasher,
+        outbox_event: OutboxPort.OutboxEvent
     ) -> None:
         self._uow_factory = uow_factory
         self._hmac = hmac
+        self._outbox_event = outbox_event
 
     def create_outbox(
         self,
@@ -55,35 +57,6 @@ class OutboxService:
             )
 
             uow.commit_outbox_idempotent()
-
-    def enqueue_outbox_pending(self, limit: int, q_outbox):
-        with self._uow_factory() as uow:
-            outbox_filter = OutboxDTO.OutboxFilter(
-                status=OutboxStatus.PENDING, next_run_at=utcnow()
-            )
-            ids = uow.outboxs.list_outbox_by_filter(outbox_filter, limit=limit)
-            if not ids:
-                return 0
-
-            outbox_filter = OutboxDTO.OutboxFilter(ids=ids)
-            outbox_update = OutboxDTO.OutboxUpdate(status=OutboxStatus.SENDING)
-
-            uow.outboxs.update_outbox_by_filter(
-                filters=outbox_filter, updates=outbox_update
-            )
-
-            # 각 이벤트를 RQ 큐에 등록
-            for oid in ids:
-                q_outbox.enqueue(
-                    "app.tasks.deliver_outbox_event",
-                    oid,
-                    job_id=f"outbox-{oid}",  # 중복 outbox enqueue 방지
-                    retry=None,
-                )
-                logger.info("enqueued outbox id=%s", oid)
-
-            uow.commit()  #  enqueue까지 성공하면 commit
-            return len(ids)
 
     def _decide_retry(
         self,
@@ -146,6 +119,7 @@ class OutboxService:
     # )
     def deliver_outbox(self, outbox_id: int, dispatch_fn) -> None:
         event_type = None
+        should_record = False # 조회, 검증 후 저장 여부
 
         outbox_attempt = OutboxDTO.OutboxAttemptCreate(
             outbox_id=outbox_id,
@@ -174,6 +148,7 @@ class OutboxService:
                     logger.info("skip id=%s status=%s", outbox_id, row.status)
                     return
 
+                should_record = True
                 payload = OutboxRule.parse_payload(getattr(row, "payload", None))
                 outbox_attempt.attempt_no = outbox_update.attempts = row.attempts + 1
                 outbox_filter = OutboxDTO.OutboxFilter(id=row.id)
@@ -209,15 +184,16 @@ class OutboxService:
                 outbox_update.attempts,
             )
         finally:
-            with self._uow_factory() as uow:
-                outbox_attempt.finished_at = utcnow()
-                uow.outboxs.add_outbox_attempt(
-                    outbox_attempt,
-                    False,
-                )
-                uow.outboxs.update_outbox_by_filter(
-                    filters=outbox_filter,
-                    updates=outbox_update,
-                )
+            if should_record:
+                with self._uow_factory() as uow:
+                    outbox_attempt.finished_at = utcnow()
+                    uow.outboxs.add_outbox_attempt(
+                        outbox_attempt,
+                        False,
+                    )
+                    uow.outboxs.update_outbox_by_filter(
+                        filters=outbox_filter,
+                        updates=outbox_update,
+                    )
 
-                uow.commit()
+                    uow.commit()

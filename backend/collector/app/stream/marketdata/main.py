@@ -13,7 +13,7 @@ async def run_stream_marketdata_main_loop(
 ):
     tasks: dict[str, asyncio.Task] = {}
     cfg = ctx.config
-    key_prefix = f"{cfg.app_name}:{cfg.deploy_env}"
+    redis_key_prefix = f"{{{cfg.key_prefix}}}"
     catalog = ctx.svcs.active_catalog  
     ws_factory = ctx.ws_facs_register
 
@@ -35,7 +35,7 @@ async def run_stream_marketdata_main_loop(
                         ctx=ctx,
                         exchange_code=code,
                         reconnect_backoff_sec=reconnect_backoff_sec,
-                        checkpoint_key=f"{key_prefix}:{CURSOR}:{code}:{TICKERS}",
+                        checkpoint_key=f"{redis_key_prefix}:{CURSOR}:{code}:{TICKERS}",
                     )
                 )
                 tasks[code] = task

@@ -157,9 +157,9 @@ async def run_stream_marketdata_loop(
     """
 
     cfg = ctx.config
-    key_prefix = f"{cfg.app_name}:{cfg.deploy_env}"
-    snap_key_fn = lambda ex: f"{key_prefix}:{SNAP}:{TICKERS}:{ex}"
-    stream_key_fn = lambda ex, sym: f"{key_prefix}:{STREAM}:{TICKERS}:{ex}:{sym}"
+    redis_key_prefix = f"{{{cfg.key_prefix}}}"
+    snap_key_fn = lambda ex: f"{redis_key_prefix}:{SNAP}:{TICKERS}:{ex}"
+    stream_key_fn = lambda ex, sym: f"{redis_key_prefix}:{STREAM}:{TICKERS}:{ex}:{sym}"
     active_catalog = ctx.svcs.active_catalog
     redis = ctx.async_redis_client.conn()
     ws_factory = ctx.ws_facs_register[exchange_code]

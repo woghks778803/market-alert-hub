@@ -69,7 +69,6 @@ let chart: IChartApi | null = null
 let candleSeries: ISeriesApi<'Candlestick'>
 let volumeSeries: ISeriesApi<'Histogram'>
 let chartTimer: ReturnType<typeof setTimeout> | null = null
-let collapsedTimer: ReturnType<typeof setTimeout> | null = null
 
 const props = defineProps<{
   market: MarketDto | null
@@ -124,6 +123,7 @@ const initChart = async () => {
     const isDark = document.documentElement.classList.contains(ThemeMode.DARK)
 
     chart = createChart(chartContainer.value!, {
+      autoSize: true,
       layout: {
         background: {
           color: isDark ? '#0f172a' : '#ffffff',
@@ -197,19 +197,6 @@ const initChart = async () => {
   }
 }
 
-watch(
-  () => props.collapsed,
-  () => {
-    if (collapsedTimer) clearTimeout(collapsedTimer)
-
-    collapsedTimer = setTimeout(() => {
-      // css transition 동기화
-      if (!chartContainer.value) return
-
-      chart?.resize(chartContainer.value.clientWidth, chartContainer.value.clientHeight)
-    }, 300)
-  }
-)
 
 watch(
   () => props.market,

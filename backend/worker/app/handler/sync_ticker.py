@@ -14,6 +14,8 @@ def handle_sync_tickers(
     ctx: WorkerContext,
     payload: Mapping[str, Any],
 ) -> dict[str, Any]:
+    redis_key_prefix = f"{{{ctx.config.key_prefix}}}"
+    
     slot = int(require(payload, "slot", target="payload.slot"))
     requested_at_epoch = int(
         require(payload, "requested_at_epoch", target="payload.requested_at_epoch")
@@ -22,9 +24,7 @@ def handle_sync_tickers(
     job_config = ctx.config.worker_jobs[OutboxEventType.SYNC_TICKERS.value]
     run_key = job_config["run_key"]
 
-    app_name = ctx.config.app_name
-    deploy_env = ctx.config.deploy_env
-    lock_key = f"{app_name}:{deploy_env}:{LOCK}:{run_key}:{slot}:{interval_sec}"
+    lock_key = f"{redis_key_prefix}:{LOCK}:{run_key}:{slot}:{interval_sec}"
 
     token = try_acquire_lock(
         ctx.redis_client, lock_key, ttl_sec=ctx.config.outbox_send_lock_ttl_sec

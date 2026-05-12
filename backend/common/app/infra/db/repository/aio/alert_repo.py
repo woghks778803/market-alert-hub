@@ -1,6 +1,5 @@
 from typing import Sequence
 from collections.abc import Collection
-from datetime import datetime
 from sqlalchemy import update, insert, select, and_, or_, asc, desc, func, case
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.ext.asyncio import AsyncSession

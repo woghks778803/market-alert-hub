@@ -4,7 +4,8 @@ from sqlalchemy.orm import Session as DbSession
 from app.domain import OutboxDTO
 from app.domain.shared.errors import ValidationAppError
 from app.infra.db.model import OutboxModel, OutboxAttemptModel
-from ..protocol.outbox_repo import OutboxRepo
+from app.infra.db.repository.common.outbox import to_outbox_where_mapping, to_outbox_values_mapping
+from app.infra.db.repository.protocol.sql.outbox_repo import OutboxRepo
 
 
 class SqlOutboxRepo(OutboxRepo):
@@ -43,44 +44,17 @@ class SqlOutboxRepo(OutboxRepo):
             return None
         return outbox.to_dto()
 
-    def _to_outbox_where_mapping(self, outbox_filter: OutboxDTO.OutboxFilter):
-        wheres = []
-
-        if outbox_filter.id is not None:
-            wheres.append(OutboxModel.id == outbox_filter.id)
-        elif outbox_filter.ids:
-            wheres.append(OutboxModel.id.in_(outbox_filter.ids))  # [] 방지
-
-        if outbox_filter.next_run_at is not None:
-            wheres.append(OutboxModel.next_run_at < outbox_filter.next_run_at)
-        if outbox_filter.status is not None:
-            wheres.append(OutboxModel.status == outbox_filter.status)
-
-        return wheres
-
-    def _to_outbox_values_mapping(self, outbox_update: OutboxDTO.OutboxUpdate):
-        values = {}
-
-        if outbox_update.status is not None:
-            values[OutboxModel.status] = outbox_update.status
-        if outbox_update.attempts is not None:
-            values[OutboxModel.attempts] = outbox_update.attempts
-        if outbox_update.next_run_at is not None:
-            values[OutboxModel.next_run_at] = outbox_update.next_run_at
-
-        return values
-
     def update_outbox_by_filter(
         self, filters: OutboxDTO.OutboxFilter, updates: OutboxDTO.OutboxUpdate
     ) -> int:
 
-        where = self._to_outbox_where_mapping(filters)
+        where = to_outbox_where_mapping(filters)
         if not where:
             raise ValidationAppError(
                 "Unsafe update: at least one narrowing filter required",
                 target="filters",
             )
-        values = self._to_outbox_values_mapping(updates)
+        values = to_outbox_values_mapping(updates)
         if not values:
             return 0
 
@@ -104,7 +78,7 @@ class SqlOutboxRepo(OutboxRepo):
         skip_locked: bool = False,
     ) -> list[int]:
 
-        where = self._to_outbox_where_mapping(filters)
+        where = to_outbox_where_mapping(filters)
         stmt = (
             select(OutboxModel.id)
             .where(*where)

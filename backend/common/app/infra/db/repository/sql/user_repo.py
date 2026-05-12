@@ -13,7 +13,7 @@ from app.infra.db.model import (
     UserOauthAccountModel,
 )
 from app.infra.db.utils import to_db_value
-from ..protocol.user_repo import UserRepo
+from app.infra.db.repository.protocol.sql.user_repo import UserRepo
 
 
 class SqlUserRepo(UserRepo):

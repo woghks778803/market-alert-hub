@@ -8,7 +8,7 @@ from app.infra.db.model import (
     NoticeModel,
     FAQModel,
 )
-from ..protocol.support_repo import SupportRepo
+from app.infra.db.repository.protocol.sql.support_repo import SupportRepo
 
 class SqlSupportRepo(SupportRepo): 
     def __init__(self, db: DbSession) -> None:

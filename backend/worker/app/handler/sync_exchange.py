@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 def handle_sync_exchanges(
     ctx: WorkerContext, payload: Mapping[str, Any]
 ) -> dict[str, Any]:
+    redis_key_prefix = f"{{{ctx.config.key_prefix}}}"
     started_at = utcnow()
 
     interval_sec = int(require(payload, "interval_sec", target="payload.interval_sec"))
@@ -21,16 +22,14 @@ def handle_sync_exchanges(
 
     job_config = ctx.config.worker_jobs[OutboxEventType.SYNC_EXCHANGES.value]
 
-    app_name = ctx.config.app_name
-    deploy_env = ctx.config.deploy_env
     batch_size = job_config["batch_size"]
     ttl_sec = job_config["ttl_sec"]
     run_key = job_config["run_key"]
 
-    redis_key = f"{app_name}:{deploy_env}:{SNAP}:{run_key}"
-    tmp_key = f"{app_name}:{deploy_env}:{TMP}:{run_key}:{slot}:{interval_sec}"
-    lock_key = f"{app_name}:{deploy_env}:{LOCK}:{run_key}:{slot}:{interval_sec}"
-    meta_key = f"{app_name}:{deploy_env}:{META}:{run_key}"
+    redis_key = f"{redis_key_prefix}:{SNAP}:{run_key}"
+    tmp_key = f"{redis_key_prefix}:{TMP}:{run_key}:{slot}:{interval_sec}"
+    lock_key = f"{redis_key_prefix}:{LOCK}:{run_key}:{slot}:{interval_sec}"
+    meta_key = f"{redis_key_prefix}:{META}:{run_key}"
 
     token = try_acquire_lock(
         ctx.redis_client, lock_key, ttl_sec=ctx.config.outbox_send_lock_ttl_sec

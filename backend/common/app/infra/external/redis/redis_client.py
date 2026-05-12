@@ -1,25 +1,14 @@
 import logging
+from typing import cast
 from dataclasses import dataclass
 from functools import lru_cache
 
 from redis.client import Redis as SyncRedis, Pipeline
-from redis.exceptions import RedisError
-from typing import cast
+from redis.exceptions import RedisError, ResponseError
+
+from .shared.dto import RedisClientConfig
 
 log = logging.getLogger(__name__)
-
-
-@dataclass(frozen=True)
-class RedisClientConfig:
-    # 연결/응답 타임아웃 (초)
-    connect_timeout: float = 1.5
-    socket_timeout: float = 2.5
-
-    # 연결 유지/헬스체크
-    health_check_interval: int = 30
-
-    # 명령 실패 시 타임아웃 관련 동작
-    retry_on_timeout: bool = True
 
 
 class RedisClient:
@@ -29,15 +18,15 @@ class RedisClient:
     - 쿨다운/락 등 간단 KV 사용 목적
     """
 
-    def __init__(self, redis_url: str, *, cfg: RedisClientConfig | None = None) -> None:
-        self._cfg = cfg or RedisClientConfig()
+    def __init__(self, redis_url: str, *, config: RedisClientConfig | None = None) -> None:
+        self._config = config or RedisClientConfig()
         self._client: SyncRedis = SyncRedis.from_url(
             redis_url,
             decode_responses=False,
-            socket_connect_timeout=self._cfg.connect_timeout,
-            socket_timeout=self._cfg.socket_timeout,
-            retry_on_timeout=self._cfg.retry_on_timeout,
-            health_check_interval=self._cfg.health_check_interval,
+            socket_connect_timeout=self._config.connect_timeout,
+            socket_timeout=self._config.socket_timeout,
+            retry_on_timeout=self._config.retry_on_timeout,
+            health_check_interval=self._config.health_check_interval,
         )
 
     def set_value( # set 타입 충돌로 set_value로 네이밍 변경
@@ -148,8 +137,90 @@ class RedisClient:
             log.exception("redis publish failed: channel=%s", channel)
             raise
 
+
+    def xautoclaim(
+        self,
+        *,
+        key: str,
+        group_name: str,
+        consumer_name: str,
+        min_idle_time_ms: int,
+        start_id: str = "0-0",
+        count: int = 10,
+    ):
+        try:
+            return self._client.xautoclaim(
+                name=key,
+                groupname=group_name,
+                consumername=consumer_name,
+                min_idle_time=min_idle_time_ms,
+                start_id=start_id,
+                count=count,
+            )
+        except RedisError:
+            log.exception("redis xautoclaim failed: key=%s", key)
+            raise
+
+
+    def xgroup_create(
+        self,
+        *,
+        key: str,
+        group_name: str,
+        id: str = "0",
+        mkstream: bool = True,
+    ) -> bool:
+        try:
+            result = self._client.xgroup_create(
+                name=key,
+                groupname=group_name,
+                id=id,
+                mkstream=mkstream,
+            )
+            return bool(result)
+
+        except ResponseError:
+            raise
+        except RedisError:
+            log.exception("redis xgroup_create failed: key=%s", key)
+            raise
+
+
+    def xreadgroup(
+        self,
+        *,
+        group_name: str,
+        consumer_name: str,
+        streams: dict[str, str],
+        count: int,
+        block_ms: int,
+    ):
+        try:
+            result = self._client.xreadgroup(
+                groupname=group_name,
+                consumername=consumer_name,
+                streams=streams,
+                count=count,
+                block=block_ms,
+            )
+            return result
+        except RedisError:
+            log.exception("redis xreadgroup failed: streams=%s", streams)
+            raise
+
+
+    def xack(self, key: str, group_name: str, *message_ids: str) -> int:
+        try:
+            result = self._client.xack(key, group_name, *message_ids)
+            return int(result)
+        except RedisError:
+            log.exception("redis xack failed: key=%s", key)
+            raise
+
+
     def conn(self) -> SyncRedis:
         return self._client
+
 
     def pipeline(self, transaction: bool = True) -> Pipeline:
         """
@@ -170,5 +241,11 @@ class RedisClient:
 
 # 프로세스 내 재사용(bootstrap이 깔끔해짐)
 @lru_cache
-def get_redis_client(redis_url: str) -> RedisClient:
-    return RedisClient(redis_url)
+def get_redis_client(
+    redis_url: str,
+    config: RedisClientConfig | None = None,
+) -> RedisClient:
+    return RedisClient(
+        redis_url,
+        config=config,
+    )

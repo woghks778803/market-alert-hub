@@ -98,6 +98,7 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: str | None = None
 
     # --- API ---
+    API_SERVICE_NAME: str = Field(default="api")
     API_LOG_LEVEL: str = Field(default="INFO")
     CORS_ALLOW_ORIGINS: str | list[str] = ["http://localhost:5173"]
 
@@ -109,22 +110,25 @@ class Settings(BaseSettings):
     WS_ASYNC_DB_POOL_SIZE: int = 1
     WS_ASYNC_DB_MAX_OVERFLOW: int = 0
 
-    # --- Dispatcher, Worker ---
-    OUTBOX_POLL_LIMIT: int = Field(default=100)
-    OUTBOX_IDLE_SLEEP: float = Field(default=0.5)
-
     # --- Dispatcher ---
+    DISPATCHER_SERVICE_NAME: str = Field(default="dispatcher")
     DISPATCHER_LOG_LEVEL: str = Field(default="INFO")
 
     DISPATCHER_DB_POOL_SIZE: int = 1
     DISPATCHER_DB_MAX_OVERFLOW: int = 0
 
+    OUTBOX_POLL_LIMIT: int = Field(default=100)
+    OUTBOX_IDLE_SLEEP: float = Field(default=0.5)
+
     # --- Worker ---
+    WORKER_SERVICE_NAME: str = Field(default="worker")
     WORKER_LOG_LEVEL: str = Field(default="INFO")
 
     WORKER_DB_POOL_SIZE: int = 1
     WORKER_DB_MAX_OVERFLOW: int = 0
     
+    OUTBOX_EVENT_BATCH_SIZE: int = Field(default=100)
+    OUTBOX_EVENT_BLOCK_MS: int = Field(default=1000)
     OUTBOX_RETRY_DELAY_SEC: int = Field(default=60)
     OUTBOX_SEND_LOCK_TTL_SEC: int = Field(default=120)
     OUTBOX_CONCURRENCY: int = Field(default=4)
@@ -152,6 +156,7 @@ class Settings(BaseSettings):
     FCM_SERVICE_ACCOUNT_PATH: str | None = None
 
     # --- Collector ---
+    COLLECTOR_SERVICE_NAME: str = Field(default="collector")
     COLLECTOR_LOG_LEVEL: str = Field(default="INFO")
 
     COLLECTOR_ENABLE_STREAM: bool = False
@@ -172,6 +177,7 @@ class Settings(BaseSettings):
     COLLECTOR_ASYNC_DB_MAX_OVERFLOW: int = 0
 
     # --- Stream Processor ---
+    STREAM_PROCESSOR_SERVICE_NAME: str = Field(default="stream_processor")
     STREAM_PROCESSOR_LOG_LEVEL: str = Field(default="INFO")
 
     STREAM_PROCESSOR_ENABLE_STREAM: bool = False
@@ -187,8 +193,12 @@ class Settings(BaseSettings):
 
     STREAM_PROCESSOR_ASYNC_DB_POOL_SIZE: int = 1
     STREAM_PROCESSOR_ASYNC_DB_MAX_OVERFLOW: int = 0
+
+    ALERT_EVENT_BATCH_SIZE: int = Field(default=100)
+    ALERT_EVENT_BLOCK_MS: int = Field(default=1000)
     
     # --- Scheduler ---
+    SCHEDULER_SERVICE_NAME: str = Field(default="scheduler")
     SCHEDULER_LOG_LEVEL: str = Field(default="INFO")
 
     SCHEDULER_RESTART_BASE_BACKOFF_SEC: float = 2.0

@@ -4,7 +4,7 @@ from app.infra.db.model import SessionModel
 from sqlalchemy.orm import Session as DbSession
 from datetime import datetime
 from app.domain import AuthDTO
-from ..protocol.session_repo import SessionRepo
+from app.infra.db.repository.protocol.sql.session_repo import SessionRepo
 
 
 class SqlSessionRepo(SessionRepo):

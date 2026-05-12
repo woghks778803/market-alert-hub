@@ -3,6 +3,11 @@ from datetime import datetime
 from app.core.constants import OutboxStatus
 from typing import Optional, Iterable, Any
 
+@dataclass(frozen=True)
+class OutboxMessage:
+    message_id: str
+    outbox_id: int
+
 
 @dataclass(slots=True)
 class Outbox:

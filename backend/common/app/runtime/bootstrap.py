@@ -65,6 +65,7 @@ from app.infra.external.redis.provider import (
     RedisAsyncAlertEvent,
     RedisAsyncTickerStore,
     RedisAsyncCandleStore,
+    RedisAsyncOutboxEvent,
     RedisAsyncCooldown,
 
     RedisCandleStore,
@@ -72,6 +73,7 @@ from app.infra.external.redis.provider import (
     RedisMarketSnapshot,
     RedisAlertSnapshot,
     RedisAlertBucket,
+    RedisOutboxEvent,
     RedisState,
 )
 
@@ -170,6 +172,15 @@ class Providers:
     - provider는 객체 lifecycle을 관리하지 않는다.
     - 객체 생성/캐싱 책임은 factory, wiring에 있다.
     """
+
+    @staticmethod
+    def outbox_event_async_provider(
+        prefix: str,
+    ) -> Callable[[], RedisAsyncOutboxEvent]:
+        return lambda: RedisAsyncOutboxEvent(
+            redis=get_async_redis_client(settings.REDIS_URL),
+            prefix=prefix,
+        )
 
     @staticmethod
     def active_catalog_provider(
@@ -339,6 +350,13 @@ class Providers:
         return lambda: get_binance_ws_client(config)
 
     @staticmethod
+    def outbox_event_provider(prefix: str) -> Callable[[], RedisOutboxEvent]:
+        return lambda: RedisOutboxEvent(
+            redis=get_redis_client(settings.REDIS_URL),
+            prefix=prefix,
+        )
+
+    @staticmethod
     def candle_store_provider(prefix: str) -> Callable[[], RedisCandleStore]:
         return lambda: RedisCandleStore(
             redis=get_redis_client(settings.REDIS_URL),
@@ -506,6 +524,7 @@ def build_api_config_bag() -> CoreDTO.ApiConfigBag:
     return CoreDTO.ApiConfigBag(
         app_name=settings.APP_NAME,
         deploy_env=settings.DEPLOY_ENV,
+        service_name=settings.API_SERVICE_NAME,
         log_level=settings.API_LOG_LEVEL or settings.LOG_LEVEL,
         pool_size=settings.API_DB_POOL_SIZE,
         max_overflow=settings.API_DB_MAX_OVERFLOW,
@@ -520,18 +539,20 @@ def build_worker_config_bag() -> CoreDTO.WorkerConfigBag:
     return CoreDTO.WorkerConfigBag(
         app_name=settings.APP_NAME,
         deploy_env=settings.DEPLOY_ENV,
+        service_name=settings.WORKER_SERVICE_NAME,
         log_level=settings.WORKER_LOG_LEVEL or settings.LOG_LEVEL,
         pool_size=settings.WORKER_DB_POOL_SIZE,
         max_overflow=settings.WORKER_DB_MAX_OVERFLOW,
         sentry_dsn=settings.SENTRY_DSN,
         sample_rate=settings.SAMPLE_RATE,
         traces_sample_rate=settings.TRACES_SAMPLE_RATE,
-        redis_url=settings.REDIS_URL,
-        outbox_poll_limit=settings.OUTBOX_POLL_LIMIT,
-        outbox_idle_sleep=settings.OUTBOX_IDLE_SLEEP,
+
+        outbox_event_batch_size=settings.OUTBOX_EVENT_BATCH_SIZE,
+        outbox_event_block_ms=settings.OUTBOX_EVENT_BLOCK_MS,
         outbox_retry_delay_sec=settings.OUTBOX_RETRY_DELAY_SEC,
         outbox_send_lock_ttl_sec=settings.OUTBOX_SEND_LOCK_TTL_SEC,
         outbox_concurrency=settings.OUTBOX_CONCURRENCY,
+
         worker_jobs=settings.WORKER_JOBS,
     )
 
@@ -540,13 +561,13 @@ def build_dispatcher_config_bag() -> CoreDTO.DispatcherConfigBag:
     return CoreDTO.DispatcherConfigBag(
         app_name=settings.APP_NAME,
         deploy_env=settings.DEPLOY_ENV,
+        service_name=settings.DISPATCHER_SERVICE_NAME,
         log_level=settings.DISPATCHER_LOG_LEVEL or settings.LOG_LEVEL,
         pool_size=settings.DISPATCHER_DB_POOL_SIZE,
         max_overflow=settings.DISPATCHER_DB_MAX_OVERFLOW,
         sentry_dsn=settings.SENTRY_DSN,
         sample_rate=settings.SAMPLE_RATE,
         traces_sample_rate=settings.TRACES_SAMPLE_RATE,
-        redis_url=settings.REDIS_URL,
         outbox_poll_limit=settings.OUTBOX_POLL_LIMIT,
         outbox_idle_sleep=settings.OUTBOX_IDLE_SLEEP,
     )
@@ -556,6 +577,7 @@ def build_scheduler_config_bag() -> CoreDTO.SchedulerConfigBag:
     return CoreDTO.SchedulerConfigBag(
         app_name=settings.APP_NAME,
         deploy_env=settings.DEPLOY_ENV,
+        service_name=settings.SCHEDULER_SERVICE_NAME,
         log_level=settings.SCHEDULER_LOG_LEVEL or settings.LOG_LEVEL,
         pool_size=settings.SCHEDULER_DB_POOL_SIZE,
         max_overflow=settings.SCHEDULER_DB_MAX_OVERFLOW,
@@ -584,6 +606,7 @@ def build_collector_config_bag() -> CoreDTO.CollectorConfigBag:
     return CoreDTO.CollectorConfigBag(
         app_name=settings.APP_NAME,
         deploy_env=settings.DEPLOY_ENV,
+        service_name=settings.COLLECTOR_SERVICE_NAME,
         log_level=settings.COLLECTOR_LOG_LEVEL or settings.LOG_LEVEL,
         pool_size=settings.COLLECTOR_ASYNC_DB_POOL_SIZE,
         max_overflow=settings.COLLECTOR_ASYNC_DB_MAX_OVERFLOW,
@@ -608,6 +631,7 @@ def build_stream_processor_config_bag() -> CoreDTO.StreamProcessorConfigBag:
     return CoreDTO.StreamProcessorConfigBag(
         app_name=settings.APP_NAME,
         deploy_env=settings.DEPLOY_ENV,
+        service_name=settings.STREAM_PROCESSOR_SERVICE_NAME,
         log_level=settings.STREAM_PROCESSOR_LOG_LEVEL or settings.LOG_LEVEL,
         pool_size=settings.STREAM_PROCESSOR_ASYNC_DB_POOL_SIZE,
         max_overflow=settings.STREAM_PROCESSOR_ASYNC_DB_MAX_OVERFLOW,
@@ -622,10 +646,14 @@ def build_stream_processor_config_bag() -> CoreDTO.StreamProcessorConfigBag:
         checkpoint_backend=settings.STREAM_PROCESSOR_CHECKPOINT_BACKEND,
         checkpoint_key_prefix=settings.STREAM_PROCESSOR_CHECKPOINT_KEY_PREFIX,
         checkpoint_file_path=settings.STREAM_PROCESSOR_CHECKPOINT_FILE_PATH,
+        alert_event_batch_size=settings.ALERT_EVENT_BATCH_SIZE,
+        alert_event_block_ms=settings.ALERT_EVENT_BLOCK_MS,
     )
 
 
 def create_service_factory(prefix: str, pool_size: int, max_overflow: int) -> ServiceFactory:
+    redis_key_prefix = f"{{{prefix}}}"
+
     return ServiceFactory(
         uow=providers.uow_provider(
             sqlalchemy_url=settings.SQLALCHEMY_URL, 
@@ -641,13 +669,14 @@ def create_service_factory(prefix: str, pool_size: int, max_overflow: int) -> Se
         google_translation=providers.google_translation_provider(),
         news_feed=providers.news_feed_provider(),
 
-        candle_store=providers.candle_store_provider(prefix),
-        market_snapshot=providers.market_snapshot_provider(prefix),
-        alert_snapshot=providers.alert_snapshot_provider(prefix),
-        alert_bucket=providers.alert_bucket_provider(prefix),
+        candle_store=providers.candle_store_provider(redis_key_prefix),
+        market_snapshot=providers.market_snapshot_provider(redis_key_prefix),
+        alert_snapshot=providers.alert_snapshot_provider(redis_key_prefix),
+        alert_bucket=providers.alert_bucket_provider(redis_key_prefix),
+        outbox_event=providers.outbox_event_provider(redis_key_prefix),
         
-        state=providers.state_provider(prefix),
-        cooldown=providers.cooldown_provider(prefix),
+        state=providers.state_provider(redis_key_prefix),
+        cooldown=providers.cooldown_provider(redis_key_prefix),
 
         email_client=providers.email_client_provider(),
         email_renderer=providers.email_renderer_provider(),
@@ -655,11 +684,13 @@ def create_service_factory(prefix: str, pool_size: int, max_overflow: int) -> Se
         hmac_hasher=providers.hmac_hasher_provider(),
         jwt_signer=providers.jwt_signer_provider(),
         secret_crypto=providers.secret_crypto_provider(),
-        config=build_service_config_bag(prefix),
+        config=build_service_config_bag(redis_key_prefix),
     )
 
 
 def create_async_service_factory(prefix: str, pool_size: int, max_overflow: int) -> AsyncServiceFactory:
+    redis_key_prefix = f"{{{prefix}}}"
+
     return AsyncServiceFactory(
         uow=providers.async_uow_provider(
             sqlalchemy_async_url=settings.SQLALCHEMY_ASYNC_URL,
@@ -667,26 +698,28 @@ def create_async_service_factory(prefix: str, pool_size: int, max_overflow: int)
             pool_size=pool_size, 
             max_overflow=max_overflow,
         ),
-
         alert_snapshot=providers.alert_snapshot_async_provider(
-            prefix=prefix
+            prefix=redis_key_prefix
         ),
         alert_bucket=providers.alert_bucket_async_provider(
-            prefix=prefix
+            prefix=redis_key_prefix
         ),
         alert_event=providers.alert_event_async_provider(
-            prefix=prefix
+            prefix=redis_key_prefix
+        ),
+        outbox_event=providers.outbox_event_async_provider(
+            prefix=redis_key_prefix
         ),
         candle_store=providers.candle_store_async_provider(
-            prefix=prefix
+            prefix=redis_key_prefix
         ),
         ticker_store=providers.ticker_store_async_provider(
-            prefix=prefix
+            prefix=redis_key_prefix
         ),
         active_catalog=providers.active_catalog_provider(
-            prefix=prefix
+            prefix=redis_key_prefix
         ),
-        cooldown=providers.cooldown_async_provider(prefix),
+        cooldown=providers.cooldown_async_provider(redis_key_prefix),
     )
 
 
@@ -694,7 +727,7 @@ def create_async_service_factory(prefix: str, pool_size: int, max_overflow: int)
 def create_ws_context() -> WsContext:
     cfg = build_ws_config_bag()
     svcs = create_async_service_factory(
-        prefix=f"{cfg.app_name}:{cfg.deploy_env}",
+        prefix=cfg.key_prefix,
         pool_size=cfg.pool_size,
         max_overflow=cfg.max_overflow,
     )
@@ -708,7 +741,7 @@ def create_ws_context() -> WsContext:
 def create_api_context() -> ApiContext:
     cfg = build_api_config_bag()
     svcs = create_service_factory(
-        prefix=f"{cfg.app_name}:{cfg.deploy_env}",
+        prefix=cfg.key_prefix,
         pool_size=cfg.pool_size,
         max_overflow=cfg.max_overflow,
     )
@@ -719,7 +752,7 @@ def create_api_context() -> ApiContext:
 def create_worker_context() -> WorkerContext:
     cfg = build_worker_config_bag()
     svcs = create_service_factory(
-        prefix=f"{cfg.app_name}:{cfg.deploy_env}",
+        prefix=cfg.key_prefix,
         pool_size=cfg.pool_size,
         max_overflow=cfg.max_overflow,
     )
@@ -730,33 +763,31 @@ def create_worker_context() -> WorkerContext:
 @lru_cache
 def create_dispatcher_context() -> DispatcherContext:
     cfg = build_dispatcher_config_bag()
-    svcs = create_service_factory(
-        prefix=f"{cfg.app_name}:{cfg.deploy_env}",
+    svcs = create_async_service_factory(
+        prefix=cfg.key_prefix,
         pool_size=cfg.pool_size,
         max_overflow=cfg.max_overflow,
     )
-    redis = get_redis_client(settings.REDIS_URL)
-    return DispatcherContext(config=cfg, svcs=svcs, redis_client=redis)
+    return DispatcherContext(config=cfg, svcs=svcs)
 
 
 @lru_cache
 def create_scheduler_context() -> SchedulerContext:
     cfg = build_scheduler_config_bag()
     svcs = create_service_factory(
-        prefix=f"{cfg.app_name}:{cfg.deploy_env}",
+        prefix=cfg.key_prefix,
         pool_size=cfg.pool_size,
         max_overflow=cfg.max_overflow,
     )
-    redis = get_redis_client(settings.REDIS_URL)
 
-    return SchedulerContext(config=cfg, svcs=svcs, redis_client=redis)
+    return SchedulerContext(config=cfg, svcs=svcs)
 
 
 @lru_cache
 def create_collector_context() -> CollectorContext:
     cfg = build_collector_config_bag()
     svcs = create_async_service_factory(
-        prefix=f"{cfg.app_name}:{cfg.deploy_env}",
+        prefix=cfg.key_prefix,
         pool_size=cfg.pool_size,
         max_overflow=cfg.max_overflow,
     )
@@ -791,7 +822,7 @@ def create_collector_context() -> CollectorContext:
 def create_stream_processor_context() -> StreamProcessorContext:
     cfg = build_stream_processor_config_bag()
     svcs = create_async_service_factory(
-        prefix=f"{cfg.app_name}:{cfg.deploy_env}",
+        prefix=cfg.key_prefix,
         pool_size=cfg.pool_size,
         max_overflow=cfg.max_overflow,
     )

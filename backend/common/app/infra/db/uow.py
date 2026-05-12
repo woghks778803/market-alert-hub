@@ -4,15 +4,15 @@ from sqlalchemy.exc import IntegrityError
 from app.domain.shared.uow import UnitOfWork as UnitOfWorkPort
 from app.infra.db.utils import is_mysql_duplicate_key
 
-from app.infra.db.repository.protocol.user_repo import UserRepo
-from app.infra.db.repository.protocol.session_repo import SessionRepo
-from app.infra.db.repository.protocol.alert_repo import AlertRepo
-from app.infra.db.repository.protocol.market_repo import MarketRepo
-from app.infra.db.repository.protocol.watchlist_repo import WatchlistRepo
-from app.infra.db.repository.protocol.channel_repo import ChannelRepo
-from app.infra.db.repository.protocol.outbox_repo import OutboxRepo
-from app.infra.db.repository.protocol.support_repo import SupportRepo
-from app.infra.db.repository.protocol.news_repo import NewsRepo
+from app.infra.db.repository.protocol.sql.user_repo import UserRepo
+from app.infra.db.repository.protocol.sql.session_repo import SessionRepo
+from app.infra.db.repository.protocol.sql.alert_repo import AlertRepo
+from app.infra.db.repository.protocol.sql.market_repo import MarketRepo
+from app.infra.db.repository.protocol.sql.watchlist_repo import WatchlistRepo
+from app.infra.db.repository.protocol.sql.channel_repo import ChannelRepo
+from app.infra.db.repository.protocol.sql.outbox_repo import OutboxRepo
+from app.infra.db.repository.protocol.sql.support_repo import SupportRepo
+from app.infra.db.repository.protocol.sql.news_repo import NewsRepo
 
 from app.infra.db.repository.sql.user_repo import SqlUserRepo
 from app.infra.db.repository.sql.session_repo import SqlSessionRepo

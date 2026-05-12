@@ -36,9 +36,9 @@ async def run_candle_consumer(app, interval):
         if isinstance(data, bytes):
             data = data.decode()
 
-        redis_prefix = f"{config.app_name}:{config.deploy_env}:"
-        if channel.startswith(redis_prefix):
-            public_channel = channel[len(redis_prefix):]
+        redis_key_prefix = f"{{{config.key_prefix}}}:"
+        if channel.startswith(redis_key_prefix):
+            public_channel = channel[len(redis_key_prefix):]
         else:
             public_channel = channel
 
@@ -51,7 +51,7 @@ async def run_candle_consumer(app, interval):
             public_channel,
             {
                 "type": f"{CANDLE}",
-                "channel": channel,
+                "channel": public_channel,
                 "data": payload,
             },
         )

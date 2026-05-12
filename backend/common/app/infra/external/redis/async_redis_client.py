@@ -4,34 +4,23 @@ from functools import lru_cache
 from redis.asyncio import Redis as AsyncRedis
 from redis.exceptions import RedisError, ResponseError
 
+from .shared.dto import RedisClientConfig
+
 log = logging.getLogger(__name__)
-
-
-@dataclass(frozen=True)
-class RedisClientAsyncConfig:
-    # 연결/응답 타임아웃 (초)
-    connect_timeout: float = 1.5
-    socket_timeout: float = 2.5
-
-    # 연결 유지/헬스체크
-    health_check_interval: int = 30
-
-    # 명령 실패 시 타임아웃 관련 동작
-    retry_on_timeout: bool = True
 
 
 class RedisClientAsync:
     def __init__(
-        self, redis_url: str, *, cfg: RedisClientAsyncConfig | None = None
+        self, redis_url: str, *, config: RedisClientConfig | None = None
     ) -> None:
-        self._cfg = cfg or RedisClientAsyncConfig()
+        self._config = config or RedisClientConfig()
         self._client: AsyncRedis = AsyncRedis.from_url(
             redis_url,
             decode_responses=False,
-            socket_connect_timeout=self._cfg.connect_timeout,
-            socket_timeout=self._cfg.socket_timeout,
-            retry_on_timeout=self._cfg.retry_on_timeout,
-            health_check_interval=self._cfg.health_check_interval,
+            socket_connect_timeout=self._config.connect_timeout,
+            socket_timeout=self._config.socket_timeout,
+            retry_on_timeout=self._config.retry_on_timeout,
+            health_check_interval=self._config.health_check_interval,
         )
 
     async def get(self, key: str) -> bytes | None:
@@ -260,5 +249,11 @@ class RedisClientAsync:
 
 
 @lru_cache
-def get_async_redis_client(redis_url: str) -> RedisClientAsync:
-    return RedisClientAsync(redis_url)
+def get_async_redis_client(
+    redis_url: str,
+    config: RedisClientConfig | None = None,
+) -> RedisClientAsync:
+    return RedisClientAsync(
+        redis_url,
+        config=config,
+    )

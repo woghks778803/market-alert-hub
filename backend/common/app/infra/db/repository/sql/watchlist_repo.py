@@ -4,7 +4,7 @@ from app.domain import WatchlistDTO
 from app.infra.db.model import (
     WatchlistItemModel,
 )
-from ..protocol.watchlist_repo import WatchlistRepo
+from app.infra.db.repository.protocol.sql.watchlist_repo import WatchlistRepo
 
 
 class SqlWatchlistRepo(WatchlistRepo):

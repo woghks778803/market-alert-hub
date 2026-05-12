@@ -14,11 +14,11 @@ async def run_ticker_1s_loop(
     market_refresh_sec: float = 10.0,
 ):
     cfg = ctx.config
+    redis_key_prefix = f"{{{cfg.key_prefix}}}"
     catalog = ctx.svcs.active_catalog
     candle = ctx.svcs.candle_store
     redis = ctx.async_redis_client
     last_id = "$"  # 최신부터 시작
-    key_prefix = f"{cfg.app_name}:{cfg.deploy_env}"
 
     buckets = {}  # symbol → state
     symbols_cache = {}
@@ -37,7 +37,7 @@ async def run_ticker_1s_loop(
 
             for ex, symbols in symbols_cache.items():
                 streams = {
-                    f"{key_prefix}:{STREAM}:{TICKERS}:{ex}:{s}": last_id for s in symbols
+                    f"{redis_key_prefix}:{STREAM}:{TICKERS}:{ex}:{s}": last_id for s in symbols
                 }
 
                 # print("run_ticker_1s_loop streams", streams)

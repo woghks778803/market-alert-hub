@@ -7,7 +7,8 @@ from app.domain import (
     EmailPort, CryptoPort, 
     MarketPort, AlertPort, 
     AuthPort, ThrottlePort,
-    ChannelPort, NewsPort
+    ChannelPort, NewsPort,
+    OutboxPort,
 )
 
 from .auth_service import AuthService
@@ -39,6 +40,7 @@ class ServiceFactory:
         market_snapshot: Callable[[], MarketPort.MarketSnapshot],
         alert_snapshot: Callable[[], AlertPort.AlertSnapshot],
         alert_bucket: Callable[[], AlertPort.AlertBucket],
+        outbox_event: Callable[[], OutboxPort.OutboxEvent],
 
         state: Callable[[], AuthPort.AuthState],
         cooldown: Callable[[], ThrottlePort.Cooldown],
@@ -61,6 +63,7 @@ class ServiceFactory:
         self._market_snapshot = market_snapshot
         self._alert_snapshot = alert_snapshot
         self._alert_bucket = alert_bucket
+        self._outbox_event = outbox_event
         self._state = state
         self._cooldown = cooldown
         self._email_client = email_client
@@ -106,6 +109,10 @@ class ServiceFactory:
     @cached_property
     def alert_bucket(self):
         return self._alert_bucket()
+
+    @cached_property
+    def outbox_event(self):
+        return self._outbox_event()
 
     @cached_property
     def cooldown(self):
@@ -197,6 +204,7 @@ class ServiceFactory:
         return OutboxService(
             uow_factory=self._uow,
             hmac=self.hmac,
+            outbox_event=self.outbox_event,
         )
 
     @cached_property

@@ -5,7 +5,7 @@ from sqlalchemy.dialects.mysql import insert as mysql_insert
 from app.domain import ChannelDTO
 from app.domain.shared.errors import ValidationAppError
 from app.infra.db.model import UserChannelModel, ChannelProviderModel
-from app.infra.db.repository.protocol.channel_repo import ChannelRepo
+from app.infra.db.repository.protocol.sql.channel_repo import ChannelRepo
 from app.infra.db.utils import to_row_dict
 
 class SqlChannelRepo(ChannelRepo): 

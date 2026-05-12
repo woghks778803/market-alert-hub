@@ -2,7 +2,9 @@ from typing import Union
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.infra.db.repository.protocol.aio.alert_repo import AlertRepo
+from app.infra.db.repository.protocol.aio.outbox_repo import OutboxRepo
 from app.infra.db.repository.aio.alert_repo import AsyncAlertRepo
+from app.infra.db.repository.aio.outbox_repo import AsyncOutboxRepo
 
 class AsyncUnitOfWork:
     def __init__(
@@ -13,6 +15,7 @@ class AsyncUnitOfWork:
         self.db: AsyncSession = db() if callable(db) else db
 
         self._alerts = None
+        self._outboxs = None
 
         self._done = False
         self._owns = owns_session
@@ -52,3 +55,9 @@ class AsyncUnitOfWork:
         if self._alerts is None:
             self._alerts = AsyncAlertRepo(self.db)
         return self._alerts
+
+    @property
+    def outboxs(self) -> OutboxRepo:
+        if self._outboxs is None:
+            self._outboxs = AsyncOutboxRepo(self.db)
+        return self._outboxs

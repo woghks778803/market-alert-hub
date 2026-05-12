@@ -3,7 +3,6 @@ import json
 from decimal import Decimal
 from typing import Callable, Sequence, Any
 from collections.abc import Mapping
-from datetime import datetime
 
 from app.core.constants import AlertStatus
 from app.core.util.datetime import utcnow

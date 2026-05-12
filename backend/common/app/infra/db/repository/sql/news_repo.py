@@ -21,7 +21,7 @@ from app.infra.db.model import (
     NewsItemStatModel,
     NewsItemTranslationModel,
 )
-from app.infra.db.repository.protocol.news_repo import NewsRepo
+from app.infra.db.repository.protocol.sql.news_repo import NewsRepo
 from app.infra.db.utils import to_row_dict
 
 rp = RssProviderModel

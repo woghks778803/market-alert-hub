@@ -13,6 +13,8 @@ def handle_fetch_news_feed(
     ctx: WorkerContext,
     payload: Mapping[str, Any],
 ) -> dict[str, Any]: 
+    redis_key_prefix = f"{{{ctx.config.key_prefix}}}"
+
     interval_sec = int(require(payload, "interval_sec", target="payload.interval_sec"))
     slot = int(require(payload, "slot", target="payload.slot"))
     news_feed = require(payload, "news_feed", target="payload.news_feed")
@@ -21,11 +23,9 @@ def handle_fetch_news_feed(
 
     job_config = ctx.config.worker_jobs[OutboxEventType.FETCH_NEWS_FEED.value]
 
-    app_name = ctx.config.app_name
-    deploy_env = ctx.config.deploy_env
     batch_size = job_config["batch_size"]
     run_key = job_config["run_key"]
-    lock_key = f"{app_name}:{deploy_env}:{LOCK}:{run_key}:{rss_source_id}:{slot}:{interval_sec}"
+    lock_key = f"{redis_key_prefix}:{LOCK}:{run_key}:{rss_source_id}:{slot}:{interval_sec}"
     token = try_acquire_lock(
         ctx.redis_client,
         lock_key,

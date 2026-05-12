@@ -10,8 +10,7 @@ def handle_auth_email_verify(
     ctx: WorkerContext,
     payload: Mapping[str, Any],
 ) -> dict[str, Any]:
-    app_name = ctx.config.app_name
-    deploy_env = ctx.config.deploy_env
+    redis_key_prefix = f"{{{ctx.config.key_prefix}}}"
 
     user_id = require(payload, "user_id", target="payload.user_id")
     email_verification_id = require(
@@ -35,7 +34,7 @@ def handle_auth_email_verify(
         raise SkipHandler("expired")
 
     lock_key = (
-        f"{app_name}:{deploy_env}:{LOCK}:{OutboxEventType.AUTH_EMAIL_VERIFY.value}:{email_verification_id}"
+        f"{redis_key_prefix}:{LOCK}:{OutboxEventType.AUTH_EMAIL_VERIFY.value}:{email_verification_id}"
     )
     token = try_acquire_lock(
         ctx.redis_client, lock_key, ttl_sec=ctx.config.outbox_send_lock_ttl_sec

@@ -15,8 +15,22 @@ class Base:
         return asdict(self)
 
 
+# frozen은 non-frozen 상속 불가
 @dataclass(frozen=True)
-class ServiceConfigBag:
+class BaseConfigBag:
+    app_name: str
+    deploy_env: str
+
+    @property
+    def key_prefix(self) -> str:
+        return f"{self.app_name}:{self.deploy_env}"
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class ServiceConfigBag(BaseConfigBag):
     app_name: str
     deploy_env: str
     
@@ -40,9 +54,10 @@ class ServiceConfigBag:
 
 
 @dataclass(frozen=True)
-class ApiConfigBag:
+class ApiConfigBag(BaseConfigBag):
     app_name: str
     deploy_env: str
+    service_name: str
     log_level: str
     pool_size: int
     max_overflow: int
@@ -54,7 +69,7 @@ class ApiConfigBag:
 
 
 @dataclass(frozen=True)
-class WsConfigBag:
+class WsConfigBag(BaseConfigBag):
     app_name: str
     deploy_env: str
     log_level: str
@@ -63,9 +78,10 @@ class WsConfigBag:
 
 
 @dataclass(frozen=True)
-class WorkerConfigBag:
+class WorkerConfigBag(BaseConfigBag):
     app_name: str
     deploy_env: str
+    service_name: str
     log_level: str
     pool_size: int
     max_overflow: int
@@ -74,9 +90,8 @@ class WorkerConfigBag:
     sample_rate: float
     traces_sample_rate: float
 
-    redis_url: str
-    outbox_poll_limit: int
-    outbox_idle_sleep: float
+    outbox_event_batch_size: int
+    outbox_event_block_ms: int
     outbox_retry_delay_sec: int
     outbox_send_lock_ttl_sec: int
     outbox_concurrency: int
@@ -85,9 +100,10 @@ class WorkerConfigBag:
 
 
 @dataclass(frozen=True)
-class DispatcherConfigBag:
+class DispatcherConfigBag(BaseConfigBag):
     app_name: str
     deploy_env: str
+    service_name: str
     log_level: str
     pool_size: int
     max_overflow: int
@@ -96,15 +112,15 @@ class DispatcherConfigBag:
     sample_rate: float
     traces_sample_rate: float
 
-    redis_url: str
     outbox_poll_limit: int
     outbox_idle_sleep: float
 
 
 @dataclass(frozen=True)
-class SchedulerConfigBag:
+class SchedulerConfigBag(BaseConfigBag):
     app_name: str
     deploy_env: str
+    service_name: str
     log_level: str
     pool_size: int
     max_overflow: int
@@ -138,10 +154,11 @@ class SchedulerConfigBag:
 
 
 @dataclass(frozen=True)
-class CollectorConfigBag:
+class CollectorConfigBag(BaseConfigBag):
     # 공통
     app_name: str
     deploy_env: str
+    service_name: str
     log_level: str
     pool_size: int
     max_overflow: int
@@ -176,10 +193,11 @@ class CollectorConfigBag:
 
 
 @dataclass(frozen=True)
-class StreamProcessorConfigBag:
+class StreamProcessorConfigBag(BaseConfigBag):
     # 공통
     app_name: str
     deploy_env: str
+    service_name: str
     log_level: str
     pool_size: int
     max_overflow: int
@@ -198,6 +216,9 @@ class StreamProcessorConfigBag:
     checkpoint_backend: str  # memory | file | redis
     checkpoint_key_prefix: str
     checkpoint_file_path: str
+
+    alert_event_batch_size: int
+    alert_event_block_ms: int
 
 
 # 페이징/정렬 -------------------------------------------------------------------

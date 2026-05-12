@@ -16,14 +16,14 @@ def handle_cleanup_deleted_users(
     ctx: WorkerContext,
     payload: Mapping[str, Any],
 ) -> dict[str, Any]:
+    redis_key_prefix = f"{{{ctx.config.key_prefix}}}"
+
     interval_sec = int(require(payload, "interval_sec", target="payload.interval_sec"))
     slot = int(require(payload, "slot", target="payload.slot"))
     job_config = ctx.config.worker_jobs[OutboxEventType.CLEANUP_DELETED_USERS.value]
-    app_name = ctx.config.app_name
-    deploy_env = ctx.config.deploy_env
     run_key = job_config["run_key"]
 
-    lock_key = f"{app_name}:{deploy_env}:{LOCK}:{run_key}:{slot}:{interval_sec}"
+    lock_key = f"{redis_key_prefix}:{LOCK}:{run_key}:{slot}:{interval_sec}"
     token = try_acquire_lock(
         ctx.redis_client, lock_key, ttl_sec=ctx.config.outbox_send_lock_ttl_sec
     )

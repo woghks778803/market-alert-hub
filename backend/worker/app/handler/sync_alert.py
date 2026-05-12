@@ -16,6 +16,7 @@ def handle_sync_alerts(
     ctx: WorkerContext,
     payload: Mapping[str, Any],
 ) -> dict[str, Any]:
+    redis_key_prefix = f"{{{ctx.config.key_prefix}}}"
     started_at = utcnow()
 
     interval_sec = int(require(payload, "interval_sec", target="payload.interval_sec"))
@@ -23,25 +24,23 @@ def handle_sync_alerts(
 
     job_config = ctx.config.worker_jobs[OutboxEventType.SYNC_ALERTS.value]
 
-    app_name = ctx.config.app_name
-    deploy_env = ctx.config.deploy_env
     batch_size = job_config["batch_size"]
     ttl_sec = job_config["ttl_sec"]
     run_key = job_config["run_key"]
 
-    tmp_prefix = f"{app_name}:{deploy_env}:{TMP}:{run_key}:{slot}:{interval_sec}"
+    tmp_prefix = f"{redis_key_prefix}:{TMP}:{run_key}:{slot}:{interval_sec}"
 
-    redis_snapshot_key = f"{app_name}:{deploy_env}:{SNAP}:{run_key}" # 실사용 snapshot 목록
+    redis_snapshot_key = f"{redis_key_prefix}:{SNAP}:{run_key}" # 실사용 snapshot 목록
     tmp_snapshot_key = f"{tmp_prefix}:{SNAP}"
 
-    redis_bucket_key = f"{app_name}:{deploy_env}:{BUCKET}:{run_key}" # 실사용 개별 bucket key prefix
+    redis_bucket_key = f"{redis_key_prefix}:{BUCKET}:{run_key}" # 실사용 개별 bucket key prefix
     tmp_bucket_key = f"{tmp_prefix}:{BUCKET}"
 
     redis_bucket_index_key = f"{redis_bucket_key}:{INDEX}" # 실사용 bucket key set 목록
     tmp_bucket_index_key = f"{tmp_bucket_key}:{INDEX}"
 
-    lock_key = f"{app_name}:{deploy_env}:{LOCK}:{run_key}:{slot}:{interval_sec}"
-    meta_key = f"{app_name}:{deploy_env}:{META}:{run_key}"
+    lock_key = f"{redis_key_prefix}:{LOCK}:{run_key}:{slot}:{interval_sec}"
+    meta_key = f"{redis_key_prefix}:{META}:{run_key}"
 
     token = try_acquire_lock(
         ctx.redis_client,

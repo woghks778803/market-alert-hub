@@ -3,9 +3,10 @@ from functools import cached_property
 
 from app.core import dto as CoreDTO
 from app.domain.shared.async_uow import AsyncUnitOfWork
-from app.domain import MarketPort, AlertPort, ThrottlePort
+from app.domain import MarketPort, AlertPort, ThrottlePort, OutboxPort
 
 from .alert_service import AlertService
+from .outbox_service import OutboxService
 
 class AsyncServiceFactory:
     def __init__(
@@ -18,6 +19,7 @@ class AsyncServiceFactory:
         alert_snapshot: Callable[[], AlertPort.AsyncAlertSnapshot],
         alert_bucket: Callable[[], AlertPort.AsyncAlertBucket],
         alert_event: Callable[[], AlertPort.AsyncAlertEvent],
+        outbox_event: Callable[[], OutboxPort.AsyncOutboxEvent],
         cooldown: Callable[[], ThrottlePort.AsyncCooldown],
     ) -> None:
         self._uow = uow
@@ -27,6 +29,7 @@ class AsyncServiceFactory:
         self._alert_snapshot = alert_snapshot
         self._alert_bucket = alert_bucket
         self._alert_event = alert_event
+        self._outbox_event = outbox_event
         self._cooldown = cooldown
 
     @property
@@ -58,6 +61,10 @@ class AsyncServiceFactory:
         return self._alert_event()
 
     @cached_property
+    def outbox_event(self):
+        return self._outbox_event()
+
+    @cached_property
     def cooldown(self):
         return self._cooldown()
 
@@ -68,4 +75,11 @@ class AsyncServiceFactory:
             alert_event=self.alert_event,
             alert_snapshot=self.alert_snapshot,
             alert_bucket=self.alert_bucket,
+        )
+
+    @cached_property
+    def outboxs(self) -> OutboxService:
+        return OutboxService(
+            uow_factory=self._uow,
+            outbox_event=self.outbox_event,
         )
