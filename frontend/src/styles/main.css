@@ -109,9 +109,14 @@ html.dark {
 }
 
 .app-container {
+  width: 100%;
   max-width: 960px;
+  margin: 0 auto;
   padding: 16px;
-  background: linear-gradient(180deg, var(--bg-container) 0%, var(--bg-container-soft) 100%);
+  box-sizing: border-box;
+  background: linear-gradient(180deg,
+      var(--bg-container) 0%,
+      var(--bg-container-soft) 100%);
 }
 
 .app-main {

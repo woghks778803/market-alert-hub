@@ -10,7 +10,7 @@
 
       <v-tab :to="{ name: 'Logs' }"> 기록 </v-tab>
     </v-tabs>
-  </div>
 
-  <router-view />
+    <router-view />
+  </div>
 </template>
