@@ -1,10 +1,8 @@
 from fastapi import (
     APIRouter,
+    Response,
     Depends,
     Security,
-    Cookie,
-    Response,
-    Request,
     Body
 )
 
@@ -90,6 +88,7 @@ def change_user_setting(
     ),
 )
 def register_channel(
+    response: Response,
     payload: UserSchema.UserChannelIn,
     user: AuthSchema.CurrentUser = Security(get_current_user),
     svcs: ServiceFactory = Depends(get_services),
@@ -101,7 +100,11 @@ def register_channel(
         config=payload.config,
     )
 
-    return created(result, request_id=meta.request_id)
+    return created(
+        result, 
+        response=response,
+        request_id=meta.request_id
+    )
 
 @router.delete(
     "/channel",

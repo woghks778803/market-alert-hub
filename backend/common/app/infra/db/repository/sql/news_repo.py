@@ -1,4 +1,4 @@
-from typing import cast, Sequence
+from typing import Sequence, Any
 from datetime import datetime
 from sqlalchemy.engine import CursorResult
 from sqlalchemy import update, insert, select, and_, or_, asc, desc, func, tuple_
@@ -329,7 +329,7 @@ class SqlNewsRepo(NewsRepo):
 
     def add_news_item_stats(
         self,
-        rows: list[NewsDTO.NewsItemTranslationCreate],
+        rows: list[NewsDTO.NewsItemStatCreate],
         *,
         chunk_size: int = 1000,
     ) -> None:
@@ -431,7 +431,7 @@ class SqlNewsRepo(NewsRepo):
         failed_at: datetime | None = None,
         deleted_is_null: bool = True,
     ) -> None: 
-        values = {
+        values: dict[str, Any] = {
             "status": status,
         }
 

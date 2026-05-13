@@ -231,7 +231,7 @@ class SymbolInfo:
     base: str
     quote: str
 
-    tick_size: str | None = None
+    tick_size: Decimal | None = None
     price_precision: int | None = None
     qty_precision: int | None = None
-    min_notional: str | None = None
+    min_notional: Decimal | None = None

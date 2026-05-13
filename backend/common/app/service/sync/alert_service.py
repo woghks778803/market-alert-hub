@@ -125,6 +125,7 @@ class AlertService:
         if cursor:
             decode_cursor = AlertRule.decode_alert_log_cursor(cursor)
 
+
         with self._uow_factory() as uow:
             rows = uow.alerts.list_alert_event_by_filter(
                 user_id=user_id,
@@ -228,16 +229,13 @@ class AlertService:
                     # TODO: 추후 추가 개발시 고정값 해제
                     timezone="UTC", 
 
-                    # timeframe=timeframe,
-                    # period=period,
                     params=params,
 
                     throttle_seconds=throttle_seconds,
+                    is_once=is_once,
 
                     valid_from=valid_from if use_validity else None,
                     valid_to=valid_to if use_validity else None,
-
-                    is_once=is_once,
                 )
             )
 

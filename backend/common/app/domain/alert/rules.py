@@ -5,8 +5,9 @@ from typing import Any
 from decimal import Decimal, InvalidOperation
 
 from app.core.util.serialization import json_safe
-from app.core.constants import AlertSort, AlertStatus, AlertEventStatus, AlertFormType, IndicatorType, DirectionType
+from app.core.constants import AlertSort, AlertStatus, AlertFormType
 import app.domain.alert.dto as AlertDTO
+import app.domain.alert.ports as AlertPort
 
 MAX_ARCHIVED_ALERTS_PER_USER = 200
 MAX_NON_ARCHIVED_ALERTS_PER_USER = 30
@@ -50,10 +51,10 @@ def decode_alert_log_cursor(cursor: str) -> AlertDTO.AlertLogListCursor:
         ),
     )
 
-def make_alert_cursor(*, sort: AlertSort, item) -> str:
+def make_alert_cursor(*, sort: AlertSort, item: AlertDTO.AlertSimple) -> str:
     payload = {
         "sort": sort.value,
-        "alert_id": item.alert_id,
+        "alert_id": item.id,
     }
 
     if sort == AlertSort.RECENT_CREATED:
@@ -72,7 +73,7 @@ def make_alert_cursor(*, sort: AlertSort, item) -> str:
     raw = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
     return base64.urlsafe_b64encode(raw.encode()).decode()
 
-def make_alert_log_cursor(*, item) -> str: 
+def make_alert_log_cursor(*, item: AlertDTO.AlertLog) -> str: 
     cursor_at = item.detected_at
 
     payload = {
@@ -143,7 +144,7 @@ def alert_snapshot_to_payload(
 
 class AlertMessageBuilder:
     def __init__(self):
-        self._form_builders = {
+        self._form_builders: dict[str, AlertPort.MessageBuilder] = {
             AlertFormType.THRESHOLD.value: ThresholdMessageBuilder(),
             AlertFormType.RANGE.value: RangeMessageBuilder(),
             AlertFormType.PERCENT.value: PercentMessageBuilder(),
@@ -151,7 +152,7 @@ class AlertMessageBuilder:
             AlertFormType.BAND.value: BandMessageBuilder(),
             AlertFormType.PATTERN.value: PatternMessageBuilder(),
         }
-        self._default_builder = DefaultMessageBuilder()
+        self._default_builder: AlertPort.MessageBuilder = DefaultMessageBuilder()
 
     def build(
         self,
@@ -162,11 +163,10 @@ class AlertMessageBuilder:
     ) -> AlertDTO.AlertMessageContent:
         title = self._make_title(context)
 
-        form_type = str(context.get("form_type") or "")
+        form_type_value = context.get("form_type")
+        form_type = form_type_value if isinstance(form_type_value, str) else ""
         
         builder = self._form_builders.get(form_type, self._default_builder)
-
-        trigger_value
 
         body = builder.build_body(
             context=context,
@@ -257,7 +257,7 @@ class AlertMessageBuildHelper:
 
         return text
 
-class ThresholdMessageBuilder:
+class ThresholdMessageBuilder(AlertPort.MessageBuilder):
     def build_body(self, *, context: dict, trigger_value) -> str:
         body = AlertMessageBuildHelper.make_base_body(context)
 
@@ -273,7 +273,7 @@ class ThresholdMessageBuilder:
 
         return AlertMessageBuildHelper.append_parts(body, parts)
 
-class RangeMessageBuilder:
+class RangeMessageBuilder(AlertPort.MessageBuilder):
     def build_body(self, *, context: dict, trigger_value) -> str:
         body = AlertMessageBuildHelper.make_base_body(context)
 
@@ -292,7 +292,7 @@ class RangeMessageBuilder:
 
         return AlertMessageBuildHelper.append_parts(body, parts)
 
-class PercentMessageBuilder:
+class PercentMessageBuilder(AlertPort.MessageBuilder):
     def build_body(self, *, context: dict, trigger_value) -> str:
         body = AlertMessageBuildHelper.make_base_body(context)
 
@@ -308,7 +308,7 @@ class PercentMessageBuilder:
 
         return AlertMessageBuildHelper.append_parts(body, parts)
 
-class CrossMessageBuilder:
+class CrossMessageBuilder(AlertPort.MessageBuilder):
     def build_body(self, *, context: dict, trigger_value) -> str:
         body = AlertMessageBuildHelper.make_base_body(context)
 
@@ -327,7 +327,7 @@ class CrossMessageBuilder:
 
         return AlertMessageBuildHelper.append_parts(body, parts)
 
-class BandMessageBuilder:
+class BandMessageBuilder(AlertPort.MessageBuilder):
     def build_body(self, *, context: dict, trigger_value) -> str:
         body = AlertMessageBuildHelper.make_base_body(context)
 
@@ -346,7 +346,7 @@ class BandMessageBuilder:
 
         return AlertMessageBuildHelper.append_parts(body, parts)
 
-class PatternMessageBuilder:
+class PatternMessageBuilder(AlertPort.MessageBuilder):
     def build_body(self, *, context: dict, trigger_value) -> str:
         body = AlertMessageBuildHelper.make_base_body(context)
 
@@ -362,7 +362,7 @@ class PatternMessageBuilder:
 
         return AlertMessageBuildHelper.append_parts(body, parts)
 
-class DefaultMessageBuilder:
+class DefaultMessageBuilder(AlertPort.MessageBuilder):
     def build_body(self, *, context: dict, trigger_value) -> str:
         body = AlertMessageBuildHelper.make_base_body(context)
 

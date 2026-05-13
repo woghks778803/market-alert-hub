@@ -47,6 +47,8 @@ class SupportService:
 
             ok_rate = True
             if user_id is None:
+                if client_ip is None:
+                    return row # 타입 체커가 이전 분기까지 추적해서 narrowing 하지 못해서 타입 체커용 분기를 하나 더 넣음 
                 ok_rate = self._cooldown.acquire_notice_view_rate(client_ip, ip_rate_sec)
 
             # 사용자 조회 체크, ip 요청 체크

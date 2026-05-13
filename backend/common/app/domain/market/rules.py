@@ -160,11 +160,11 @@ def aggregate(
     # rows: 1m/1h/1d 원시 캔들. 속성: exi_id, ts_open, open/high/low/close/volume 가정
     buckets: dict[tuple[int, datetime], dict] = {}
     for r in rows:
-        key = (r.id, _floor(r.ts_open, to))
+        key = (r.exchange_instrument_id, _floor(r.ts_open, to))
         b = buckets.get(key)
         if b is None:
             buckets[key] = {
-                "exi": r.id,
+                "exi": r.exchange_instrument_id,
                 "ts": key[1],
                 "high": r.high,
                 "low": r.low,

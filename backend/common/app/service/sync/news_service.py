@@ -110,6 +110,9 @@ class NewsService:
             # rss source 검색
             news_feed = uow.newses.get_news_feed_by_id(rss_source_id=rss_source_id)
 
+            if news_feed is None:
+                raise NotFoundError("News Feed not found", target="news_feed")
+
             # news_feed 데이터 가져오기
             result: NewsDTO.NewsFeedFetchResult = self._news_feed.fetch(
                 request=NewsDTO.NewsFeedFetchRequest(
@@ -205,8 +208,6 @@ class NewsService:
             # print("created_news_items", created_news_items)
 
             # 새로 들어간 item만 news_item_translations PENDING 생성
-            created_stat_count = 0
-            created_translation_count = 0
             if created_news_items:
                 uow.newses.add_news_item_stats(
                     rows=[

@@ -26,6 +26,7 @@ class AlertSimple:
     
     valid_from: datetime | None
     valid_to: datetime | None
+    created_at: datetime
     updated_at: datetime
 
     exchange_instrument_id: int
@@ -41,8 +42,8 @@ class AlertLog:
     alert_id: int
     title: str
     body: str
-    exchange_code: str
-    exchange_symbol: str
+    exchange_code: str | None
+    exchange_symbol: str | None
     status: AlertEventStatus
     detected_at: datetime
 

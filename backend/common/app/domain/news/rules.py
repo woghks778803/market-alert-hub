@@ -18,7 +18,7 @@ def decode_news_post_cursor(cursor: str) -> NewsDTO.NewsPostListCursor:
         ),
     )
 
-def make_news_post_cursor(*, sort: NewsPostsort, item) -> str:
+def make_news_post_cursor(*, sort: NewsPostsort, item: NewsDTO.NewsPost) -> str:
     cursor_at = item.published_at if item.published_at else item.fetched_at
 
     payload = {

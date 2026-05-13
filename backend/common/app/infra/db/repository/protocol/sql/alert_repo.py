@@ -19,7 +19,7 @@ class AlertRepo(Protocol):
         status: AlertStatus | None = None,
         deleted_is_null: bool = True,
         archived_only: bool = False,
-    ) -> int | None: ...
+    ) -> int: ...
 
     def get_by_id(self, alert_id: int, user_id: int): ...
 
@@ -64,7 +64,7 @@ class AlertRepo(Protocol):
         *,
         user_id: int,
         status: AlertEventStatus | None,
-        cursor: AlertDTO.AlertListCursor,
+        cursor: AlertDTO.AlertLogListCursor | None,
         limit: int,
     ) -> Sequence[AlertDTO.AlertEvent]: ...
 
@@ -94,6 +94,7 @@ class AlertRepo(Protocol):
         self,
         *,
         alert_delivery_ids: Sequence[int],
+        status: AlertDeliveryStatus,
     ) -> Sequence[AlertDTO.AlertDeliveryTarget]: ...
 
     def list_user_channel_by_filter(
@@ -120,7 +121,7 @@ class AlertRepo(Protocol):
         user_id: int,
         status: AlertStatus | None,
         sort: AlertSort,
-        cursor: AlertDTO.AlertListCursor,
+        cursor: AlertDTO.AlertListCursor | None,
         limit: int,
         archived_only: bool = False,
         deleted_is_null: bool = True,

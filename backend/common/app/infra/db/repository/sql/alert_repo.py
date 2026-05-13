@@ -1,6 +1,7 @@
-from typing import Sequence
+from typing import Sequence, cast
 from datetime import datetime
 from sqlalchemy.orm import Session as DbSession
+from sqlalchemy.engine import CursorResult
 from sqlalchemy import update, insert, select, and_, or_, asc, desc, func, case
 
 from app.core.util.datetime import utcnow, get_days_ago
@@ -77,7 +78,7 @@ class SqlAlertRepo(AlertRepo):
         status: AlertStatus | None = None,
         archived_only: bool = False,
         deleted_is_null: bool = True,
-    ) -> int | None:
+    ) -> int:
         
         stmt = select(func.count(a.id)).where(
             a.user_id == user_id,
@@ -93,7 +94,9 @@ class SqlAlertRepo(AlertRepo):
         if deleted_is_null:
             stmt = stmt.where(a.deleted_at.is_(None))
 
-        return self._db.execute(stmt).scalar()
+        result = self._db.execute(stmt).scalar()
+
+        return result if result else 0
 
     def get_by_id(
         self,
@@ -337,7 +340,7 @@ class SqlAlertRepo(AlertRepo):
         *,
         user_id: int,
         status: AlertEventStatus | None,
-        cursor: AlertDTO.AlertListCursor,
+        cursor: AlertDTO.AlertLogListCursor | None,
         limit: int,
     ) -> Sequence[AlertDTO.AlertEvent]:
         stmt = (
@@ -599,7 +602,7 @@ class SqlAlertRepo(AlertRepo):
         user_id: int,
         status: AlertStatus | None,
         sort: AlertSort | None,
-        cursor: AlertDTO.AlertListCursor,
+        cursor: AlertDTO.AlertListCursor | None,
         limit: int,
         archived_only: bool = False,
         deleted_is_null: bool = True,
@@ -647,6 +650,7 @@ class SqlAlertRepo(AlertRepo):
                 a.is_once.label("is_once"),
                 a.valid_from.label("valid_from"),
                 a.valid_to.label("valid_to"),
+                a.created_at.label("created_at"),
                 a.updated_at.label("updated_at"),
 
                 exchange_instrument.c.ei_id.label("exchange_instrument_id"),
@@ -734,7 +738,7 @@ class SqlAlertRepo(AlertRepo):
 
             stmt = insert(ad).values(values)
 
-            result = self._db.execute(stmt)
+            result = cast(CursorResult, self._db.execute(stmt))
 
             total += int(result.rowcount or 0)
 
@@ -848,8 +852,8 @@ class SqlAlertRepo(AlertRepo):
                 .values(**values)
             )
 
-            executed = self._db.execute(stmt)
-            total += int(executed.rowcount or 0)
+            result = cast(CursorResult, self._db.execute(stmt))
+            total += int(result.rowcount or 0)
 
         return total
 

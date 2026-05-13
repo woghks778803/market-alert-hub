@@ -1,7 +1,7 @@
-from typing import Sequence
 from sqlalchemy import update, insert, select, and_, or_, asc, desc, func, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.domain import OutboxDTO
+from app.domain.shared.errors import ValidationAppError
 from app.infra.db.model import OutboxModel
 from app.infra.db.repository.common.outbox import to_outbox_where_mapping, to_outbox_values_mapping
 from app.infra.db.repository.protocol.aio.outbox_repo import OutboxRepo

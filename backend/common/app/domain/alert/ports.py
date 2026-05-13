@@ -1,5 +1,15 @@
 from typing import Protocol, Any
+from decimal import Decimal
 from collections.abc import Collection, Mapping
+
+class MessageBuilder(Protocol):
+    def build_body(
+        self,
+        *,
+        context: dict[str, object],
+        trigger_value: Decimal | None,
+    ) -> str:
+        raise NotImplementedError
 
 class AlertSnapshot(Protocol):
     def upsert_alert(self, alert_id: int, payload: dict[str, Any], ttl_sec: int | None = None) -> None:
@@ -29,7 +39,16 @@ class AlertBucket(Protocol):
     ) -> None:
         raise NotImplementedError
 
-    def get_price_bucket_key(exchange_code: str, exchange_symbol: str) -> str:
+    def get_alert_bucket_key(
+        self,
+        *,
+        indicator: str,
+        exchange_code: str,
+        exchange_symbol: str,
+        form_type: str,
+        scope: str,
+        direction: str,
+    ) -> str:
         raise NotImplementedError
 
 class AsyncAlertSnapshot(Protocol):

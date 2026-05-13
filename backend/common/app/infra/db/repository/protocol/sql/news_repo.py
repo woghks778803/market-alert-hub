@@ -58,7 +58,7 @@ class NewsRepo(Protocol):
 
     def add_news_item_stats(
         self,
-        rows: list[NewsDTO.NewsItemTranslationCreate],
+        rows: list[NewsDTO.NewsItemStatCreate],
         *,
         chunk_size: int = 1000,
     ) -> int: ...
