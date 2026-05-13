@@ -1,7 +1,8 @@
 {
   "name": "Market Alert Hub (compose)",
   "dockerComposeFile": [
-    "../ops/dev/docker-compose.base.yml"
+    "../ops/docker-compose.base.yml",
+    "../ops/local/docker-compose.local.yml"
   ],
   "service": "api",
   "runServices": [

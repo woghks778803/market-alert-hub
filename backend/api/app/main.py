@@ -72,19 +72,30 @@ def _install_openapi_with_bearer(app: FastAPI) -> None:
 
 def create_app() -> FastAPI:
     service_name = api_ctx.config.service_name
-    if api_ctx.config.deploy_env == DeploymentEnvironment.PROD:
-        setup_logging(level=logging.INFO, service=service_name)
-    else:
-        setup_logging(level=logging.DEBUG, service=service_name)
+    deploy_env = api_ctx.config.deploy_env
+
+    sentry_dsn = api_ctx.config.sentry_dsn
+    sample_rate = api_ctx.config.sample_rate
+    traces_sample_rate = api_ctx.config.traces_sample_rate
+
+    cors_allow_origins = api_ctx.config.cors_allow_origins
+
+    is_prod = deploy_env == DeploymentEnvironment.PROD
+    is_local = deploy_env == DeploymentEnvironment.LOCAL
+    
+    setup_logging(
+        level=logging.INFO if is_prod else logging.DEBUG,
+        service=service_name,
+    )
 
     app = FastAPI(
         title="Market Alert Hub API",
         description="실시간 크립토 알림 서비스의 백엔드 API",
         version="0.1.0",
         # openapi_tags=TAGS_METADATA,
-        docs_url="/api/docs",
-        redoc_url="/api/redoc",
-        openapi_url="/api/openapi.json",
+        docs_url="/api/docs" if is_local else None,
+        redoc_url=None, # "/api/redoc"
+        openapi_url="/api/openapi.json" if is_local else None,
         swagger_ui_parameters={
             "docExpansion": "none",
             "defaultModelsExpandDepth": -1,
@@ -100,11 +111,11 @@ def create_app() -> FastAPI:
     app.state.candle_queue = asyncio.Queue()
 
     sentry_sdk.init(
-        dsn=api_ctx.config.sentry_dsn,
+        dsn=sentry_dsn,
         integrations=[FastApiIntegration()],
-        environment=api_ctx.config.deploy_env,
-        sample_rate=api_ctx.config.sample_rate,
-        traces_sample_rate=api_ctx.config.traces_sample_rate,
+        environment=deploy_env,
+        sample_rate=sample_rate,
+        traces_sample_rate=traces_sample_rate,
         send_default_pii=True,
         # enable_logs=True,
     )
@@ -117,7 +128,7 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestIdMiddleware)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=api_ctx.config.cors_allow_origins,  # TODO: 배포 시 도메인으로 제한
+        allow_origins=cors_allow_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
