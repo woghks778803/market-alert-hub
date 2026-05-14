@@ -4,7 +4,7 @@
     overlay
   />
 
-  <div class="alert-container">
+  <div>
     <div class="alert-summary">
       <div>
         <div class="alert-summary-title">최근 알림 기록</div>

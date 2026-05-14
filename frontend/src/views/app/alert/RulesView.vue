@@ -4,7 +4,7 @@
     overlay
   />
 
-  <div class="alert-container">
+  <div>
     <RuleSummary />
 
     <RuleFilter

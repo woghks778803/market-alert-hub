@@ -1,5 +1,8 @@
 <template>
-  <v-card class="news-post-card">
+  <v-card 
+    class="news-post-card"
+    @click.stop="goDetail"
+  >
     <div class="news-post-card__top">
       <div class="news-post-source">
         <span class="news-post-source__dot"></span>
@@ -36,7 +39,11 @@
 import type { NewsPostDto } from '@/services/news.types'
 import { formatDateTime } from '@/utils/format'
 
-defineProps<{
+const props = defineProps<{
   post: NewsPostDto
 }>()
+
+function goDetail() {
+  window.location.href = props.post.link
+}
 </script>

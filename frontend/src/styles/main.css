@@ -112,16 +112,8 @@ html.dark {
   width: 100%;
   max-width: 960px;
   margin: 0 auto;
-  padding: 16px;
+  padding: 4px;
   box-sizing: border-box;
-  background: linear-gradient(180deg,
-      var(--bg-container) 0%,
-      var(--bg-container-soft) 100%);
-}
-
-.app-main {
-  overflow-y: auto;
-  height: calc(100vh - 120px);
 }
 
 .app-card {
@@ -1012,12 +1004,6 @@ html.dark {
 /* =========================
    Alert Rules
 ========================= */
-
-.alert-container {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
 
 .alert-summary {
   display: flex;

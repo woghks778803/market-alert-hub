@@ -4,7 +4,7 @@
     overlay
   />
 
-  <div class="alert-container">
+  <div>
     <v-infinite-scroll
       :key="currentAlertListKey"
       class="alert-rule-list"

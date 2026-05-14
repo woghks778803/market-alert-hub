@@ -184,6 +184,7 @@ class SqlAlertRepo(AlertRepo):
                 a.is_once.label("is_once"),
                 a.valid_from.label("valid_from"),
                 a.valid_to.label("valid_to"),
+                a.created_at.label("created_at"),
                 a.updated_at.label("updated_at"),
 
                 exchange_instrument.c.ei_id.label("exchange_instrument_id"),
