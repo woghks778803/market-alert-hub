@@ -1,12 +1,6 @@
 import { vuetify } from '@/plugins/vuetify'
-
-enum BridgeType {
-  THEME = 'THEME',
-  KEEP_SCREEN_ON = 'KEEP_SCREEN_ON',
-  VIBRATE = 'VIBRATE',
-  AUTH_LOGIN = 'AUTH_LOGIN',
-  AUTH_LOGOUT = 'AUTH_LOGOUT',
-}
+import { postBridgeMessage } from '@/platform/appBridge'
+import { BridgeType } from '@/types/bridge.types'
 
 export enum ThemeMode {
   SYSTEM = 'system',
@@ -26,16 +20,6 @@ export function useAppSettings() {
     vibrateEnabled: 'app.vibrate_enabled',
     keepScreenOnEnabled: 'app.keep_screen_on_enabled',
   } as const
-
-  function postBridgeMessage(type: BridgeType, payload: Record<string, unknown>): void {
-    // console.log("postBridgeMessage", type, payload)
-    window.AppBridge?.postMessage(
-      JSON.stringify({
-        type,
-        payload,
-      })
-    )
-  }
 
   function getBoolean(key: string, fallback = false): boolean {
     const raw = localStorage.getItem(key)

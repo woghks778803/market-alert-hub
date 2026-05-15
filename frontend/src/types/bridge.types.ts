@@ -1,0 +1,8 @@
+
+export enum BridgeType {
+  THEME = 'THEME',
+  KEEP_SCREEN_ON = 'KEEP_SCREEN_ON',
+  VIBRATE = 'VIBRATE',
+  AUTH_LOGIN = 'AUTH_LOGIN',
+  AUTH_LOGOUT = 'AUTH_LOGOUT',
+}

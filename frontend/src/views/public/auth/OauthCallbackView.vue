@@ -57,16 +57,10 @@ import { useRoute, useRouter, type LocationQueryValue } from 'vue-router'
 import AppCenterCard from '@/components/common/AppCenterCard.vue'
 import { getOauthError } from '@/composables/error/authError.message'
 import { useMode } from '@/composables/common/useMode'
-import { useAsyncAction } from '@/composables/common/useAsyncAction'
-import { useAppSettings } from '@/composables/common/useAppSettings'
-import { useAuthStore } from '@/stores/auth.store'
 
 const router = useRouter()
 const route = useRoute()
-const authStore = useAuthStore()
 const { mode, setMode } = useMode()
-const { run } = useAsyncAction()
-const { applyLogin, applyLogout } = useAppSettings()
 const viewMode = computed(() => mode.value)
 const errorMessage = ref<string | null>(null)
 
@@ -79,34 +73,9 @@ const fetchParam = async () => {
   const code = getQueryString(route.query.code)
   const target = getQueryString(route.query.target)
 
-  // const target = Array.isArray(route.query.target)
-  //   ? route.query.target[0]
-  //   : (route.query.target ?? "");
-
-  if (code == 'ok') {
-    setMode('default')
-    resetMessages()
-
-    try {
-      await run(async () => {
-        await authStore.reissue()
-        applyLogin()
-        await router.replace({ name: 'VerifyEmail' })
-      })
-    } catch {
-      authStore.clearStatus()
-      applyLogout()
-      router.replace({ name: 'OauthCallback', query: { code: 'internal_error' } })
-    }
-  } else {
-    setMode('fail')
-    const result = getOauthError({ code, target })
-    errorMessage.value = result
-  }
-}
-
-function resetMessages() {
-  errorMessage.value = null
+  setMode('fail')
+  const result = getOauthError({ code, target })
+  errorMessage.value = result
 }
 
 function retry() {

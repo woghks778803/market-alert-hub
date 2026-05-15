@@ -1,5 +1,8 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 
+import { postBridgeMessage } from '@/platform/appBridge'
+import { BridgeType } from '@/types/bridge.types'
+
 import PublicLayout from '@/layouts/PublicLayout.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 
@@ -10,6 +13,7 @@ import { appRoutes } from '@/routes/modules/app.routes'
 import { systemRoutes } from '@/routes/modules/system.routes'
 import type { StatusDto } from '@/services/auth.types'
 import { useAuthStore } from '@/stores/auth.store'
+
 
 // NOTE: 여긴 "조립"만 한다.
 // - 레이아웃(공개/앱) 트리 만들고
@@ -84,8 +88,13 @@ router.beforeEach(async (to, _from, next) => {
     try {
       status = await authStore.reissue()
       authState = getAuthState(status)
+
+      if (authState !== 'guest') {
+        postBridgeMessage(BridgeType.AUTH_LOGIN, {})
+      }
     } catch {
       authStore.clearStatus()
+      postBridgeMessage(BridgeType.AUTH_LOGOUT, {})
     }
   }
 
