@@ -8,6 +8,11 @@ export enum ThemeMode {
   DARK = 'dark',
 }
 
+export enum SoundMode {
+  DEFAULT = 'default',
+  SILENT = 'silent',
+}
+
 export function useAppSettings() {
   const ThemeLabel: Record<ThemeMode, string> = {
     [ThemeMode.SYSTEM]: '시스템',
@@ -15,8 +20,14 @@ export function useAppSettings() {
     [ThemeMode.DARK]: '다크',
   }
 
+  const NotificationSoundLabel: Record<SoundMode, string> = {
+    [SoundMode.DEFAULT]: '기본',
+    [SoundMode.SILENT]: '무음',
+  }
+
   const STORAGE_KEYS = {
     theme: 'app.theme',
+    notificationSound: 'app.notification_sound',
     vibrateEnabled: 'app.vibrate_enabled',
     keepScreenOnEnabled: 'app.keep_screen_on_enabled',
   } as const
@@ -53,6 +64,18 @@ export function useAppSettings() {
     return ThemeMode.SYSTEM
   }
 
+  function applyNotificationSound(mode: SoundMode): void {
+    localStorage.setItem(STORAGE_KEYS.notificationSound, mode)
+
+    postBridgeMessage(BridgeType.NOTIFICATION_SOUND, { mode })
+  }
+
+  function getSavedNotificationSound(): SoundMode {
+    const raw = localStorage.getItem(STORAGE_KEYS.notificationSound)
+    if (raw === SoundMode.DEFAULT || raw === SoundMode.SILENT) return raw
+    return SoundMode.DEFAULT
+  }
+
   function applyVibrate(enabled: boolean): void {
     setBoolean(STORAGE_KEYS.vibrateEnabled, enabled)
 
@@ -87,7 +110,6 @@ export function useAppSettings() {
 
   function initAppSettings(): void {
     applyTheme(getSavedTheme())
-    applyVibrate(getSavedVibrateEnabled())
     applyKeepScreenOn(getSavedKeepScreenOnEnabled())
   }
 
@@ -105,15 +127,18 @@ export function useAppSettings() {
 
   return {
     ThemeLabel,
+    NotificationSoundLabel,
 
     applyLogin,
     applyLogout,
     applyTheme,
     getSavedTheme,
-    applyVibrate,
-    getSavedVibrateEnabled,
+    applyNotificationSound,
+    getSavedNotificationSound,
     applyKeepScreenOn,
     getSavedKeepScreenOnEnabled,
+    applyVibrate,
+    getSavedVibrateEnabled,
     initAppSettings,
     watchSystemTheme,
   }

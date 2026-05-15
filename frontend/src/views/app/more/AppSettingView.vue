@@ -24,6 +24,33 @@
   </div>
 
   <div class="app-container">
+    <div class="app-title">알림</div>
+
+    <v-list
+      class="app-card"
+      density="comfortable"
+    >
+      <!-- 알림 사운드 -->
+      <v-list-item title="알림 사운드">
+        <template #append>
+          <v-select
+            :model-value="notificationSound"
+            :items="soundItems"
+            density="compact"
+            variant="outlined"
+            hide-details
+            style="width: 120px"
+            @update:model-value="onChangeNotificationSound"
+          />
+        </template>
+      </v-list-item>
+
+      <!-- <v-divider /> -->
+      <!-- 진동 -->
+    </v-list>
+  </div>
+
+  <div class="app-container">
     <div class="app-title">디바이스</div>
 
     <v-list
@@ -42,55 +69,38 @@
         </template>
       </v-list-item>
 
-      <v-divider />
+      <!-- <v-divider /> -->
 
-      <!-- 진동 -->
-      <v-list-item title="진동">
-        <template #append>
-          <v-switch
-            :model-value="vibration"
-            inset
-            hide-details
-            @update:model-value="onChangeVibration"
-          />
-        </template>
-      </v-list-item>
-
-      <!-- 푸쉬 알림 -->
-      <v-list-item title="푸쉬 알림">
-        <template #append>
-          <v-switch
-            v-model="push"
-            inset
-            hide-details
-          />
-        </template>
-      </v-list-item>
     </v-list>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useAppSettings, ThemeMode } from '@/composables/common/useAppSettings'
+import { useAppSettings, ThemeMode, SoundMode } from '@/composables/common/useAppSettings'
 
 const {
   ThemeLabel,
+  NotificationSoundLabel,
   getSavedTheme,
   getSavedKeepScreenOnEnabled,
-  getSavedVibrateEnabled,
+  getSavedNotificationSound,
   applyTheme,
   applyKeepScreenOn,
-  applyVibrate,
+  applyNotificationSound,
 } = useAppSettings()
 
 const theme = ref(getSavedTheme())
 const keepScreenOn = ref(getSavedKeepScreenOnEnabled())
-const vibration = ref(getSavedVibrateEnabled())
-const push = ref(false)
+const notificationSound = ref(getSavedNotificationSound())
 
 const themeItems = Object.values(ThemeMode).map((value) => ({
   title: ThemeLabel[value],
+  value,
+}))
+
+const soundItems = Object.values(SoundMode).map((value) => ({
+  title: NotificationSoundLabel[value],
   value,
 }))
 
@@ -106,9 +116,9 @@ function onChangeKeepScreenOn(val: boolean | null) {
   applyKeepScreenOn(val)
 }
 
-function onChangeVibration(val: boolean | null) {
+function onChangeNotificationSound(val: SoundMode) {
   if (val == null) return
-  vibration.value = val
-  applyVibrate(val)
+  notificationSound.value = val
+  applyNotificationSound(val)
 }
 </script>
