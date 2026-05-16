@@ -7,6 +7,10 @@
     </v-container>
   </v-main>
 
+  <AppFooter />
+
+  <div class="app-bottom-spacer" />
+
   <v-bottom-navigation
     :model-value="activeTab"
     grow
@@ -56,6 +60,7 @@
 
 <script setup lang="ts">
 import AppHeader from '@/components/common/AppHeader.vue'
+import AppFooter from '@/components/common/AppFooter.vue'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 

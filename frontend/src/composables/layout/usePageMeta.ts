@@ -11,6 +11,7 @@ export function usePageMeta() {
   })
 
   const hideHeader = computed(() => route.meta.hideHeader === true)
+  const hideFooter = computed(() => route.meta.hideFooter === true)
   const showBack = computed(() => route.meta.showBack === true)
 
   const goBack = () => {
@@ -26,6 +27,7 @@ export function usePageMeta() {
     title,
     showBack,
     hideHeader,
+    hideFooter,
     goBack,
   }
 }

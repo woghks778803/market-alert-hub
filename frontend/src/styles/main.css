@@ -1826,6 +1826,80 @@ html.dark .notice-summary-text {
 }
 
 /* =========================
+   Footer
+========================= */
+
+.app-bottom-spacer {
+  height: calc(64px + env(safe-area-inset-bottom));
+  flex-shrink: 0;
+}
+
+.app-footer {
+  margin-top: 48px;
+  padding: 28px 20px calc(28px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-container);
+  color: var(--text-secondary);
+}
+
+.app-footer__inner {
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.app-footer__brand {
+  margin-bottom: 8px;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.app-footer__summary,
+.app-footer__disclaimer {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+
+.app-footer__summary {
+  margin-bottom: 8px;
+}
+
+.app-footer__disclaimer {
+  margin-bottom: 14px;
+  opacity: 0.9;
+}
+
+.app-footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 14px;
+}
+
+.app-footer__links a {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.app-footer__business {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.app-footer__copyright {
+  margin-top: 12px;
+  font-size: 11px;
+}
+
+/* =========================
    Common
 ========================= */
 

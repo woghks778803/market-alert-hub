@@ -15,21 +15,18 @@ import type { StatusDto } from '@/services/auth.types'
 import { useAuthStore } from '@/stores/auth.store'
 
 
-// NOTE: 여긴 "조립"만 한다.
-// - 레이아웃(공개/앱) 트리 만들고
-// - children은 modules에서 가져온다.
 const routes: RouteRecordRaw[] = [
   {
     path: '/auth',
     component: PublicLayout,
     children: authRoutes,
-    meta: { hideHeader: true },
+    meta: { hideFooter: true, hideHeader: true },
   },
   {
     path: '/legal',
     component: PublicLayout,
     children: legalRoutes,
-    meta: { showBack: true },
+    meta: { hideFooter: true, showBack: true },
   },
   {
     path: '/support',
