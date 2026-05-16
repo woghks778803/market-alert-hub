@@ -76,12 +76,12 @@
           density="compact"
           hide-details
           class="terms-check"
-          aria-label="마케팅 정보 수신 동의"
+          aria-label="광고성 정보 수신 동의"
           @update:model-value="syncAllChecked"
         />
         <div class="terms-row__text">
           <div class="terms-row__title">
-            <span class="terms-optional">(선택)</span> 마케팅 정보 수신 동의
+            <span class="terms-optional">(선택)</span> 광고성 정보 수신 동의
           </div>
         </div>
         <v-btn

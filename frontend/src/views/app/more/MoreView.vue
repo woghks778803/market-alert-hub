@@ -94,8 +94,8 @@
       </v-list>
       <v-list lines="one">
         <v-list-item
-          title="마케팅 정보 수신 동의"
-          subtitle="마케팅 정보 수신 및 이용 안내"
+          title="광고성 정보 수신 동의"
+          subtitle="광고성 정보 수신 및 이용 안내"
           append-icon="mdi-chevron-right"
           :to="{ name: 'TermsMarketing' }"
         />

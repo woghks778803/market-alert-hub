@@ -2,6 +2,7 @@
   <v-container>
     <v-sheet
       class="pa-6 pa-md-12 mx-auto markdown-body"
+      width="100%"
       max-width="900"
     >
       <vue-markdown :source="currentContent" />

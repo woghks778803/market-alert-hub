@@ -19,6 +19,6 @@ export const legalRoutes: RouteRecordRaw[] = [
     path: 'marketing',
     name: 'TermsMarketing',
     component: TermsDetailView,
-    meta: { title: '마케팅 정보 수신 동의', type: 'marketing', tab: 'more' },
+    meta: { title: '광고성 정보 수신 동의', type: 'marketing', tab: 'more' },
   },
 ]

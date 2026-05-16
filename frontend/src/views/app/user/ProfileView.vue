@@ -50,7 +50,7 @@
       <div>
         <v-list>
           <v-list-item
-            title="마케팅 수신 동의"
+            title="광고성 수신 동의"
             subtitle="이벤트 및 프로모션 등 광고성 정보"
           >
             <template #append>
