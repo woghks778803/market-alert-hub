@@ -337,7 +337,7 @@ export function useRuleForm(params: UseRuleFormParams) {
 
     form.throttleTimeframe = toThrottleTimeframe(alert.throttleSeconds)
 
-    form.useValidity = alert.validFrom !== null || alert.validTo !== null
+    form.useValidity = alert.validFrom !== '' || alert.validTo !== ''
     form.validFrom = alert.validFrom ?? ''
     form.validTo = alert.validTo ?? ''
 

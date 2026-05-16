@@ -1,28 +1,24 @@
 from datetime import datetime
 from decimal import Decimal
-from pydantic import BaseModel, ConfigDict
 
-_model_cfg = ConfigDict(from_attributes=True, use_enum_values=True)
+from app.api.schema.base import ApiResponseModel, ApiRequestModel
 
 
-class MarketSimpleRead(BaseModel):
+class ExchangeRead(ApiResponseModel):
+    id: int
+    code: str
+    name: str
+
+
+class MarketSimpleRead(ApiResponseModel):
     exchange_instrument_id: int
     exchange_symbol: str
     exchange_name: str
     base_symbol: str
     quote_symbol: str
 
-    model_config = _model_cfg
 
-
-class ExchangeRead(BaseModel):
-    model_config = _model_cfg
-    id: int
-    code: str
-    name: str
-
-
-class MarketRead(BaseModel):
+class MarketRead(ApiResponseModel):
     exchange_instrument_id: int
     exchange_symbol: str
     exchange_code: str
@@ -47,8 +43,7 @@ class MarketRead(BaseModel):
     volume_24h: Decimal | None
 
 
-class CandleRead(BaseModel):
-    model_config = _model_cfg
+class CandleRead(ApiResponseModel):
     exchange_instrument_id: int
     ts_open: datetime
     open: float
@@ -58,13 +53,6 @@ class CandleRead(BaseModel):
     volume: float | None = 0.0
 
 
-class ExchangeInstrumentListItem(BaseModel):
-    id: int
-    exchange_symbol: str
-    base_symbol: str
-    exchange_name: str
-
-
-class CandleIngestResult(BaseModel):
-    id: int
-    created: bool  # True=insert, False=update(when upsert)
+# class CandleIngestResult(BaseModel):
+#     id: int
+#     created: bool  # True=insert, False=update(when upsert)

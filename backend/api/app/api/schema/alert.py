@@ -1,17 +1,12 @@
 from typing import Literal, Any
 from datetime import datetime
 from decimal import Decimal
-from pydantic import BaseModel, ConfigDict
+
 from app.core.constants import AlertEventStatus, AlertStatus, AlertFormType, IndicatorType, DirectionType, ThrottleTimeframe
+from app.api.schema.base import ApiResponseModel, ApiRequestModel
 
-_model_cfg = ConfigDict(from_attributes=True, use_enum_values=True)
 
-class SimpleOk(BaseModel):
-    ok: bool = True
-
-class AlertIn(BaseModel):
-    model_config = _model_cfg
-
+class AlertIn(ApiRequestModel):
     name: str
     exchange_instrument_id: int | None = None
     alert_type_id: int
@@ -28,21 +23,22 @@ class AlertIn(BaseModel):
 
     params: dict[str, Any]
 
-class AlertStatusIn(BaseModel):
-    model_config = _model_cfg
 
+class AlertStatusIn(ApiRequestModel):
     status: AlertStatus
 
-class AlertSummaryRead(BaseModel):
-    model_config = _model_cfg
 
+class SimpleOk(ApiResponseModel):
+    ok: bool = True
+
+
+class AlertSummaryRead(ApiResponseModel):
     total_count: int
     active_count: int
     paused_count: int
 
-class AlertRead(BaseModel):
-    model_config = _model_cfg
 
+class AlertRead(ApiResponseModel):
     id: int
     alert_type_id: int
     name: str
@@ -64,9 +60,8 @@ class AlertRead(BaseModel):
     ei_is_active: bool
     e_is_active: bool
 
-class AlertLogRead(BaseModel):
-    model_config = _model_cfg
 
+class AlertLogRead(ApiResponseModel):
     alert_event_id: int
     alert_id: int
     title: str
@@ -76,7 +71,8 @@ class AlertLogRead(BaseModel):
     status: AlertEventStatus
     detected_at: datetime
 
-class AlertTypeRead(BaseModel):
+
+class AlertTypeRead(ApiResponseModel):
     id: int
     code: str
     name: str
@@ -86,5 +82,4 @@ class AlertTypeRead(BaseModel):
     form_type: AlertFormType
     param_schema: dict
     
-    model_config = _model_cfg
 

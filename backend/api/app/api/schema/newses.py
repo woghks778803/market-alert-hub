@@ -1,13 +1,11 @@
 from datetime import datetime
 from decimal import Decimal
-from pydantic import BaseModel, ConfigDict
+
 from app.core.constants import LanguageCode, TranslationCode
+from app.api.schema.base import ApiResponseModel
 
-_model_cfg = ConfigDict(from_attributes=True, use_enum_values=True)
 
-class PostRead(BaseModel):
-    model_config = _model_cfg
-
+class PostRead(ApiResponseModel):
     news_item_id: int
     title_original: str
     description_original: str | None

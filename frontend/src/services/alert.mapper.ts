@@ -1,3 +1,5 @@
+import { localDateTimeToUtcIso } from '@/utils/time'
+import { formatDateTimeInput } from '@/utils/format'
 import type {
   AlertSummaryInfo,
   AlertInfo,
@@ -46,8 +48,8 @@ export function toAlertDto(data: AlertInfo): AlertDto {
 
     throttleSeconds: data.throttle_seconds,
     isOnce: data.is_once,
-    validFrom: data.valid_from,
-    validTo: data.valid_to,
+    validFrom: formatDateTimeInput(data.valid_from),
+    validTo: formatDateTimeInput(data.valid_to),
     updatedAt: data.updated_at,
 
     exchangeInstrumentId: data.exchange_instrument_id,
@@ -130,8 +132,12 @@ export function toAlertSaveRequest(q: AlertSaveQuery): AlertSaveRequest {
     timezone: q.timezone,
 
     use_validity: q.useValidity,
-    valid_from: q.validFrom,
-    valid_to: q.validTo,
+    valid_from: q.useValidity
+      ? localDateTimeToUtcIso(q.validFrom)
+      : null,
+    valid_to: q.useValidity
+      ? localDateTimeToUtcIso(q.validTo)
+      : null,
 
     params: q.params,
   }

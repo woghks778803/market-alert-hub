@@ -1,16 +1,15 @@
 from datetime import datetime
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import Field
 
-_model_cfg = ConfigDict(from_attributes=True, use_enum_values=True)
+from app.api.schema.base import ApiResponseModel, ApiRequestModel
 
 
-class WatchlistIn(BaseModel):
+class WatchlistIn(ApiRequestModel):
     exchange_instrument_id: int = Field(..., ge=1)
     sort_order: int | None = Field(None, ge=0)
 
 
-class WatchlistItemRead(BaseModel):
-    model_config = _model_cfg
+class WatchlistItemRead(ApiResponseModel):
     id: int
     exchange_instrument_id: int
     sort_order: int

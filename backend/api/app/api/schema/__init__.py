@@ -7,7 +7,7 @@ from . import watchlist as WatchlistSchema
 from . import seed as SeedSchema
 from . import channel as ChannelSchema
 from . import support as SupportSchema
-from . import news as NewsSchema
+from . import newses as NewsSchema
 
 __all__ = [
     "UserSchema", "AuthSchema", "ErrorSchema",
