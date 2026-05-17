@@ -59,8 +59,12 @@
         variant="flat"
         block
         size="large"
-        :loading="loading"
-        :disabled="!isReady || !canSubmit"
+        :loading="emailAction.loading.value"
+        :disabled="
+          !kakaoAction.isReady.value || 
+          !emailAction.isReady.value || 
+          !canSubmit
+        "
       >
         로그인
       </v-btn>
@@ -77,7 +81,11 @@
       block
       size="large"
       variant="flat"
-      :ripple="false"
+      :loading="kakaoAction.loading.value"
+      :disabled="
+        !kakaoAction.isReady.value || 
+        !emailAction.isReady.value
+      "
       @click="onKakaoLogin"
     >
       <v-icon
@@ -120,6 +128,7 @@ import { getLoginError } from '@/composables/error/authError.message'
 import { useAuthStore } from '@/stores/auth.store'
 import { OAuthCode } from '@/services/auth.types'
 
+let kakaoloadTime: ReturnType<typeof setTimeout> | null = null
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
@@ -137,7 +146,8 @@ const {
   onInputChanged,
   onBlurValidate,
 } = useLoginForm()
-const { run, loading, isReady } = useAsyncAction()
+const emailAction = useAsyncAction()
+const kakaoAction = useAsyncAction()
 const { applyLogin } = useAppSettings()
 
 function getNextPath(): string | null {
@@ -148,7 +158,7 @@ function getNextPath(): string | null {
 async function onSubmit() {
   try {
     await handleSubmit(async () => {
-      await run(async () => {
+      await emailAction.run(async () => {
         const authStatus = await authStore.login({
           email: email.value,
           password: password.value,
@@ -189,6 +199,18 @@ function goForgotPassword() {
 }
 
 function onKakaoLogin() {
+  if (!kakaoAction.isReady.value || !emailAction.isReady.value) return
+
+  kakaoAction.loading.value = true
+
+  if (kakaoloadTime)
+      clearTimeout(kakaoloadTime)
+
+  kakaoloadTime = window.setTimeout(() => {
+    kakaoAction.loading.value = false
+    kakaoloadTime = null
+  }, 3000)
+  
   const params = new URLSearchParams({
     provider: OAuthCode.KAKAO,
   })

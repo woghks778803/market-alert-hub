@@ -29,11 +29,13 @@ def ensure_utc(dt: datetime) -> datetime:
     return dt
 
 
-def parse_iso_utc(s: str) -> datetime:
-    if s.endswith("Z"):
-        s = s[:-1]
-        return datetime.fromisoformat(s).replace(tzinfo=timezone.utc)
-    return datetime.fromisoformat(s).astimezone(timezone.utc)
+def parse_iso_utc(value: str) -> datetime:
+    dt = datetime.fromisoformat(value)
+
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+
+    return dt.astimezone(timezone.utc)
 
 
 def get_days_ago(dt: datetime, days: int) -> datetime:
