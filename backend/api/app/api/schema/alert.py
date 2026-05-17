@@ -1,6 +1,7 @@
 from typing import Literal, Any
 from datetime import datetime
 from decimal import Decimal
+from pydantic import AwareDatetime
 
 from app.core.constants import AlertEventStatus, AlertStatus, AlertFormType, IndicatorType, DirectionType, ThrottleTimeframe
 from app.api.schema.base import ApiResponseModel, ApiRequestModel
@@ -18,8 +19,8 @@ class AlertIn(ApiRequestModel):
     timezone: str
 
     use_validity: bool
-    valid_from: datetime | None = None
-    valid_to: datetime | None = None
+    valid_from: AwareDatetime | None = None
+    valid_to: AwareDatetime | None = None
 
     params: dict[str, Any]
 

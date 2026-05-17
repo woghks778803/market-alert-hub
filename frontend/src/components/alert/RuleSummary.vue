@@ -1,7 +1,7 @@
 <template>
   <div class="alert-summary">
     <div class="alert-summary-left">
-      <span class="alert-rule-title">야간 알림 허용</span>
+      <!-- <span class="alert-rule-title">야간 알림 허용</span>
 
       <v-switch
         v-if="me"
@@ -9,7 +9,7 @@
         density="compact"
         hide-details
         @update:model-value="userStore.setQuietHours"
-      />
+      /> -->
     </div>
 
     <div class="alert-summary-right">
@@ -22,10 +22,7 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { useAlertStore } from '@/stores/alert.store'
-import { useUserStore } from '@/stores/user.store'
 
 const alertStore = useAlertStore()
 const { alertSummary } = storeToRefs(alertStore)
-const userStore = useUserStore()
-const { me } = storeToRefs(userStore)
 </script>

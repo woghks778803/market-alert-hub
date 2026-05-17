@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any
 from decimal import Decimal
 
-from app.core.util.datetime import utcnow
+from app.core.util.datetime import utcnow, parse_iso_utc
 from app.core.constants import (
     AlertStatus, 
     ConditionType, 
@@ -293,9 +293,18 @@ def _can_fire_alert(
     alert: dict[str, Any],
     now: datetime,
 ) -> bool:
-    valid_from = alert.get("valid_from")
-    valid_to = alert.get("valid_to")
-    last_fired_at = alert.get("last_fired_at")
+    # TODO:
+    # Redis 알림 스냅샷을 stream processor 메모리에 캐시하고,
+    # 생성·수정·삭제 이벤트 기반으로 동기화하여
+    # 매 틱마다 datetime 파싱 및 Redis 조회가 반복되지 않도록 개선 필요
+
+    valid_from_raw = alert.get("valid_from")
+    valid_to_raw = alert.get("valid_to")
+    last_fired_at_raw = alert.get("last_fired_at")
+
+    valid_from = parse_iso_utc(valid_from_raw) if valid_from_raw else None
+    valid_to = parse_iso_utc(valid_to_raw) if valid_to_raw else None
+    last_fired_at = parse_iso_utc(last_fired_at_raw) if last_fired_at_raw else None
     is_once = alert.get("is_once")
 
     if valid_from is not None and now < valid_from:

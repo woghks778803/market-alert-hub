@@ -67,7 +67,7 @@
       </div>
     </v-card-text>
 
-    <v-card-title>알림</v-card-title>
+    <!-- <v-card-title>알림</v-card-title>
     <v-card-text>
       <div>
         <v-list>
@@ -87,7 +87,7 @@
           </v-list-item>
         </v-list>
       </div>
-    </v-card-text>
+    </v-card-text> -->
 
     <v-card-title>보안</v-card-title>
 
