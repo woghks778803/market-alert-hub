@@ -496,9 +496,7 @@ class AuthService:
             if not email_verification:
                 return urlencode({"code": "not_found", "target": "token"})
 
-            print("email_verification", email_verification)
             if email_verification.status != EmailVerificationStatus.SENT:
-                print("email_verification status", email_verification.status)
                 return urlencode({"code": "validation_error", "target": "status"})
 
             expires_at = ensure_utc(email_verification.expires_at)
@@ -674,40 +672,19 @@ class AuthService:
             uow.commit()
             return {"ok": True}
 
-    def change_password(self, *, user_id: int, current_password: str, new_password: str):
+    def verify_password_reset(self, *, token: str):
         now = utcnow()
+        token_hash = self._hmac.token_hash(token)
         with self._uow_factory() as uow:
-            user = uow.users.get_by_user_id(user_id)
-            if not user:
-                raise AuthError("Invalid credentials", target="user")
-
-            if user.password_hash is None or not self._password.verify_password(
-                current_password, user.password_hash
-            ):
-                raise PermissionError("Invalid credentials", target="user")
-
-            uow.users.update_user_password_hash(
-                id=user.id, password_hash=self._password.hash_password(new_password)
+            password_reset = uow.users.get_password_reset_by_token_hash(
+                token_hash, consumed_is_null=True, expires_after=now
             )
+            if not password_reset:
+                raise NotFoundError("Token not found", target="token")
 
-            chp = uow.channels.get_provider_by_code(ChannelCode.FCM.value)
-            if not chp:
-                raise NotFoundError(
-                    "Not found channel provider", target="channel_provider"
-                )
-            if not chp.is_active:
-                raise ValidationAppError(
-                    "Channel provider is not active", target="channel_provider"
-                )
-
-            uow.channels.update_channel_active(
-                channel_provider_id=chp.id,
-                user_id=user.id,
-                is_active=False
-            )
-            uow.sessions.update_session_revoke(user_id=user_id, revoked_at=now)
-
-            uow.commit()
+            expires_at = ensure_utc(password_reset.expires_at)
+            if expires_at <= now:
+                raise ValidationAppError("Token expired", target="token")
 
             return {"ok": True}
 
@@ -763,19 +740,40 @@ class AuthService:
 
             return {"ok": True}
 
-    def verify_password_reset(self, *, token: str):
+    def change_password(self, *, user_id: int, current_password: str, new_password: str):
         now = utcnow()
-        token_hash = self._hmac.token_hash(token)
         with self._uow_factory() as uow:
-            password_reset = uow.users.get_password_reset_by_token_hash(
-                token_hash, consumed_is_null=True, expires_after=now
-            )
-            if not password_reset:
-                raise NotFoundError("Token not found", target="token")
+            user = uow.users.get_by_user_id(user_id)
+            if not user:
+                raise AuthError("Invalid credentials", target="user")
 
-            expires_at = ensure_utc(password_reset.expires_at)
-            if expires_at <= now:
-                raise ValidationAppError("Token expired", target="token")
+            if user.password_hash is None or not self._password.verify_password(
+                current_password, user.password_hash
+            ):
+                raise PermissionError("Invalid credentials", target="user")
+
+            uow.users.update_user_password_hash(
+                id=user.id, password_hash=self._password.hash_password(new_password)
+            )
+
+            chp = uow.channels.get_provider_by_code(ChannelCode.FCM.value)
+            if not chp:
+                raise NotFoundError(
+                    "Not found channel provider", target="channel_provider"
+                )
+            if not chp.is_active:
+                raise ValidationAppError(
+                    "Channel provider is not active", target="channel_provider"
+                )
+
+            uow.channels.update_channel_active(
+                channel_provider_id=chp.id,
+                user_id=user.id,
+                is_active=False
+            )
+            uow.sessions.update_session_revoke(user_id=user_id, revoked_at=now)
+
+            uow.commit()
 
             return {"ok": True}
 

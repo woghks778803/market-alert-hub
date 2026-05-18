@@ -144,6 +144,7 @@ export const appRoutes: RouteRecordRaw[] = [
     name: 'More',
     component: MoreView,
     meta: {
+      hideFooter: true,
       title: '더보기',
       allows: ['verified'],
       showBack: false,

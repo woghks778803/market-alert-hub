@@ -40,7 +40,7 @@
     variant="flat"
     class="mb-4"
   >
-    <v-card-title>고객 지원</v-card-title>
+    <v-card-title >고객 지원</v-card-title>
     <v-card-text class="pt-0">
       <v-list lines="one">
         <v-list-item
@@ -61,9 +61,9 @@
       <v-list lines="one">
         <v-list-item
           title="1:1 문의"
-          subtitle="카카오톡으로 빠른 답변"
+          subtitle="카카오톡으로 문의 및 피드백 보내기"
           append-icon="mdi-chevron-right"
-          :to="{ name: 'Alerts' }"
+          href="https://pf.kakao.com/_nxmqPX"
         />
       </v-list>
     </v-card-text>
@@ -112,7 +112,7 @@
       <v-list lines="one">
         <v-list-item
           title="버전"
-          subtitle="0.0.0"
+          subtitle="1.0.0"
         />
       </v-list>
       <v-btn

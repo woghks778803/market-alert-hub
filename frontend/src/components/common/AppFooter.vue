@@ -31,7 +31,7 @@
 
       <div class="app-footer__business">
         <span>대표자: 정재환</span>
-        <span>문의: alertping.cloud@outlook.com</span>
+        <span>버그 제보 및 피드백: support@alertping.site</span>
       </div>
 
       <div class="app-footer__copyright">

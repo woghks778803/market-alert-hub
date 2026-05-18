@@ -249,7 +249,7 @@ html.dark {
   appearance: none;
   border: 0;
   background: transparent;
-  padding: 6px 10px;
+  padding: 6px 2px;
   font-weight: 700;
   color: rgb(var(--v-theme-primary));
   cursor: pointer;
@@ -1263,6 +1263,47 @@ button.alert-rule-fab {
   font-size: 11px;
   color: var(--text-secondary);
   opacity: 0.9;
+}
+
+/* =========================
+   Support
+========================= */
+
+.support-page {
+  width: 100%;
+  max-width: 640px;
+  padding: 28px 20px 48px;
+}
+
+.support-link-card {
+  transition:
+    background-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.support-link-card:active {
+  background: var(--bg-soft);
+  transform: scale(0.99);
+}
+
+.support-kakao-button {
+  height: 44px;
+  border-radius: 10px;
+  color: #111827 !important;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.support-email {
+  color: rgb(var(--v-theme-primary));
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.support-email:hover {
+  text-decoration: underline;
 }
 
 /* 에디터 HTML 스타일 (공지사항 상세와 통일) */

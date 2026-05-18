@@ -34,7 +34,7 @@
         class="auth-link auth-link--muted"
         @click="goLogin"
       >
-        로그인 화면으로 돌아가기
+        다른 계정으로 로그인
       </button>
     </template>
   </AuthFormCard>

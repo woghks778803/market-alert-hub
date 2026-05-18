@@ -103,6 +103,14 @@
       >
         회원가입
       </button>
+      ·
+      <button
+        class="auth-link"
+        type="button"
+        @click="goSupport"
+      >
+        고객지원
+      </button>
     </div>
 
     <div class="auth-footer">
@@ -192,6 +200,10 @@ async function onSubmit() {
 
 function goSignup() {
   router.push({ name: 'Signup' }).catch(() => {})
+}
+
+function goSupport() {
+  router.push({ name: 'Support' }).catch(() => {})
 }
 
 function goForgotPassword() {
