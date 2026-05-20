@@ -37,4 +37,5 @@ jobs:
       environment: dev
       build_command: npm run build:dev
       app_location: frontend/dist
+      hostname: dev.alertping.site
     secrets: inherit

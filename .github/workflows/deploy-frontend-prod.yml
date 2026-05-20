@@ -1,9 +1,9 @@
 name: Deploy Frontend Prod
 
 on:
-  # push:
-  #   branches:
-  #     - main
+  push:
+    branches:
+      - main
   #   paths:
   #     - frontend/**
   #     - .github/workflows/reusable-deploy-frontend.yml
@@ -37,4 +37,5 @@ jobs:
       environment: prod
       build_command: npm run build:prod
       app_location: frontend/dist
+      hostname: app.alertping.site
     secrets: inherit

@@ -13,6 +13,9 @@ on:
         required: false
         type: string
         default: frontend/dist
+      hostname:
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -71,3 +74,28 @@ jobs:
           action: upload
           app_location: ${{ inputs.app_location }}
           skip_app_build: true
+
+      - name: Purge Cloudflare frontend cache
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          CLOUDFLARE_HOSTNAME: ${{ inputs.hostname }}
+        run: |
+          response=$(curl --silent --show-error --fail-with-body \
+            --request POST \
+            "https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/purge_cache" \
+            --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            --header "Content-Type: application/json" \
+            --data "{
+              \"prefixes\": [
+                \"${CLOUDFLARE_HOSTNAME}/market\",
+                \"${CLOUDFLARE_HOSTNAME}/alert\",
+                \"${CLOUDFLARE_HOSTNAME}/news\",
+                \"${CLOUDFLARE_HOSTNAME}/auth\",
+                \"${CLOUDFLARE_HOSTNAME}/legal\",
+                \"${CLOUDFLARE_HOSTNAME}/support\"
+              ]
+            }")
+
+          echo "$response"
+          echo "$response" | jq -e '.success == true' > /dev/null
