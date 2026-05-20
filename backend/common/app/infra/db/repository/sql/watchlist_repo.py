@@ -1,0 +1,51 @@
+from sqlalchemy import delete, select, func, and_, asc, desc
+from sqlalchemy.orm import aliased, Session as DbSession
+from app.domain import WatchlistDTO
+from app.infra.db.model import (
+    WatchlistItemModel,
+)
+from app.infra.db.repository.protocol.sql.watchlist_repo import WatchlistRepo
+
+
+class SqlWatchlistRepo(WatchlistRepo):
+    def __init__(self, db: DbSession):
+        self._db = db
+
+    def add_item(
+        self, *, user_id: int, exchange_instrument_id: int, sort_order: int
+    ) -> WatchlistDTO.WatchlistItem:
+        row = WatchlistItemModel(
+            user_id=user_id,
+            exchange_instrument_id=exchange_instrument_id,
+            sort_order=sort_order,
+        )
+        self._db.add(row)
+        self._db.flush()  # id 채우기
+        return row.to_dto()
+
+    def get_item_by_filter(
+        self, *, user_id: int, exchange_instrument_id: int
+    ) -> WatchlistDTO.WatchlistItem | None:
+        stmt = select(WatchlistItemModel).where(
+            and_(
+                WatchlistItemModel.user_id == user_id,
+                WatchlistItemModel.exchange_instrument_id == exchange_instrument_id,
+            )
+        )
+
+        model = self._db.execute(stmt).scalar_one_or_none()
+        return model.to_dto() if model else None
+
+    def get_next_sort(self, *, user_id: int) -> int:
+        stmt = select(func.coalesce(func.max(WatchlistItemModel.sort_order), 0)).where(
+            and_(WatchlistItemModel.user_id == user_id)
+        )
+        return int(self._db.execute(stmt).scalar_one()) + 1
+
+    def delete_item(self, *, user_id: int, exchange_instrument_id: int) -> None:
+        stmt = delete(WatchlistItemModel).where(
+            WatchlistItemModel.user_id == user_id,
+            WatchlistItemModel.exchange_instrument_id == exchange_instrument_id,
+        )
+
+        self._db.execute(stmt)

@@ -1,0 +1,231 @@
+name: mah-local
+
+services:
+  gateway:
+    build: 
+      context: ../gateway
+      dockerfile: Dockerfile.local
+    container_name: mah_gateway
+    ports:
+      - "${GATEWAY_PORT:-8080}:80"
+    depends_on:
+      api:
+        condition: service_started
+    env_file:
+      - ./local/env/common.env
+      - ./local/env/gateway.env
+    # gateway는 파이썬 안 쓰면 PYTHONPATH 불필요
+    restart: unless-stopped
+    networks: [ mahnet ]
+    cpus: 0.20
+    mem_limit: 256m
+
+  # dashboard:
+  #   image: eoranged/rq-dashboard:latest
+  #   container_name: mah_dashboard
+  #   ports:
+  #     - "9181:9181"
+  #   environment:
+  #     - RQ_DASHBOARD_REDIS_URL=redis://redis:6379/0
+  #   depends_on:
+  #     - redis
+  #   networks: [ mahnet ]
+
+  api:
+    build:
+      context: ../backend
+      dockerfile: api/Dockerfile.local
+    container_name: mah_api
+    working_dir: /app
+    volumes:
+      - ../backend/api:/app:cached
+      - ../backend/common:/app/common:cached
+      - ./local/secrets/firebase:/app/secrets/firebase:ro
+    command: [ "/app/entrypoint.sh" ]
+    expose: [ "8000" ] # 내부 통신용
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    env_file:
+      - ./local/env/common.env
+      - ./local/env/api.env
+    restart: unless-stopped
+    networks: [ mahnet ]
+    # 개발 중 과부하 방지
+    # cpus: 1
+    # mem_limit: 512m
+    cpus: 2
+    mem_limit: 2048m
+
+  worker:
+    build:
+      context: ../backend
+      dockerfile: worker/Dockerfile.local
+    container_name: mah_worker
+    working_dir: /app
+    volumes:
+      - ../backend/worker:/app:cached
+      - ../backend/common:/app/common:cached
+      - ./local/secrets/firebase:/app/secrets/firebase:ro
+    entrypoint: [ "sh", "/app/entrypoint.sh" ]
+    # CMD는 Dockerfile의 ["python","main.py"] 사용
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    env_file:
+      - ./local/env/common.env
+      - ./local/env/worker.env
+    restart: unless-stopped
+    tty: true # IDE attach 안정
+    stdin_open: true
+    networks: [ mahnet ]
+    cpus: 0.80
+    mem_limit: 384m
+
+  dispatcher:
+    build:
+      context: ../backend
+      dockerfile: dispatcher/Dockerfile.local
+    container_name: mah_dispatcher
+    working_dir: /app
+    volumes:
+      - ../backend/dispatcher:/app:cached
+      - ../backend/common:/app/common:cached
+      - ./local/secrets/firebase:/app/secrets/firebase:ro
+    entrypoint: [ "sh", "/app/entrypoint.sh" ]
+    # CMD는 Dockerfile의 ["python","main.py"] 사용
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    env_file:
+      - ./local/env/common.env
+      - ./local/env/dispatcher.env
+    restart: unless-stopped
+    tty: true # IDE attach 안정
+    stdin_open: true
+    networks: [ mahnet ]
+    cpus: 0.80
+    mem_limit: 384m
+    # cpus: 0.50
+    # mem_limit: 512m
+
+  scheduler:
+    build:
+      context: ../backend
+      dockerfile: scheduler/Dockerfile.local
+    container_name: mah_scheduler
+    working_dir: /app
+    volumes:
+      - ../backend/scheduler:/app:cached
+      - ../backend/common:/app/common:cached
+      - ./local/secrets/firebase:/app/secrets/firebase:ro
+    entrypoint: [ "sh", "/app/entrypoint.sh" ]
+    # CMD는 Dockerfile의 ["python","main.py"] 사용
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    env_file:
+      - ./local/env/common.env
+      - ./local/env/scheduler.env
+    restart: unless-stopped
+    tty: true # IDE attach 안정
+    stdin_open: true
+    networks: [ mahnet ]
+    cpus: 0.80
+    mem_limit: 384m
+    # cpus: 0.50
+    # mem_limit: 512m
+
+  collector:
+    build:
+      context: ../backend
+      dockerfile: collector/Dockerfile.local
+    container_name: mah_collector
+    working_dir: /app
+    volumes:
+      - ../backend/collector:/app:cached
+      - ../backend/common:/app/common:cached
+      - ./local/secrets/firebase:/app/secrets/firebase:ro
+    entrypoint: [ "sh", "/app/entrypoint.sh" ]
+    depends_on:
+      redis: { condition: service_healthy }
+    env_file:
+      - ./local/env/common.env
+      - ./local/env/collector.env
+    restart: unless-stopped
+    networks: [ mahnet ]
+    cpus: 0.80
+    mem_limit: 512m
+
+  stream_processor:
+    build:
+      context: ../backend
+      dockerfile: stream_processor/Dockerfile.local
+    container_name: mah_stream_processor
+    working_dir: /app
+    volumes:
+      - ../backend/stream_processor:/app:cached
+      - ../backend/common:/app/common:cached
+      - ./local/secrets/firebase:/app/secrets/firebase:ro
+    entrypoint: [ "sh", "/app/entrypoint.sh" ]
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    env_file:
+      - ./local/env/common.env
+      - ./local/env/stream_processor.env
+    restart: unless-stopped
+    networks: [ mahnet ]
+    cpus: 0.50
+    mem_limit: 512m
+
+  db:
+    image: mysql:8.4
+    container_name: mah_db
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    env_file:
+      - ./local/env/common.env
+    volumes:
+      - db_data:/var/lib/mysql
+      - ../backend/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ../backend/db/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+    healthcheck:
+      test: [ "CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD --silent" ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    networks: [ mahnet ]
+    cpus: 0.80
+    mem_limit: 512m
+
+  redis:
+    image: redis:7-alpine
+    container_name: mah_redis
+    restart: unless-stopped
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+    ports:
+      - "6379:6379"
+    volumes:
+      - ../backend/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    networks: [ mahnet ]
+    cpus: 0.20
+    mem_limit: 256m
+
+volumes:
+  db_data:
+  redis_data:
+
+
+networks:
+  mahnet:
+    driver: bridge

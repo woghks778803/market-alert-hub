@@ -1,0 +1,58 @@
+name: mah
+
+services:
+  gateway:
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - mahnet
+
+  api:
+    working_dir: /app
+    command: ["sh", "/app/entrypoint.sh"]
+    expose:
+      - "8000"
+    restart: unless-stopped
+    networks:
+      - mahnet
+
+  worker:
+    working_dir: /app
+    entrypoint: ["sh", "/app/entrypoint.sh"]
+    restart: unless-stopped
+    networks:
+      - mahnet
+
+  dispatcher:
+    working_dir: /app
+    entrypoint: ["sh", "/app/entrypoint.sh"]
+    restart: unless-stopped
+    networks:
+      - mahnet
+
+  scheduler:
+    working_dir: /app
+    entrypoint: ["sh", "/app/entrypoint.sh"]
+    restart: unless-stopped
+    networks:
+      - mahnet
+
+  collector:
+    working_dir: /app
+    entrypoint: ["sh", "/app/entrypoint.sh"]
+    restart: unless-stopped
+    networks:
+      - mahnet
+
+  stream_processor:
+    working_dir: /app
+    entrypoint: ["sh", "/app/entrypoint.sh"]
+    restart: unless-stopped
+    networks:
+      - mahnet
+
+networks:
+  mahnet:
+    driver: bridge

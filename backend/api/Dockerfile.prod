@@ -1,0 +1,24 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    TZ=${TZ:-Asia/Seoul} \
+    PYTHONPATH=/app
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential curl ca-certificates tzdata \
+    && rm -rf /var/lib/apt/lists/*
+
+# 의존성 먼저 복사 → 설치 캐시 활용
+COPY common/requirements.txt /app/requirements.txt
+RUN pip install --upgrade pip && pip install -r /app/requirements.txt
+
+# dev 서버는 소스 마운트 없이 이미지 안에 코드 포함
+COPY common /app/common
+COPY api /app
+
+EXPOSE 8000

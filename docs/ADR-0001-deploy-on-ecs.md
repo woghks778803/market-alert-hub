@@ -1,1 +1,0 @@
-# ECS Fargate + Nginx 경로분기 결정

@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.jpro.alertping",
+      "sha256_cert_fingerprints": [
+        "34:FE:CE:B4:D2:C4:44:95:5B:07:02:5E:D0:5F:3D:46:7F:3B:D0:D3:82:BA:0C:57:CC:AD:6A:25:82:9E:D9:5D"
+      ]
+    }
+  }
+]

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>[AlertPing] 휴면 계정 안내</title>
+</head>
+
+<body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;background:#f8f9fa;">
+  <table width="100%" cellspacing="0" cellpadding="0"
+    style="max-width:600px;margin:auto;background:#ffffff;border-radius:8px;overflow:hidden;">
+    <tr>
+      <td style="background:#1a73e8;color:#fff;padding:16px 24px;font-size:20px;font-weight:bold;">
+        AlertPing
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:24px;font-size:16px;line-height:1.5;color:#333;">
+        <p style="margin:0 0 12px 0;">안녕하세요, <strong>{{user_name}}</strong> 님!</p>
+        <p style="margin:0 0 12px 0;">{{last_login_date}} 이후 서비스에 접속하지 않아 계정이 휴면 상태로 전환될 예정입니다.</p>
+        <p style="margin:0 0 12px 0;">휴면 상태가 되면 로그인 및 알림 기능이 제한될 수 있습니다.</p>
+        <p style="text-align:center;margin-top:24px;">
+          <a href="{{reactivate_link}}"
+            style="background:#1a73e8;color:#fff;text-decoration:none;padding:12px 24px;border-radius:6px;display:inline-block;">계정
+            활성화하기</a>
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="background:#f1f3f5;color:#666;font-size:12px;padding:12px 24px;text-align:center;">
+        계정을 계속 사용하시려면 <strong>{{dormant_deadline}}</strong> 이전에 로그인해 주세요.
+      </td>
+    </tr>
+  </table>
+</body>
+
+</html>

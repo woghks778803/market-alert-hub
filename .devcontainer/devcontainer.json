@@ -1,0 +1,37 @@
+{
+  "name": "Market Alert Hub (compose)",
+  "dockerComposeFile": [
+    "../ops/docker-compose.base.yml",
+    "../ops/local/docker-compose.local.yml"
+  ],
+  "service": "api",
+  "runServices": [
+    "db",
+    "redis",
+    "api",
+    "worker",
+    "dispatcher",
+    "scheduler",
+    "collector",
+    "stream_processor",
+    "gateway"
+  ],
+  "workspaceFolder": "/app",
+  "shutdownAction": "none", // stopCompose
+  "overrideCommand": false,
+  "postCreateCommand": "alembic upgrade head || true",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python3",
+        "python.createEnvironment.trigger": "off",
+        "python.terminal.activateEnvironment": false,
+        "python.analysis.indexing": false
+      }
+    }
+  }
+}

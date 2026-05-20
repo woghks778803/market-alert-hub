@@ -1,0 +1,42 @@
+name: Deploy Backend Dev
+
+on:
+  push:
+    branches:
+      - develop
+    # paths:
+    #   - backend/**
+    #   - gateway/**
+    #   - ops/**
+    #   - .github/workflows/reusable-deploy-backend.yml
+    #   - .github/workflows/deploy-backend-dev.yml
+
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-backend-dev
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate-branch:
+    name: Validate develop branch
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check branch
+        run: |
+          if [ "$GITHUB_REF_NAME" != "develop" ]; then
+            echo "Dev 배포는 develop 브랜치에서만 실행할 수 있습니다."
+            exit 1
+          fi
+
+  deploy:
+    uses: ./.github/workflows/reusable-deploy-backend.yml
+    with:
+      environment: dev
+      dockerfile_name: Dockerfile.dev
+      runner_label: mah-dev-vm
+    secrets: inherit

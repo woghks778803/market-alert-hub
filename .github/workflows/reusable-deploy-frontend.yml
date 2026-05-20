@@ -1,0 +1,101 @@
+name: Reusable Deploy Frontend SWA
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      build_command:
+        required: true
+        type: string
+      app_location:
+        required: false
+        type: string
+        default: frontend/dist
+      hostname:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+
+  deploy:
+    name: Build and deploy frontend
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Verify SWA deployment context
+        env:
+          SWA_TOKEN: ${{ secrets.SWA_TOKEN }}
+        run: |
+          set -e
+
+          echo "Environment input: '${{ inputs.environment }}'"
+
+          if [ -z "$SWA_TOKEN" ]; then
+            echo "::error::SWA_TOKEN is empty in environment '${{ inputs.environment }}'"
+            exit 1
+          fi
+
+          echo "SWA_TOKEN is available"
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: ${{ inputs.build_command }}
+        env:
+          VITE_API_BASE_URL: ${{ vars.API_BASE_URL }}
+          VITE_WS_BASE_URL: ${{ vars.WS_BASE_URL }}
+
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.SWA_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: ${{ inputs.app_location }}
+          skip_app_build: true
+
+      - name: Purge Cloudflare frontend cache
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          CLOUDFLARE_HOSTNAME: ${{ inputs.hostname }}
+        run: |
+          response=$(curl --silent --show-error --fail-with-body \
+            --request POST \
+            "https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/purge_cache" \
+            --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            --header "Content-Type: application/json" \
+            --data "{
+              \"prefixes\": [
+                \"${CLOUDFLARE_HOSTNAME}/market\",
+                \"${CLOUDFLARE_HOSTNAME}/alert\",
+                \"${CLOUDFLARE_HOSTNAME}/news\",
+                \"${CLOUDFLARE_HOSTNAME}/auth\",
+                \"${CLOUDFLARE_HOSTNAME}/legal\",
+                \"${CLOUDFLARE_HOSTNAME}/support\"
+              ]
+            }")
+
+          echo "$response"
+          echo "$response" | jq -e '.success == true' > /dev/null

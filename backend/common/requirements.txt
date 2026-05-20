@@ -1,0 +1,61 @@
+# ----------- Monorepo -----------
+
+# --- JWT / 보안 ---
+PyJWT>=2.9.0
+# RS/ES 알고리즘(비대칭키) 쓸 때만 필요
+cryptography>=43.0.0
+# python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4      # 비밀번호 해싱
+bcrypt<4.0
+argon2-cffi>=23.1.0         # argon2(id) 지원 (강력한 기본 해싱)
+python-multipart==0.0.9     # Form/OAuth callback 처리에 필요
+
+# --- DB / ORM ---
+SQLAlchemy>=2.0
+alembic>=1.13
+redis>=7.0.1
+pymysql>=1.1.3
+asyncmy>=0.2.11
+
+# --- OAuth2 클라이언트 ---
+authlib==1.3.2
+
+# --- 기타 ---
+pydantic[email]
+pydantic-settings>=2.3.0
+watchfiles
+
+# --- AWS SDK for Python ---
+boto3>=1.34,<2.0
+botocore>=1.34,<2.0  # (boto3 설치 시 함께 설치됨)
+
+# --- Google API / Auth ---
+requests==2.32.5
+google-auth==2.52.0
+firebase-admin==7.4.0
+
+# --- RSS ---
+feedparser==6.0.12
+
+# --- frontend template ---
+jinja2>=3.1         # (옵션) HTML 템플릿 렌더링용
+
+# --- WS/REST ---
+aiohttp>=3.9
+websockets>=12
+httpx[http2]==0.28.1
+
+# --- Error Tracking ---
+sentry-sdk[fastapi]==2.3.1 # Sentry 에러 모니터링 (FastAPI 예외 자동 수집)
+
+#--------- api ----------------
+# --- Web framework ---
+fastapi==0.115.0
+uvicorn[standard]==0.30.1
+#--------- worker ----------------
+# Retry Utility
+# tenacity==8.2.3
+#--------- collector ----------------
+#--------- dispatcher ----------------
+#--------- stream processor ----------------
+#--------- scheduler ----------------

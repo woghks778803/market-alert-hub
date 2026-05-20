@@ -1,0 +1,141 @@
+from jwt import ExpiredSignatureError, InvalidTokenError
+from datetime import datetime, timezone
+from functools import lru_cache
+from dataclasses import dataclass
+from fastapi import Depends, Request, Response, Cookie
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+from app.api.schema import AuthSchema
+from app.core.constants import UserRole
+from app.domain.shared.errors import AuthError, PermissionError
+from app.service.sync.factory import ServiceFactory
+from app.runtime.app_context import ApiContext
+from app.runtime.bootstrap import (
+    create_api_context,
+)
+
+# _bearer = HTTPBearer(auto_error=False)
+
+@dataclass(frozen=True)
+class RequestMeta:
+    request_id: str
+    timestamp: datetime
+
+
+@lru_cache(maxsize=1)  # 의미 없지만 실수 방지를 위한 보호막
+def get_api_context() -> ApiContext:
+    return create_api_context()
+
+
+def get_request_meta(request: Request) -> RequestMeta:
+    rid = getattr(request.state, "request_id", "-")
+    return RequestMeta(request_id=rid, timestamp=datetime.now(timezone.utc))
+
+
+def get_services(
+    ctx: ApiContext = Depends(get_api_context),
+):
+    return ctx.svcs
+
+# def get_current_token(
+#     creds: HTTPAuthorizationCredentials | None = Depends(_bearer),
+# ) -> str:
+#     """
+#     Authorization: Bearer <token> 헤더에서 토큰만 추출.
+#     """
+#     if not creds or creds.scheme.lower() != "bearer":
+#         raise AuthError(message="Missing or invalid token", target="token")
+#     return creds.credentials
+
+def get_refresh_token(
+    refresh_token: str | None = Cookie(None, alias="refresh_token"),
+) -> str:
+    if not refresh_token:
+        raise AuthError("Missing refresh token", target="refresh_token")  # 401
+    return refresh_token
+
+def get_current_token(
+    access_token: str | None = Cookie(default=None, alias="access_token"),
+) -> str:
+    if not access_token:
+        raise AuthError("Missing token", target="token")
+    return access_token
+
+
+def get_current_user(
+    svcs: ServiceFactory = Depends(get_services),
+    token: str = Depends(get_current_token),
+):
+
+    try:
+        payload = svcs.jwt.decode_token(token)
+    except ExpiredSignatureError:
+        raise AuthError("Token expired", target="token")
+    except InvalidTokenError:
+        raise AuthError("Invalid token", target="token")
+
+    try:
+        user_id = int(payload["sub"])
+        role = UserRole(payload["role"])
+    except (KeyError, ValueError):
+        raise AuthError("Invalid token payload", target="token")
+
+    return AuthSchema.CurrentUser(
+        id=user_id,
+        role=role,
+        email_enrolled=payload.get("ee"),
+        email_verified=payload.get("ev"),
+    )
+
+def get_optional_user(
+    svcs: ServiceFactory = Depends(get_services),
+    access_token: str | None = Cookie(default=None, alias="access_token"),
+) -> AuthSchema.CurrentUser | None:
+
+    if not access_token:
+        return None
+
+    try:
+        payload = svcs.jwt.decode_token(access_token)
+    except (ExpiredSignatureError, InvalidTokenError):
+        return None  
+
+    try:
+        user_id = int(payload["sub"])
+        role = UserRole(payload["role"])
+    except (KeyError, ValueError):
+        return None
+
+    return AuthSchema.CurrentUser(
+        id=user_id,
+        role=role,
+        email_enrolled=payload.get("ee"),
+        email_verified=payload.get("ev"),
+    )
+
+def require_admin(user=Depends(get_current_user)):
+    if getattr(user, "role", None) != UserRole.ADMIN:
+        raise PermissionError("Admin role required", target="role")
+
+# RedirectResponse는 Response를 상속
+def expire_auth_cookies(response: Response): 
+    response.set_cookie(
+        key="access_token",
+        value="",
+        max_age=0,
+        expires=0,
+        path="/",
+        httponly=True,
+        secure=False,
+        samesite="lax",
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value="",
+        max_age=0,
+        expires=0,
+        path="/",
+        httponly=True,
+        secure=False,
+        samesite="lax",
+    )

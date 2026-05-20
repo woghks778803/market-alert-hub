@@ -1,5 +1,0 @@
-# backend/collectors/requirements.txt
-httpx
-websockets
-redis
-pydantic

@@ -1,0 +1,63 @@
+from datetime import datetime
+from sqlalchemy import (
+    Integer,
+    Boolean,
+    String,
+    Integer,
+    DateTime,
+    ForeignKey,
+    UniqueConstraint,
+    Index,
+    text,
+)
+from sqlalchemy.orm import Mapped, mapped_column
+from app.infra.db.base import Base
+from app.core.util.datetime import utcnow
+from app.domain import WatchlistDTO
+
+
+class WatchlistItem(Base):
+    __tablename__ = "watchlist_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    exchange_instrument_id: Mapped[int] = mapped_column(
+        ForeignKey("exchange_instruments.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+
+    note: Mapped[str | None] = mapped_column(String(255))
+    sort_order: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
+    )
+    # deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        # 유저 목록 정렬/조회 최적화
+        Index("ix_wi_user_sort", "user_id", "sort_order"),
+        UniqueConstraint(
+            "user_id", "exchange_instrument_id", name="uq_wi_user_exchange_instrument"
+        ),
+    )
+
+    def to_dto(self) -> WatchlistDTO.WatchlistItem:
+        return WatchlistDTO.WatchlistItem(
+            id=self.id,
+            user_id=self.user_id,
+            exchange_instrument_id=self.exchange_instrument_id,
+            note=self.note,
+            sort_order=self.sort_order,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
+        )
