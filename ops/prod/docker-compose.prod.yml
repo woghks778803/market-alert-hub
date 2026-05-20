@@ -1,0 +1,86 @@
+name: mah-prod
+
+services:
+  gateway:
+    image: alertpingacr01.azurecr.io/mah-gateway:prod-latest
+    container_name: mah_gateway
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./prod/secrets/cloudflare:/app/secrets/cloudflare:ro
+    depends_on:
+      api:
+        condition: service_started
+    env_file:
+      - ./prod/env/common.env
+      - ./prod/env/gateway.env
+    cpus: 0.15
+    mem_limit: 128m
+
+  api:
+    image: alertpingacr01.azurecr.io/mah-api:prod-latest
+    container_name: mah_api
+    volumes:
+      - ./prod/secrets/firebase:/app/secrets/firebase:ro
+    env_file:
+      - ./prod/env/common.env
+      - ./prod/env/api.env
+    cpus: 0.70
+    mem_limit: 768m
+
+  worker:
+    image: alertpingacr01.azurecr.io/mah-worker:prod-latest
+    container_name: mah_worker
+    volumes:
+      - ./prod/secrets/firebase:/app/secrets/firebase:ro
+    env_file:
+      - ./prod/env/common.env
+      - ./prod/env/worker.env
+    cpus: 0.35
+    mem_limit: 384m
+
+  dispatcher:
+    image: alertpingacr01.azurecr.io/mah-dispatcher:prod-latest
+    container_name: mah_dispatcher
+    volumes:
+      - ./prod/secrets/firebase:/app/secrets/firebase:ro
+    env_file:
+      - ./prod/env/common.env
+      - ./prod/env/dispatcher.env
+    cpus: 0.25
+    mem_limit: 256m
+
+  scheduler:
+    image: alertpingacr01.azurecr.io/mah-scheduler:prod-latest
+    container_name: mah_scheduler
+    volumes:
+      - ./prod/secrets/firebase:/app/secrets/firebase:ro
+    env_file:
+      - ./prod/env/common.env
+      - ./prod/env/scheduler.env
+    cpus: 0.25
+    mem_limit: 256m
+
+  collector:
+    image: alertpingacr01.azurecr.io/mah-collector:prod-latest
+    container_name: mah_collector
+    volumes:
+      - ./prod/secrets/firebase:/app/secrets/firebase:ro
+    env_file:
+      - ./prod/env/common.env
+      - ./prod/env/collector.env
+    cpus: 0.45
+    mem_limit: 512m
+
+  stream_processor:
+    image: alertpingacr01.azurecr.io/mah-stream-processor:prod-latest
+    container_name: mah_stream_processor
+    volumes:
+      - ./prod/secrets/firebase:/app/secrets/firebase:ro
+    env_file:
+      - ./prod/env/common.env
+      - ./prod/env/stream_processor.env
+    cpus: 0.35
+    mem_limit: 384m
+    

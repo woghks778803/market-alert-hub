@@ -8,8 +8,7 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - /var/www/certbot:/var/www/certbot:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./dev/secrets/cloudflare:/app/secrets/cloudflare:ro
     depends_on:
       api:
         condition: service_started
@@ -23,7 +22,7 @@ services:
     image: alertpingacr01.azurecr.io/mah-api:dev-latest
     container_name: mah_api
     volumes:
-      - ./dev/secrets:/app/secrets:ro
+      - ./dev/secrets/firebase:/app/secrets/firebase:ro
     env_file:
       - ./dev/env/common.env
       - ./dev/env/api.env
@@ -34,7 +33,7 @@ services:
     image: alertpingacr01.azurecr.io/mah-worker:dev-latest
     container_name: mah_worker
     volumes:
-      - ./dev/secrets:/app/secrets:ro
+      - ./dev/secrets/firebase:/app/secrets/firebase:ro
     env_file:
       - ./dev/env/common.env
       - ./dev/env/worker.env
@@ -45,7 +44,7 @@ services:
     image: alertpingacr01.azurecr.io/mah-dispatcher:dev-latest
     container_name: mah_dispatcher
     volumes:
-      - ./dev/secrets:/app/secrets:ro
+      - ./dev/secrets/firebase:/app/secrets/firebase:ro
     env_file:
       - ./dev/env/common.env
       - ./dev/env/dispatcher.env
@@ -56,7 +55,7 @@ services:
     image: alertpingacr01.azurecr.io/mah-scheduler:dev-latest
     container_name: mah_scheduler
     volumes:
-      - ./dev/secrets:/app/secrets:ro
+      - ./dev/secrets/firebase:/app/secrets/firebase:ro
     env_file:
       - ./dev/env/common.env
       - ./dev/env/scheduler.env
@@ -67,7 +66,7 @@ services:
     image: alertpingacr01.azurecr.io/mah-collector:dev-latest
     container_name: mah_collector
     volumes:
-      - ./dev/secrets:/app/secrets:ro
+      - ./dev/secrets/firebase:/app/secrets/firebase:ro
     env_file:
       - ./dev/env/common.env
       - ./dev/env/collector.env
@@ -78,7 +77,7 @@ services:
     image: alertpingacr01.azurecr.io/mah-stream-processor:dev-latest
     container_name: mah_stream_processor
     volumes:
-      - ./dev/secrets:/app/secrets:ro
+      - ./dev/secrets/firebase:/app/secrets/firebase:ro
     env_file:
       - ./dev/env/common.env
       - ./dev/env/stream_processor.env

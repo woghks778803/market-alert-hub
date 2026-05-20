@@ -1,7 +1,7 @@
 # HTTP: certbot challenge + HTTPS redirect
   server {
     listen 80;
-    server_name dev.alertping.site;
+    server_name app.alertping.site;
 
     location /.well-known/acme-challenge/ {
       root /var/www/certbot;
@@ -20,7 +20,7 @@
   # HTTPS
   server {
     listen 443 ssl;
-    server_name dev.alertping.site;
+    server_name app.alertping.site;
 
     ssl_certificate     /app/secrets/cloudflare/origin.pem;
     ssl_certificate_key /app/secrets/cloudflare/origin-key.pem;

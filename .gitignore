@@ -45,7 +45,6 @@ env.prod
 # ======================
 # DO NOT ignore Dockerfile / .dockerignore (tracked as source!)
 docker-compose.override.yml
-docker-compose.local.yml
 db_data/
 redis_data/
 
