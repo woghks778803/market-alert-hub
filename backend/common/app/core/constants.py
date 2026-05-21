@@ -56,6 +56,7 @@ class ExchangeCode(str, enum.Enum):
 
 class ChannelCode(str, enum.Enum):
     FCM = "FCM"
+    EMAIL = "EMAIL"
     TELEGRAM = "TELEGRAM"
     DISCORD = "DISCORD"
 

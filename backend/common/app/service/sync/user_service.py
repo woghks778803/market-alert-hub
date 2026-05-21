@@ -34,14 +34,6 @@ class UserService:
         except ValueError:
             raise ValidationAppError(f"Invalid {target_name}", target=target_name)
 
-    def _ensure_user(self, uow: UnitOfWork, user_id: int):
-        user = uow.users.get_by_user_id(user_id)
-        if not user:
-            raise NotFoundError(
-                "User not found", target="user_id"
-            )  # 전역핸들러에서 404 매핑되게
-        return user
-
     def _ensure_email_verification(self, uow: UnitOfWork, email_verification_id: int):
         email_verification = uow.users.get_email_verification_by_id(
             email_verification_id
@@ -94,8 +86,15 @@ class UserService:
                     nickname=user.nickname,
                     role=user.role,
                     status=user.status,
-                    created_at=user.created_at,
+                    is_service=user.is_service,
+                    is_privacy=user.is_privacy,
+                    is_marketing=user.is_marketing,
+                    is_quiet_hours=user.is_quiet_hours,
+                    email_verified_at=user.email_verified_at,
                     last_login_at=user.last_login_at,
+                    created_at=user.created_at,
+                    updated_at=user.updated_at,
+                    deleted_at=user.deleted_at,
                 )
 
                 user_infos.append(user_info)
@@ -124,7 +123,11 @@ class UserService:
 
     def get_user_email_info(self, *, user_id: int) -> UserDTO.UserEmailInfo:
         with self._uow_factory() as uow:
-            user = self._ensure_user(uow, user_id)
+            user = uow.users.get_by_user_id(user_id)
+            if not user:
+                raise NotFoundError(
+                    "User not found", target="user"
+                )
 
             if user.email_ciphertext is None or user.email_nonce is None:
                 raise ValidationAppError("user email is not set", target="user.email")
@@ -143,7 +146,11 @@ class UserService:
 
     def get_user_admin_info(self, *, user_id: int) -> UserDTO.UserAdminInfo:
         with self._uow_factory() as uow:
-            user = self._ensure_user(uow, user_id)
+            user = uow.users.get_by_user_id(user_id, False)
+            if not user:
+                raise NotFoundError(
+                    "User not found", target="user"
+                )  
 
             user_info = UserDTO.UserAdminInfo(
                 id=user.id,
@@ -158,8 +165,15 @@ class UserService:
                 nickname=user.nickname,
                 role=user.role,
                 status=user.status,
-                created_at=user.created_at,
+                is_service=user.is_service,
+                is_privacy=user.is_privacy,
+                is_marketing=user.is_marketing,
+                is_quiet_hours=user.is_quiet_hours,
+                email_verified_at=user.email_verified_at,
                 last_login_at=user.last_login_at,
+                created_at=user.created_at,
+                updated_at=user.updated_at,
+                deleted_at=user.deleted_at,
             )
 
             return user_info

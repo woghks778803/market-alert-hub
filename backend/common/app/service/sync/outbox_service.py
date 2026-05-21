@@ -4,7 +4,7 @@ from datetime import datetime
 
 # from tenacity import retry, stop_after_attempt, wait_exponential
 from app.core import dto as CoreDTO
-from app.core.constants import OutboxStatus, OutboxEventType
+from app.core.constants import OutboxStatus, OutboxEventType, ChannelCode
 from app.core.util.trace import get_trace_id
 from app.core.util.datetime import utcnow
 from app.core.util.serialization import to_canonical_json
@@ -69,8 +69,15 @@ class OutboxService:
 
             if result.retryable:
                 if OutboxEventType.AUTH_EMAIL_VERIFY == event_type:
-                    provider = uow.channels.get_channel_by_code("EMAIL")
+                    provider = uow.channels.get_provider_by_code(ChannelCode.EMAIL.value)
+
+                    if not provider:
+                        raise NotFoundError(
+                            "Not found channel provider", target="channel_provider"
+                        )
+
                     policy = provider.retry_policy  # JSON → dict 파싱
+
                     if not policy:
                         raise InternalServerError(
                             "retry policy not configured",

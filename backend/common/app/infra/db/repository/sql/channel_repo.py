@@ -15,21 +15,19 @@ class SqlChannelRepo(ChannelRepo):
     def list_provider_by_filter(
         self,
         *,
-        is_active: bool = True,
+        is_active: bool | None = None,
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[ChannelDTO.ChannelProvider]:
         stmt = (
             select(ChannelProviderModel)
-            .where(
-                and_(
-                    ChannelProviderModel.is_active.is_(is_active),
-                )
-            )
             .order_by(asc(ChannelProviderModel.id))
             .limit(limit)
             .offset(offset)
         )
+
+        if is_active is not None:
+            stmt = stmt.where(ChannelProviderModel.is_active.is_(is_active))
 
         rows = self._db.execute(stmt).scalars().all()
         return [row.to_dto() for row in rows]
@@ -42,19 +40,14 @@ class SqlChannelRepo(ChannelRepo):
                 ChannelProviderModel.is_active.is_(is_active)
             )
         )
-        provider = self._db.execute(stmt).scalars().one_or_none()
+        model = self._db.execute(stmt).scalars().one_or_none()
 
-        if provider is None:
-            return None
-        return provider.to_dto()
+        return model.to_dto() if model else None
 
-    def get_by_channel_id(self, user_channel_id: int) -> UserChannelModel | None:
+    def get_by_channel_id(self, user_channel_id: int) -> ChannelDTO.UserChannel | None:
         stmt = select(UserChannelModel).options(selectinload(UserChannelModel.channel_provider)).where(UserChannelModel.id == user_channel_id)
-        return self._db.execute(stmt).scalar_one_or_none()
-
-    def get_channel_by_code(self, code: str) -> ChannelProviderModel:
-        stmt = select(ChannelProviderModel).where(ChannelProviderModel.code == code)
-        return self._db.execute(stmt).scalar_one_or_none()
+        model = self._db.execute(stmt).scalar_one_or_none()
+        return model.to_dto() if model else None
 
     def get_channel_cnt(
         self, 

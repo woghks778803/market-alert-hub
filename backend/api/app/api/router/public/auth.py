@@ -183,7 +183,12 @@ def register(
             Envelope[AuthSchema.CurrentUser],
             description="로그인 성공",
             example=OpenApi.wrap_example(
-                {"user_id": 5, "access_token": "<jwt>", "token_type": "bearer"}
+                {
+                    "id": 1,
+                    "role": "role",
+                    "email_verified": True,
+                    "email_enrolled": True
+                }
             ),
         ),
     ),
@@ -314,7 +319,6 @@ def change_email(
 
     access_token = svcs.auths.change_email(
         user_id=user.id,
-        # current_password=payload.current_password,
         new_email=payload.new_email,
     )
 
@@ -497,7 +501,6 @@ def oauth_start(
     meta: RequestMeta = Depends(get_request_meta),
 ):
     try:
-
         oauth_result = svcs.auths.oauth_start(
             provider=provider,
             agree_marketing=agree_marketing,
