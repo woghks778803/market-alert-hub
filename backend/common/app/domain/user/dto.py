@@ -23,8 +23,15 @@ class UserAdminInfo:
     id: int
     email: str | None
     nickname: str
-    created_at: datetime
+    is_service: bool
+    is_privacy: bool
+    is_marketing: bool
+    is_quiet_hours: bool
+    email_verified_at: datetime | None
     last_login_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+    deleted_at: datetime | None
     role: str | None = None
     status: str | None = None
 

@@ -62,6 +62,16 @@ export function mapForgotPasswordError(error?: ApiError | null): ForgotPasswordE
     return { kind: 'message', message: '네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }
   }
 
+  if (error.code === 'forbidden' && error.target === 'oauth_account') {
+    return { kind: 'message', message: '소셜 로그인 이용자는 비밀번호를 변경할 수 없습니다.' }
+  }
+
+  if (error.code === 'forbidden' && error.target === 'status.suspended') {
+    return { kind: 'message', message: '이용이 제한된 계정입니다.' }
+  } else if (error.code === 'forbidden' && error.target === 'status.deleted') {
+    return { kind: 'message', message: '탈퇴 처리중인 계정입니다.' }
+  }
+
   // 쿨다운
   if (error.code === 'rate_limited' && error.target === 'resend_password_reset') {
     const sec = pickCooldownSec(error.details)
@@ -99,6 +109,10 @@ export function mapLoginError(error?: ApiError | null): string | null {
 
   if (error.code === 'validation_error' && error.target === 'terms') {
     return '약관 동의가 필요합니다.'
+  }
+
+  if (error.code === 'forbidden' && error.target === 'oauth_account') {
+    return '이미 사용중인 이메일입니다. 소셜 로그인을 사용해주세요.'
   }
 
   if (error.code === 'forbidden' && error.target === 'role') {

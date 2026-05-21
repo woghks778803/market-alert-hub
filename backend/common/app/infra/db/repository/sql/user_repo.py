@@ -1,6 +1,6 @@
 from typing import Sequence
 from datetime import datetime
-from sqlalchemy import select, update, delete, bindparam, desc, and_, func
+from sqlalchemy import exists, select, update, delete, bindparam, desc, and_, func
 from sqlalchemy.orm import Session as DbSession
 from app.core.constants import UserStatus
 from app.domain import EmailDTO, UserDTO
@@ -51,12 +51,15 @@ class SqlUserRepo(UserRepo):
         self._db.flush()
         return password_reset.to_dto()
 
-    def get_user_by_email_fingerprint(
-        self, email_fingerprint: bytes
-    ) -> UserDTO.User | None:
-        stmt = select(UserModel).where(UserModel.email_fingerprint == email_fingerprint)
-        result = self._db.execute(stmt).scalar_one_or_none()
-        return result.to_dto() if result is not None else None
+    def exists_user_oauth_account(self, user_id: int) -> bool:
+        stmt = select(
+            exists(
+                select(UserOauthAccountModel.id).where(
+                    UserOauthAccountModel.user_id == user_id
+                )
+            )
+        )
+        return bool(self._db.scalar(stmt))
 
     def get_with_provider_by_user_id(
         self, user_id: int, deleted_is_null: bool = True
@@ -95,6 +98,13 @@ class SqlUserRepo(UserRepo):
             provider_code=row.code,
             provider_display_name=row.display_name,
         ) if row else None
+
+    def get_by_email_fingerprint(
+        self, email_fingerprint: bytes
+    ) -> UserDTO.User | None:
+        stmt = select(UserModel).where(UserModel.email_fingerprint == email_fingerprint)
+        model = self._db.execute(stmt).scalar_one_or_none()
+        return model.to_dto() if model is not None else None
 
     def get_by_user_id(
         self, user_id: int, deleted_is_null: bool = True

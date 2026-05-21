@@ -241,7 +241,7 @@ class AuthService:
             email_fingerprint = self._hmac.fp_hash(email)
             email_secrets = self._secrets.encrypt(email.encode("utf-8"))
 
-            user = uow.users.get_user_by_email_fingerprint(email_fingerprint)
+            user = uow.users.get_by_email_fingerprint(email_fingerprint)
 
             if user:
                 if user.status == UserStatus.DELETED:
@@ -327,9 +327,15 @@ class AuthService:
 
         with self._uow_factory() as uow:
             email_fingerprint = self._hmac.fp_hash(email)
-            user = uow.users.get_user_by_email_fingerprint(email_fingerprint)
+            user = uow.users.get_by_email_fingerprint(email_fingerprint)
             if not user:
                 raise AuthError("User not found", target="user")
+
+            if uow.users.exists_user_oauth_account(user.id):
+                raise PermissionError(
+                    "Password authentication unavailable",
+                    target="oauth_account",
+                )
 
             if user.status == UserStatus.DELETED:
                 raise PermissionError("User status deleted", target="status.deleted")
@@ -528,7 +534,6 @@ class AuthService:
         *, 
         user_id: int, 
         new_email: str, 
-        # current_password: str | None = None,
         ip: str | None = None,
         ua: str | None = None,
     ) -> str:
@@ -540,14 +545,9 @@ class AuthService:
             if not user:
                 raise AuthError("Invalid credentials", target="user")
 
-            # if user.password_hash is None or not self._password.verify_password(
-            #     current_password, user.password_hash
-            # ):
-            #     raise AuthError("Invalid credentials", target="user")
-
             new_email_fingerprint = self._hmac.fp_hash(new_email)
             new_email_secrets = self._secrets.encrypt(new_email.encode("utf-8"))
-            if uow.users.get_user_by_email_fingerprint(new_email_fingerprint):
+            if uow.users.get_by_email_fingerprint(new_email_fingerprint):
                 raise ConflictError(
                     "email_fingerprint already exists", target="new_email"
                 )
@@ -613,9 +613,22 @@ class AuthService:
 
         with self._uow_factory() as uow:
             email_fingerprint = self._hmac.fp_hash(email)
-            user = uow.users.get_user_by_email_fingerprint(email_fingerprint)
+            user = uow.users.get_by_email_fingerprint(email_fingerprint)
             if not user:
-                raise AuthError("Invalid credentials", target="email")
+                raise NotFoundError("Email not found", target="email")
+
+            if uow.users.exists_user_oauth_account(user.id):
+                raise PermissionError(
+                    "Password authentication unavailable",
+                    target="oauth_account",
+                )
+
+            if user.status == UserStatus.DELETED:
+                raise PermissionError("User status deleted", target="status.deleted")
+            elif user.status == UserStatus.SUSPENDED:
+                raise PermissionError(
+                    "User status suspended", target="status.suspended"
+                )
 
             #  쿨다운 (연타 방지)
             cooldown_sec = self._config.email_resend_cooldown_sec
@@ -857,7 +870,6 @@ class AuthService:
 
     def oauth_callback(
         self,
-        # provider: str,
         code: str | None = None,
         state: str | None = None,
         error: str | None = None,

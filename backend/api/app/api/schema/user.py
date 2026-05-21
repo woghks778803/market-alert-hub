@@ -42,9 +42,16 @@ class UserReadPublic(ApiResponseModel):
 
 class UserReadAdmin(ApiResponseModel):
     id: int
-    email: EmailStr
-    nickname: str | None = None
+    email: EmailStr | None
+    nickname: str
+    is_service: bool
+    is_privacy: bool
+    is_marketing: bool
+    is_quiet_hours: bool
     role: UserRole | None = None
     status: UserStatus | None = None
-    created_at: datetime
+    email_verified_at: datetime | None = None
     last_login_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+    deleted_at: datetime | None
