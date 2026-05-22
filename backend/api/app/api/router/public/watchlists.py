@@ -39,7 +39,7 @@ def create_item(
         ),
         response=response,
         request_id=meta.request_id,
-        location=f"/watchlist/{result.id}",
+        location=f"/watchlists/{result.id}",
     )
 
 

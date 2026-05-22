@@ -50,7 +50,7 @@
 import TimeframeTabs from './TimeframeTabs.vue'
 import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { createChart, type IChartApi, type ISeriesApi, type UTCTimestamp } from 'lightweight-charts'
+import { createChart, TickMarkType, type IChartApi, type ISeriesApi, type UTCTimestamp, type Time } from 'lightweight-charts'
 import { useMarketStore } from '@/stores/market.store'
 import type { MarketDto } from '@/services/market.types'
 import { TIMEFRAME_SECONDS } from '@/services/market.types'
@@ -106,6 +106,14 @@ function toggleLog() {
   applyPriceScale()
 }
 
+function toLocalDate(time: Time): Date {
+  if (typeof time !== 'number') {
+    throw new Error(`Unsupported chart time: ${String(time)}`)
+  }
+
+  return new Date(time * 1000)
+}
+
 const initChart = async () => {
   cleanup()
 
@@ -129,6 +137,62 @@ const initChart = async () => {
           color: isDark ? '#0f172a' : '#ffffff',
         },
         textColor: isDark ? '#9ca3af' : '#374151',
+      },
+      localization: { // 차트 전체의 지역화/표시 형식 설정
+        locale: navigator.language,
+
+        // 크로스헤어 하단의 날짜·시간
+        timeFormatter: (time: Time) => {
+          const d = toLocalDate(time)
+
+          const yyyy = d.getFullYear()
+          const mm = String(d.getMonth() + 1).padStart(2, '0')
+          const dd = String(d.getDate()).padStart(2, '0')
+          const hh = String(d.getHours()).padStart(2, '0')
+          const min = String(d.getMinutes()).padStart(2, '0')
+
+          return `${yyyy}.${mm}.${dd} ${hh}:${min}`
+        },
+      },
+      timeScale: {
+        timeVisible: true,
+        secondsVisible: false,
+
+        // 차트 하단 x축 눈금
+        tickMarkFormatter: (
+          time: Time,
+          tickMarkType: TickMarkType,
+        ) => {
+          const d = toLocalDate(time)
+
+          const yyyy = d.getFullYear()
+          const mm = String(d.getMonth() + 1).padStart(2, '0')
+          const dd = String(d.getDate()).padStart(2, '0')
+          const hh = String(d.getHours()).padStart(2, '0')
+          const min = String(d.getMinutes()).padStart(2, '0')
+
+          console.log("tickMarkType", tickMarkType)
+
+          switch (tickMarkType) {
+            case TickMarkType.Year:
+              return String(yyyy)
+
+            case TickMarkType.Month:
+              return `${mm}월`
+
+            case TickMarkType.DayOfMonth:
+              return `${mm}.${dd}`
+
+            case TickMarkType.Time:
+              return `${hh}:${min}`
+
+            case TickMarkType.TimeWithSeconds:
+              return `${hh}:${min}`
+
+            default:
+              return `${mm}.${dd}`
+          }
+        },
       },
     })
 

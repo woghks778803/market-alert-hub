@@ -237,7 +237,7 @@ def create_alert(
         {"ok": True},
         response=response,
         request_id=meta.request_id,
-        location=f"/alert/{result.id}",
+        location=f"/alerts/{result.id}",
     )
 
 @router.patch(

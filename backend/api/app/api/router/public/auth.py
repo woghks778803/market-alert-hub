@@ -170,7 +170,7 @@ def register(
         user,
         response=response,
         request_id=meta.request_id,
-        location="/auth/register",
+        location="/users/me",
     )
 
 
