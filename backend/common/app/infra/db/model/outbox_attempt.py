@@ -20,7 +20,11 @@ class OutboxAttempt(Base):
     retryable: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     result_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
     result_message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    result_payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+    result_payload: Mapped[dict] = mapped_column(
+        JSON, 
+        nullable=False, 
+        default=dict,
+    )
 
     # 타이밍
     started_at: Mapped[datetime] = mapped_column(

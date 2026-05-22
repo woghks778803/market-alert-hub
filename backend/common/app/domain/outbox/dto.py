@@ -36,7 +36,7 @@ class OutboxAttempt:
     success: int
     retryable: int
     started_at: datetime
-    result_payload: dict[str, Any]
+    result_payload: dict
     result_code: str | None
     result_message: str | None
     finished_at: datetime | None

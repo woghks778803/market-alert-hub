@@ -106,6 +106,8 @@ class AlertFormType(str, enum.Enum):
     COMPARE = "compare"              # A/B 비교: volume > volume_ma
 
 class OutboxEventType(str, enum.Enum):
+    MARKET_BACKFILL_REQUEST = "MARKET_BACKFILL_REQUEST"
+
     AUTH_EMAIL_VERIFY = "AUTH_EMAIL_VERIFY"
     AUTH_PASSWORD_RESET = "AUTH_PASSWORD_RESET"
 
@@ -198,6 +200,15 @@ class OutboxStatus(str, enum.Enum):
     FAILED = "failed"
 
 
+class BackfillRequestItemStatus(str, enum.Enum):
+    QUEUED = "queued"
+    RUNNING = "running"
+    RETRY_WAIT = "retry_wait"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
 class EmailVerificationStatus(str, enum.Enum):
     PENDING = "pending"
     SENT = "sent"
@@ -245,6 +256,7 @@ class AssetType(str, enum.Enum):
     STOCK = "stock"
     FUTURE = "future"
 
+
 class IndicatorType(str, enum.Enum):
     PRICE = "price"
     VOLUME = "volume"
@@ -262,9 +274,11 @@ class DirectionType(str, enum.Enum):
     DOWN = "down"
     BOTH = "both"
 
+
 class ConditionType(str, enum.Enum):
     SINGLE = "single"
     CROSS = "cross"
+
 
 class NoticeCategory(str, enum.Enum):
     UPDATE = "update"

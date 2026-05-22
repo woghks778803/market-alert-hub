@@ -164,6 +164,7 @@ class ServiceFactory:
     def markets(self) -> MarketService:
         return MarketService(
             uow_factory=self._uow,
+            hmac=self.hmac,
             exchange_symbol_providers=self.exchange_symbol_providers,
             candle_store=self.candle_store,
             market_snapshot=self.market_snapshot,

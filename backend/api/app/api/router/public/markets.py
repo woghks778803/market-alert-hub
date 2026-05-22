@@ -16,7 +16,7 @@ router = APIRouter(prefix="/markets")
 #     summary="마켓 심볼 상세 정보",
 #     responses=OpenApi.combine(
 #         OpenApi.OK(
-#             Envelope[MarketSchema.MarketRead],  #  스키마도 래퍼로
+#             Envelope[MarketSchema.MarketRead],  
 #             description="마켓 조회 성공",
 #         ),
 #         OpenApi.ERR_409,
@@ -41,7 +41,7 @@ router = APIRouter(prefix="/markets")
     summary="마켓 심볼 상세 정보",
     responses=OpenApi.combine(
         OpenApi.OK(
-            Envelope[MarketSchema.MarketRead],  #  스키마도 래퍼로
+            Envelope[MarketSchema.MarketRead],  
             description="마켓 조회 성공",
         ),
         OpenApi.ERR_409,
@@ -102,7 +102,7 @@ def list_market(
     summary="거래소 목록",
     responses=OpenApi.combine(
         OpenApi.OK(
-            Envelope[list[MarketSchema.ExchangeRead]],  #  스키마도 래퍼로
+            Envelope[list[MarketSchema.ExchangeRead]],  
             description="리스트 조회 성공",
         ),
         OpenApi.ERR_409,

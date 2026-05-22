@@ -12,6 +12,8 @@ from app.infra.db.model import (
     PriceSnapshot1mModel,
     PriceSnapshot1hModel,
     PriceSnapshot1dModel,
+    BackfillRequestModel,
+    BackfillRequestItemModel,
     WatchlistItemModel,
 )
 from app.core.util.datetime import utcnow, get_days_ago
@@ -29,6 +31,8 @@ wi = WatchlistItemModel
 ps1m = PriceSnapshot1mModel
 ps1h = PriceSnapshot1hModel
 ps1d = PriceSnapshot1dModel
+br = BackfillRequestModel
+bri = BackfillRequestItemModel
 
 
 class SqlMarketRepo(MarketRepo):
@@ -785,27 +789,30 @@ class SqlMarketRepo(MarketRepo):
 
     # ---------------------------- add ----------------------------------------------
 
-    def add_exchange_instruments(
-        self, exchange_instruments: list[MarketDTO.ExchangeInstrumentSync]
+    def add_backfile_request(
+        self,
+        row: MarketDTO.BackfillRequestCreate
+    ) -> MarketDTO.BackfillRequest:
+        backfill_request = br.from_create_dto(row)
+        self._db.add(backfill_request)
+        self._db.flush()
+        return backfill_request.to_dto()
+
+    def add_backfill_request_items(
+        self,
+        rows: list[MarketDTO.BackfillRequestItemCreate],
+        *,
+        chunk_size: int = 1000,
     ) -> None:
-        if not exchange_instruments:
+        if not rows:
             return
 
-        rows = [
-            ExchangeInstrumentModel(
-                exchange_id=ei.exchange_id,
-                exchange_symbol=ei.exchange_symbol,
-                base_asset_id=ei.base_asset_id,
-                quote_asset_id=ei.quote_asset_id,
-                price_precision=ei.price_precision,
-                qty_precision=ei.qty_precision,
-                min_notional=ei.min_notional,
-                updated_at=ei.updated_at,
-                is_active=ei.is_active,
-            )
-            for ei in exchange_instruments
-        ]
-        self._db.add_all(rows)
+        for i in range(0, len(rows), chunk_size):
+            chunk = rows[i : i + chunk_size]
+            values = [to_row_dict(x) for x in chunk]
+
+            stmt = insert(bri).values(values)
+            self._db.execute(stmt)
 
     def upsert_exchange_instrument_tickers(
         self,

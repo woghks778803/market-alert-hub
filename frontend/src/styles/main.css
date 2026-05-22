@@ -806,7 +806,7 @@ html.dark {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  /* 🔥 핵심 */
+  /* 핵심 */
 }
 
 .sd-top {
@@ -820,7 +820,7 @@ html.dark {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  /* 🔥 중요 */
+  /* 중요 */
   gap: 10px;
 }
 

@@ -1,9 +1,13 @@
 import asyncio, logging, sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 
-from sentry_sdk.integrations.fastapi import FastApiIntegration
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from sqlalchemy.exc import IntegrityError
+from app.domain.shared.errors import AppError
 
 from app.core.constants import DeploymentEnvironment, CandleInterval, TickerInterval
 from app.core.logging import setup_logging
@@ -135,13 +139,14 @@ def create_app() -> FastAPI:
     )
 
     # --- Exception Handlers ---
-    app.add_exception_handler(Exception, unified_exception_handler)
+    # app.add_exception_handler(Exception, unified_exception_handler) # 이러면 StarletteHTTPException 등이 fastapi 생성시 기본값으로 할당되어서 안 거쳐감
+
     # --- Exception Handlers ---
-    # app.add_exception_handler(AppError, unified_exception_handler)                 # 도메인 에러
-    # app.add_exception_handler(StarletteHTTPException, unified_exception_handler)   # HTTPException
-    # app.add_exception_handler(RequestValidationError, unified_exception_handler)   # 바디/쿼리 검증 에러
-    # app.add_exception_handler(IntegrityError, unified_exception_handler)           # DB 무결성
-    # app.add_exception_handler(Exception, unified_exception_handler)                # 그 외 모든 것
+    app.add_exception_handler(AppError, unified_exception_handler)                 # 도메인 에러
+    app.add_exception_handler(StarletteHTTPException, unified_exception_handler)   # HTTPException
+    app.add_exception_handler(RequestValidationError, unified_exception_handler)   # 바디/쿼리 검증 에러
+    app.add_exception_handler(IntegrityError, unified_exception_handler)           # DB 무결성
+    app.add_exception_handler(Exception, unified_exception_handler)                # 그 외 모든 것
 
     # --- Routers ---
     app.include_router(api)

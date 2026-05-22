@@ -125,8 +125,15 @@ class MarketRepo(Protocol):
         start_dt: datetime,
         end_dt: datetime,
     ) -> list[MarketDTO.PriceSnapshotCreate]: ...
-    def add_exchange_instruments(
-        self, exchange_instruments: list[MarketDTO.ExchangeInstrumentSync]
+    def add_backfile_request(
+        self,
+        row: MarketDTO.BackfillRequestCreate
+    ) -> MarketDTO.BackfillRequest: ...
+    def add_backfill_request_items(
+        self,
+        rows: list[MarketDTO.BackfillRequestItemCreate],
+        *,
+        chunk_size: int = 1000,
     ) -> None: ...
     def upsert_exchange_instrument_tickers(
         self,

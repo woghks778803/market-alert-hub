@@ -1,7 +1,21 @@
 from datetime import datetime
 from decimal import Decimal
+from pydantic import AwareDatetime
 
+from app.core.constants import CandleBaseInterval
 from app.api.schema.base import ApiResponseModel, ApiRequestModel
+
+
+class BackfillRequestIn(ApiRequestModel):
+    exchange_instrument_ids: list[int]
+    base: CandleBaseInterval
+    start_at: AwareDatetime
+    end_at: AwareDatetime
+    reason: str
+
+
+class SimpleOk(ApiResponseModel):
+    ok: bool = True
 
 
 class ExchangeRead(ApiResponseModel):

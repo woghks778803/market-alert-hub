@@ -12,6 +12,8 @@ from .exchange_instrument_ticker import (
 from .price_snapshots_1m import PriceSnapshot1m as PriceSnapshot1mModel
 from .price_snapshots_1h import PriceSnapshot1h as PriceSnapshot1hModel
 from .price_snapshots_1d import PriceSnapshot1d as PriceSnapshot1dModel
+from .backfill_request import BackfillRequest as BackfillRequestModel
+from .backfill_request_item import BackfillRequestItem as BackfillRequestItemModel  
 from .user_channel import UserChannel as UserChannelModel
 from .channel_provider import ChannelProvider as ChannelProviderModel
 from .alert import Alert as AlertModel
@@ -47,6 +49,8 @@ __all__ = [
     "PriceSnapshot1mModel",
     "PriceSnapshot1hModel",
     "PriceSnapshot1dModel",
+    "BackfillRequestModel",
+    "BackfillRequestItemModel",
     "AlertModel",
     "AlertBucketPolicyModel",
     "AlertChannelTargetModel",

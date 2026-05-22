@@ -1,8 +1,12 @@
 from typing import Any, Mapping, NamedTuple
 from datetime import datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
-from app.core.constants import AssetType
+from app.core.constants import (
+    BackfillRequestItemStatus,
+    CandleBaseInterval,
+    AssetType,
+)
 from app.domain.shared.errors import ValidationAppError
 
 
@@ -235,3 +239,53 @@ class SymbolInfo:
     price_precision: int | None = None
     qty_precision: int | None = None
     min_notional: Decimal | None = None
+
+
+@dataclass(frozen=True)
+class BackfillRequest:
+    id: int
+    user_id: int
+    base: CandleBaseInterval
+    start_at: datetime
+    end_at: datetime
+    reason: str
+    created_at: datetime
+    updated_at: datetime
+
+
+@dataclass(frozen=True)
+class BackfillRequestCreate:
+    user_id: int
+    base: CandleBaseInterval
+    start_at: datetime
+    end_at: datetime
+    reason: str
+
+@dataclass(frozen=True)
+class BackfillRequestItem:
+    id: int
+    backfill_request_id: int
+    exchange_instrument_id: int
+    status: BackfillRequestItemStatus
+    cursor_at: datetime | None
+    result_code: str | None
+    result_message: str | None
+    result_payload: dict
+    started_at: datetime | None
+    finished_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+
+@dataclass(frozen=True)
+class BackfillRequestItemCreate:
+    backfill_request_id: int
+    exchange_instrument_id: int
+    status: BackfillRequestItemStatus = BackfillRequestItemStatus.QUEUED
+    cursor_at: datetime | None = None
+    result_code: str | None = None
+    result_message: str | None = None
+    result_payload: dict = field(default_factory=dict)
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+

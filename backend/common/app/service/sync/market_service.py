@@ -11,11 +11,14 @@ from app.core.constants import (
     ExchangeCode,
     MarketSort,
     BaseQuote,
+    OutboxStatus,
 )
+from app.core.util.trace import get_trace_id
 from app.core.util.datetime import utcnow, epoch_to_datetime
+from app.core.util.serialization import to_canonical_json
 from app.domain.shared.uow import UnitOfWork
 from app.domain.shared.errors import ValidationAppError, NotFoundError
-from app.domain import MarketDTO, MarketRule, MarketPort
+from app.domain import MarketDTO, MarketRule, MarketPort, CryptoPort
 
 
 class MarketService:
@@ -23,11 +26,13 @@ class MarketService:
         self,
         *,
         uow_factory: Callable[[], UnitOfWork],
+        hmac: CryptoPort.TokenHasher,
         exchange_symbol_providers: dict[str, MarketPort.ExchangeSymbol],
         candle_store: MarketPort.CandleStore,
         market_snapshot: MarketPort.MarketSnapshot,
     ) -> None:
         self._uow_factory = uow_factory
+        self._hmac = hmac
         self._exchange_symbol_providers = exchange_symbol_providers
         self._candle_store = candle_store
         self._market_snapshot = market_snapshot
@@ -173,6 +178,99 @@ class MarketService:
             if limit is not None and len(rows) > limit:
                 rows = rows[-limit:] if not asc_order else rows[:limit]
             return rows
+    
+    def create_backfill_request(
+        self,
+        *,
+        user_id: int,
+        exchange_instrument_ids: list[int],
+        base: CandleBaseInterval,
+        start_at: datetime,
+        end_at: datetime,
+        reason: str,
+    ):
+        trace_id = get_trace_id()
+
+        with self._uow_factory() as uow:
+            # 값 검증
+            exchange_instrument_ids = list(dict.fromkeys(exchange_instrument_ids))
+            reason = reason.strip()
+            
+            if start_at >= end_at:
+                raise ValidationAppError("start_at must be earlier than end_at", target="start_at")
+
+            if not exchange_instrument_ids:
+                raise ValidationAppError("exchange_instrument_ids is required", target="exchange_instrument_ids")
+
+            if not reason:
+                raise ValidationAppError(
+                    "reason is required",
+                    target="reason",
+                )
+
+            # exchange_instrument_ids 검색
+            market_simples = uow.markets.list_exchange_instrument_by_filter(
+                exchange_instrument_ids=exchange_instrument_ids,
+                is_active=True,
+            )
+
+            if(len(market_simples) != len(exchange_instrument_ids)):
+                raise ValidationAppError(f"Invalid exchange_instrument_ids", target="exchange_instrument_ids")
+
+            # backfill_request 생성
+            backfill_request = uow.markets.add_backfile_request(
+                row=MarketDTO.BackfillRequestCreate(
+                    user_id=user_id,
+                    base=base,
+                    start_at=start_at,
+                    end_at=end_at,
+                    reason=reason,
+                )
+            )
+
+            # backfill_request_itme 생성
+            items = [
+                MarketDTO.BackfillRequestItemCreate(
+                    backfill_request_id=backfill_request.id,
+                    exchange_instrument_id=exchange_instrument_id,
+                )
+                for exchange_instrument_id in exchange_instrument_ids
+            ]
+
+            uow.markets.add_backfill_request_items(rows=items)
+
+            # outbox 생성
+            fp_dict: dict[str, Any] = {
+                "event_type": OutboxEventType.MARKET_BACKFILL_REQUEST.value,
+                "aggregate_type": "backfill_request",
+                "aggregate_id": backfill_request.id,
+            }
+
+            outbox_fingerprint = to_canonical_json(fp_dict)
+            outbox_fingerprint = (
+                self._hmac.fp_hash(outbox_fingerprint)
+                if outbox_fingerprint is not None
+                else None
+            )
+
+            # 4) outbox enqueue
+            uow.outboxs.add_outbox(
+                OutboxDTO.OutboxCreate(
+                    trace_id=trace_id,
+                    event_type=OutboxEventType.MARKET_BACKFILL_REQUEST,
+                    aggregate_type="user",
+                    aggregate_id=user_id,
+                    outbox_fingerprint=outbox_fingerprint,
+                    payload={
+                        "backfill_request_id": backfill_request.id,
+                    },
+                    status=OutboxStatus.PENDING,
+                    attempts=0,
+                ),
+                True,
+            )
+
+            uow.commit()
 
     # ---------------------------------------------------------------------------------------------------------------
 
@@ -188,10 +286,10 @@ class MarketService:
                 exchange_instrument_ids=ids
             )
 
-            # 🔥 market lookup map
+            # market lookup map
             market_map = {m.exchange_instrument_id: m for m in market_simples}
 
-            # 🔥 BTC 기준값 찾기
+            # BTC 기준값 찾기
             btc_krw_symbol = None
             btc_usdt_symbol = None
             eth_btc_symbol = None
@@ -240,7 +338,7 @@ class MarketService:
                 data = self._candle_store.get_1s(exchange, symbol)
                 eth_btc = Decimal(data["close"]) if data else None
 
-            # 🔥 normalized 계산
+            # normalized 계산
             for s in snapshots:
                 m = market_map.get(s.exchange_instrument_id)
                 if not m:
@@ -268,7 +366,7 @@ class MarketService:
                 if normalized_price is not None:
                     normalized_volume = normalized_price * volume
 
-                # 🔥 snapshots에 주입
+                # snapshots에 주입
                 s.normalized_price = normalized_price or Decimal("0")
                 s.normalized_volume = normalized_volume or Decimal("0")
 
@@ -385,13 +483,13 @@ class MarketService:
 
         normalized = self.normalize_symbols(raw_symbols)
         with self._uow_factory() as uow:
-            active = self.ensure_exchange_instruments(
+            actives = self.ensure_exchange_instruments(
                 uow=uow,
                 exchange_code=exchange_code,
                 symbols=normalized,
             )
             uow.commit()
-            return active
+            return actives
 
     def normalize_symbols(self, rows: list[MarketDTO.SymbolInfo]) -> list:
         """
