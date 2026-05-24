@@ -15,8 +15,9 @@ class NoticeDetailRead(ApiResponseModel):
     content: str
     category: str
     view_count: int
-    summary: str | None = None
+    created_at: datetime
     updated_at: datetime | None = None
+    summary: str | None = None
 
     prev: NoticeSimple | None = None
     next: NoticeSimple | None = None
@@ -28,6 +29,8 @@ class NoticeRead(ApiResponseModel):
     content: str
     category: str
     view_count: int
+
+    created_at: datetime
     updated_at: datetime | None = None
 
 

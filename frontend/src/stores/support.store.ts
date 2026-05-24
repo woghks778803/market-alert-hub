@@ -16,10 +16,10 @@ export const useSupportStore = defineStore('notice', () => {
   const faqs = ref<FAQDto[]>([])
   const notices = ref<NoticeDto[]>([])
   const notice = ref<NoticeDatailDto | null>(null)
-  const activeTab = ref<NoticeCategory>(NoticeCategory.UPDATE)
+  const activeTab = ref<NoticeCategory>(NoticeCategory.NOTICE)
 
   const noticeListQuery = ref<NoticeListQuery>({
-    category: NoticeCategory.UPDATE,
+    category: NoticeCategory.NOTICE,
     limit: 20,
     offset: 0,
   })

@@ -1311,25 +1311,64 @@ button.alert-rule-fab {
   height: 100%;
 }
 
-.faq-content-wrapper :deep(p) {
-  margin-bottom: 8px;
+/* v-html 기본 본문 */
+.html-content {
+  color: inherit;
+  font-size: inherit;
+  font-family: inherit;
+  line-height: 1.6;
+  text-align: left;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/* 문단 */
+.html-content p {
+  display: block;
+  margin: 1em 0;
   line-height: 1.6;
 }
 
-.faq-content-wrapper :deep(strong) {
-  color: #7c4dff;
-  font-weight: 700;
+.html-content p:first-child {
+  margin-top: 0;
 }
 
-.faq-content-wrapper :deep(ul) {
-  padding-left: 20px;
-  margin-top: 8px;
-  list-style-type: disc !important;
+.html-content p:last-child {
+  margin-bottom: 0;
+}
+
+/* 목록 */
+.html-content ol {
+  display: block;
+  list-style-type: decimal;
+  list-style-position: outside;
+  margin: 1em 0;
+  padding-inline-start: 40px;
+}
+
+.html-content ul {
+  display: block;
+  list-style-type: disc;
+  list-style-position: outside;
+  margin: 1em 0;
+  padding-inline-start: 40px;
+}
+
+.html-content li {
+  display: list-item;
+  margin: 0;
+  padding-left: 0;
+  line-height: 1.6;
+}
+
+.html-content strong {
+  font-weight: 700;
+  color: rgb(var(--v-theme-primary));
 }
 
 /* 아코디언 테두리 정리 */
 .v-expansion-panel--active>.v-expansion-panel-title {
-  color: #7c4dff !important;
+  color: rgb(var(--v-theme-primary)) !important;
 }
 
 .leading-tight {
@@ -1418,10 +1457,6 @@ html.dark .v-sheet.notice-summary {
 
 html.dark .notice-summary-text {
   color: #c4b5fd;
-}
-
-.notice-tabs :deep(.v-slide-group__content) {
-  padding: 0;
 }
 
 .notice-tab-item {

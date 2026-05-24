@@ -10,7 +10,7 @@
       class="pa-0"
     >
       <div class="pa-6 pb-4 border-b border-default">
-        <div class="d-flex align-center mb-3">
+        <div class="d-flex align-center ga-2 mb-4">
           <v-chip
             size="x-small"
             :class="['notice-chip font-weight-bold px-3', NoticeCategoryLabel[notice.category].bg]"
@@ -20,7 +20,7 @@
             {{ NoticeCategoryLabel[notice.category].title }}
           </v-chip>
           <span class="text-caption"
-            >{{ formatDateTime(notice.updatedAt) }} · 조회 {{ notice.viewCount }}</span
+            >{{ formatDateTime(notice.createdAt) }} · 조회 {{ notice.viewCount }}</span
           >
         </div>
         <h1 class="text-h5 font-weight-black text-primary leading-tight">
@@ -96,7 +96,7 @@
 </template>
 
 <script setup lang="ts">
-import { watch, onMounted } from 'vue'
+import { watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 
@@ -112,11 +112,6 @@ const router = useRouter()
 const supportStore = useSupportStore()
 const { notice } = storeToRefs(supportStore)
 const supportAction = useAsyncAction()
-
-onMounted(async () => {
-  const id = Number(route.params.id)
-  await supportStore.fetchNotice(id)
-})
 
 watch(
   () => route.params.id,

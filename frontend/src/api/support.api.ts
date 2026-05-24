@@ -10,6 +10,7 @@ export type NoticeInfo = {
   is_active: boolean
   view_count: number
 
+  created_at: string
   updated_at: string
 }
 
@@ -28,6 +29,7 @@ export type NoticeDetailInfo = {
   is_active: boolean
   view_count: number
 
+  created_at: string
   updated_at: string
 
   prev: NoticeSimpleInfo | null

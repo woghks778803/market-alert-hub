@@ -37,7 +37,7 @@
 
           <v-expansion-panel-text class="pt-4">
             <div
-              class="faq-content-wrapper text-body-2"
+              class="html-content text-body-2"
               v-html="item.answer"
             />
           </v-expansion-panel-text>

@@ -24,22 +24,22 @@ class SqlSupportRepo(SupportRepo):
         prev_sql = (
             select(NoticeModel.id, NoticeModel.title)
             .where(
-                NoticeModel.updated_at > notice.updated_at,
+                NoticeModel.id > notice.id,
                 NoticeModel.category == notice.category,
                 NoticeModel.is_active.is_(is_active)
             )
-            .order_by(NoticeModel.updated_at.asc())
+            .order_by(NoticeModel.id.asc())
             .limit(1)
         )
 
         next_sql = (
             select(NoticeModel.id, NoticeModel.title)
             .where(
-                NoticeModel.updated_at < notice.updated_at,
+                NoticeModel.id < notice.id,
                 NoticeModel.category == notice.category,
                 NoticeModel.is_active.is_(is_active)
             )
-            .order_by(NoticeModel.updated_at.desc())
+            .order_by(NoticeModel.id.desc())
             .limit(1)
         )
 
@@ -75,7 +75,7 @@ class SqlSupportRepo(SupportRepo):
                     NoticeModel.is_active.is_(is_active),
                 )
             )
-            .order_by(asc(NoticeModel.id))
+            .order_by(NoticeModel.id.asc())
             .limit(limit)
             .offset(offset)
         )

@@ -24,6 +24,7 @@ export function toNoticeDto(data: NoticeInfo): NoticeDto {
     isActive: data.is_active,
     viewCount: data.view_count,
 
+    createdAt: data.created_at,
     updatedAt: data.updated_at,
   }
 }
@@ -39,6 +40,7 @@ export function toNoticeDetailDto(data: NoticeDetailInfo): NoticeDatailDto {
     isActive: data.is_active,
     viewCount: data.view_count,
 
+    createdAt: data.created_at,
     updatedAt: data.updated_at,
 
     prevNotice: data.prev,

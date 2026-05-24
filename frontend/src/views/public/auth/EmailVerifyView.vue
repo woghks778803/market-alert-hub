@@ -8,8 +8,8 @@
     @submit="onSubmit"
   >
     <template #description>
-      가입에 사용할 이메일 주소를 입력하세요.<br />
-      입력한 이메일로 인증 링크를 보내드립니다.
+      AlertPing에서 사용할 이메일 주소를 입력하세요.<br />
+      계정 확인, 복구, 알림 수신과 중요 안내를 위해 이메일을 인증합니다.
     </template>
 
     <v-text-field

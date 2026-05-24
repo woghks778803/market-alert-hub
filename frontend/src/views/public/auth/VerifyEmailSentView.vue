@@ -5,7 +5,7 @@
     <div class="verify-desc">
       <div class="verify-email">{{ userStore.me?.email }}</div>
       <div>인증 링크를 전송했습니다</div>
-      <div>메일함에서 링크를 눌러 가입을 완료하세요</div>
+      <div>메일함에서 링크를 눌러 인증을 완료하세요</div>
       <div class="verify-hint">메일이 안 보이면 스팸함을 확인해주세요</div>
     </div>
 

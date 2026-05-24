@@ -71,7 +71,7 @@
             </div>
 
             <div class="text-caption font-weight-medium text-[#BDBDBD]">
-              {{ formatDateTime(notice.updatedAt) }}
+              {{ formatDateTime(notice.createdAt) }}
             </div>
           </v-card>
         </v-col>

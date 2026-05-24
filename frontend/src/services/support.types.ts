@@ -7,6 +7,7 @@ export type NoticeDto = {
   isActive: boolean
   viewCount: number
 
+  createdAt: string
   updatedAt: string
 }
 
@@ -25,6 +26,7 @@ export type NoticeDatailDto = {
   isActive: boolean
   viewCount: number
 
+  createdAt: string
   updatedAt: string
 
   prevNotice: NoticeSimpleDto | null
