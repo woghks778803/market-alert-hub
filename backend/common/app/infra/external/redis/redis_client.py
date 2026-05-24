@@ -84,6 +84,18 @@ class RedisClient:
             log.exception("redis delete failed: key=%s", key)
             raise
 
+    def rename(self, source: str, target: str) -> bool:
+        try:
+            ok = self._client.rename(source, target)
+            return bool(ok)
+        except RedisError:
+            log.exception(
+                "redis rename failed: source=%s target=%s",
+                source,
+                target,
+            )
+            raise
+
     def hget(self, key: str, field: str) -> int:
         try:
             return cast(int, self._client.hget(name=key, key=field))

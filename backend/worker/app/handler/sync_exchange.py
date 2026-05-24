@@ -72,6 +72,12 @@ def handle_sync_exchanges(
         started_epoch_ms = datetime_to_epoch_ms(started_at)
         finished_epoch_ms = datetime_to_epoch_ms(finished_at)
 
+        if total > 0:
+            # 원자적 스왑: tmp_key -> redis_key
+            r.rename(tmp_key, redis_key)
+        else:
+            r.delete(redis_key)
+
         meta = {
             "run_key": run_key,
             "slot": slot,
@@ -81,8 +87,7 @@ def handle_sync_exchanges(
             "synced_at_epoch_ms": finished_epoch_ms,
         }
 
-        pipe = r.pipeline(transaction=False)
-        pipe.set(
+        r.set(
             meta_key,
             json.dumps(
                 meta,
@@ -90,19 +95,11 @@ def handle_sync_exchanges(
                 separators=(",", ":"),
             ),
         )
-        
-        if total > 0:
-            # 원자적 스왑: tmp_key -> redis_key
-            pipe.rename(tmp_key, redis_key)
-        else:
-            pipe.delete(redis_key)
 
         # TTL이 필요하면 tmp/meta 둘 다 TTL 적용
         # if ttl_sec > 0:
         #     pipe.expire(tmp_key, ttl_sec)
         #     pipe.expire(meta_key, ttl_sec)
-
-        pipe.execute()
 
         logger.info(
             "sync_exchanges: wrote %s exchanges into redis_key=%s", total, redis_key

@@ -57,6 +57,7 @@ def handle_sync_alerts(
         r = ctx.redis_client.conn()
         old_tmp_bucket_keys = r.smembers(tmp_bucket_index_key)
         old_real_bucket_keys = r.smembers(redis_bucket_index_key)
+        all_bucket_keys: set[str] = set()
 
         pipe = r.pipeline(transaction=False)
 
@@ -107,6 +108,7 @@ def handle_sync_alerts(
                 for bucket_key, alert_ids in bucket_mapping.items():
                     pipe.sadd(f"{tmp_bucket_key}:{bucket_key}", *alert_ids)
                     pipe.sadd(tmp_bucket_index_key, bucket_key)
+                    all_bucket_keys.add(bucket_key)
 
                 pipe.execute()
                 total += len(mapping)
@@ -117,6 +119,39 @@ def handle_sync_alerts(
         started_epoch_ms = datetime_to_epoch_ms(started_at)
         finished_epoch_ms = datetime_to_epoch_ms(finished_at)
 
+        # pipe.rename은 redis cluster가 의도적으로 막아둬서 pipeline 안에서 사용 불가하기 때문에 따로 빼서 사용해야함
+        if total > 0:
+            r.rename(tmp_snapshot_key, redis_snapshot_key)
+
+            for bucket_key in all_bucket_keys:
+                r.rename(f"{tmp_bucket_key}:{bucket_key}", f"{redis_bucket_key}:{bucket_key}")
+            
+            r.rename(tmp_bucket_index_key, redis_bucket_index_key)
+
+            pipe = r.pipeline(transaction=False)
+
+            for raw_bucket_key in old_real_bucket_keys:
+                bucket_key = raw_bucket_key.decode() if isinstance(raw_bucket_key, bytes) else raw_bucket_key
+
+                if bucket_key not in all_bucket_keys:
+                    pipe.delete(f"{redis_bucket_key}:{bucket_key}")
+
+            pipe.execute()
+            
+        else:
+            # 활성 알림이 0개니까 기존 스냅샷 제거
+            pipe = r.pipeline(transaction=False)
+
+            pipe.delete(redis_snapshot_key)
+
+            for raw_bucket_key in old_real_bucket_keys:
+                bucket_key = raw_bucket_key.decode() if isinstance(raw_bucket_key, bytes) else raw_bucket_key
+                pipe.delete(f"{redis_bucket_key}:{bucket_key}")
+
+            pipe.delete(redis_bucket_index_key)
+
+            pipe.execute()
+        
         meta = {
             "run_key": run_key,
             "slot": slot,
@@ -126,8 +161,7 @@ def handle_sync_alerts(
             "synced_at_epoch_ms": finished_epoch_ms,
         }
 
-        pipe = r.pipeline(transaction=False)
-        pipe.set(
+        r.set(
             meta_key,
             json.dumps(
                 meta,
@@ -135,34 +169,11 @@ def handle_sync_alerts(
                 separators=(",", ":"),
             ),
         )
-        
-        if total > 0:
-            pipe.rename(tmp_snapshot_key, redis_snapshot_key)
 
-            for raw_bucket_key in old_real_bucket_keys:
-                bucket_key = raw_bucket_key.decode() if isinstance(raw_bucket_key, bytes) else raw_bucket_key
-                pipe.delete(f"{redis_bucket_key}:{bucket_key}")
-
-            for bucket_key, alert_ids in bucket_mapping.items():
-                pipe.rename(f"{tmp_bucket_key}:{bucket_key}", f"{redis_bucket_key}:{bucket_key}")
-            
-            pipe.rename(tmp_bucket_index_key, redis_bucket_index_key)
-        else:
-            # 활성 알림이 0개니까 기존 스냅샷 제거
-            pipe.delete(redis_snapshot_key)
-
-            for raw_bucket_key in old_real_bucket_keys:
-                bucket_key = raw_bucket_key.decode() if isinstance(raw_bucket_key, bytes) else raw_bucket_key
-                pipe.delete(f"{redis_bucket_key}:{bucket_key}")
-
-            pipe.delete(redis_bucket_index_key)
-            
         # TTL이 필요하면 tmp/meta 둘 다 TTL 적용
         # if ttl_sec > 0:
         #     pipe.expire(tmp_snapshot_key, ttl_sec)
         #     pipe.expire(meta_key, ttl_sec)
-
-        pipe.execute()
 
         logger.info(
             "sync_alerts: wrote %s alerts into redis_snapshot_key=%s", total, redis_snapshot_key

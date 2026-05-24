@@ -1,5 +1,6 @@
 import json
-from typing import Callable
+from typing import Callable, Sequence
+
 from app.core.constants import CANDLE, CandleInterval
 from app.domain import MarketPort
 from app.infra.external.redis.async_redis_client import RedisClientAsync
@@ -53,9 +54,12 @@ class RedisCandleStore(MarketPort.AsyncCandleStore):
             "ts_open": int(raw.get(b"ts_open", b"0")),
         }
 
-    async def subscribe(self, interval_type: str):
-        pubsub = await self._redis.subscribe(f"{self._prefix}:{CANDLE}:{interval_type}:UPBIT:KRW-BTC")
+    async def subscribe(self, channels: Sequence[str]):
+        pubsub = await self._redis.subscribe(*channels)
         return pubsub
+
+    def channel_key(self, interval_type: str, ex: str, symbol: str) -> str:
+        return f"{self._prefix}:{CANDLE}:{interval_type}:{ex}:{symbol}"
 
     def _symbols_1s_key(self, ex, symbol) -> str:
         return f"{self._prefix}:{CANDLE}:{CandleInterval.SEC_1.value}:{ex}:{symbol}"

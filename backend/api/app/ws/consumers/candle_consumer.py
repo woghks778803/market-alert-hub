@@ -12,8 +12,24 @@ async def run_candle_consumer(app, interval):
     store: MarketStore = app.state.market_store
     svcs: AsyncServiceFactory = app.state.ws_svcs
     config: CoreDTO.WsConfigBag = app.state.ws_config
+    
+    exchanges = await svcs.active_catalog.get_exchanges_snap()
 
-    pubsub = await svcs.candle_store.subscribe(interval_type=interval.value)
+    channels: list[str] = []
+
+    for exchange_code, exchange in exchanges.items():
+        symbols = await svcs.active_catalog.get_symbols_snap(exchange_code)
+
+        for exchange_symbol, symbol in symbols.items():
+            channels.append(
+                svcs.candle_store.channel_key(
+                    interval_type=interval.value,
+                    ex=exchange_code,
+                    symbol=exchange_symbol,
+                )
+            )
+
+    pubsub = await svcs.candle_store.subscribe(channels)
 
     while True:
         msg = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
