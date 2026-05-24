@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from app.domain.shared.errors import AppError
 
 from app.core.constants import DeploymentEnvironment, CandleInterval, TickerInterval
-from app.core.logging import setup_logging
+from app.core.logging import setup_logging, resolve_log_level
 
 from app.api.deps import get_api_context
 from app.api.middleware import RequestIdMiddleware
@@ -84,11 +84,10 @@ def create_app() -> FastAPI:
 
     cors_allow_origins = api_ctx.config.cors_allow_origins
 
-    is_prod = deploy_env == DeploymentEnvironment.PROD
     is_local = deploy_env == DeploymentEnvironment.LOCAL
     
     setup_logging(
-        level=logging.INFO if is_prod else logging.DEBUG,
+        level=resolve_log_level(api_ctx.config.log_level),
         service=service_name,
     )
 

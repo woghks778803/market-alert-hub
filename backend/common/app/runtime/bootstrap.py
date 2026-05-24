@@ -56,6 +56,7 @@ from app.infra.external.oauth.kakao.rest_client import (
     get_kakao_rest_client,
 )
 
+from app.infra.external.redis.shared.dto import RedisClientConfig
 from app.infra.external.redis.async_redis_client import get_async_redis_client
 from app.infra.external.redis.redis_client import get_redis_client
 from app.infra.external.redis.provider import (
@@ -155,6 +156,15 @@ def _resolve_master_key() -> str:
         "Set CRYPTO_DATA_ENC_KEY or CRYPTO_DATA_ENC_SECRET_ID."
     )
 
+def _resolve_redis_config() -> RedisClientConfig:
+    return RedisClientConfig(
+        connect_timeout=settings.REDIS_CONNECT_TIMEOUT,
+        socket_timeout=settings.REDIS_SOCKET_TIMEOUT,
+        health_check_interval=settings.REDIS_HEALTH_CHECK_INTERVAL,
+        retry_on_timeout=settings.REDIS_RETRY_ON_TIMEOUT,
+        cluster_enabled=settings.REDIS_CLUSTER_ENABLED,
+    )
+
 def _build_message_provider_registry():
     return {
         ChannelCode.FCM.value: providers.fcm_push_provider(),
@@ -178,7 +188,10 @@ class Providers:
         prefix: str,
     ) -> Callable[[], RedisAsyncOutboxEvent]:
         return lambda: RedisAsyncOutboxEvent(
-            redis=get_async_redis_client(settings.REDIS_URL),
+            redis=get_async_redis_client(
+                settings.REDIS_URL,
+                _resolve_redis_config()
+            ),
             prefix=prefix,
         )
 
@@ -187,7 +200,10 @@ class Providers:
         prefix: str,
     ) -> Callable[[], RedisAsyncMarketCatalog]:
         return lambda: RedisAsyncMarketCatalog(
-            redis=get_async_redis_client(settings.REDIS_URL),
+            redis=get_async_redis_client(
+                settings.REDIS_URL,
+                _resolve_redis_config()
+            ),
             exchanges_snap_key=f"{prefix}:{SNAP}:{EXCHANGES}",
             exchanges_meta_key=f"{prefix}:{META}:{EXCHANGES}",
             symbols_snap_key_fn=lambda ex: f"{prefix}:{SNAP}:{SYMBOLS}:{ex}",
@@ -199,7 +215,10 @@ class Providers:
         prefix: str,
     ) -> Callable[[], RedisAsyncAlertSnapshot]:
         return lambda: RedisAsyncAlertSnapshot(
-            redis=get_async_redis_client(settings.REDIS_URL),
+            redis=get_async_redis_client(
+                settings.REDIS_URL,
+                _resolve_redis_config()
+            ),
             prefix=prefix,
         )
     
@@ -208,7 +227,10 @@ class Providers:
         prefix: str,
     ) -> Callable[[], RedisAsyncAlertBucket]:
         return lambda: RedisAsyncAlertBucket(
-            redis=get_async_redis_client(settings.REDIS_URL),
+            redis=get_async_redis_client(
+                settings.REDIS_URL,
+                _resolve_redis_config()
+            ),
             prefix=prefix,
         )
 
@@ -217,7 +239,10 @@ class Providers:
         prefix: str,
     ) -> Callable[[], RedisAsyncAlertEvent]:
         return lambda: RedisAsyncAlertEvent(
-            redis=get_async_redis_client(settings.REDIS_URL),
+            redis=get_async_redis_client(
+                settings.REDIS_URL,
+                _resolve_redis_config()
+            ),
             prefix=prefix,
         )
 
@@ -226,7 +251,10 @@ class Providers:
         prefix: str,
     ) -> Callable[[], RedisAsyncTickerStore]:
         return lambda: RedisAsyncTickerStore(
-            redis=get_async_redis_client(settings.REDIS_URL),
+            redis=get_async_redis_client(
+                settings.REDIS_URL,
+                _resolve_redis_config()
+            ),
             prefix=prefix,
         )
 
@@ -235,13 +263,22 @@ class Providers:
         prefix: str,
     ) -> Callable[[], RedisAsyncCandleStore]:
         return lambda: RedisAsyncCandleStore(
-            redis=get_async_redis_client(settings.REDIS_URL),
+            redis=get_async_redis_client(
+                settings.REDIS_URL,
+                _resolve_redis_config()
+            ),
             prefix=prefix,
         )
 
     @staticmethod
     def cooldown_async_provider(prefix: str) -> Callable[[], RedisAsyncCooldown]:
-        return lambda: RedisAsyncCooldown(redis=get_async_redis_client(settings.REDIS_URL), prefix=prefix)
+        return lambda: RedisAsyncCooldown(
+            redis=get_async_redis_client(
+                settings.REDIS_URL,
+                _resolve_redis_config()
+            ),
+            prefix=prefix
+        )
 
     @staticmethod
     def google_translation_provider() -> Callable[[], GoogleTranslation]:
@@ -352,45 +389,72 @@ class Providers:
     @staticmethod
     def outbox_event_provider(prefix: str) -> Callable[[], RedisOutboxEvent]:
         return lambda: RedisOutboxEvent(
-            redis=get_redis_client(settings.REDIS_URL),
+            redis=get_redis_client(
+                settings.REDIS_URL,
+                _resolve_redis_config(),
+            ),
             prefix=prefix,
         )
 
     @staticmethod
     def candle_store_provider(prefix: str) -> Callable[[], RedisCandleStore]:
         return lambda: RedisCandleStore(
-            redis=get_redis_client(settings.REDIS_URL),
+            redis=get_redis_client(
+                settings.REDIS_URL,
+                _resolve_redis_config(),
+            ),
             prefix=prefix,
         )
 
     @staticmethod
     def market_snapshot_provider(prefix: str) -> Callable[[], RedisMarketSnapshot]:
         return lambda: RedisMarketSnapshot(
-            redis=get_redis_client(settings.REDIS_URL),
+            redis=get_redis_client(
+                settings.REDIS_URL,
+                _resolve_redis_config(),
+            ),
             prefix=prefix
         )
 
     @staticmethod
     def alert_snapshot_provider(prefix: str) -> Callable[[], RedisAlertSnapshot]:
         return lambda: RedisAlertSnapshot(
-            redis=get_redis_client(settings.REDIS_URL),
+            redis=get_redis_client(
+                settings.REDIS_URL,
+                _resolve_redis_config(),
+            ),
             prefix=prefix
         )
 
     @staticmethod
     def alert_bucket_provider(prefix: str) -> Callable[[], RedisAlertBucket]:
         return lambda: RedisAlertBucket(
-            redis=get_redis_client(settings.REDIS_URL),
+            redis=get_redis_client(
+                settings.REDIS_URL,
+                _resolve_redis_config(),
+            ),
             prefix=prefix
         )
 
     @staticmethod
     def state_provider(prefix: str) -> Callable[[], RedisState]:
-        return lambda: RedisState(redis=get_redis_client(settings.REDIS_URL), prefix=prefix)
+        return lambda: RedisState(
+            redis=get_redis_client(
+                settings.REDIS_URL,
+                _resolve_redis_config(),
+            ),
+            prefix=prefix
+        )
 
     @staticmethod
     def cooldown_provider(prefix: str) -> Callable[[], RedisCooldown]:
-        return lambda: RedisCooldown(redis=get_redis_client(settings.REDIS_URL), prefix=prefix)
+        return lambda: RedisCooldown(
+            redis=get_redis_client(
+                settings.REDIS_URL,
+                _resolve_redis_config(),
+            ),
+            prefix=prefix
+        )
 
     @staticmethod
     def uow_provider(
@@ -756,7 +820,10 @@ def create_worker_context() -> WorkerContext:
         pool_size=cfg.pool_size,
         max_overflow=cfg.max_overflow,
     )
-    redis = get_redis_client(settings.REDIS_URL)
+    redis = get_redis_client(
+        settings.REDIS_URL,
+        _resolve_redis_config(),
+    )
     return WorkerContext(config=cfg, svcs=svcs, redis_client=redis)
 
 
@@ -791,7 +858,10 @@ def create_collector_context() -> CollectorContext:
         pool_size=cfg.pool_size,
         max_overflow=cfg.max_overflow,
     )
-    async_redis = get_async_redis_client(settings.REDIS_URL)
+    async_redis = get_async_redis_client(
+        settings.REDIS_URL,
+        _resolve_redis_config()
+    )
 
     subscribe_facs_register: SubscribeFactoryRegistry = {
         ExchangeCode.UPBIT.value: lambda codes: UpbitWsSubscribe(
@@ -826,7 +896,10 @@ def create_stream_processor_context() -> StreamProcessorContext:
         pool_size=cfg.pool_size,
         max_overflow=cfg.max_overflow,
     )
-    async_redis = get_async_redis_client(settings.REDIS_URL)
+    async_redis = get_async_redis_client(
+        settings.REDIS_URL,
+        _resolve_redis_config()
+    )
 
     return StreamProcessorContext(
         config=cfg,

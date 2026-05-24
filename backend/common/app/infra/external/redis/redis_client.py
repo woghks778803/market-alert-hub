@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 
 from redis.client import Redis as SyncRedis, Pipeline
+from redis.cluster import RedisCluster as SyncRedisCluster
 from redis.exceptions import RedisError, ResponseError
 
 from .shared.dto import RedisClientConfig
@@ -20,14 +21,27 @@ class RedisClient:
 
     def __init__(self, redis_url: str, *, config: RedisClientConfig | None = None) -> None:
         self._config = config or RedisClientConfig()
-        self._client: SyncRedis = SyncRedis.from_url(
-            redis_url,
+
+        common_kwargs = dict(
             decode_responses=False,
             socket_connect_timeout=self._config.connect_timeout,
             socket_timeout=self._config.socket_timeout,
-            retry_on_timeout=self._config.retry_on_timeout,
             health_check_interval=self._config.health_check_interval,
         )
+
+        if self._config.cluster_enabled:
+            self._client = SyncRedisCluster.from_url(
+                redis_url,
+                ssl_check_hostname=False,
+                **common_kwargs,
+            )
+        else:
+            self._client = SyncRedis.from_url(
+                redis_url,
+                retry_on_timeout=self._config.retry_on_timeout,
+                **common_kwargs,
+            )
+
 
     def set_value( # set 타입 충돌로 set_value로 네이밍 변경
         self,
@@ -218,7 +232,7 @@ class RedisClient:
             raise
 
 
-    def conn(self) -> SyncRedis:
+    def conn(self) -> SyncRedis | SyncRedisCluster:
         return self._client
 
 

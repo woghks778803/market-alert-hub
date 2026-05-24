@@ -42,6 +42,11 @@ class Settings(BaseSettings):
     REDIS_SSL: bool = False
     REDIS_ACCESS_PRIMARY_KEY: str | None = None
     REDIS_ACCESS_SECONDARY_KEY: str | None = None
+    REDIS_CONNECT_TIMEOUT: float
+    REDIS_SOCKET_TIMEOUT: float
+    REDIS_HEALTH_CHECK_INTERVAL: float
+    REDIS_RETRY_ON_TIMEOUT: bool
+    REDIS_CLUSTER_ENABLED: bool
 
     # --- version switch ---
     ACTIVE_JWT_KID: int = 1

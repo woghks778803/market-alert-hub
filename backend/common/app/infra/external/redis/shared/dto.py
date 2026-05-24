@@ -11,3 +11,5 @@ class RedisClientConfig:
 
     # 명령 실패 시 타임아웃 관련 동작
     retry_on_timeout: bool = True
+
+    cluster_enabled: bool = False

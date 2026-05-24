@@ -5,7 +5,7 @@ import signal
 import sentry_sdk
 
 from app.core.constants import DeploymentEnvironment
-from app.core.logging import setup_logging
+from app.core.logging import setup_logging, resolve_log_level
 from .wiring import build_dispatcher_runtime
 
 log = logging.getLogger(__name__)
@@ -15,10 +15,10 @@ async def run() -> None:
     rt = build_dispatcher_runtime()
     service_name = rt.config.service_name
 
-    if rt.config.deploy_env == DeploymentEnvironment.PROD:
-        setup_logging(level=logging.INFO, service=service_name)
-    else:
-        setup_logging(level=logging.DEBUG, service=service_name)
+    setup_logging(
+        level=resolve_log_level(rt.config.log_level),
+        service=service_name,
+    )
 
     sentry_sdk.init(
         dsn=rt.config.sentry_dsn,

@@ -2,6 +2,7 @@ import logging
 from dataclasses import dataclass
 from functools import lru_cache
 from redis.asyncio import Redis as AsyncRedis
+from redis.asyncio.cluster import RedisCluster as AsyncRedisCluster
 from redis.exceptions import RedisError, ResponseError
 
 from .shared.dto import RedisClientConfig
@@ -14,14 +15,26 @@ class RedisClientAsync:
         self, redis_url: str, *, config: RedisClientConfig | None = None
     ) -> None:
         self._config = config or RedisClientConfig()
-        self._client: AsyncRedis = AsyncRedis.from_url(
-            redis_url,
+
+        common_kwargs = dict(
             decode_responses=False,
             socket_connect_timeout=self._config.connect_timeout,
             socket_timeout=self._config.socket_timeout,
-            retry_on_timeout=self._config.retry_on_timeout,
             health_check_interval=self._config.health_check_interval,
         )
+
+        if self._config.cluster_enabled:
+            self._client = AsyncRedisCluster.from_url(
+                redis_url,
+                ssl_check_hostname=False,
+                **common_kwargs,
+            )
+        else:
+            self._client = AsyncRedis.from_url(
+                redis_url,
+                retry_on_timeout=self._config.retry_on_timeout,
+                **common_kwargs,
+            )
 
     async def get(self, key: str) -> bytes | None:
         try:
@@ -233,7 +246,7 @@ class RedisClientAsync:
             log.exception("redis pipeline create failed")
             raise
 
-    def conn(self) -> AsyncRedis:
+    def conn(self) -> AsyncRedis | AsyncRedisCluster:
         return self._client
 
     async def aclose(self) -> None:

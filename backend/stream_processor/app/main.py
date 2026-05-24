@@ -3,7 +3,7 @@ import logging
 import sentry_sdk
 import sys
 
-from app.core.logging import setup_logging
+from app.core.logging import setup_logging, resolve_log_level
 from app.core.constants import DeploymentEnvironment
 from app.run import run
 from app.wiring import build_runtime
@@ -13,10 +13,10 @@ def main() -> int:
     rt = build_runtime()
     service_name = rt.ctx.config.service_name
 
-    if rt.ctx.config.deploy_env == DeploymentEnvironment.PROD:
-        setup_logging(level=logging.INFO, service=service_name)
-    else:
-        setup_logging(level=logging.DEBUG, service=service_name)
+    setup_logging(
+        level=resolve_log_level(rt.ctx.config.log_level),
+        service=service_name,
+    )
 
     sentry_sdk.init(
         dsn=rt.ctx.config.sentry_dsn,

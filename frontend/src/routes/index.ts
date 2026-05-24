@@ -95,7 +95,7 @@ router.beforeEach(async (to, _from, next) => {
     }
   }
 
-  console.log('Global Guard:', { to: to.fullPath, authState, allows, hasStatus: status })
+  // console.log('Global Guard:', { to: to.fullPath, authState, allows, hasStatus: status })
 
   // if (token && isTokenExpired(token)) {
   // authStore.clearStatus()

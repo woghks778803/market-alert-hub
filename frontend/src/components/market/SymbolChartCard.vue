@@ -171,8 +171,6 @@ const initChart = async () => {
           const hh = String(d.getHours()).padStart(2, '0')
           const min = String(d.getMinutes()).padStart(2, '0')
 
-          console.log("tickMarkType", tickMarkType)
-
           switch (tickMarkType) {
             case TickMarkType.Year:
               return String(yyyy)
@@ -278,7 +276,7 @@ watch(
   () => candles.value.length,
   async (m) => {
     if (!m || !candleSeries) return
-    console.log('candles length changed, updating chart data for:', m)
+    // console.log('candles length changed, updating chart data for:', m)
 
     if (!candles || candles.value.length === 0) {
       console.warn('No candles data available for market:', m)
