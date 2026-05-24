@@ -21,7 +21,7 @@ async def run_ticker_consumer(app, interval):
             await asyncio.sleep(0.1)
             continue
         # async for msg in pubsub.listen():
-        if msg["type"] != WsMessageType.PMESSAGE.value:
+        if msg["type"] != WsMessageType.MESSAGE.value:
             continue
 
         channel = msg["channel"]

@@ -22,7 +22,7 @@ async def run_candle_consumer(app, interval):
             await asyncio.sleep(0.05)
             continue
 
-        if msg["type"] != WsMessageType.PMESSAGE.value:
+        if msg["type"] != WsMessageType.MESSAGE.value:
             continue
 
         channel = msg["channel"]

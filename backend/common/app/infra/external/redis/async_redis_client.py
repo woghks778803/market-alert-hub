@@ -154,6 +154,15 @@ class RedisClientAsync:
             log.exception("redis pubsub create failed")
             raise
 
+    async def subscribe(self, *channels: str):
+        try:
+            pubsub = self._client.pubsub()
+            await pubsub.subscribe(*channels)
+            return pubsub
+        except RedisError:
+            log.exception("redis subscribe failed: channels=%s", channels)
+            raise
+
     async def psubscribe(self, *patterns: str):
         try:
             pubsub = self._client.pubsub()

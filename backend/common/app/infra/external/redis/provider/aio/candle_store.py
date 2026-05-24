@@ -54,7 +54,7 @@ class RedisCandleStore(MarketPort.AsyncCandleStore):
         }
 
     async def subscribe(self, interval_type: str):
-        pubsub = await self._redis.psubscribe(f"{self._prefix}:{CANDLE}:{interval_type}:*")
+        pubsub = await self._redis.subscribe(f"{self._prefix}:{CANDLE}:{interval_type}:UPBIT:KRW-BTC")
         return pubsub
 
     def _symbols_1s_key(self, ex, symbol) -> str:
