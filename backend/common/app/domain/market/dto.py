@@ -230,6 +230,16 @@ class ParsedMarketSymbol:
 
 
 @dataclass(frozen=True)
+class CandleInfo:
+    opened_at: datetime
+    open_price: Decimal
+    high_price: Decimal
+    low_price: Decimal
+    close_price: Decimal
+    volume: Decimal
+
+
+@dataclass(frozen=True)
 class SymbolInfo:
     symbol: str  # 예: "KRW-BTC"
     base: str
@@ -288,4 +298,33 @@ class BackfillRequestItemCreate:
     result_payload: dict = field(default_factory=dict)
     started_at: datetime | None = None
     finished_at: datetime | None = None
+
+
+@dataclass(frozen=True)
+class MarketBackfillJob:
+    backfill_request_id: int
+    backfill_request_item_id: int
+
+    user_id: int
+    base: CandleBaseInterval
+    reason: str
+    start_at: datetime
+    end_at: datetime
+
+    exchange_instrument_id: int
+    exchange_symbol: str
+    item_status: BackfillRequestItemStatus
+    cursor_at: datetime | None
+    result_code: str | None
+    result_message: str | None
+    result_payload: dict[str, Any] | None
+
+    exchange_id: int
+    exchange_code: str
+    exchange_timezone: str
+
+    base_asset_id: int
+    base_symbol: str
+    quote_asset_id: int
+    quote_symbol: str
 

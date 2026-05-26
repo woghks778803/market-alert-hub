@@ -34,6 +34,15 @@ class ServiceConfigBag(BaseConfigBag):
     app_name: str
     deploy_env: str
     
+    # 바이낸스 candle api 제한
+    binance_candle_batch_size: int
+    binance_candle_rate_limit: int
+
+    # 업비트 candle api 제한
+    upbit_candle_batch_size: int
+    upbit_candle_rate_limit: int
+    
+    # 
     oauth_state_sec: int
     # 이메일 재전송 쿨다운 초
     email_resend_cooldown_sec: int

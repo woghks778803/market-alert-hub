@@ -106,7 +106,7 @@ class AlertFormType(str, enum.Enum):
     COMPARE = "compare"              # A/B 비교: volume > volume_ma
 
 class OutboxEventType(str, enum.Enum):
-    MARKET_BACKFILL_REQUEST = "MARKET_BACKFILL_REQUEST"
+    REQUEST_MARKET_BACKFILL = "REQUEST_MARKET_BACKFILL"
 
     AUTH_EMAIL_VERIFY = "AUTH_EMAIL_VERIFY"
     AUTH_PASSWORD_RESET = "AUTH_PASSWORD_RESET"
@@ -133,6 +133,7 @@ class CooldownType(str, enum.Enum):
     EMAIL_VERIFY_RESEND = "EMAIL_VERIFY_RESEND"
     NOTICE_VIEW = "NOTICE_VIEW"
     NOTICE_VIEW_RATE = "NOTICE_VIEW_RATE"
+    EXCHANGE_CANDLE_RATE_LIMIT = "EXCHANGE_CANDLE_RATE_LIMIT"
 
 class PlatformType(str, enum.Enum):
     ANDROID = "android"

@@ -1,15 +1,14 @@
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
-
-from .shared.errors import UpbitHttpError, UpbitRateLimitError, UpbitDecodeError
-from .shared.dto import UpbitMarket
 
 from app.infra.external.transport.port.http import SyncHttpTransport
 from app.infra.external.transport.impl.httpx import (
     HttpxTransport,
     HttpxTransportConfig,
 )
-
+from .shared.errors import UpbitHttpError, UpbitRateLimitError, UpbitDecodeError
+from .shared.dto import UpbitMarket
 
 @dataclass(frozen=True)
 class UpbitRestClientConfig:
@@ -67,7 +66,7 @@ class UpbitRestClient:
         except Exception as e:
             raise UpbitDecodeError(f"Failed to decode Upbit response: {e}") from e
 
-    def list_markets(self) -> list[UpbitMarket]:
+    def list_market(self) -> list[UpbitMarket]:
         data = self._get_json("/v1/market/all", params={"isDetails": "false"})
         if not isinstance(data, list):
             raise UpbitDecodeError("Unexpected markets payload shape")
@@ -84,6 +83,51 @@ class UpbitRestClient:
                     UpbitMarket(market=market, korean_name=kname, english_name=ename)
                 )
         return out
+
+    def list_minute_candle(
+        self,
+        *,
+        unit: int,
+        market: str,
+        to: datetime,
+        count: int,
+    ) -> list[dict[str, Any]]:
+        data = self._get_json(
+            f"/v1/candles/minutes/{unit}",
+            params={
+                "market": market,
+                "to": to.strftime("%Y-%m-%dT%H:%M:%S"),
+                "count": count,
+            },
+        )
+
+        if not isinstance(data, list):
+            raise UpbitDecodeError("Unexpected minute candles payload shape")
+
+        return [item for item in data if isinstance(item, dict)]
+
+        return result
+
+    def list_day_candle(
+        self,
+        *,
+        market: str,
+        to: datetime,
+        count: int,
+    ) -> list[dict[str, Any]]:
+        data = self._get_json(
+            "/v1/candles/days",
+            params={
+                "market": market,
+                "to": to.strftime("%Y-%m-%dT%H:%M:%S"),
+                "count": count,
+            },
+        )
+
+        if not isinstance(data, list):
+            raise UpbitDecodeError("Unexpected day candle payload shape")
+
+        return [item for item in data if isinstance(item, dict)]
 
 
 def get_upbit_rest_client(

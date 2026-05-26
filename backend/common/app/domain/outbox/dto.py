@@ -75,6 +75,7 @@ class OutboxUpdate:
     status: OutboxStatus | None = None
     attempts: int | None = None
     next_run_at: datetime | None = None
+    sent_at: datetime | None = None
 
     def to_dict(self) -> dict:
         return {k: v for k, v in asdict(self).items() if v is not None}
@@ -89,6 +90,7 @@ class OutboxCreate:
     payload: dict[str, Any]
     status: OutboxStatus
     attempts: int
+    next_run_at: datetime | None = None
     outbox_fingerprint: bytes | None = None
 
 

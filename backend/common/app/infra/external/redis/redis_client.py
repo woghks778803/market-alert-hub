@@ -77,6 +77,22 @@ class RedisClient:
             log.exception("redis ttl failed: key=%s", key)
             raise
 
+    def incr(self, key: str) -> int:
+        try:
+            return int(self._client.incr(key))
+        except RedisError:
+            log.exception("redis incr failed: key=%s", key)
+            raise
+
+
+    def expire(self, key: str, ttl_sec: int) -> bool:
+        try:
+            ok = self._client.expire(key, ttl_sec)
+            return bool(ok)
+        except RedisError:
+            log.exception("redis expire failed: key=%s ttl_sec=%s", key, ttl_sec)
+            raise
+
     def delete(self, key: str) -> int:
         try:
             return cast(int, self._client.delete(key))

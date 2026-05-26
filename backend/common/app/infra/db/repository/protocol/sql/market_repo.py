@@ -1,10 +1,17 @@
-from typing import Protocol, Sequence, Tuple
+from typing import Any, Protocol, Sequence, Tuple
 from datetime import datetime
-from app.core.constants import MarketSort
+from app.core.constants import MarketSort, BackfillRequestItemStatus
 from app.domain import MarketDTO
 
 
 class MarketRepo(Protocol):
+    def list_backfill_job_by_filter(
+        self,
+        *,
+        backfill_request_id: int,
+        statuses: list[BackfillRequestItemStatus] | None = None,
+        limit: int,
+    ) -> list[MarketDTO.MarketBackfillJob]: ...
     def list_ticker_stats_from_snapshots(
         self, is_active: bool, deleted_is_null: bool = True
     ) -> list[MarketDTO.ExchangeInstrumentTickerCreate]: ...
@@ -135,6 +142,24 @@ class MarketRepo(Protocol):
         *,
         chunk_size: int = 1000,
     ) -> None: ...
+    def update_backfill_request_item(
+        self,
+        *,
+        backfill_request_item_id: int,
+        from_status: MarketDTO.BackfillRequestItemStatus,
+        to_status: MarketDTO.BackfillRequestItemStatus,
+        cursor_at: datetime | None = None,
+        result_code: str | None = None,
+        result_message: str | None = None,
+        result_payload: dict[str, Any] | None = None,
+    ) -> bool: ...
+    def update_backfill_request_item_status(
+        self,
+        *,
+        backfill_request_item_id: int,
+        from_statuses: list[MarketDTO.BackfillRequestItemStatus],
+        to_status: MarketDTO.BackfillRequestItemStatus,
+    ) -> bool: ...
     def upsert_exchange_instrument_tickers(
         self,
         rows: list[MarketDTO.ExchangeInstrumentTickerCreate],

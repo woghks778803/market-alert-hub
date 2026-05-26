@@ -114,6 +114,7 @@ class OutboxService:
                 outbox_attempt.success = result.success
                 outbox_attempt.retryable = result.retryable
                 if result.success:
+                    outbox_update.sent_at = utcnow()
                     outbox_update.status = OutboxStatus.SENT
                     outbox_attempt.result_message = "Done"
                 else:
@@ -153,13 +154,14 @@ class OutboxService:
                     return
                 if row.status != OutboxStatus.SENDING:
                     logger.info("skip id=%s status=%s", outbox_id, row.status)
-                    return
+                    return 
 
-                should_record = True
-                payload = OutboxRule.parse_payload(getattr(row, "payload", None))
+                payload = row.payload
                 outbox_attempt.attempt_no = outbox_update.attempts = row.attempts + 1
                 outbox_filter = OutboxDTO.OutboxFilter(id=row.id)
                 event_type = row.event_type
+
+                should_record = True
 
             result: CoreDTO.HandlerResult = dispatch_fn(
                 event_type=event_type, payload=payload
@@ -174,7 +176,15 @@ class OutboxService:
             )
 
         except Exception as e:
+            if not should_record:
+                logger.exception(
+                    "process preparation failed outbox id=%s",
+                    outbox_id,
+                )
+                raise
+
             outbox_attempt.retryable = False
+            outbox_update.next_run_at = None
             outbox_update.status = OutboxStatus.FAILED
             response = getattr(e, "response", None)
             error = response.get("Error", {}) if isinstance(response, dict) else {}

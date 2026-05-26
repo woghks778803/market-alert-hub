@@ -62,16 +62,18 @@ class Outbox(Base):
 
     @classmethod
     def from_create_dto(cls, dto: OutboxDTO.OutboxCreate) -> "Outbox":
-        """
-        domain DTO -> ORM Model
-        """
-        return cls(
-            trace_id=dto.trace_id,
-            event_type=dto.event_type,
-            aggregate_type=dto.aggregate_type,
-            aggregate_id=dto.aggregate_id,
-            outbox_fingerprint=dto.outbox_fingerprint,
-            payload=dto.payload,
-            status=dto.status,
-            attempts=dto.attempts,
-        )
+        kwargs = {
+            "trace_id": dto.trace_id,
+            "event_type": dto.event_type,
+            "aggregate_type": dto.aggregate_type,
+            "aggregate_id": dto.aggregate_id,
+            "outbox_fingerprint": dto.outbox_fingerprint,
+            "payload": dto.payload,
+            "status": dto.status,
+            "attempts": dto.attempts,
+        }
+
+        if dto.next_run_at is not None:
+            kwargs["next_run_at"] = dto.next_run_at
+            
+        return cls(**kwargs)

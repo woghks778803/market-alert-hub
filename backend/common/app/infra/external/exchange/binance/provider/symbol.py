@@ -9,8 +9,8 @@ from app.infra.external.exchange.binance.rest_client import BinanceRestClient
 class BinanceSymbol(MarketPort.ExchangeSymbol):
     rest_client: BinanceRestClient
 
-    def list_symbols(self) -> list[MarketDTO.SymbolInfo]:
-        rows = self.rest_client.list_markets()
+    def list_symbol(self) -> list[MarketDTO.SymbolInfo]:
+        rows = self.rest_client.list_market()
 
         result: list[MarketDTO.SymbolInfo] = []
         for r in rows:

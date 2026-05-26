@@ -8,8 +8,8 @@ from app.infra.external.exchange.upbit.rest_client import UpbitRestClient
 class UpbitSymbol(MarketPort.ExchangeSymbol):
     rest_client: UpbitRestClient
 
-    def list_symbols(self) -> list[MarketDTO.SymbolInfo]:
-        rows = self.rest_client.list_markets()  # list[UpbitMarket] 가정
+    def list_symbol(self) -> list[MarketDTO.SymbolInfo]:
+        rows = self.rest_client.list_market()  # list[UpbitMarket] 가정
 
         result: list[MarketDTO.SymbolInfo] = []
         for r in rows:

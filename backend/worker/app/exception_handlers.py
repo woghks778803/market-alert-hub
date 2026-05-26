@@ -143,7 +143,7 @@ def run_task(
             deploy_env=deploy_env,
         )
         return HandlerResult(
-            success=True,
+            success=False,
             retryable=False,
             result_code=e.code,
             result_message=e.message,

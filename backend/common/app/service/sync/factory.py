@@ -30,6 +30,7 @@ class ServiceFactory:
         uow: Callable[[], UnitOfWork],
 
         exchange_symbol_providers: dict[str, Callable[[], MarketPort.ExchangeSymbol]],
+        exchange_candle_providers: dict[str, Callable[[], MarketPort.ExchangeCandle]],
         channel_message_providers: dict[str, Callable[[], ChannelPort.ChannelMessage]],
 
         kakao_oauth: Callable[[], AuthPort.KakaoOAuth],
@@ -55,6 +56,7 @@ class ServiceFactory:
     ) -> None:
         self._uow = uow
         self._exchange_symbol_providers = exchange_symbol_providers
+        self._exchange_candle_providers = exchange_candle_providers
         self._channel_message_providers = channel_message_providers
         self._kakao_oauth = kakao_oauth
         self._google_translation = google_translation
@@ -77,6 +79,10 @@ class ServiceFactory:
     @cached_property
     def exchange_symbol_providers(self):
         return {k: v() for k, v in self._exchange_symbol_providers.items()}
+
+    @cached_property
+    def exchange_candle_providers(self):
+        return {k: v() for k, v in self._exchange_candle_providers.items()}
 
     @cached_property
     def channel_message_providers(self):
@@ -164,10 +170,13 @@ class ServiceFactory:
     def markets(self) -> MarketService:
         return MarketService(
             uow_factory=self._uow,
-            hmac=self.hmac,
             exchange_symbol_providers=self.exchange_symbol_providers,
+            exchange_candle_providers=self.exchange_candle_providers,
             candle_store=self.candle_store,
             market_snapshot=self.market_snapshot,
+            cooldown=self.cooldown,
+            hmac=self.hmac,
+            config=self._config,
         )
 
     @cached_property

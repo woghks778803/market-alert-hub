@@ -64,7 +64,6 @@ export const useSupportStore = defineStore('notice', () => {
     notice.value = null
     notices.value = []
     faqs.value = []
-    activeTab.value = NoticeCategory.UPDATE
   }
 
   return {

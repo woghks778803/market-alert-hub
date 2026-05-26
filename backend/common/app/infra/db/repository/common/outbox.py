@@ -19,6 +19,8 @@ def to_outbox_where_mapping(outbox_filter: OutboxDTO.OutboxFilter):
 def to_outbox_values_mapping(outbox_update: OutboxDTO.OutboxUpdate):
     values = {}
 
+    values[OutboxModel.sent_at] = outbox_update.sent_at
+
     if outbox_update.status is not None:
         values[OutboxModel.status] = outbox_update.status
     if outbox_update.attempts is not None:

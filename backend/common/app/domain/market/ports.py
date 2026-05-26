@@ -1,11 +1,24 @@
+from datetime import datetime
 from typing import Any, Mapping, Protocol
-from .dto import SymbolInfo
+from .dto import SymbolInfo, CandleInfo
 
 JsonDict = dict[str, Any]
 
 class ExchangeSymbol(Protocol):
-    def list_symbols(self) -> list[SymbolInfo]:
+    def list_symbol(self) -> list[SymbolInfo]:
         raise NotImplementedError
+
+
+class ExchangeCandle(Protocol):
+    def list_candle(
+            self,
+            *,
+            unit: int,
+            exchange_symbol: str,
+            to: datetime,
+            count: int,
+        ) -> list[CandleInfo]:
+            raise NotImplementedError
 
 
 class MarketSnapshot(Protocol):

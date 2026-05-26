@@ -95,7 +95,8 @@ class BackfillRequest(Base):
             created_at=self.created_at,
             updated_at=self.updated_at,
         )
-
+        
+    @classmethod
     def from_create_dto(cls, dto: MarketDTO.BackfillRequestCreate) -> "BackfillRequest":
         return cls(
             user_id=dto.user_id,

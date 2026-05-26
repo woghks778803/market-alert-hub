@@ -1,18 +1,19 @@
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
+from app.core.util.datetime import datetime_to_epoch_ms
+from app.infra.external.transport.port.http import SyncHttpTransport
+from app.infra.external.transport.impl.httpx import (
+    HttpxTransport,
+    HttpxTransportConfig,
+)
 from .shared.errors import (
     BinanceDecodeError,
     BinanceHttpError,
     BinanceRateLimitError,
 )
 from .shared.dto import BinanceMarket
-
-from app.infra.external.transport.port.http import SyncHttpTransport
-from app.infra.external.transport.impl.httpx import (
-    HttpxTransport,
-    HttpxTransportConfig,
-)
 
 
 @dataclass(frozen=True)
@@ -81,7 +82,7 @@ class BinanceRestClient:
 
         return len(normalized.split(".", 1)[1])
 
-    def list_markets(self) -> list[BinanceMarket]:
+    def list_market(self) -> list[BinanceMarket]:
         data = self._get_json("/api/v3/exchangeInfo")
         symbols = data.get("symbols") if isinstance(data, dict) else None
         if not isinstance(symbols, list):
@@ -150,6 +151,29 @@ class BinanceRestClient:
                 )
             )
         return out
+
+    def list_kline(
+        self,
+        *,
+        symbol: str,
+        interval: str,
+        end_time: datetime,
+        limit: int,
+    ) -> Any:
+        data = self._get_json(
+            "/api/v3/klines",
+            params={
+                "symbol": symbol,
+                "interval": interval,
+                "endTime": datetime_to_epoch_ms(end_time),
+                "limit": limit,
+            },
+        )
+
+        if not isinstance(data, list):
+            raise BinanceDecodeError("Unexpected kline payload shape")
+
+        return data
 
 
 def get_binance_rest_client(

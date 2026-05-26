@@ -138,6 +138,10 @@ class Settings(BaseSettings):
     OUTBOX_SEND_LOCK_TTL_SEC: int = Field(default=120)
     OUTBOX_CONCURRENCY: int = Field(default=4)
 
+    # markets
+    REQUEST_MARKET_BACKFILL_JOB_BATCH_SIZE: int = 1
+    REQUEST_MARKET_BACKFILL_API_BATCH_SIZE: int = 1
+
     # tickers
     SYNC_TICKERS_BATCH_SIZE: int = 500
 
@@ -249,9 +253,15 @@ class Settings(BaseSettings):
         "wss://stream.binance.com:9443/ws"  # 업비트 WebSocket endpoint
     )
 
+    BINANCE_CANDLE_BATCH_SIZE: int = 1000
+    BINANCE_CANDLE_RATE_LIMIT: int = 1
+
     # --- Exchange: Upbit endpoints (REST/WS) ---
     UPBIT_REST_BASE_URL: str = "https://api.upbit.com"  # 업비트 REST API base url
     UPBIT_WS_URL: str = "wss://api.upbit.com/websocket/v1"  # 업비트 WebSocket endpoint
+
+    UPBIT_CANDLE_BATCH_SIZE: int = 200
+    UPBIT_CANDLE_RATE_LIMIT: int = 1
 
     # --- Oauth: Kakao endpoints (REST) ---
     KAKAO_API_REST_BASE_URL: str = "https://kapi.kakao.com"
@@ -299,6 +309,11 @@ class Settings(BaseSettings):
             },
             OutboxEventType.PERSIST_SNAPSHOTS.value: {
                 "run_key": OutboxEventType.PERSIST_SNAPSHOTS.value,
+            },
+            OutboxEventType.REQUEST_MARKET_BACKFILL.value: {
+                "run_key": OutboxEventType.REQUEST_MARKET_BACKFILL.value,
+                "job_batch_size": self.REQUEST_MARKET_BACKFILL_JOB_BATCH_SIZE,
+                "api_batch_size": self.REQUEST_MARKET_BACKFILL_API_BATCH_SIZE,
             },
             OutboxEventType.SYNC_EXCHANGES.value: {
                 "run_key": EXCHANGES,

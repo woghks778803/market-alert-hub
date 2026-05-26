@@ -79,33 +79,35 @@ from app.infra.external.redis.provider import (
 )
 
 
-from app.infra.external.exchange.upbit.shared.dto import UpbitWsSubscribe
-from app.infra.external.exchange.binance.shared.dto import BinanceWsSubscribe
 from app.infra.external.exchange.port.ws_client import (
     WsFactoryRegistry,
     WsClient,
 )
 from app.infra.external.exchange.port.subscribe import SubscribeFactoryRegistry
+from app.infra.external.exchange.upbit.shared.dto import UpbitWsSubscribe
+from app.infra.external.exchange.binance.shared.dto import BinanceWsSubscribe
 
 from app.infra.external.exchange.upbit.provider.symbol import UpbitSymbol
+from app.infra.external.exchange.upbit.provider.candle import UpbitCandle
 from app.infra.external.exchange.upbit.rest_client import (
     UpbitRestClientConfig,
     get_upbit_rest_client,
-)
-from app.infra.external.exchange.binance.rest_client import (
-    BinanceRestClientConfig,
-    get_binance_rest_client,
 )
 from app.infra.external.exchange.upbit.ws_client import (
     UpbitWsClientConfig,
     get_upbit_ws_client,
 )
 
+from app.infra.external.exchange.binance.provider.symbol import BinanceSymbol
+from app.infra.external.exchange.binance.provider.candle import BinanceCandle
+from app.infra.external.exchange.binance.rest_client import (
+    BinanceRestClientConfig,
+    get_binance_rest_client,
+)
 from app.infra.external.exchange.binance.ws_client import (
     BinanceWsClientConfig,
     get_binance_ws_client,
 )
-from app.infra.external.exchange.binance.provider.symbol import BinanceSymbol
 
 from app.infra.external.email.ses_client import SesEmailClient
 from app.infra.external.email.jinja_renderer import JinjaEmailRenderer
@@ -176,6 +178,11 @@ def _build_symbol_provider_registry():
         ExchangeCode.BINANCE.value: providers.binance_symbol_provider(),
     }
 
+def _build_candle_provider_registry():
+    return {
+        ExchangeCode.UPBIT.value: providers.upbit_candle_provider(),
+        ExchangeCode.BINANCE.value: providers.binance_candle_provider(),
+    }
 
 class Providers:
     """
@@ -361,12 +368,28 @@ class Providers:
         return lambda: UpbitSymbol(rest_client=get_upbit_rest_client(config))
 
     @staticmethod
+    def upbit_candle_provider() -> Callable[[], UpbitCandle]:
+        config = UpbitRestClientConfig(
+            base_url=settings.UPBIT_REST_BASE_URL,
+            timeout_sec=settings.HTTP_TIMEOUT_SEC,
+        )
+        return lambda: UpbitCandle(rest_client=get_upbit_rest_client(config))
+
+    @staticmethod
     def binance_symbol_provider() -> Callable[[], BinanceSymbol]:
         config = BinanceRestClientConfig(
             base_url=settings.BINANCE_REST_BASE_URL,
             timeout_sec=settings.HTTP_TIMEOUT_SEC,
         )
         return lambda: BinanceSymbol(rest_client=get_binance_rest_client(config))
+
+    @staticmethod
+    def binance_candle_provider() -> Callable[[], BinanceCandle]:
+        config = BinanceRestClientConfig(
+            base_url=settings.BINANCE_REST_BASE_URL,
+            timeout_sec=settings.HTTP_TIMEOUT_SEC,
+        )
+        return lambda: BinanceCandle(rest_client=get_binance_rest_client(config))
 
     @staticmethod
     def upbit_ws_provider() -> Callable[[], WsClient]:
@@ -560,6 +583,12 @@ def build_service_config_bag(prefix: str) -> CoreDTO.ServiceConfigBag:
     return CoreDTO.ServiceConfigBag(
         app_name=settings.APP_NAME,
         deploy_env=settings.DEPLOY_ENV,
+        
+        binance_candle_batch_size=settings.BINANCE_CANDLE_BATCH_SIZE,
+        binance_candle_rate_limit=settings.BINANCE_CANDLE_RATE_LIMIT,
+        upbit_candle_batch_size=settings.UPBIT_CANDLE_BATCH_SIZE,
+        upbit_candle_rate_limit=settings.UPBIT_CANDLE_RATE_LIMIT,
+
         oauth_state_sec=settings.OAUTH_STATE_TTL_SEC,
         email_resend_cooldown_sec=settings.EMAIL_RESEND_COOLDOWN_SEC,
         notice_view_cooldown_sec=settings.NOTICE_VIEW_COOLDOWN_SEC,
@@ -727,6 +756,7 @@ def create_service_factory(prefix: str, pool_size: int, max_overflow: int) -> Se
         ),
 
         exchange_symbol_providers=_build_symbol_provider_registry(),
+        exchange_candle_providers=_build_candle_provider_registry(),
         channel_message_providers=_build_message_provider_registry(),
 
         kakao_oauth=providers.kakao_oauth_provider(),

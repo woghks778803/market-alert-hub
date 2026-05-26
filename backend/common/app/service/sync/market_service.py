@@ -3,6 +3,7 @@ from typing import Any, Callable, Sequence, Iterable
 from datetime import datetime, timedelta
 from decimal import Decimal
 
+from app.core import dto as CoreDTO
 from app.core.constants import (
     TickerInterval,
     CandleInterval,
@@ -12,13 +13,22 @@ from app.core.constants import (
     MarketSort,
     BaseQuote,
     OutboxStatus,
+    OutboxEventType,
+    BackfillRequestItemStatus,
 )
 from app.core.util.trace import get_trace_id
-from app.core.util.datetime import utcnow, epoch_to_datetime
+from app.core.util.datetime import utcnow, epoch_to_datetime, ensure_utc
 from app.core.util.serialization import to_canonical_json
 from app.domain.shared.uow import UnitOfWork
-from app.domain.shared.errors import ValidationAppError, NotFoundError
-from app.domain import MarketDTO, MarketRule, MarketPort, CryptoPort
+from app.domain.shared.errors import ValidationAppError, NotFoundError, InternalServerError
+from app.domain import (
+    OutboxDTO, 
+    MarketDTO, 
+    MarketRule, 
+    MarketPort, 
+    CryptoPort,
+    ThrottlePort,
+)
 
 
 class MarketService:
@@ -26,16 +36,22 @@ class MarketService:
         self,
         *,
         uow_factory: Callable[[], UnitOfWork],
-        hmac: CryptoPort.TokenHasher,
         exchange_symbol_providers: dict[str, MarketPort.ExchangeSymbol],
+        exchange_candle_providers: dict[str, MarketPort.ExchangeCandle],
         candle_store: MarketPort.CandleStore,
         market_snapshot: MarketPort.MarketSnapshot,
+        cooldown: ThrottlePort.Cooldown,
+        hmac: CryptoPort.TokenHasher,
+        config: CoreDTO.ServiceConfigBag,
     ) -> None:
         self._uow_factory = uow_factory
-        self._hmac = hmac
         self._exchange_symbol_providers = exchange_symbol_providers
+        self._exchange_candle_providers = exchange_candle_providers
         self._candle_store = candle_store
         self._market_snapshot = market_snapshot
+        self._cooldown = cooldown
+        self._hmac = hmac
+        self._config = config
 
     # Meta
     def get_by_exchange_instrument_id(
@@ -189,8 +205,6 @@ class MarketService:
         end_at: datetime,
         reason: str,
     ):
-        trace_id = get_trace_id()
-
         with self._uow_factory() as uow:
             # 값 검증
             exchange_instrument_ids = list(dict.fromkeys(exchange_instrument_ids))
@@ -241,7 +255,7 @@ class MarketService:
 
             # outbox 생성
             fp_dict: dict[str, Any] = {
-                "event_type": OutboxEventType.MARKET_BACKFILL_REQUEST.value,
+                "event_type": OutboxEventType.REQUEST_MARKET_BACKFILL.value,
                 "aggregate_type": "backfill_request",
                 "aggregate_id": backfill_request.id,
             }
@@ -256,10 +270,10 @@ class MarketService:
             # 4) outbox enqueue
             uow.outboxs.add_outbox(
                 OutboxDTO.OutboxCreate(
-                    trace_id=trace_id,
-                    event_type=OutboxEventType.MARKET_BACKFILL_REQUEST,
-                    aggregate_type="user",
-                    aggregate_id=user_id,
+                    trace_id=get_trace_id(),
+                    event_type=OutboxEventType.REQUEST_MARKET_BACKFILL,
+                    aggregate_type="backfill_request",
+                    aggregate_id=backfill_request.id,
                     outbox_fingerprint=outbox_fingerprint,
                     payload={
                         "backfill_request_id": backfill_request.id,
@@ -271,6 +285,8 @@ class MarketService:
             )
 
             uow.commit()
+
+            return backfill_request
 
     # ---------------------------------------------------------------------------------------------------------------
 
@@ -479,7 +495,7 @@ class MarketService:
     def sync_exchange_instruments(self, exchange_code: str):
         raw_symbols = self._exchange_symbol_providers[
             exchange_code
-        ].list_symbols()  # list[MarketDTO.SymbolInfo]
+        ].list_symbol()  # list[MarketDTO.SymbolInfo]
 
         normalized = self.normalize_symbols(raw_symbols)
         with self._uow_factory() as uow:
@@ -599,6 +615,329 @@ class MarketService:
         return repo.list_exchange_instrument_by_filter(
             exchange_id=exchange.id, is_active=True
         )
+
+
+    def request_market_backfills(
+        self,
+        *,
+        backfill_request_id: int,
+        job_batch_size: int,
+        api_batch_size: int,
+    ) -> dict[str, Any]:
+        # 이 경우 outbox_fingerprint는 관리자 API 중복 요청 방지용으로만 사용하고 requeue에선 None 처리
+        now = utcnow()
+        blocked_exchanges: set[str] = set()
+
+        # 1) 처리할 job 조회
+        with self._uow_factory() as uow:
+            jobs = uow.markets.list_backfill_job_by_filter(
+                backfill_request_id=backfill_request_id,
+                statuses=[
+                    MarketDTO.BackfillRequestItemStatus.QUEUED,
+                    MarketDTO.BackfillRequestItemStatus.RETRY_WAIT,
+                ],
+                limit=job_batch_size + 1,
+            )
+
+        if not jobs:
+            return {
+                "backfill_request_id": backfill_request_id,
+                "processed_items": 0,
+                "completed_items": 0,
+                "retry_wait_items": 0,
+                "failed_items": 0,
+                "reason": "no_pending_items",
+            }
+
+        should_requeue = len(jobs) > job_batch_size
+        processed_items = 0
+        completed_items = 0
+        retry_wait_items = 0
+        failed_items = 0
+
+        # 2) 이번 worker 실행에서 처리할 item 수 제한
+        for job in jobs[:job_batch_size]:
+            if job.exchange_code in blocked_exchanges:
+                continue
+
+            # 3) item claim: queued/retry_wait -> running
+            with self._uow_factory() as uow:
+                claimed = uow.markets.update_backfill_request_item_status(
+                    backfill_request_item_id=job.backfill_request_item_id,
+                    from_statuses=[
+                        MarketDTO.BackfillRequestItemStatus.QUEUED,
+                        MarketDTO.BackfillRequestItemStatus.RETRY_WAIT,
+                    ],
+                    to_status=MarketDTO.BackfillRequestItemStatus.RUNNING
+                )
+                uow.commit()
+
+            if not claimed:
+                continue
+            
+            processed_items += 1
+
+            total_fetched_count = 0
+            total_upserted_count = 0
+            start_at = ensure_utc(job.start_at)
+            end_at = ensure_utc(job.end_at)
+            current_to = ensure_utc(job.cursor_at or job.end_at)
+
+            try:
+                # 4) 거래소별 기본값
+                exchange_code = job.exchange_code
+
+                if exchange_code == ExchangeCode.UPBIT.value:
+                    candle_batch_size = self._config.upbit_candle_batch_size
+                    candle_rate_limit = self._config.upbit_candle_rate_limit
+
+                    if candle_batch_size <= 0:
+                        raise InternalServerError(f"invalid upbit_candle_batch_size: {candle_batch_size}", target="candle_batch_size")
+
+                    if candle_rate_limit <= 0:
+                        raise InternalServerError(f"invalid upbit_candle_rate_limit_count: {candle_rate_limit}", target="candle_rate_limit")
+
+                    candle_provider = self._exchange_candle_providers[ExchangeCode.UPBIT.value]
+
+                elif exchange_code == ExchangeCode.BINANCE.value:
+                    candle_batch_size = self._config.binance_candle_batch_size
+                    candle_rate_limit = self._config.binance_candle_rate_limit
+
+                    if candle_batch_size <= 0:
+                        raise InternalServerError(f"invalid binance_candle_batch_size: {candle_batch_size}", target="candle_batch_size")
+
+                    if candle_rate_limit <= 0:
+                        raise InternalServerError(f"invalid binance_candle_rate_limit: {candle_rate_limit}", target="candle_rate_limit")
+
+                    candle_provider = self._exchange_candle_providers[ExchangeCode.BINANCE.value]
+
+                else:
+                    raise ValidationAppError(
+                        f"unsupported exchange for backfill: {job.exchange_code}", 
+                        target="job.exchange_code",
+                        meta={"exchange_code" : job.exchange_code}
+                    )
+
+                completed = False
+                last_cursor_at = current_to
+
+                # 5) 이번 worker 실행에서 API batch N번까지만 처리
+                for _ in range(api_batch_size):
+                    # 5-1) Redis rate limit: 초당 5회 같은 제한
+                    current_count = self._cooldown.incr_exchange_candle_rate_limit(
+                        exchange_code=exchange_code,
+                        ttl_sec=1,
+                    )
+
+                    if current_count > candle_rate_limit:
+                        # 호출하지 않고 다음 outbox로 넘김
+                        with self._uow_factory() as uow:
+                            uow.markets.update_backfill_request_item(
+                                backfill_request_item_id=job.backfill_request_item_id,
+                                from_status=MarketDTO.BackfillRequestItemStatus.RUNNING,
+                                to_status=MarketDTO.BackfillRequestItemStatus.RETRY_WAIT,
+                                cursor_at=current_to,
+                                result_code="rate_limit",
+                                result_message="exchange candle rate limit exceeded",
+                                result_payload={
+                                    "fetched_count": total_fetched_count,
+                                    "upserted_count": total_upserted_count,
+                                    "cursor_at": current_to.isoformat(),
+                                },
+                            )
+
+                            uow.commit()
+
+                        retry_wait_items += 1
+                        should_requeue = True
+                        blocked_exchanges.add(exchange_code)
+                        
+                        break
+                        # return {
+                        #     "backfill_request_id": backfill_request_id,
+                        #     "processed_items": processed_items,
+                        #     "completed_items": completed_items,
+                        #     "retry_wait_items": retry_wait_items,
+                        #     "failed_items": failed_items,
+                        #     "reason": "rate_limit",
+                        # }
+
+                    # 5-2) API 호출 1회 = api batch 1개
+                    exchange_candles = candle_provider.list_candle(
+                        base=job.base,
+                        exchange_symbol=job.exchange_symbol,
+                        to=current_to,
+                        count=candle_batch_size,
+                    )
+
+                    if exchange_candles is None:
+                        raise ValidationAppError(
+                            "unsupported exchange candle base interval",
+                            target="job.base",
+                            meta={"base": job.base.value},
+                        )
+
+                    if not exchange_candles:
+                        # 더 가져올 데이터 없음
+                        completed = True
+                        break
+
+                    # 다음 cursor 계산
+                    # candle gap이 크면 범위 안에 저장할 candle이 없을 수 있으니 cursor는 거래소에서 제공하는 exchange_candle로 계산
+                    opened_times = [
+                        exchange_candle.opened_at
+                        for exchange_candle in exchange_candles
+                    ]
+
+                    oldest_opened_at = min(opened_times)
+                    last_cursor_at = oldest_opened_at
+
+                    total_fetched_count += len(exchange_candles)
+
+                    interval = MarketRule.choose_candle_interval_delta(job.base)
+
+                    window_end_at = min(current_to, end_at)
+
+                    candles = MarketRule.fill_candle_gaps(
+                        candles=exchange_candles,
+                        start_at=start_at,
+                        end_at=window_end_at,
+                        interval=interval,
+                    )
+
+                    # 5-3) 응답 -> 내부 candle row 변환
+                    snapshots = [
+                        MarketDTO.PriceSnapshotCreate(
+                            exchange_instrument_id=job.exchange_instrument_id,
+                            ts_open=candle.opened_at,
+                            open=candle.open_price,
+                            high=candle.high_price,
+                            low=candle.low_price,
+                            close=candle.close_price,
+                            volume=candle.volume,
+                            updated_at=now,
+                        )
+                        for candle in candles
+                    ]
+
+                    # 5-4) 저장
+                    if snapshots:
+                        # upsert 대상으로 넘긴 candle row 수
+                        saved_count = len(snapshots)
+
+                        with self._uow_factory() as uow:
+                            if job.base == CandleBaseInterval.MIN_1:
+                                uow.markets.upsert_snapshots_1m(rows=snapshots)
+                            elif job.base == CandleBaseInterval.HOUR_1:
+                                uow.markets.upsert_snapshots_1h(rows=snapshots)
+                            elif job.base == CandleBaseInterval.DAY_1:
+                                uow.markets.upsert_snapshots_1d(rows=snapshots)
+                            else:
+                                raise ValidationAppError(
+                                    "unsupported candle base interval",
+                                    target="job.base",
+                                    meta={"base": job.base.value},
+                                )
+             
+                            uow.commit()
+
+                        total_upserted_count += saved_count
+
+                    # start_at까지 내려왔으면 완료
+                    if oldest_opened_at <= start_at:
+                        completed = True
+                        break
+
+                    # 아직 더 과거로 내려가야 하면 다음 API 호출의 to로 사용
+                    current_to = oldest_opened_at
+
+                # 6) 상태 마무리
+                if completed:
+                    with self._uow_factory() as uow:
+                        uow.markets.update_backfill_request_item(
+                            backfill_request_item_id=job.backfill_request_item_id,
+                            from_status=MarketDTO.BackfillRequestItemStatus.RUNNING,
+                            to_status=MarketDTO.BackfillRequestItemStatus.COMPLETED,
+                            result_code="completed",
+                            result_message=None,
+                            result_payload={
+                                "fetched_count": total_fetched_count,
+                                "upserted_count": total_upserted_count,
+                                "cursor_at": None,
+                            },
+                        )
+                        uow.commit()
+
+                    completed_items += 1
+
+                else:
+                    with self._uow_factory() as uow:
+                        uow.markets.update_backfill_request_item(
+                            backfill_request_item_id=job.backfill_request_item_id,
+                            from_status=MarketDTO.BackfillRequestItemStatus.RUNNING,
+                            to_status=MarketDTO.BackfillRequestItemStatus.RETRY_WAIT,
+                            cursor_at=last_cursor_at,
+                            result_code="yield",
+                            result_message="max api batches per run reached",
+                            result_payload={
+                                "fetched_count": total_fetched_count,
+                                "upserted_count": total_upserted_count,
+                                "cursor_at": last_cursor_at.isoformat(),
+                            },
+                        )
+
+                        uow.commit()
+
+                    retry_wait_items += 1
+                    should_requeue = True
+
+                if should_requeue:
+                    with self._uow_factory() as uow:
+                        uow.outboxs.add_outbox(
+                            OutboxDTO.OutboxCreate(
+                                trace_id=get_trace_id(),
+                                event_type=OutboxEventType.REQUEST_MARKET_BACKFILL,
+                                aggregate_type="backfill_request",
+                                aggregate_id=backfill_request_id,
+                                payload={
+                                    "backfill_request_id": backfill_request_id,
+                                },
+                                status=OutboxStatus.PENDING,
+                                attempts=0,
+                                next_run_at=utcnow() + timedelta(seconds=10),
+                                outbox_fingerprint=None,
+                            ),
+                            True,
+                        )
+                        
+                        uow.commit()
+
+            except Exception as e:
+                with self._uow_factory() as uow:
+                    uow.markets.update_backfill_request_item(
+                        backfill_request_item_id=job.backfill_request_item_id,
+                        from_status=MarketDTO.BackfillRequestItemStatus.RUNNING,
+                        to_status=MarketDTO.BackfillRequestItemStatus.FAILED,
+                        result_code=e.__class__.__name__[:64],
+                        result_message=str(e),
+                        result_payload={
+                            "fetched_count": total_fetched_count,
+                            "upserted_count": total_upserted_count,
+                            "cursor_at": current_to.isoformat() if current_to else None,
+                        },
+                    )
+                    uow.commit()
+
+                failed_items += 1
+
+        return {
+            "backfill_request_id": backfill_request_id,
+            "processed_items": processed_items,
+            "completed_items": completed_items,
+            "retry_wait_items": retry_wait_items,
+            "failed_items": failed_items,
+        }
+
 
     # ------------------------------------ seed snapshots data ------------------------------------------------------
 

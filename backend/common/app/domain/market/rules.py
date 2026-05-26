@@ -9,6 +9,111 @@ import app.domain.market.dto as MarketDTO
 
 Interval = Literal["1m", "5m", "15m", "1h", "4h", "1d", "1w", "1M"]
 
+def choose_candle_interval_delta(base: CandleBaseInterval) -> timedelta:
+    if base == CandleBaseInterval.MIN_1:
+        return timedelta(minutes=1)
+
+    if base == CandleBaseInterval.HOUR_1:
+        return timedelta(hours=1)
+
+    if base == CandleBaseInterval.DAY_1:
+        return timedelta(days=1)
+
+    raise ValidationAppError(
+        "unsupported candle base interval",
+        target="base",
+        meta={"base": base.value},
+    )
+
+def fill_candle_gaps(
+    *,
+    candles: list[MarketDTO.CandleInfo],
+    start_at: datetime,
+    end_at: datetime,
+    interval: timedelta,
+) -> list[MarketDTO.CandleInfo]:
+    """
+    거래소가 준 캔들을 서비스용 연속 캔들로 보정
+
+    - start_at <= opened_at < end_at 범위만 반환
+    - 빈 구간은 이전 close 기준으로 OHLC 동일 / volume 0 생성
+    - start_at 이전 candle은 저장하지 않지만 previous close seed로 사용 가능
+    - previous close가 없으면 leading gap은 생성하지 않음
+    """
+
+    sorted_candles = sorted(
+        (
+            candle
+            for candle in candles
+            if candle.opened_at < end_at
+        ),
+        key=lambda candle: candle.opened_at,
+    )
+
+    if not sorted_candles:
+        return []
+
+    filled: List[MarketDTO.CandleInfo] = []
+
+    prev_close: Decimal | None = None
+    expected_open: datetime | None = None
+
+    for candle in sorted_candles:
+        if prev_close is not None and expected_open is not None:
+            gap_open = expected_open
+
+            if gap_open < start_at:
+                diff = start_at - gap_open
+                steps = int(diff.total_seconds() // interval.total_seconds())
+                gap_open = gap_open + (interval * steps)
+
+                if gap_open < start_at:
+                    gap_open += interval
+
+            while gap_open < candle.opened_at and gap_open < end_at:
+                filled.append(
+                    MarketDTO.CandleInfo(
+                        opened_at=gap_open,
+                        open_price=prev_close,
+                        high_price=prev_close,
+                        low_price=prev_close,
+                        close_price=prev_close,
+                        volume=Decimal("0"),
+                    )
+                )
+                gap_open += interval
+
+        if start_at <= candle.opened_at < end_at:
+            filled.append(candle)
+
+        prev_close = candle.close_price
+        expected_open = candle.opened_at + interval
+
+    if prev_close is not None and expected_open is not None:
+        gap_open = expected_open
+
+        if gap_open < start_at:
+            diff = start_at - gap_open
+            steps = int(diff.total_seconds() // interval.total_seconds())
+            gap_open = gap_open + (interval * steps)
+
+            if gap_open < start_at:
+                gap_open += interval
+
+        while gap_open < end_at:
+            filled.append(
+                MarketDTO.CandleInfo(
+                    opened_at=gap_open,
+                    open_price=prev_close,
+                    high_price=prev_close,
+                    low_price=prev_close,
+                    close_price=prev_close,
+                    volume=Decimal("0"),
+                )
+            )
+            gap_open += interval
+
+    return filled
 
 def compose_candle_snapshot_data(
     market_simples: list[MarketDTO.MarketSimple],

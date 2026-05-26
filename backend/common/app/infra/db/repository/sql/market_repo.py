@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import cast, Sequence, Tuple
+from typing import cast, Any, Sequence, Tuple
 from sqlalchemy.engine import CursorResult
 from sqlalchemy import update, insert, select, and_, or_, asc, desc, func, tuple_
 from sqlalchemy.dialects.mysql import insert as mysql_insert
@@ -17,7 +17,7 @@ from app.infra.db.model import (
     WatchlistItemModel,
 )
 from app.core.util.datetime import utcnow, get_days_ago
-from app.core.constants import MarketSort
+from app.core.constants import MarketSort, BackfillRequestItemStatus
 from app.domain import MarketDTO
 from app.infra.db.repository.protocol.sql.market_repo import MarketRepo
 from app.infra.db.utils import to_row_dict
@@ -38,6 +38,105 @@ bri = BackfillRequestItemModel
 class SqlMarketRepo(MarketRepo):
     def __init__(self, db: DbSession):
         self._db = db
+
+    def list_backfill_job_by_filter(
+        self,
+        *,
+        backfill_request_id: int,
+        statuses: list[BackfillRequestItemStatus] | None = None,
+        limit: int,
+    ) -> list[MarketDTO.MarketBackfillJob]:
+
+        stmt = (
+            select(
+                br.id.label("backfill_request_id"),
+                bri.id.label("backfill_request_item_id"),
+
+                br.user_id,
+                br.base,
+                br.reason,
+                br.start_at,
+                br.end_at,
+
+                bri.exchange_instrument_id,
+                bri.status.label("item_status"),
+                bri.cursor_at,
+                bri.result_code,
+                bri.result_message,
+                bri.result_payload,
+
+                e.id.label("exchange_id"),
+                e.code.label("exchange_code"),
+                e.timezone.label("exchange_timezone"),
+
+                ei.exchange_symbol,
+
+                base.id.label("base_asset_id"),
+                base.symbol.label("base_symbol"),
+                quote.id.label("quote_asset_id"),
+                quote.symbol.label("quote_symbol"),
+            )
+            .select_from(bri)
+            .join(
+                br,
+                br.id == bri.backfill_request_id,
+            )
+            .join(
+                ei,
+                ei.id == bri.exchange_instrument_id,
+            )
+            .join(
+                e,
+                e.id == ei.exchange_id,
+            )
+            .join(
+                base,
+                base.id == ei.base_asset_id,
+            )
+            .join(
+                quote,
+                quote.id == ei.quote_asset_id,
+            )
+            .where(br.id == backfill_request_id)
+            .where(ei.is_active.is_(True))
+            .where(ei.deleted_at.is_(None))
+            .order_by(bri.id.asc())
+            .limit(limit)
+        )
+
+        if statuses:
+            stmt = stmt.where(
+                bri.status.in_([status.value for status in statuses])
+            )
+
+        rows = self._db.execute(stmt).mappings().all()
+
+        return [
+            MarketDTO.MarketBackfillJob(
+                backfill_request_id=row["backfill_request_id"],
+                backfill_request_item_id=row["backfill_request_item_id"],
+                user_id=row["user_id"],
+                base=row["base"],
+                reason=row["reason"],
+                start_at=row["start_at"],
+                end_at=row["end_at"],
+                exchange_instrument_id=row["exchange_instrument_id"],
+                exchange_symbol=row["exchange_symbol"],
+                item_status=row["item_status"],
+                cursor_at=row["cursor_at"],
+                result_code=row["result_code"],
+                result_message=row["result_message"],
+                result_payload=row["result_payload"],
+                exchange_id=row["exchange_id"],
+                exchange_code=row["exchange_code"],
+                exchange_timezone=row["exchange_timezone"],
+                base_asset_id=row["base_asset_id"],
+                base_symbol=row["base_symbol"],
+                quote_asset_id=row["quote_asset_id"],
+                quote_symbol=row["quote_symbol"],
+            )
+            for row in rows
+        ]
 
     def list_ticker_stats_from_snapshots(
         self, is_active: bool, deleted_is_null: bool = True
@@ -813,6 +912,86 @@ class SqlMarketRepo(MarketRepo):
 
             stmt = insert(bri).values(values)
             self._db.execute(stmt)
+
+    def update_backfill_request_item(
+        self,
+        *,
+        backfill_request_item_id: int,
+        from_status: MarketDTO.BackfillRequestItemStatus,
+        to_status: MarketDTO.BackfillRequestItemStatus,
+        cursor_at: datetime | None = None,
+        result_code: str | None = None,
+        result_message: str | None = None,
+        result_payload: dict[str, Any] | None = None,
+    ) -> bool:
+        now = utcnow()
+
+        values: dict[str, Any] = {
+            "status": to_status,
+            "cursor_at": cursor_at,
+            "result_code": result_code,
+            "result_message": result_message,
+            "result_payload": result_payload or {},
+            "updated_at": now,
+        }
+
+        if to_status == MarketDTO.BackfillRequestItemStatus.RUNNING:
+            values["started_at"] = now
+            values["finished_at"] = None
+
+        elif to_status in (
+            MarketDTO.BackfillRequestItemStatus.COMPLETED,
+            MarketDTO.BackfillRequestItemStatus.FAILED,
+            MarketDTO.BackfillRequestItemStatus.CANCELLED,
+            MarketDTO.BackfillRequestItemStatus.RETRY_WAIT,
+        ):
+            values["finished_at"] = now
+
+        stmt = (
+            update(bri)
+            .where(bri.id == backfill_request_item_id)
+            .where(bri.status == from_status)
+            .values(**values)
+        )
+
+        result = self._db.execute(stmt)
+        return result.rowcount == 1
+    
+    def update_backfill_request_item_status(
+        self,
+        *,
+        backfill_request_item_id: int,
+        from_statuses: list[MarketDTO.BackfillRequestItemStatus],
+        to_status: MarketDTO.BackfillRequestItemStatus,
+    ) -> bool:
+        now = utcnow()
+
+        values: dict[str, Any] = {
+            "status": to_status,
+            "updated_at": now,
+        }
+
+        if to_status == MarketDTO.BackfillRequestItemStatus.RUNNING:
+            values["started_at"] = now
+            values["finished_at"] = None
+
+        elif to_status in (
+            MarketDTO.BackfillRequestItemStatus.COMPLETED,
+            MarketDTO.BackfillRequestItemStatus.FAILED,
+            MarketDTO.BackfillRequestItemStatus.CANCELLED,
+            MarketDTO.BackfillRequestItemStatus.RETRY_WAIT,
+        ):
+            values["finished_at"] = now
+
+        stmt = (
+            update(bri)
+            .where(bri.id == backfill_request_item_id)
+            .where(bri.status.in_(from_statuses))
+            .values(**values)
+        )
+
+        result = self._db.execute(stmt)
+        return result.rowcount == 1
 
     def upsert_exchange_instrument_tickers(
         self,
