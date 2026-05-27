@@ -22,43 +22,36 @@ const consentPayload = computed(() => ({
   agreeMarketing: agreeMarketing.value,
 }))
 
-console.log('useTermsConsent initialized', {
-  agreeService: agreeService.value,
-  agreePrivacy: agreePrivacy.value,
-  agreeMarketing: agreeMarketing.value,
-  allChecked: allChecked.value,
-})
+  /**
+   * 🔹 최초 로드 시 sessionStorage에서 복구
+   */
+  ; (function restore() {
+    const raw = sessionStorage.getItem(STORAGE_KEY)
+    if (!raw) {
+      isRestoring = false
+      return
+    }
 
-/**
- * 🔹 최초 로드 시 sessionStorage에서 복구
- */
-;(function restore() {
-  const raw = sessionStorage.getItem(STORAGE_KEY)
-  if (!raw) {
-    isRestoring = false
-    return
-  }
+    try {
+      const parsed = JSON.parse(raw)
+      agreeService.value = !!parsed.agree_service
+      agreePrivacy.value = !!parsed.agree_privacy
+      agreeMarketing.value = !!parsed.agree_marketing
 
-  try {
-    const parsed = JSON.parse(raw)
-    agreeService.value = !!parsed.agree_service
-    agreePrivacy.value = !!parsed.agree_privacy
-    agreeMarketing.value = !!parsed.agree_marketing
+      allChecked.value = agreeService.value && agreePrivacy.value && agreeMarketing.value
 
-    allChecked.value = agreeService.value && agreePrivacy.value && agreeMarketing.value
-
-    console.log('useTermsConsent restored from sessionStorage', {
-      agreeService: agreeService.value,
-      agreePrivacy: agreePrivacy.value,
-      agreeMarketing: agreeMarketing.value,
-      allChecked: allChecked.value,
-    })
-  } catch {
-    sessionStorage.removeItem(STORAGE_KEY)
-  } finally {
-    isRestoring = false
-  }
-})()
+      // console.log('useTermsConsent restored from sessionStorage', {
+      //   agreeService: agreeService.value,
+      //   agreePrivacy: agreePrivacy.value,
+      //   agreeMarketing: agreeMarketing.value,
+      //   allChecked: allChecked.value,
+      // })
+    } catch {
+      sessionStorage.removeItem(STORAGE_KEY)
+    } finally {
+      isRestoring = false
+    }
+  })()
 
 /**
  * 🔹 값 변경 시 자동 저장
@@ -99,10 +92,6 @@ function resetTermsConsent() {
   agreePrivacy.value = false
   agreeMarketing.value = false
   allChecked.value = false
-
-  // queueMicrotask(() => {
-  //     canPersist = true;
-  // });
 }
 
 function syncAllChecked() {

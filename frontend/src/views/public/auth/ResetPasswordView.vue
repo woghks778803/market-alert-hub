@@ -193,8 +193,6 @@ onMounted(async () => {
       throw new Error('invalid_verify_token')
     }
     await authStore.verifyPasswordReset({ token })
-
-    console.log('verify success')
   } catch {
     setMode('fail')
   }

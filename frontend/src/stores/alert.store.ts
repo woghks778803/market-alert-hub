@@ -64,13 +64,11 @@ export const useAlertStore = defineStore('alert', () => {
   async function fetchAlert(id: number) {
     const result = await alertService.getAlert(id)
     alert.value = result
-    console.log('fetchAlert', alert.value)
     return result
   }
 
   async function fetchAlertTypes() {
     alertTypes.value = await alertService.getAlertTypes(alertTypeListQuery.value)
-    console.log('fetchAlertTypes', alertTypes)
   }
 
   async function fetchAlertLogs(options?: { append?: boolean }) {

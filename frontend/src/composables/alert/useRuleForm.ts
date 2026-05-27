@@ -216,7 +216,6 @@ export function useRuleForm(params: UseRuleFormParams) {
       }
 
       case FormType.PERCENT: {
-        console.log('percentForm', percentForm)
         const errors: Record<string, string> = {}
         if (toNumberOrNull(percentForm.value.percent) === null) {
           errors.percent = '변동률을 입력해주세요.'
@@ -429,7 +428,6 @@ export function useRuleForm(params: UseRuleFormParams) {
   }
 
   async function handleSubmit(onSuccess: () => Promise<void> | void): Promise<void> {
-    console.log('handleSubmit', form, thresholdForm)
     if (!canSubmit.value) return
 
     fieldErrors.value = emptyErrors()

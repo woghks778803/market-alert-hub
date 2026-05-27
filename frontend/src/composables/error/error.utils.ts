@@ -25,7 +25,6 @@ export function extractApiError(err: unknown): ApiError | null {
 
   // service에서 throw env.error 한 경우
   if (isApiError(err)) {
-    console.log("1")
     return err
   }
 
