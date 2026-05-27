@@ -19,8 +19,8 @@ import type {
   CandlesListQuery,
 } from '@/services/market.types'
 
-export async function getMarket(exchange_code: string, symbol: string): Promise<MarketDto> {
-  const env = await marketApi.getMarket(exchange_code, symbol)
+export async function getMarket(exchangeCode: string, exchangeSymbol: string): Promise<MarketDto> {
+  const env = await marketApi.getMarket(exchangeCode, exchangeSymbol)
 
   if (!env.success || !env.data) {
     throw env.error ?? new Error('invalid_market_response')

@@ -63,13 +63,13 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'select', payload: { exchange: string; symbol: string }): void
+  (e: 'select', payload: { exchange: string; exchangeSymbol: string }): void
 }>()
 
 function goDetail() {
   emit('select', {
     exchange: props.item.exchangeCode,
-    symbol: props.item.exchangeSymbol,
+    exchangeSymbol: props.item.exchangeSymbol,
   })
 }
 

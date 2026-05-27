@@ -56,19 +56,6 @@ class MarketService:
         self._hmac = hmac
         self._config = config
 
-    # Meta
-    def get_by_exchange_instrument_id(
-        self, user_id: int, exchange_instrument_id: int
-    ) -> MarketDTO.Market:
-        with self._uow_factory() as uow:
-            result = uow.markets.get_by_filter(
-                user_id=user_id, exchange_instrument_id=exchange_instrument_id
-            )
-
-            if result is None:
-                raise NotFoundError(message="Not found Market", target="market")
-
-            return result
 
     def get_by_exchange_symbol(
         self, user_id: int, exchange_code: str, exchange_symbol: str

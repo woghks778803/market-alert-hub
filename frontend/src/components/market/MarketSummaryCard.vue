@@ -10,8 +10,8 @@
           <div class="sd-top">
             <div class="sd-name">
               {{ market.name }}
-              <v-chip size="x-small">{{ market.exchangeCode }}</v-chip>
-              <v-chip size="x-small">{{ market.baseSymbol }}</v-chip>
+              <v-chip size="x-small" @click.stop="goExchangeDetail">{{ market.exchangeCode }}</v-chip>
+              <v-chip size="x-small" @click.stop="goInstrumentDetail">{{ market.baseSymbol }}</v-chip>
             </div>
           </div>
 
@@ -92,6 +92,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'toggle'): void
+  (e: 'exchange', payload: { exchange: string }): void
+  (e: 'instrument', payload: { symbol: string }): void
 }>()
 
 async function toggleWatchlist() {
@@ -100,5 +102,17 @@ async function toggleWatchlist() {
 
 async function toggleCollapsed() {
   emit('toggle')
+}
+
+async function goExchangeDetail() {
+  emit('exchange', {
+    exchange: props.market.exchangeCode,
+  })
+}
+
+async function goInstrumentDetail() {
+  emit('instrument', {
+    symbol: props.market.baseSymbol,
+  })
 }
 </script>

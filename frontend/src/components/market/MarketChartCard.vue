@@ -51,6 +51,7 @@ import TimeframeTabs from './TimeframeTabs.vue'
 import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { createChart, TickMarkType, type IChartApi, type ISeriesApi, type UTCTimestamp, type Time } from 'lightweight-charts'
+
 import { useMarketStore } from '@/stores/market.store'
 import type { MarketDto } from '@/services/market.types'
 import { TIMEFRAME_SECONDS } from '@/services/market.types'

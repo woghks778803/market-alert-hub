@@ -4,7 +4,7 @@
       v-for="item in items"
       :key="item.exchangeCode + ':' + item.exchangeSymbol"
       :item="item"
-      @select="goDetail"
+      @select="goMarketDetail"
     />
   </div>
 </template>
@@ -21,9 +21,9 @@ defineProps<{
   items: MarketDto[]
 }>()
 
-function goDetail(payload: { exchange: string; symbol: string }) {
+function goMarketDetail(payload: { exchange: string; exchangeSymbol: string }) {
   router.push({
-    name: 'SymbolDetail',
+    name: 'MarketDetail',
     params: payload,
   })
 }

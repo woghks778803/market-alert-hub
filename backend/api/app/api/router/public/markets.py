@@ -11,29 +11,121 @@ router = APIRouter(prefix="/markets")
 
 
 # @router.get(
-#     "/{exchange_instrument_id:int}",
-#     response_model=Envelope[MarketSchema.MarketRead],
-#     summary="마켓 심볼 상세 정보",
+#     "/exchange/{exchange_code}",
+#     response_model=Envelope[MarketSchema.ExchangeDetailRead],
+#     summary="거래소 상세 정보",
 #     responses=OpenApi.combine(
 #         OpenApi.OK(
-#             Envelope[MarketSchema.MarketRead],  
-#             description="마켓 조회 성공",
+#             Envelope[MarketSchema.ExchangeDetailRead],
+#             description="거래소 조회 성공",
 #         ),
 #         OpenApi.ERR_409,
 #     ),
 # )
-# def get_market(
-#     exchange_instrument_id: int = Path(..., ge=1),
+# def get_exchange(
+#     exchange_code: str = Path(...),
 #     user: AuthSchema.CurrentUser = Security(get_current_user),
 #     svcs: ServiceFactory = Depends(get_services),
 #     meta: RequestMeta = Depends(get_request_meta),
 # ):
-#     rows = svcs.markets.get_by_exchange_instrument_id(
+#     row = svcs.markets.get_exchange(
 #         user_id=user.id,
-#         exchange_instrument_id=exchange_instrument_id,
+#         exchange_code=exchange_code,
 #     )
+
+#     return ok(row, request_id=meta.request_id)
+
+
+# @router.get(
+#     "/exchange/{exchange_code}/markets",
+#     response_model=Envelope[list[MarketSchema.MarketRead]],
+#     summary="거래소 마켓 목록",
+#     responses=OpenApi.combine(
+#         OpenApi.OK(
+#             Envelope[list[MarketSchema.MarketRead]],
+#             description="거래소 마켓 목록 조회 성공",
+#         ),
+#         OpenApi.ERR_409,
+#     ),
+# )
+# def list_market_by_exchange(
+#     exchange_code: str = Path(...),
+#     limit: int = Query(100, ge=1, le=200),
+#     offset: int = Query(0, ge=0),
+#     search: str | None = Query(None),
+#     sort: MarketSort = Query(MarketSort.VOLUME_DESC),
+#     user: AuthSchema.CurrentUser = Security(get_current_user),
+#     svcs: ServiceFactory = Depends(get_services),
+#     meta: RequestMeta = Depends(get_request_meta),
+# ):
+#     rows = svcs.markets.list_by_exchange(
+#         user_id=user.id,
+#         exchange_code=exchange_code,
+#         search=search,
+#         sort=sort,
+#         limit=limit,
+#         offset=offset,
+#     )
+
 #     return ok(rows, request_id=meta.request_id)
 
+
+# @router.get(
+#     "/instrument/{instrument_symbol}",
+#     response_model=Envelope[MarketSchema.InstrumentDetailRead],
+#     summary="종목 상세 정보",
+#     responses=OpenApi.combine(
+#         OpenApi.OK(
+#             Envelope[MarketSchema.InstrumentDetailRead],
+#             description="종목 조회 성공",
+#         ),
+#         OpenApi.ERR_409,
+#     ),
+# )
+# def get_instrument(
+#     instrument_symbol: str = Path(...),
+#     user: AuthSchema.CurrentUser = Security(get_current_user),
+#     svcs: ServiceFactory = Depends(get_services),
+#     meta: RequestMeta = Depends(get_request_meta),
+# ):
+#     row = svcs.markets.get_instrument_detail(
+#         user_id=user.id,
+#         instrument_symbol=instrument_symbol,
+#     )
+
+#     return ok(row, request_id=meta.request_id)
+
+
+# @router.get(
+#     "/instrument/{instrument_symbol}/markets",
+#     response_model=Envelope[list[MarketSchema.MarketRead]],
+#     summary="종목 마켓 목록",
+#     responses=OpenApi.combine(
+#         OpenApi.OK(
+#             Envelope[list[MarketSchema.MarketRead]],
+#             description="종목 마켓 목록 조회 성공",
+#         ),
+#         OpenApi.ERR_409,
+#     ),
+# )
+# def list_market_by_instrument(
+#     instrument_symbol: str = Path(...),
+#     limit: int = Query(100, ge=1, le=200),
+#     offset: int = Query(0, ge=0),
+#     sort: MarketSort = Query(MarketSort.VOLUME_DESC),
+#     user: AuthSchema.CurrentUser = Security(get_current_user),
+#     svcs: ServiceFactory = Depends(get_services),
+#     meta: RequestMeta = Depends(get_request_meta),
+# ):
+#     rows = svcs.markets.list_by_instrument(
+#         user_id=user.id,
+#         instrument_symbol=instrument_symbol,
+#         sort=sort,
+#         limit=limit,
+#         offset=offset,
+#     )
+
+#     return ok(rows, request_id=meta.request_id)
 
 @router.get(
     "/{exchange_code:str}/{exchange_symbol:str}",

@@ -5,14 +5,14 @@
   />
 
   <v-container class="app-container">
-    <SymbolSummaryCard
+    <MarketSummaryCard
       v-if="market"
       :market="market"
       :collapsed="collapsed"
       @toggle="toggleCollapsed"
     />
 
-    <SymbolChartCard
+    <MarketChartCard
       :market="market"
       :collapsed="collapsed"
       :candle-run="candleAction.run"
@@ -26,7 +26,7 @@
           color="primary"
           class="sd-alert-btn"
           prepend-icon="mdi-bell-outline"
-          @click="goSetting"
+          @click="goRuleSetting"
         >
           알림 만들기
         </v-btn>
@@ -54,8 +54,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { onMounted, onUnmounted, onDeactivated, watch, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import AppLoading from '@/components/common/AppLoading.vue'
-import SymbolSummaryCard from '@/components/market/SymbolSummaryCard.vue'
-import SymbolChartCard from '@/components/market/SymbolChartCard.vue'
+import MarketSummaryCard from '@/components/market/MarketSummaryCard.vue'
+import MarketChartCard from '@/components/market/MarketChartCard.vue'
 import { useAsyncAction } from '@/composables/common/useAsyncAction'
 import { WsChannelType, CandleInterval, TickerInterval } from '@/services/market.types'
 import { useMarketStore } from '@/stores/market.store'
@@ -71,11 +71,11 @@ const collapsed = ref(false)
 
 onMounted(async () => {
   marketStore.resetMarket()
-  const exchange_code = route.params.exchange as string
-  const symbol = route.params.symbol as string
+  const exchangeCode = route.params.exchange as string
+  const exchangeSymbol = route.params.exchangeSymbol as string
 
   marketAction.run(async () => {
-    await marketStore.fetchMarket(exchange_code, symbol)
+    await marketStore.fetchMarket(exchangeCode, exchangeSymbol)
   })
 
   marketStore.initWs()
@@ -101,9 +101,23 @@ async function toggleCollapsed() {
   collapsed.value = !collapsed.value
 }
 
-function goSetting() {
+function goRuleSetting() {
   router.push({ name: 'RuleSetting' })
 }
+
+// function goExchangeDetail(payload: { exchange: string }) {
+//   router.push({
+//     name: 'ExchangeDetail',
+//     params: payload,
+//   })
+// }
+
+// function goInstrumentDetail(payload: { symbol: string }) {
+//   router.push({
+//     name: 'InstrumentDetail',
+//     params: payload,
+//   })
+// }
 
 watch(
   () => market.value,

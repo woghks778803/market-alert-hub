@@ -76,9 +76,9 @@ export type CandlesListRequest = {
 }
 
 export const marketApi = {
-  // GET /markets/{exchange_code}/{symbol}
-  async getMarket(exchange_code: string, symbol: string) {
-    const { data } = await http.get<Envelope<MarketInfo>>(`/markets/${exchange_code}/${symbol}`)
+  // GET /markets/{exchange_code}/{market_code}
+  async getMarket(exchangeCode: string, exchangeSymbol: string) {
+    const { data } = await http.get<Envelope<MarketInfo>>(`/markets/${exchangeCode}/${exchangeSymbol}`)
     return data
   },
 

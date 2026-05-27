@@ -3,8 +3,11 @@ import AlertLayout from '@/layouts/AlertLayout.vue'
 
 // import HomeView from '@/views/app/home/HomeView.vue'
 
-import MarketView from '@/views/app/market/IndexView.vue'
-import SymbolDetailView from '@/views/app/market/SymbolDetailView.vue'
+import MarketView from '@/views/app/market/MarketView.vue'
+import MarketDetailView from '@/views/app/market/MarketDetailView.vue'
+import ExchangeDetailView from '@/views/app/market/ExchangeDetailView.vue'
+import InstrumentDetailView from '@/views/app/market/InstrumentDetailView.vue'
+
 
 import RulesView from '@/views/app/alert/RulesView.vue'
 import RuleSettingView from '@/views/app/alert/RuleSettingView.vue'
@@ -42,12 +45,38 @@ export const appRoutes: RouteRecordRaw[] = [
     },
   },
   {
-    path: 'market/:exchange/:symbol',
-    name: 'SymbolDetail',
-    component: SymbolDetailView,
+    path: 'market/:exchange/:exchangeSymbol',
+    name: 'MarketDetail',
+    component: MarketDetailView,
     meta: {
       title: (route: RouteLocationNormalizedLoaded) =>
-        `${route.params.symbol}/${route.params.exchange}`,
+        `${route.params.exchangeSymbol}/${route.params.exchange}`,
+      allows: ['verified'],
+      showBack: true,
+      tab: 'market',
+      fallback: { name: 'Markets' },
+    },
+  },
+  {
+    path: 'market/exchange/:exchange',
+    name: 'ExchangeDetail',
+    component: ExchangeDetailView,
+    meta: {
+      title: (route: RouteLocationNormalizedLoaded) =>
+        `${route.params.exchange}`,
+      allows: ['verified'],
+      showBack: true,
+      tab: 'market',
+      fallback: { name: 'Markets' },
+    },
+  },
+  {
+    path: 'market/instrument/:symbol',
+    name: 'InstrumentDetail',
+    component: InstrumentDetailView,
+    meta: {
+      title: (route: RouteLocationNormalizedLoaded) =>
+        `${route.params.symbol}`,
       allows: ['verified'],
       showBack: true,
       tab: 'market',

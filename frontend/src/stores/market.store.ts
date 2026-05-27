@@ -42,6 +42,8 @@ export const useMarketStore = defineStore('market', () => {
   const currentTimeframe = ref<ChartTimeframe>(ChartTimeframe.MIN_1)
   const currentSystemTab = ref<string[]>(['all'])
 
+  const candleHasMore = ref(true)
+
   const simpleMarketListQuery = ref<SimpleMarketListQuery>({
     search: '',
   })
@@ -62,9 +64,8 @@ export const useMarketStore = defineStore('market', () => {
     return MarketSortLabel[marketListQuery.value.sort ?? MarketSort.VOLUME_DESC]
   })
 
-  async function fetchMarket(exchange_code: string, symbol: string) {
-    // console.log("Fetching market for:", exchange_code, symbol)
-    market.value = await marketService.getMarket(exchange_code, symbol)
+  async function fetchMarket(exchangeCode: string, exchangeSymbol: string) {
+    market.value = await marketService.getMarket(exchangeCode, exchangeSymbol)
   }
 
   async function fetchMarkets() {
@@ -81,9 +82,14 @@ export const useMarketStore = defineStore('market', () => {
   }
 
   async function fetchCandles() {
-    // console.log("Fetching candles for market:", market.value)
     if (!market.value) return
-    if (candles.value.length >= CANDLES_MAX_LIMIT) return
+    if (!candleHasMore.value) return
+    if (candles.value.length >= CANDLES_MAX_LIMIT) {
+      candleHasMore.value = false
+      return
+    }
+
+    const previousOldestTsOpen = candles.value[0]?.tsOpen
 
     candlesListQuery.value.exchangeInstrumentId = market.value.exchangeInstrumentId
     candlesListQuery.value.output = currentTimeframe.value
@@ -91,10 +97,35 @@ export const useMarketStore = defineStore('market', () => {
     candlesListQuery.value.order = 'desc'
 
     const data = await marketService.getCandles(candlesListQuery.value as CandlesListQuery)
+    const fetchedCount = data.length
 
-    if (data.length === 0) return
+    if (fetchedCount === 0) {
+      candleHasMore.value = false
+      return
+    }
 
-    candles.value.unshift(...data.reverse())
+    const olderCandles = [...data]
+      .reverse()
+      .filter(
+        (candle) =>
+          previousOldestTsOpen === undefined ||
+          candle.tsOpen < previousOldestTsOpen,
+      )
+
+    if (olderCandles.length === 0) {
+      candleHasMore.value = false
+      return
+    }
+
+    candles.value.unshift(...olderCandles)
+
+    // 검색 캔들 수가 미달이거나 최대 캔들 수 이상인 경우
+    if (
+      fetchedCount < CANDLES_LIMIT ||
+      candles.value.length >= CANDLES_MAX_LIMIT
+    ) {
+      candleHasMore.value = false
+    }
     // console.log("Fetched candles:", data.length, "Total candles:", candles.value.length)
   }
 
