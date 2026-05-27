@@ -41,19 +41,22 @@
 
         <div class="sd-chart-sub">Chart Placeholder</div>
       </div>
-      <TimeframeTabs />
+      <TimeframeTabs 
+        :model-value="currentTimeframe"
+        @update:model-value="handleChangeTimeframe"
+      />
     </v-card-text>
   </v-card>
 </template>
 
 <script setup lang="ts">
-import TimeframeTabs from './TimeframeTabs.vue'
 import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { createChart, TickMarkType, type IChartApi, type ISeriesApi, type UTCTimestamp, type Time } from 'lightweight-charts'
 
+import TimeframeTabs from '@/components/market/TimeframeTabs.vue'
 import { useMarketStore } from '@/stores/market.store'
-import type { MarketDto } from '@/services/market.types'
+import type { MarketDto, ChartTimeframe } from '@/services/market.types'
 import { TIMEFRAME_SECONDS } from '@/services/market.types'
 import { ThemeMode } from '@/composables/common/useAppSettings'
 
@@ -65,6 +68,7 @@ const chartMounted = ref(false)
 
 const isAutoScale = ref(true)
 const isLogScale = ref(false)
+const isResetTimeScale = ref(false)
 
 let chart: IChartApi | null = null
 let candleSeries: ISeriesApi<'Candlestick'>
@@ -84,6 +88,20 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   cleanup()
 })
+
+function nextFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => resolve())
+  })
+}
+
+function toLocalDate(time: Time): Date {
+  if (typeof time !== 'number') {
+    throw new Error(`Unsupported chart time: ${String(time)}`)
+  }
+
+  return new Date(time * 1000)
+}
 
 function cleanup() {
   chart?.remove()
@@ -107,12 +125,28 @@ function toggleLog() {
   applyPriceScale()
 }
 
-function toLocalDate(time: Time): Date {
-  if (typeof time !== 'number') {
-    throw new Error(`Unsupported chart time: ${String(time)}`)
-  }
+async function handleChangeTimeframe(
+  next: ChartTimeframe,
+): Promise<void> {
+  if (currentTimeframe.value === next) return
 
-  return new Date(time * 1000)
+  isResetTimeScale.value = true
+
+  try {
+    await marketStore.changeTimeFrame(next)
+
+    // candles 변경에 따른 series.setData() 반영 대기
+    await nextTick()
+    await nextFrame()
+
+    // 최신 캔들이 보이는 위치로 즉시 이동
+    chart?.timeScale().scrollToPosition(0, false)
+
+    // 위치 변경으로 발생하는 range 이벤트까지 차단
+    await nextFrame()
+  } finally {
+    isResetTimeScale.value = false
+  }
 }
 
 const initChart = async () => {
@@ -133,6 +167,10 @@ const initChart = async () => {
 
     chart = createChart(chartContainer.value!, {
       autoSize: true,
+      kineticScroll: {
+        touch: false,
+        mouse: false,
+      },
       layout: {
         background: {
           color: isDark ? '#0f172a' : '#ffffff',
@@ -259,7 +297,6 @@ const initChart = async () => {
     chartMounted.value = false
   }
 }
-
 
 watch(
   () => props.market,

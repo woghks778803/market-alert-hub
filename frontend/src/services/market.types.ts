@@ -111,6 +111,10 @@ export type CandlesListQuery = {
   order?: 'asc' | 'desc'
 }
 
+export type ChartTimeframeStyle = {
+  label: ChartTimeframe
+}
+
 export enum MarketSort {
   VOLUME_DESC = 'volume_desc',
   CHANGE_DESC = 'change_desc',
@@ -149,6 +153,19 @@ export const MarketSortLabel: Record<MarketSort, string> = {
   [MarketSort.PRICE_DESC]: '가격 높은순',
   [MarketSort.PRICE_ASC]: '가격 낮은순',
 }
+
+export const ChartTimeframeLabel: Record<ChartTimeframe, ChartTimeframeStyle> = {
+  [ChartTimeframe.MIN_1]: {
+    label: ChartTimeframe.MIN_1,
+  },
+  [ChartTimeframe.HOUR_1]: {
+    label: ChartTimeframe.HOUR_1,
+  },
+  [ChartTimeframe.DAY_1]: {
+    label: ChartTimeframe.DAY_1,
+  },
+}
+
 // 설정 상수는 SCREAMING_SNAKE
 export const TIMEFRAME_SECONDS: Record<ChartTimeframe, number> = {
   [ChartTimeframe.MIN_1]: 60,
@@ -156,5 +173,5 @@ export const TIMEFRAME_SECONDS: Record<ChartTimeframe, number> = {
   [ChartTimeframe.DAY_1]: 86400,
 }
 
-export const CANDLES_MAX_LIMIT: number = 3000
-export const CANDLES_LIMIT: number = 500
+export const CANDLES_MAX_LIMIT: number = 5000
+export const CANDLES_LIMIT: number = 1000

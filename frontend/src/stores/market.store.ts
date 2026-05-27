@@ -382,8 +382,8 @@ export const useMarketStore = defineStore('market', () => {
     clearCandles()
     // 변경
     currentTimeframe.value = next
-
     candlesListQuery.value.cursor = undefined
+    candleHasMore.value = true
 
     await fetchCandles()
 

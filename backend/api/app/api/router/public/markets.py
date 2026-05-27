@@ -259,7 +259,7 @@ def list_candle(
     cursor: datetime | None = Query(None, description="UTC ISO8601"),
     start: datetime | None = Query(None, description="UTC ISO8601"),
     end: datetime | None = Query(None, description="UTC ISO8601"),
-    limit: int = Query(500, ge=1, le=500),
+    limit: int = Query(500, ge=1, le=1000),
     order: str = Query("asc", pattern="^(asc|desc)$"),
     svcs: ServiceFactory = Depends(get_services),
     meta: RequestMeta = Depends(get_request_meta),

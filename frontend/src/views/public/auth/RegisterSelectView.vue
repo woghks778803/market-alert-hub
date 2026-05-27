@@ -27,7 +27,7 @@
       size="large"
       variant="flat"
       :ripple="false"
-      @click="goTerms('kakao')"
+      @click="goTerms(OAuthCode.KAKAO)"
     >
       <v-icon
         class="mr-2"
@@ -52,6 +52,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import AppCenterCard from '@/components/common/AppCenterCard.vue'
+import { OAuthCode } from '@/services/auth.types'
 
 const router = useRouter()
 
