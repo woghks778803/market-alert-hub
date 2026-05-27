@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from app.core.constants import CandleBaseInterval
-from app.core.util.datetime import epoch_to_datetime
+from app.core.util.datetime import epoch_to_datetime, ensure_utc, get_milliseconds_ago
 from app.domain import MarketDTO, MarketPort
 from app.infra.external.exchange.binance.rest_client import BinanceRestClient
 from app.infra.external.exchange.binance.shared.errors import BinanceDecodeError
@@ -21,10 +21,16 @@ class BinanceCandle(MarketPort.ExchangeCandle):
         to: datetime,
         count: int,
     ) -> list[MarketDTO.CandleInfo] | None:
+        to = ensure_utc(to)
+
+        # service의 to는 exclusive
+        # Binance endTime은 inclusive이므로 1ms 이전으로 지정
+        effective_to = get_milliseconds_ago(to, 1)
+
         rows = self.rest_client.list_kline(
             symbol=exchange_symbol,
             interval=base.value,
-            end_time=to,
+            end_time=effective_to,
             limit=count,
         )
 

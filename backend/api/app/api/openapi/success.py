@@ -1,5 +1,5 @@
 # 성공 응답 공통 프리셋
-from typing import Any, Dict, Optional, Type
+from typing import Any, Dict, Type
 from http import HTTPStatus as HS
 from pydantic import BaseModel
 
@@ -8,10 +8,10 @@ from .types import Responses
 
 def _success(
     status: HS,
-    model: Optional[Type[BaseModel]] = None,
+    model: Type[BaseModel] | None = None,
     *,
     description: str,
-    example: Optional[Dict[str, Any]] = None,
+    example: Dict[str, Any] | None = None,
 ) -> Responses:
     response: Dict[str, Any] = {
         "description": description,
@@ -40,7 +40,7 @@ def OK(
     model: Type[BaseModel],
     *,
     description: str = "성공",
-    example: Optional[Dict[str, Any]] = None
+    example: Dict[str, Any] | None = None
 ):
     return _success(HS.OK, model, description=description, example=example)
 
@@ -49,7 +49,7 @@ def CREATED(
     model: Type[BaseModel],
     *,
     description: str = "생성됨",
-    example: Optional[Dict[str, Any]] = None
+    example: Dict[str, Any] | None = None
 ):
     return _success(HS.CREATED, model, description=description, example=example)
 

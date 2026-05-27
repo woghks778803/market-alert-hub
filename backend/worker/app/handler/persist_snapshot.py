@@ -67,7 +67,7 @@ def handle_persist_snapshots(
 
     lock_key = f"{redis_key_prefix}:{LOCK}:{run_key}:{slot}:{interval_sec}"
     token = try_acquire_lock(
-        ctx.redis_client, key=lock_key, ttl_sec=max(30, min(interval_sec, 300))
+        ctx.redis_client, lock_key, ttl_sec=ctx.config.outbox_send_lock_ttl_sec
     )
     if not token:
         raise SkipHandler("locked")

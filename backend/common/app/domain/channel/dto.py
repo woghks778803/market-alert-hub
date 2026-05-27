@@ -1,7 +1,7 @@
 from dataclasses import dataclass, asdict
 from datetime import datetime
 from app.core.constants import OutboxStatus
-from typing import Optional, Iterable, Any
+from typing import Iterable, Any
 
 
 @dataclass(slots=True)

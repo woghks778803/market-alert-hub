@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field, asdict
-from typing import Any, Generic, Iterable, Mapping, Optional, Sequence, TypeVar
+from typing import Any, Generic, Iterable, Mapping, Sequence, TypeVar
 from app.core.error.error_model import ErrorSpec
 
 # 공용 유틸 --------------------------------------------------------------------
@@ -245,7 +245,7 @@ class Page(Base, Generic[T]):
     total: int
     page: int
     size: int
-    sort: Optional[Sort] = None
+    sort: Sort | None = None
 
 
 # ---------------------------------------------------

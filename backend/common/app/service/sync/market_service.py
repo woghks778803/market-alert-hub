@@ -1,3 +1,4 @@
+import logging
 from tracemalloc import start
 from typing import Any, Callable, Sequence, Iterable
 from datetime import datetime, timedelta
@@ -29,6 +30,8 @@ from app.domain import (
     CryptoPort,
     ThrottlePort,
 )
+
+log = logging.getLogger(__name__)
 
 
 class MarketService:
@@ -657,6 +660,7 @@ class MarketService:
 
         # 2) 이번 worker 실행에서 처리할 item 수 제한
         for job in jobs[:job_batch_size]:
+            rate_limited = False
             if job.exchange_code in blocked_exchanges:
                 continue
 
@@ -750,17 +754,21 @@ class MarketService:
 
                         retry_wait_items += 1
                         should_requeue = True
+                        rate_limited = True
                         blocked_exchanges.add(exchange_code)
                         
                         break
-                        # return {
-                        #     "backfill_request_id": backfill_request_id,
-                        #     "processed_items": processed_items,
-                        #     "completed_items": completed_items,
-                        #     "retry_wait_items": retry_wait_items,
-                        #     "failed_items": failed_items,
-                        #     "reason": "rate_limit",
-                        # }
+
+                    log.info(
+                        "exchange_candle_api_call exchange=%s symbol=%s base=%s to=%s count=%s current_count=%s limit=%s",
+                        exchange_code,
+                        job.exchange_symbol,
+                        job.base.value,
+                        current_to.isoformat(),
+                        candle_batch_size,
+                        current_count,
+                        candle_rate_limit,
+                    )
 
                     # 5-2) API 호출 1회 = api batch 1개
                     exchange_candles = candle_provider.list_candle(
@@ -790,6 +798,29 @@ class MarketService:
                     ]
 
                     oldest_opened_at = min(opened_times)
+                    newest_opened_at = max(opened_times)
+                    
+                    log.info(
+                        "market_backfill_api_batch "
+                        "request_id=%s item_id=%s instrument_id=%s exchange=%s symbol=%s base=%s "
+                        "start_at=%s end_at=%s current_to=%s raw_count=%s raw_oldest=%s raw_newest=%s "
+                        "same_cursor=%s oldest_lte_start=%s",
+                        backfill_request_id,
+                        job.backfill_request_item_id,
+                        job.exchange_instrument_id,
+                        exchange_code,
+                        job.exchange_symbol,
+                        job.base.value,
+                        start_at.isoformat(),
+                        end_at.isoformat(),
+                        current_to.isoformat(),
+                        len(exchange_candles),
+                        oldest_opened_at.isoformat(),
+                        newest_opened_at.isoformat(),
+                        oldest_opened_at == current_to,
+                        oldest_opened_at <= start_at,
+                    )
+
                     last_cursor_at = oldest_opened_at
 
                     total_fetched_count += len(exchange_candles)
@@ -819,6 +850,26 @@ class MarketService:
                         )
                         for candle in candles
                     ]
+
+                    log.info(
+                        "market_backfill_snapshot_batch "
+                        "request_id=%s item_id=%s instrument_id=%s exchange=%s symbol=%s base=%s "
+                        "window_end_at=%s filled_count=%s snapshot_count=%s "
+                        "total_fetched=%s total_upserted=%s current_to=%s oldest_opened_at=%s",
+                        backfill_request_id,
+                        job.backfill_request_item_id,
+                        job.exchange_instrument_id,
+                        exchange_code,
+                        job.exchange_symbol,
+                        job.base.value,
+                        window_end_at.isoformat(),
+                        len(candles),
+                        len(snapshots),
+                        total_fetched_count,
+                        total_upserted_count,
+                        current_to.isoformat(),
+                        oldest_opened_at.isoformat(),
+                    )
 
                     # 5-4) 저장
                     if snapshots:
@@ -850,6 +901,10 @@ class MarketService:
 
                     # 아직 더 과거로 내려가야 하면 다음 API 호출의 to로 사용
                     current_to = oldest_opened_at
+
+                # rate limit에서 이미 RETRY_WAIT 처리했기때문에 추가 상태 변경은 필요없음
+                if rate_limited:
+                    continue
 
                 # 6) 상태 마무리
                 if completed:
@@ -891,27 +946,6 @@ class MarketService:
                     retry_wait_items += 1
                     should_requeue = True
 
-                if should_requeue:
-                    with self._uow_factory() as uow:
-                        uow.outboxs.add_outbox(
-                            OutboxDTO.OutboxCreate(
-                                trace_id=get_trace_id(),
-                                event_type=OutboxEventType.REQUEST_MARKET_BACKFILL,
-                                aggregate_type="backfill_request",
-                                aggregate_id=backfill_request_id,
-                                payload={
-                                    "backfill_request_id": backfill_request_id,
-                                },
-                                status=OutboxStatus.PENDING,
-                                attempts=0,
-                                next_run_at=utcnow() + timedelta(seconds=10),
-                                outbox_fingerprint=None,
-                            ),
-                            True,
-                        )
-                        
-                        uow.commit()
-
             except Exception as e:
                 with self._uow_factory() as uow:
                     uow.markets.update_backfill_request_item(
@@ -929,6 +963,27 @@ class MarketService:
                     uow.commit()
 
                 failed_items += 1
+
+        if should_requeue:
+            with self._uow_factory() as uow:
+                uow.outboxs.add_outbox(
+                    OutboxDTO.OutboxCreate(
+                        trace_id=get_trace_id(),
+                        event_type=OutboxEventType.REQUEST_MARKET_BACKFILL,
+                        aggregate_type="backfill_request",
+                        aggregate_id=backfill_request_id,
+                        payload={
+                            "backfill_request_id": backfill_request_id,
+                        },
+                        status=OutboxStatus.PENDING,
+                        attempts=0,
+                        next_run_at=utcnow() + timedelta(seconds=10),
+                        outbox_fingerprint=None,
+                    ),
+                    True,
+                )
+                
+                uow.commit()
 
         return {
             "backfill_request_id": backfill_request_id,

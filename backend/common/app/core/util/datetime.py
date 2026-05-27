@@ -38,6 +38,10 @@ def parse_iso_utc(value: str) -> datetime:
     return dt.astimezone(timezone.utc)
 
 
+def get_milliseconds_ago(dt: datetime, milliseconds: int) -> datetime:
+    return dt - timedelta(milliseconds=milliseconds)
+
+
 def get_days_ago(dt: datetime, days: int) -> datetime:
     return dt - timedelta(days=days)
 
