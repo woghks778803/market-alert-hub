@@ -54,10 +54,11 @@ import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { createChart, TickMarkType, type IChartApi, type ISeriesApi, type UTCTimestamp, type Time } from 'lightweight-charts'
 
+import { getDecimalPlaces } from '@/utils/number'
 import TimeframeTabs from '@/components/market/TimeframeTabs.vue'
-import { useMarketStore } from '@/stores/market.store'
 import type { MarketDto, ChartTimeframe } from '@/services/market.types'
 import { TIMEFRAME_SECONDS } from '@/services/market.types'
+import { useMarketStore } from '@/stores/market.store'
 import { ThemeMode } from '@/composables/common/useAppSettings'
 
 const marketStore = useMarketStore()
@@ -74,6 +75,7 @@ let chart: IChartApi | null = null
 let candleSeries: ISeriesApi<'Candlestick'>
 let volumeSeries: ISeriesApi<'Histogram'>
 let chartTimer: ReturnType<typeof setTimeout> | null = null
+let currentPricePrecision = 2
 
 const props = defineProps<{
   market: MarketDto | null
@@ -106,6 +108,23 @@ function toLocalDate(time: Time): Date {
 function cleanup() {
   chart?.remove()
   chart = null
+}
+
+function applyPricePrecision(nextPrecision: number) {
+  const precision = Math.min(nextPrecision, 12)
+
+  // 같은 종목 내에서는 정밀도를 낮추지 않는다.
+  if (!candleSeries || precision <= currentPricePrecision) return
+
+  currentPricePrecision = precision
+
+  candleSeries.applyOptions({
+    priceFormat: {
+      type: 'price',
+      precision,
+      minMove: 10 ** -precision,
+    },
+  })
 }
 
 function applyPriceScale() {
@@ -280,9 +299,10 @@ const initChart = async () => {
       const threshold = intervalSec * 30
 
       if (chartTimer) clearTimeout(chartTimer)
-
+      
       chartTimer = setTimeout(async () => {
         if (from <= oldest + threshold) {
+          console.log("222")
           props.candleRun(async () => {
             candlesListQuery.value.cursor = new Date(oldest * 1000).toISOString()
             await marketStore.fetchCandles()
@@ -303,6 +323,16 @@ watch(
   async (m) => {
     if (!m) return
 
+    currentPricePrecision = 2
+
+    candleSeries?.applyOptions({
+      priceFormat: {
+        type: 'price',
+        precision: 2,
+        minMove: 0.01,
+      },
+    })
+
     props.candleRun(async () => {
       await marketStore.fetchCandles()
     })
@@ -321,14 +351,32 @@ watch(
       return
     }
 
-    const sorted = candles.value.map((c) => ({
-      time: (new Date(c.tsOpen).getTime() / 1000) as UTCTimestamp,
-      open: Number(c.open),
-      high: Number(c.high),
-      low: Number(c.low),
-      close: Number(c.close),
-    }))
+    let precision = 2
 
+    const sorted = candles.value.map((c) => {
+      const open = Number(c.open)
+      const high = Number(c.high)
+      const low = Number(c.low)
+      const close = Number(c.close)
+
+      precision = Math.max(
+        precision,
+        getDecimalPlaces(open),
+        getDecimalPlaces(high),
+        getDecimalPlaces(low),
+        getDecimalPlaces(close),
+      )
+
+      return {
+        time: (new Date(c.tsOpen).getTime() / 1000) as UTCTimestamp,
+        open,
+        high,
+        low,
+        close,
+      }
+    })
+
+    applyPricePrecision(precision)
     candleSeries.setData(sorted)
 
     volumeSeries.setData(
@@ -348,12 +396,26 @@ watch(
     if (!c || !candleSeries) return
     // console.log("currentCandle changed, updating chart data for:", c, candleSeries)
 
+    const open = Number(c.open)
+    const high = Number(c.high)
+    const low = Number(c.low)
+    const close = Number(c.close)
+
+    applyPricePrecision(
+      Math.max(
+        getDecimalPlaces(open),
+        getDecimalPlaces(high),
+        getDecimalPlaces(low),
+        getDecimalPlaces(close),
+      ),
+    )
+
     candleSeries.update({
       time: c.tsOpen as UTCTimestamp,
-      open: Number(c.open),
-      high: Number(c.high),
-      low: Number(c.low),
-      close: Number(c.close),
+      open,
+      high,
+      low,
+      close,
     })
 
     volumeSeries.update({

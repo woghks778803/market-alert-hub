@@ -26,7 +26,7 @@
 
       <section class="news-post-header">
         <div class="news-post-title">주요 시장 소식을 빠르게 확인하세요</div>
-
+        <div class="news-post-subtitle">AI 자동 번역으로 오역이 있을 수 있으니 상세 내용은 원문을 확인하세요</div>
         <div class="news-post-meta">최근 48시간 · {{ MAX_POSTS_LIMIT }}개</div>
       </section>
 

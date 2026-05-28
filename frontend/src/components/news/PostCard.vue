@@ -22,6 +22,10 @@
       {{ post.titleOriginal }}
     </div>
 
+    <div class="news-post-card__translation">
+      Translated by {{ post.translationProvider }}
+    </div>
+
     <div class="news-post-card__bottom">
       <div class="news-post-tag">번역됨 · 원문 보기</div>
 

@@ -30,7 +30,9 @@
 
       <!-- row 2 -->
       <div class="mk-row-bottom">
-        <div class="mk-price">{{ formatPrice(item.closePrice) }} {{ item.quoteSymbol }}</div>
+        <div class="mk-price">
+          {{ formatPrice(item.closePrice, getDecimalPlaces(item.closePrice)) }} {{ item.quoteSymbol }}
+        </div>
 
         <div class="mk-change-block">
           <div
@@ -53,6 +55,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { formatChange, formatPrice, formatVolume } from '@/utils/format'
+import { getDecimalPlaces } from '@/utils/number'
 import type { MarketDto } from '@/services/market.types'
 import { useMarketStore } from '@/stores/market.store'
 

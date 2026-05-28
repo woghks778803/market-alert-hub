@@ -1,3 +1,19 @@
+export function getDecimalPlaces(value: number | null): number {
+  if (value == null || !Number.isFinite(value)) return 0
+
+  const text = value.toString().toLowerCase()
+
+  if (text.includes('e-')) {
+    const [coefficient, exponentText] = text.split('e-')
+    const coefficientDecimals =
+      coefficient.split('.')[1]?.length ?? 0
+
+    return Number(exponentText) + coefficientDecimals
+  }
+
+  return text.split('.')[1]?.length ?? 0
+}
+
 export function normalizeNumberString(value: string): string {
   return value.replace(/,/g, '').trim()
 }

@@ -1,6 +1,6 @@
 import { computed, reactive, ref, type Ref } from 'vue'
 
-import { toNumberOrNull } from '@/utils/numbers'
+import { toNumberOrNull } from '@/utils/number'
 import { minLength, maxLength } from '@/utils/validate'
 import { FormType, ThrottleTimeframe, AlertStatus } from '@/services/alert.types'
 import type {

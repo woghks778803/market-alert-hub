@@ -15,7 +15,9 @@
             </div>
           </div>
 
-          <div class="sd-price">{{ formatPrice(market.closePrice) }} {{ market.quoteSymbol }}</div>
+          <div class="sd-price">
+            {{ formatPrice(market.closePrice, getDecimalPlaces(market.closePrice)) }} {{ market.quoteSymbol }}
+          </div>
 
           <div
             class="sd-change"
@@ -61,12 +63,12 @@
       >
         <div>
           <div class="label">고가</div>
-          <div>{{ formatPrice(market.high) }}</div>
+          <div>{{ formatPrice(market.high, getDecimalPlaces(market.high)) }}</div>
         </div>
 
         <div>
           <div class="label">저가</div>
-          <div>{{ formatPrice(market.low) }}</div>
+          <div>{{ formatPrice(market.low, getDecimalPlaces(market.low)) }}</div>
         </div>
 
         <div>
@@ -79,9 +81,10 @@
 </template>
 
 <script setup lang="ts">
+import { formatPrice, formatChange, formatVolume } from '@/utils/format'
+import { getDecimalPlaces } from '@/utils/number'
 import type { MarketDto } from '@/services/market.types'
 import { useMarketStore } from '@/stores/market.store'
-import { formatPrice, formatChange, formatVolume } from '@/utils/format'
 
 const marketStore = useMarketStore()
 

@@ -1,9 +1,8 @@
 export function formatPrice(value: number | null, tickSize?: number) {
-  if (value == null) return '-'
+  if (value == null || !Number.isFinite(value)) return '-'
 
-  if (tickSize) {
-    const decimals = tickSize.toString().split('.')[1]?.length ?? 0
-    return value.toFixed(decimals)
+  if (tickSize != null && tickSize > 0) {
+    return value.toFixed(tickSize)
   }
 
   // fallback

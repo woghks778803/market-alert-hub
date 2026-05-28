@@ -1,6 +1,6 @@
 export * from './validate'
 export * from './string'
-export * from './numbers'
+export * from './number'
 export * from './format'
 export * from './time'
 export * from './jwt'
