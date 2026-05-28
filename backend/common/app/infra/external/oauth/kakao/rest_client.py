@@ -36,7 +36,7 @@ class KakaoRestClient:
                 "client_id": self._config.client_id,
                 "redirect_uri": self._config.redirect_uri,
                 "state": state,
-                # "prompt": "login",
+                "prompt": "select_account",
             }
         )
 
@@ -92,6 +92,16 @@ class KakaoRestClient:
             },
         )
 
+        if response.status_code == 400:
+            body = response.json()
+
+            if body.get("code") == -101:
+                # 이미 연결 해제된 상태이므로 unlink 성공으로 취급
+                return {
+                    "id": provider_user_id,
+                    "already_unlinked": True,
+                }
+                
         self._raise_if_error(response)
         return response.json()
 

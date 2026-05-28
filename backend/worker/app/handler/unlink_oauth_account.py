@@ -12,18 +12,17 @@ from app.exception_handlers import (
 logger = logging.getLogger(__name__)
 
 
-def handle_cleanup_deleted_users(
+def handle_unlink_oauth_accounts(
     ctx: WorkerContext,
     payload: Mapping[str, Any],
 ) -> dict[str, Any]:
     redis_key_prefix = f"{{{ctx.config.key_prefix}}}"
 
-    interval_sec = int(require(payload, "interval_sec", target="payload.interval_sec"))
-    slot = int(require(payload, "slot", target="payload.slot"))
-    job_config = ctx.config.worker_jobs[OutboxEventType.CLEANUP_DELETED_USERS.value]
+    user_id = require(payload, "user_id", target="payload.user_id")
+    job_config = ctx.config.worker_jobs[OutboxEventType.UNLINK_OAUTH_ACCOUNTS.value]
     run_key = job_config["run_key"]
 
-    lock_key = f"{redis_key_prefix}:{LOCK}:{run_key}:{slot}:{interval_sec}"
+    lock_key = f"{redis_key_prefix}:{LOCK}:{run_key}:{user_id}"
     token = try_acquire_lock(
         ctx.redis_client, lock_key, ttl_sec=ctx.config.outbox_send_lock_ttl_sec
     )
@@ -31,20 +30,19 @@ def handle_cleanup_deleted_users(
         raise SkipHandler("locked")
 
     try:
-        result = ctx.svcs.auths.cleanup_deleted_users()
+        result = ctx.svcs.auths.oauth_unlink(user_id=user_id)
 
         logger.info(
-            "cleanup_deleted_users processed_count=%s start_date=%s end_date=%s",
-            getattr(result, "processed_count", None),
-            getattr(result, "start_date", None),
-            getattr(result, "end_date", None),
+            "unlink_oauth_accounts user_id=%s processed_count=%s",
+            result["user_id"],
+            result["processed_count"],
         )
         return result
 
     except Exception as e:
         raise FatalHandler(
-            "cleanup_deleted_users_fatal",
-            meta={"error": str(e), "interval_sec": interval_sec, "slot": slot},
+            "unlink_oauth_accounts_fatal",
+            meta={"error": str(e), "user_id": user_id},
         ) from e
     finally:
         release_lock(ctx.redis_client, lock_key, token)

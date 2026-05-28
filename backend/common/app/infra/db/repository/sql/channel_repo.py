@@ -32,14 +32,17 @@ class SqlChannelRepo(ChannelRepo):
         rows = self._db.execute(stmt).scalars().all()
         return [row.to_dto() for row in rows]
 
-    def get_provider_by_code(self, code: str, is_active: bool = True) -> ChannelDTO.ChannelProvider | None:
+    def get_provider_by_code(self, code: str, is_active: bool | None = None) -> ChannelDTO.ChannelProvider | None:
         stmt = (
             select(ChannelProviderModel)
             .where(
                 ChannelProviderModel.code == code, 
-                ChannelProviderModel.is_active.is_(is_active)
             )
         )
+
+        if is_active is not None:
+            stmt = stmt.where(ChannelProviderModel.is_active.is_(is_active))
+
         model = self._db.execute(stmt).scalars().one_or_none()
 
         return model.to_dto() if model else None

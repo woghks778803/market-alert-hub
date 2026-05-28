@@ -737,10 +737,6 @@ class AuthService:
                 raise NotFoundError(
                     "Not found channel provider", target="channel_provider"
                 )
-            if not chp.is_active:
-                raise ValidationAppError(
-                    "Channel provider is not active", target="channel_provider"
-                )
 
             uow.channels.update_channel_active(
                 channel_provider_id=chp.id,
@@ -773,10 +769,6 @@ class AuthService:
             if not chp:
                 raise NotFoundError(
                     "Not found channel provider", target="channel_provider"
-                )
-            if not chp.is_active:
-                raise ValidationAppError(
-                    "Channel provider is not active", target="channel_provider"
                 )
 
             uow.channels.update_channel_active(
@@ -1060,21 +1052,17 @@ class AuthService:
             access_token=access_token,
         )
 
+    def oauth_unlink(
+        self, user_id: int
+    ) -> dict[str, Any]:
+        processed_count = 0
 
-    def deactivate_user(self, *, user_id: int) -> None:
-        now = utcnow()
         with self._uow_factory() as uow:
-            user = uow.users.get_by_user_id(user_id)
-            if not user:
-                raise NotFoundError("User not found", target="user")
-
-            # 외부 OAuth 연동 해제
             accounts = uow.users.list_oauth_accounts_by_user(
-                user_id=user.id, unlinked_at_is_null=True
+                user_id=user_id, unlinked_at_is_null=True
             )
 
             if accounts:
-
                 def _unlink_kakao(provider_user_id: str) -> None:
                     self._kakao_oauth.unlink(int(provider_user_id))
 
@@ -1089,28 +1077,37 @@ class AuthService:
                     )
                     if not provider:
                         continue
+
                     handler = unlink_map.get(provider.code)
-                    if handler:
-                        try:
-                            handler(account.provider_user_id)
-                        except Exception as e:
-                            raise InternalServerError(
-                                f"Failed to unlink {provider.code} account",
-                                target="oauth",
-                            ) from e
+                    if not handler:
+                        continue
+                
+                    handler(account.provider_user_id)
+                    processed_count += 1
 
                 uow.users.update_oauth_accounts_unlinked_at(
-                    user_id=user.id, unlinked_at=now
+                    user_id=user_id, unlinked_at=utcnow()
                 )
+
+            uow.commit()
+            
+            return {
+                "user_id": user_id,
+                "processed_count": processed_count,
+            }
+
+    def deactivate_user(self, *, user_id: int) -> None:
+        now = utcnow()
+
+        with self._uow_factory() as uow:
+            user = uow.users.get_by_user_id(user_id)
+            if not user:
+                raise NotFoundError("User not found", target="user")
 
             chp = uow.channels.get_provider_by_code(ChannelCode.FCM.value)
             if not chp:
                 raise NotFoundError(
                     "Not found channel provider", target="channel_provider"
-                )
-            if not chp.is_active:
-                raise ValidationAppError(
-                    "Channel provider is not active", target="channel_provider"
                 )
 
             uow.channels.update_channel_active(
@@ -1123,8 +1120,38 @@ class AuthService:
             )
             uow.sessions.update_session_revoke(user_id=user.id, revoked_at=now)
             uow.users.update_user_email_verified_at(id=user.id)
-            uow.commit()
 
+            # 외부 OAuth 연동 해제 outbox
+            fp_dict: dict[str, Any] = {
+                "event_type": OutboxEventType.UNLINK_OAUTH_ACCOUNTS.value,
+                "aggregate_type": "user",
+                "aggregate_id": user.id,
+            }
+
+            outbox_fingerprint = to_canonical_json(fp_dict)
+            outbox_fingerprint = (
+                self._hmac.fp_hash(outbox_fingerprint)
+                if outbox_fingerprint is not None
+                else None
+            )
+
+            uow.outboxs.add_outbox(
+                OutboxDTO.OutboxCreate(
+                    trace_id=get_trace_id(),
+                    event_type=OutboxEventType.UNLINK_OAUTH_ACCOUNTS,
+                    aggregate_type="user",
+                    aggregate_id=user.id,
+                    outbox_fingerprint=outbox_fingerprint,
+                    payload={
+                        "user_id": user.id,
+                    },
+                    status=OutboxStatus.PENDING,
+                    attempts=0,
+                ),
+                True,
+            )
+
+            uow.commit()
 
     def cleanup_deleted_users(self) -> dict[str, Any]:
         days_ago = get_days_ago(utcnow(), days=30)
@@ -1191,6 +1218,7 @@ class AuthService:
             uow.commit()
 
             return {
+                "user_ids": user_ids,
                 "start_date": start_date.strftime(ISO_FMT),
                 "end_date": end_date.strftime(ISO_FMT),
                 "processed_count": len(deleted_users),

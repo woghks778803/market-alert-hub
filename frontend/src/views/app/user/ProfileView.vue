@@ -184,7 +184,17 @@ onMounted(async () => {
 const handleDeactivate = async () => {
   await userAction.run(async () => {
     await deactivate()
+    await nextTick()
+
     router.replace({ name: 'Login' })
+    setTimeout(() => {
+      toast.success(
+        '회원 탈퇴 신청이 완료되었습니다. 계정은 30일 후 최종 삭제됩니다.',
+        {
+          toastId: 'account-deactivated',
+        },
+      )
+    }, 0)
   })
 }
 

@@ -87,10 +87,6 @@ class ChannelService:
                 raise NotFoundError(
                     "Not found channel provider", target="channel_provider"
                 )
-            if not chp.is_active:
-                raise ValidationAppError(
-                    "Channel provider is not active", target="channel_provider"
-                )
 
             ChannelRule.validate_user_config(
                 code=ChannelCode(chp.code), config=config, user_schema=chp.user_schema

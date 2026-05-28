@@ -304,6 +304,9 @@ class Settings(BaseSettings):
                 "run_key": OutboxEventType.DISPATCH_ALERT_EVENTS.value,
                 "batch_size": self.DISPATCH_ALERT_EVENTS_BATCH_SIZE,
             },
+            OutboxEventType.UNLINK_OAUTH_ACCOUNTS.value: {
+                "run_key": OutboxEventType.UNLINK_OAUTH_ACCOUNTS.value,
+            },
             OutboxEventType.CLEANUP_DELETED_USERS.value: {
                 "run_key": OutboxEventType.CLEANUP_DELETED_USERS.value,
             },

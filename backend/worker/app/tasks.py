@@ -14,6 +14,7 @@ from .handler.sync_ticker import handle_sync_tickers
 from .handler.sync_alert import handle_sync_alerts
 from .handler.dispatch_alert_event import handle_dispatch_alert_events
 from .handler.persist_snapshot import handle_persist_snapshots
+from .handler.unlink_oauth_account import handle_unlink_oauth_accounts
 from .handler.cleanup_deleted_user import handle_cleanup_deleted_users
 from .handler.fetch_news_feed import handle_fetch_news_feed
 from .handler.translate_news_item import handle_translate_news_items
@@ -31,6 +32,7 @@ HANDLERS: dict[OutboxEventType, Handler] = {
     OutboxEventType.SYNC_SYMBOLS: handle_sync_symbols,
     OutboxEventType.SYNC_TICKERS: handle_sync_tickers,
     OutboxEventType.SYNC_ALERTS: handle_sync_alerts,
+    OutboxEventType.UNLINK_OAUTH_ACCOUNTS: handle_unlink_oauth_accounts,
     OutboxEventType.DISPATCH_ALERT_EVENTS: handle_dispatch_alert_events,
     OutboxEventType.CLEANUP_DELETED_USERS: handle_cleanup_deleted_users,
     OutboxEventType.FETCH_NEWS_FEED: handle_fetch_news_feed,
