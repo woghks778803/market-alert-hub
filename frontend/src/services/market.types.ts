@@ -38,9 +38,10 @@ export type MarketDto = {
   exchangeCode: string
   exchangeName: string
 
+  name: string
+  nameKo: string
   baseSymbol: string
   quoteSymbol: string
-  name: string
 
   isWatchlisted: boolean
 
@@ -57,7 +58,7 @@ export type MarketDto = {
   normalizedVolume: number | null
 }
 
-export type SimpleMarketDto = {
+export type MarketSimpleDto = {
   label: string
   exchangeInstrumentId: number
   exchangeSymbol: string
@@ -66,10 +67,31 @@ export type SimpleMarketDto = {
   quoteSymbol: string
 }
 
-export type ExchangeDto = {
+export type ExchangeSimpleDto = {
   id: number
   code: string
   name: string
+}
+
+export type ExchangeDetailDto = {
+  id: number
+  code: string
+  name: string
+  nameKo: string | null
+  country: string | null
+  timezone: string
+  baseUrl: string | null
+  marketCount: number
+}
+
+export type InstrumentDetailDto = {
+  id: number
+  symbol: string
+  name: string
+  nameKo: string | null
+  assetType: string
+  exchangeCount: number
+  marketCount: number
 }
 
 export type CandleDto = {
@@ -89,7 +111,7 @@ export type MarketListQuery = {
   sort?: MarketSort
 }
 
-export type SimpleMarketListQuery = {
+export type MarketSimpleListQuery = {
   search: string
 }
 

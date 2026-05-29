@@ -10,6 +10,8 @@
       :market="market"
       :collapsed="collapsed"
       @toggle="toggleCollapsed"
+      @exchange="goExchangeDetail"
+      @instrument="goInstrumentDetail"
     />
 
     <MarketChartCard
@@ -105,19 +107,19 @@ function goRuleSetting() {
   router.push({ name: 'RuleSetting' })
 }
 
-// function goExchangeDetail(payload: { exchange: string }) {
-//   router.push({
-//     name: 'ExchangeDetail',
-//     params: payload,
-//   })
-// }
+function goExchangeDetail(payload: { exchange: string }) {
+  router.push({
+    name: 'ExchangeDetail',
+    params: payload,
+  })
+}
 
-// function goInstrumentDetail(payload: { symbol: string }) {
-//   router.push({
-//     name: 'InstrumentDetail',
-//     params: payload,
-//   })
-// }
+function goInstrumentDetail(payload: { symbol: string }) {
+  router.push({
+    name: 'InstrumentDetail',
+    params: payload,
+  })
+}
 
 watch(
   () => market.value,

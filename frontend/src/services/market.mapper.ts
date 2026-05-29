@@ -1,7 +1,9 @@
 import type {
-  SimpleMarketInfo,
+  MarketSimpleInfo,
   MarketInfo,
-  ExchangeInfo,
+  ExchangeSimpleInfo,
+  ExchangeDetailInfo,
+  InstrumentDetailInfo,
   CandleInfo,
   MarketListRequest,
   ExchangeListRequest,
@@ -14,9 +16,11 @@ import type {
 import type {
   CandleSnapshotDto,
   TickerSnapshotDto,
-  SimpleMarketDto,
+  MarketSimpleDto,
   MarketDto,
-  ExchangeDto,
+  ExchangeSimpleDto,
+  ExchangeDetailDto,
+  InstrumentDetailDto,
   CandleDto,
   MarketListQuery,
   ExchangeListQuery,
@@ -30,9 +34,10 @@ export function toMarketDto(data: MarketInfo): MarketDto {
     exchangeCode: data.exchange_code,
     exchangeName: data.exchange_name,
 
+    name: data.base_name,
+    nameKo: data.base_name_ko,
     baseSymbol: data.base_symbol,
     quoteSymbol: data.quote_symbol,
-    name: data.asset_name,
 
     isWatchlisted: data.is_watchlisted,
 
@@ -50,7 +55,7 @@ export function toMarketDto(data: MarketInfo): MarketDto {
   }
 }
 
-export function toSimpleMarketDto(data: SimpleMarketInfo): SimpleMarketDto {
+export function toMarketSimpleDto(data: MarketSimpleInfo): MarketSimpleDto {
   return {
     label: data.exchange_name + ' · ' + data.exchange_symbol,
     exchangeInstrumentId: data.exchange_instrument_id,
@@ -61,11 +66,36 @@ export function toSimpleMarketDto(data: SimpleMarketInfo): SimpleMarketDto {
   }
 }
 
-export function toExchangeDto(data: ExchangeInfo): ExchangeDto {
+export function toExchangeSimpleDto(data: ExchangeSimpleInfo): ExchangeSimpleDto {
   return {
     id: data.id,
     code: data.code,
     name: data.name,
+  }
+}
+
+export function toExchangeDetailDto(data: ExchangeDetailInfo): ExchangeDetailDto {
+  return {
+    id: data.id,
+    code: data.code,
+    name: data.name,
+    nameKo: data.name_ko,
+    country: data.country,
+    timezone: data.timezone,
+    baseUrl: data.base_url,
+    marketCount: data.market_count,
+  }
+}
+
+export function toInstrumentDetailDto(data: InstrumentDetailInfo): InstrumentDetailDto {
+  return {
+    id: data.id,
+    symbol: data.symbol,
+    name: data.name,
+    nameKo: data.name_ko,
+    assetType: data.asset_type,
+    exchangeCount: data.exchange_count,
+    marketCount: data.market_count,
   }
 }
 

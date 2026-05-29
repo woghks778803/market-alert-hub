@@ -26,15 +26,21 @@ class MarketRepo(Protocol):
     ) -> MarketDTO.Market | None: ...
     def get_exchange_by_filter(
         self,
-        id: int | None = None,
-        code: str | None = None,
+        exchange_id: int | None = None,
+        exchange_code: str | None = None,
         is_active: bool = True,
         deleted_is_null: bool = True,
     ) -> MarketDTO.Exchange | None: ...
-    def get_last_1m_by_exchange_instrument_ids(
+    def get_exchange_detail(
         self,
-        exchange_instrument_ids: list[int],
-    ) -> dict[int, MarketDTO.PriceSnapshot]: ...
+        *,
+        exchange_code: str,
+    ) -> MarketDTO.ExchangeDetail | None: ...
+    def get_instrument_detail(
+        self,
+        *,
+        instrument_symbol: str,
+    ) -> MarketDTO.InstrumentDetail | None: ...
     def get_exchange_instrument_by_filter(
         self,
         *,
@@ -42,6 +48,10 @@ class MarketRepo(Protocol):
         is_active: bool = True,
         deleted_is_null: bool = True,
     ) -> MarketDTO.ExchangeInstrument | None: ...
+    def get_last_1m_by_exchange_instrument_ids(
+        self,
+        exchange_instrument_ids: list[int],
+    ) -> dict[int, MarketDTO.PriceSnapshot]: ...
     def list_exchange_by_filter(
         self,
         *,
@@ -55,6 +65,7 @@ class MarketRepo(Protocol):
         *,
         user_id: int,
         exchange_codes: list[str] | None,
+        instrument_symbol: str | None = None,
         search: str | None,
         watchlist_only: bool,
         sort: MarketSort,

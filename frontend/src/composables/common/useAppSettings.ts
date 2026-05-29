@@ -54,7 +54,10 @@ export function useAppSettings() {
     const isDark = resolveIsDark(mode)
     document.documentElement.classList.toggle(ThemeMode.DARK, isDark)
 
-    vuetify.theme.global.name.value = isDark ? ThemeMode.DARK : ThemeMode.LIGHT
+    void vuetify.theme.change(
+      isDark ? ThemeMode.DARK : ThemeMode.LIGHT,
+    )
+
     postBridgeMessage(BridgeType.THEME, { mode })
   }
 

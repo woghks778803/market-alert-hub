@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from pydantic import AwareDatetime
 
-from app.core.constants import CandleBaseInterval
+from app.core.constants import CandleBaseInterval, AssetType
 from app.api.schema.base import ApiResponseModel, ApiRequestModel
 
 
@@ -18,10 +18,31 @@ class SimpleOk(ApiResponseModel):
     ok: bool = True
 
 
-class ExchangeRead(ApiResponseModel):
+class ExchangeSimpleRead(ApiResponseModel):
     id: int
     code: str
     name: str
+
+
+class ExchangeDetailRead(ApiResponseModel):
+    id: int
+    code: str
+    name: str
+    name_ko: str | None
+    country: str | None
+    timezone: str
+    base_url: str | None
+    market_count: int
+
+
+class InstrumentDetailRead(ApiResponseModel):
+    id: int
+    symbol: str
+    name: str
+    name_ko: str | None
+    asset_type: AssetType
+    exchange_count: int
+    market_count: int
 
 
 class MarketSimpleRead(ApiResponseModel):
@@ -37,9 +58,10 @@ class MarketRead(ApiResponseModel):
     exchange_symbol: str
     exchange_code: str
     exchange_name: str
+    base_name: str
+    base_name_ko: str
     base_symbol: str
     quote_symbol: str
-    asset_name: str
 
     is_watchlisted: bool
 

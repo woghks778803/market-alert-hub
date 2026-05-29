@@ -72,6 +72,41 @@ class MarketService:
 
             return result
 
+
+    def get_exchange_detail(
+        self, exchange_code: str
+    ) -> MarketDTO.ExchangeDetail:
+        with self._uow_factory() as uow:
+            result = uow.markets.get_exchange_detail(
+                exchange_code=exchange_code,
+            )
+
+        if result is None:
+            raise NotFoundError(
+                message="Not found Exchange",
+                target="exchange",
+            )
+
+        return result
+
+
+    def get_instrument_detail(
+        self, instrument_symbol: str
+    ) -> MarketDTO.InstrumentDetail:
+        with self._uow_factory() as uow:
+            result = uow.markets.get_instrument_detail(
+                instrument_symbol=instrument_symbol,
+            )
+
+        if result is None:
+            raise NotFoundError(
+                message="Not found Instrument",
+                target="instrument",
+            )
+
+        return result
+
+
     def list_exchange_by_filter(
         self, 
         *, 
@@ -80,6 +115,7 @@ class MarketService:
     ) -> Sequence[MarketDTO.Exchange]:
         with self._uow_factory() as uow:
             return uow.markets.list_exchange_by_filter(limit=limit, offset=offset)
+
 
     def list_by_filter(
         self,
@@ -106,6 +142,32 @@ class MarketService:
 
             return rows
 
+    
+    def list_by_instrument(
+        self,
+        *,
+        user_id: int,
+        instrument_symbol: str,
+        sort: MarketSort,
+        limit: int,
+        offset: int,
+    ) -> Sequence[MarketDTO.Market]:
+        with self._uow_factory() as uow:
+            rows = uow.markets.list_by_filter(
+                user_id=user_id,
+                exchange_codes=None,
+                instrument_symbol=instrument_symbol,
+                search=None,
+                watchlist_only=False,
+                sort=sort,
+                is_active=True,
+                limit=limit,
+                offset=offset,
+            )
+
+        return rows
+
+
     def list_exchange_instrument_by_filter(
         self,
         *,
@@ -125,6 +187,7 @@ class MarketService:
                 offset=offset,
             )
             return rows
+
 
     def list_candle_by_filter(
         self,
@@ -185,6 +248,7 @@ class MarketService:
                 rows = rows[-limit:] if not asc_order else rows[:limit]
             return rows
     
+
     def create_backfill_request(
         self,
         *,
@@ -389,6 +453,7 @@ class MarketService:
 
         return len(snapshots)
 
+
     def normalize_empty_snapshots_1m(
         self, no_tick_payloads: list[dict[str, Any]], bucket_start_epoch: int
     ) -> list[MarketDTO.PriceSnapshotCreate]:
@@ -424,6 +489,7 @@ class MarketService:
             )
 
         return result
+
 
     def normalize_snapshots_1m(
         self,
@@ -482,6 +548,7 @@ class MarketService:
         )
         return snapshot
 
+
     def sync_exchange_instruments(self, exchange_code: str):
         raw_symbols = self._exchange_symbol_providers[
             exchange_code
@@ -496,6 +563,7 @@ class MarketService:
             )
             uow.commit()
             return actives
+
 
     def normalize_symbols(self, rows: list[MarketDTO.SymbolInfo]) -> list:
         """
@@ -512,6 +580,7 @@ class MarketService:
             result.append(r)
         return result
 
+
     def ensure_exchange_instruments(
         self, *, uow: UnitOfWork, exchange_code: str, symbols: list[MarketDTO.SymbolInfo]
     ):
@@ -520,7 +589,7 @@ class MarketService:
         - symbols는 MarketDTO.SymbolInfo 리스트
         """
         repo = uow.markets
-        exchange = repo.get_exchange_by_filter(code=exchange_code)
+        exchange = repo.get_exchange_by_filter(exchange_code=exchange_code)
         if not exchange:
             raise NotFoundError("Not found exchange", target="exchange")
 
@@ -1038,6 +1107,7 @@ class MarketService:
 
         return result
 
+
     def ensure_snapshot(
         self, *, base: CandleBaseInterval, item: MarketDTO.MarketCandle
     ) -> dict:
@@ -1083,6 +1153,7 @@ class MarketService:
 
         return {"id": int(_id), "created": bool(created)}
 
+
     def ensure_snapshots_1m(
         self, snapshots: list[MarketDTO.PriceSnapshotCreate]
     ) -> int:
@@ -1104,6 +1175,7 @@ class MarketService:
             interval_type=CandleInterval.MIN_1.value,
         )
         return len(snapshots)
+
 
     def ensure_snapshots_1h(
         self,
@@ -1133,6 +1205,7 @@ class MarketService:
             interval_type=CandleInterval.HOUR_1.value,
         )
         return len(snapshots)
+
 
     def ensure_snapshots_1d(
         self,

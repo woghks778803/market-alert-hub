@@ -11,10 +11,31 @@ export type CandleInfo = {
   volume: number
 }
 
-export type ExchangeInfo = {
+export type ExchangeSimpleInfo = {
   id: number
   code: string
   name: string
+}
+
+export type ExchangeDetailInfo = {
+  id: number
+  code: string
+  name: string
+  name_ko: string | null
+  country: string | null
+  timezone: string
+  base_url: string | null
+  market_count: number
+}
+
+export type InstrumentDetailInfo = {
+  id: number
+  symbol: string
+  name: string
+  name_ko: string | null
+  asset_type: string
+  exchange_count: number
+  market_count: number
 }
 
 export type MarketInfo = {
@@ -23,9 +44,10 @@ export type MarketInfo = {
   exchange_code: string
   exchange_name: string
 
+  base_name: string
+  base_name_ko: string
   base_symbol: string
   quote_symbol: string
-  asset_name: string
 
   is_watchlisted: boolean
 
@@ -42,7 +64,7 @@ export type MarketInfo = {
   normalized_volume: string | null
 }
 
-export type SimpleMarketInfo = {
+export type MarketSimpleInfo = {
   exchange_instrument_id: number
   exchange_symbol: string
   base_symbol: string
@@ -76,12 +98,6 @@ export type CandlesListRequest = {
 }
 
 export const marketApi = {
-  // GET /markets/{exchange_code}/{market_code}
-  async getMarket(exchangeCode: string, exchangeSymbol: string) {
-    const { data } = await http.get<Envelope<MarketInfo>>(`/markets/${exchangeCode}/${exchangeSymbol}`)
-    return data
-  },
-
   // GET /markets
   async getMarkets(params?: MarketListRequest) {
     const { data } = await http.get<Envelope<MarketInfo[]>>('/markets', { params })
@@ -89,16 +105,46 @@ export const marketApi = {
   },
 
   // GET /markets/exchange-instruments
-  async getSimpleMarkets(params?: { search: string }) {
-    const { data } = await http.get<Envelope<SimpleMarketInfo[]>>('/markets/exchange-instruments', {
+  async getMarketSimples(params?: { search: string }) {
+    const { data } = await http.get<Envelope<MarketSimpleInfo[]>>('/markets/exchange-instruments', {
       params,
     })
     return data
   },
 
   // GET /markets/exchanges
-  async getExchanges(params?: ExchangeListRequest) {
-    const { data } = await http.get<Envelope<ExchangeInfo[]>>('/markets/exchanges', { params })
+  async getExchangeSimples() {
+    const { data } = await http.get<Envelope<ExchangeSimpleInfo[]>>('/markets/exchanges')
+    return data
+  },
+
+  // GET /markets/exchanges/{exchange_code}
+  async getExchangeDetail(exchangeCode: string) {
+    const { data } = await http.get<Envelope<ExchangeDetailInfo>>(`/markets/exchanges/${exchangeCode}`)
+    return data
+  },
+
+  // GET /markets/exchanges/{exchange_code}/markets
+  async getExchangeMarkets(exchangeCode: string) {
+    const { data } = await http.get<Envelope<MarketInfo[]>>(`/markets/exchanges/${exchangeCode}/markets`)
+    return data
+  },
+
+  // GET /markets/instruments/{instrument_symbol}
+  async getInstrumentDetail(instrumentSymbol: string) {
+    const { data } = await http.get<Envelope<InstrumentDetailInfo>>(`/markets/instruments/${instrumentSymbol}`)
+    return data
+  },
+
+  // GET /markets/instruments/{instrument_symbol}/markets
+  async getInstrumentMarkets(instrumentSymbol: string) {
+    const { data } = await http.get<Envelope<MarketInfo[]>>(`/markets/instruments/${instrumentSymbol}/markets`)
+    return data
+  },
+
+  // GET /markets/{exchange_code}/{market_code}
+  async getMarket(exchangeCode: string, exchangeSymbol: string) {
+    const { data } = await http.get<Envelope<MarketInfo>>(`/markets/${exchangeCode}/${exchangeSymbol}`)
     return data
   },
 

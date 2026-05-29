@@ -21,7 +21,7 @@
 
           <div
             class="sd-change"
-            :class="market.changeRate && market.changeRate < 0 ? 'sd-change-down' : 'sd-change-up'"
+            :class="market.changeRate && market.changeRate < 0 ? 'mk-change-down' : 'mk-change-up'"
           >
             {{ formatChange(market.changeRate) }}%
           </div>

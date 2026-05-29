@@ -20,14 +20,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
-import type { ExchangeDto } from '@/services/market.types'
+import type { ExchangeSimpleDto } from '@/services/market.types'
 import { useMarketStore } from '@/stores/market.store'
 
 const marketStore = useMarketStore()
 const { currentSystemTab } = storeToRefs(marketStore)
 
 const props = defineProps<{
-  exchangeTabs: ExchangeDto[]
+  exchangeTabs: ExchangeSimpleDto[]
 }>()
 
 const emit = defineEmits<{

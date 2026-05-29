@@ -3,7 +3,7 @@
     class="mk-card"
     :class="{ flash }"
     tabindex="0"
-    @click="goDetail"
+    @click="goMarketDetail"
   >
     <v-card-text>
       <!-- row 1 -->
@@ -69,7 +69,7 @@ const emit = defineEmits<{
   (e: 'select', payload: { exchange: string; exchangeSymbol: string }): void
 }>()
 
-function goDetail() {
+function goMarketDetail() {
   emit('select', {
     exchange: props.item.exchangeCode,
     exchangeSymbol: props.item.exchangeSymbol,

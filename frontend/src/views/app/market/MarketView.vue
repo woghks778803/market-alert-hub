@@ -8,7 +8,7 @@
     <MarketSearchBar @search="handleSearch" />
 
     <MarketFilterTabs
-      :exchange-tabs="exchanges"
+      :exchange-tabs="exchangeSimples"
       @change="handleFilter"
     />
 
@@ -33,7 +33,7 @@
         </v-list>
       </v-menu>
 
-      <div class="mk-count">{{ markets.length }}개 결과</div>
+      <div class="mk-count">{{ markets.length.toLocaleString() }}개 결과</div>
     </div>
 
     <MarketList :items="markets" />
@@ -60,14 +60,14 @@ import { useMarketStore } from '@/stores/market.store'
 import { MarketSortLabel, MarketSort } from '@/services/market.types'
 
 const marketStore = useMarketStore()
-const { markets, exchanges, openSort } = storeToRefs(marketStore)
+const { markets, exchangeSimples, openSort } = storeToRefs(marketStore)
 const marketAction = useAsyncAction()
 
 onMounted(() => {
   marketStore.resetMarket()
 
   marketAction.run(async () => {
-    await marketStore.fetchExchanges()
+    await marketStore.fetchExchangeSimples()
     await marketStore.fetchMarkets()
   })
 

@@ -10,154 +10,10 @@ import app.api.openapi as OpenApi
 router = APIRouter(prefix="/markets")
 
 
-# @router.get(
-#     "/exchange/{exchange_code}",
-#     response_model=Envelope[MarketSchema.ExchangeDetailRead],
-#     summary="거래소 상세 정보",
-#     responses=OpenApi.combine(
-#         OpenApi.OK(
-#             Envelope[MarketSchema.ExchangeDetailRead],
-#             description="거래소 조회 성공",
-#         ),
-#         OpenApi.ERR_409,
-#     ),
-# )
-# def get_exchange(
-#     exchange_code: str = Path(...),
-#     user: AuthSchema.CurrentUser = Security(get_current_user),
-#     svcs: ServiceFactory = Depends(get_services),
-#     meta: RequestMeta = Depends(get_request_meta),
-# ):
-#     row = svcs.markets.get_exchange(
-#         user_id=user.id,
-#         exchange_code=exchange_code,
-#     )
-
-#     return ok(row, request_id=meta.request_id)
-
-
-# @router.get(
-#     "/exchange/{exchange_code}/markets",
-#     response_model=Envelope[list[MarketSchema.MarketRead]],
-#     summary="거래소 마켓 목록",
-#     responses=OpenApi.combine(
-#         OpenApi.OK(
-#             Envelope[list[MarketSchema.MarketRead]],
-#             description="거래소 마켓 목록 조회 성공",
-#         ),
-#         OpenApi.ERR_409,
-#     ),
-# )
-# def list_market_by_exchange(
-#     exchange_code: str = Path(...),
-#     limit: int = Query(100, ge=1, le=200),
-#     offset: int = Query(0, ge=0),
-#     search: str | None = Query(None),
-#     sort: MarketSort = Query(MarketSort.VOLUME_DESC),
-#     user: AuthSchema.CurrentUser = Security(get_current_user),
-#     svcs: ServiceFactory = Depends(get_services),
-#     meta: RequestMeta = Depends(get_request_meta),
-# ):
-#     rows = svcs.markets.list_by_exchange(
-#         user_id=user.id,
-#         exchange_code=exchange_code,
-#         search=search,
-#         sort=sort,
-#         limit=limit,
-#         offset=offset,
-#     )
-
-#     return ok(rows, request_id=meta.request_id)
-
-
-# @router.get(
-#     "/instrument/{instrument_symbol}",
-#     response_model=Envelope[MarketSchema.InstrumentDetailRead],
-#     summary="종목 상세 정보",
-#     responses=OpenApi.combine(
-#         OpenApi.OK(
-#             Envelope[MarketSchema.InstrumentDetailRead],
-#             description="종목 조회 성공",
-#         ),
-#         OpenApi.ERR_409,
-#     ),
-# )
-# def get_instrument(
-#     instrument_symbol: str = Path(...),
-#     user: AuthSchema.CurrentUser = Security(get_current_user),
-#     svcs: ServiceFactory = Depends(get_services),
-#     meta: RequestMeta = Depends(get_request_meta),
-# ):
-#     row = svcs.markets.get_instrument_detail(
-#         user_id=user.id,
-#         instrument_symbol=instrument_symbol,
-#     )
-
-#     return ok(row, request_id=meta.request_id)
-
-
-# @router.get(
-#     "/instrument/{instrument_symbol}/markets",
-#     response_model=Envelope[list[MarketSchema.MarketRead]],
-#     summary="종목 마켓 목록",
-#     responses=OpenApi.combine(
-#         OpenApi.OK(
-#             Envelope[list[MarketSchema.MarketRead]],
-#             description="종목 마켓 목록 조회 성공",
-#         ),
-#         OpenApi.ERR_409,
-#     ),
-# )
-# def list_market_by_instrument(
-#     instrument_symbol: str = Path(...),
-#     limit: int = Query(100, ge=1, le=200),
-#     offset: int = Query(0, ge=0),
-#     sort: MarketSort = Query(MarketSort.VOLUME_DESC),
-#     user: AuthSchema.CurrentUser = Security(get_current_user),
-#     svcs: ServiceFactory = Depends(get_services),
-#     meta: RequestMeta = Depends(get_request_meta),
-# ):
-#     rows = svcs.markets.list_by_instrument(
-#         user_id=user.id,
-#         instrument_symbol=instrument_symbol,
-#         sort=sort,
-#         limit=limit,
-#         offset=offset,
-#     )
-
-#     return ok(rows, request_id=meta.request_id)
-
-@router.get(
-    "/{exchange_code:str}/{exchange_symbol:str}",
-    response_model=Envelope[MarketSchema.MarketRead],
-    summary="마켓 심볼 상세 정보",
-    responses=OpenApi.combine(
-        OpenApi.OK(
-            Envelope[MarketSchema.MarketRead],  
-            description="마켓 조회 성공",
-        ),
-        OpenApi.ERR_409,
-    ),
-)
-def get_market(
-    exchange_code: str = Path(...),
-    exchange_symbol: str = Path(...),
-    user: AuthSchema.CurrentUser = Security(get_current_user),
-    svcs: ServiceFactory = Depends(get_services),
-    meta: RequestMeta = Depends(get_request_meta),
-):
-    rows = svcs.markets.get_by_exchange_symbol(
-        user_id=user.id,
-        exchange_code=exchange_code,
-        exchange_symbol=exchange_symbol,
-    )
-    return ok(rows, request_id=meta.request_id)
-
-
 @router.get(
     "",
     response_model=Envelope[list[MarketSchema.MarketRead]],
-    summary="마켓(거래소 종목) 목록",
+    summary="전체 마켓 시세 목록",
     responses=OpenApi.combine(
         OpenApi.OK(
             Envelope[list[MarketSchema.MarketRead]],
@@ -188,33 +44,11 @@ def list_market(
     )
     return ok(rows, request_id=meta.request_id)
 
-@router.get(
-    "/exchanges",
-    response_model=Envelope[list[MarketSchema.ExchangeRead]],
-    summary="거래소 목록",
-    responses=OpenApi.combine(
-        OpenApi.OK(
-            Envelope[list[MarketSchema.ExchangeRead]],  
-            description="리스트 조회 성공",
-        ),
-        OpenApi.ERR_409,
-    ),
-)
-def list_exchange(
-    limit: int = Query(10, ge=1, le=20),
-    offset: int = Query(0, ge=0),
-    user: AuthSchema.CurrentUser = Security(get_current_user),
-    svcs: ServiceFactory = Depends(get_services),
-    meta: RequestMeta = Depends(get_request_meta),
-):
-    rows = svcs.markets.list_exchange_by_filter(limit=limit, offset=offset)
-    return ok(rows, request_id=meta.request_id)
-
 
 @router.get(
     "/exchange-instruments",
     response_model=Envelope[list[MarketSchema.MarketSimpleRead]],
-    summary="거래소 종목 목록",
+    summary="알림 대상 마켓 검색",
     responses=OpenApi.combine(
         OpenApi.OK(
             Envelope[list[MarketSchema.MarketSimpleRead]],
@@ -234,6 +68,145 @@ def list_exchange_instrument(
 ):
     rows = svcs.markets.list_exchange_instrument_by_filter(
         search=search, exchange_id=exchange_id, is_active=True, limit=limit, offset=offset
+    )
+
+    return ok(rows, request_id=meta.request_id)
+
+
+@router.get(
+    "/exchanges",
+    response_model=Envelope[list[MarketSchema.ExchangeSimpleRead]],
+    summary="거래소 목록",
+    responses=OpenApi.combine(
+        OpenApi.OK(
+            Envelope[list[MarketSchema.ExchangeSimpleRead]],  
+            description="리스트 조회 성공",
+        ),
+        OpenApi.ERR_409,
+    ),
+)
+def list_exchange(
+    limit: int = Query(10, ge=1, le=20),
+    offset: int = Query(0, ge=0),
+    user: AuthSchema.CurrentUser = Security(get_current_user),
+    svcs: ServiceFactory = Depends(get_services),
+    meta: RequestMeta = Depends(get_request_meta),
+):
+    rows = svcs.markets.list_exchange_by_filter(limit=limit, offset=offset)
+    return ok(rows, request_id=meta.request_id)
+
+
+@router.get(
+    "/exchanges/{exchange_code}",
+    response_model=Envelope[MarketSchema.ExchangeDetailRead],
+    summary="거래소 상세 정보",
+    responses=OpenApi.combine(
+        OpenApi.OK(
+            Envelope[MarketSchema.ExchangeDetailRead],
+            description="거래소 조회 성공",
+        ),
+        OpenApi.ERR_409,
+    ),
+)
+def get_exchange_detail(
+    exchange_code: str = Path(...),
+    user: AuthSchema.CurrentUser = Security(get_current_user),
+    svcs: ServiceFactory = Depends(get_services),
+    meta: RequestMeta = Depends(get_request_meta),
+):
+    row = svcs.markets.get_exchange_detail(
+        exchange_code=exchange_code,
+    )
+
+    return ok(row, request_id=meta.request_id)
+
+
+@router.get(
+    "/exchanges/{exchange_code}/markets",
+    response_model=Envelope[list[MarketSchema.MarketRead]],
+    summary="거래소별 마켓 시세 목록",
+    responses=OpenApi.combine(
+        OpenApi.OK(
+            Envelope[list[MarketSchema.MarketRead]],
+            description="거래소 마켓 목록 조회 성공",
+        ),
+        OpenApi.ERR_409,
+    ),
+)
+def list_market_by_exchange(
+    exchange_code: str = Path(...),
+    sort: MarketSort = Query(MarketSort.VOLUME_DESC),
+    limit: int = Query(100, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    user: AuthSchema.CurrentUser = Security(get_current_user),
+    svcs: ServiceFactory = Depends(get_services),
+    meta: RequestMeta = Depends(get_request_meta),
+):
+    rows = svcs.markets.list_by_filter(
+        user_id=user.id,
+        exchange_codes=[exchange_code],
+        search=None,
+        watchlist_only=False,
+        sort=sort,
+        limit=limit,
+        offset=offset,
+    )
+
+    return ok(rows, request_id=meta.request_id)
+
+
+@router.get(
+    "/instruments/{instrument_symbol}",
+    response_model=Envelope[MarketSchema.InstrumentDetailRead],
+    summary="종목 상세 정보",
+    responses=OpenApi.combine(
+        OpenApi.OK(
+            Envelope[MarketSchema.InstrumentDetailRead],
+            description="종목 조회 성공",
+        ),
+        OpenApi.ERR_409,
+    ),
+)
+def get_instrument_detail(
+    instrument_symbol: str = Path(...),
+    user: AuthSchema.CurrentUser = Security(get_current_user),
+    svcs: ServiceFactory = Depends(get_services),
+    meta: RequestMeta = Depends(get_request_meta),
+):
+    row = svcs.markets.get_instrument_detail(
+        instrument_symbol=instrument_symbol,
+    )
+
+    return ok(row, request_id=meta.request_id)
+
+
+@router.get(
+    "/instruments/{instrument_symbol}/markets",
+    response_model=Envelope[list[MarketSchema.MarketRead]],
+    summary="종목별 마켓 시세 목록",
+    responses=OpenApi.combine(
+        OpenApi.OK(
+            Envelope[list[MarketSchema.MarketRead]],
+            description="종목 마켓 목록 조회 성공",
+        ),
+        OpenApi.ERR_409,
+    ),
+)
+def list_market_by_instrument(
+    instrument_symbol: str = Path(...),
+    limit: int = Query(100, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    sort: MarketSort = Query(MarketSort.VOLUME_DESC),
+    user: AuthSchema.CurrentUser = Security(get_current_user),
+    svcs: ServiceFactory = Depends(get_services),
+    meta: RequestMeta = Depends(get_request_meta),
+):
+    rows = svcs.markets.list_by_instrument(
+        user_id=user.id,
+        instrument_symbol=instrument_symbol,
+        sort=sort,
+        limit=limit,
+        offset=offset,
     )
 
     return ok(rows, request_id=meta.request_id)
@@ -272,6 +245,33 @@ def list_candle(
         end=end,
         limit=limit,
         asc_order=(order == "asc"),
+    )
+    return ok(rows, request_id=meta.request_id)
+
+
+@router.get(
+    "/{exchange_code:str}/{exchange_symbol:str}",
+    response_model=Envelope[MarketSchema.MarketRead],
+    summary="마켓 심볼 상세 정보",
+    responses=OpenApi.combine(
+        OpenApi.OK(
+            Envelope[MarketSchema.MarketRead],  
+            description="마켓 조회 성공",
+        ),
+        OpenApi.ERR_409,
+    ),
+)
+def get_market(
+    exchange_code: str = Path(...),
+    exchange_symbol: str = Path(...),
+    user: AuthSchema.CurrentUser = Security(get_current_user),
+    svcs: ServiceFactory = Depends(get_services),
+    meta: RequestMeta = Depends(get_request_meta),
+):
+    rows = svcs.markets.get_by_exchange_symbol(
+        user_id=user.id,
+        exchange_code=exchange_code,
+        exchange_symbol=exchange_symbol,
     )
     return ok(rows, request_id=meta.request_id)
 

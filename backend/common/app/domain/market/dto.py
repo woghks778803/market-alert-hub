@@ -91,9 +91,10 @@ class Market:
     exchange_code: str
     exchange_name: str
 
+    base_name: str
+    base_name_ko: str
     base_symbol: str
     quote_symbol: str
-    asset_name: str
 
     open_price: Decimal | None
     close_price: Decimal | None
@@ -187,6 +188,18 @@ class Exchange:
 
 
 @dataclass(slots=True)
+class ExchangeDetail:
+    id: int
+    code: str
+    name: str
+    name_ko: str | None
+    country: str | None
+    timezone: str
+    base_url: str | None
+    market_count: int
+
+
+@dataclass(slots=True)
 class Instrument:
     id: int
     name: str
@@ -196,6 +209,17 @@ class Instrument:
     updated_at: datetime
     deleted_at: datetime | None
     is_active: bool
+
+
+@dataclass(frozen=True)
+class InstrumentDetail:
+    id: int
+    symbol: str
+    name: str
+    name_ko: str | None
+    asset_type: AssetType
+    exchange_count: int
+    market_count: int
 
 
 @dataclass(slots=True)

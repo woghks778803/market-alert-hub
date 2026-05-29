@@ -1,21 +1,23 @@
 import { marketApi } from '@/api/market.api'
 
 import {
-  toSimpleMarketDto,
+  toMarketSimpleDto,
   toMarketDto,
-  toExchangeDto,
+  toExchangeSimpleDto,
+  toExchangeDetailDto,
+  toInstrumentDetailDto,
   toCandleDto,
   toMarketListRequest,
   toCandlesListRequest,
-  toExchangeListRequest,
 } from '@/services/market.mapper'
 import type {
-  SimpleMarketDto,
+  MarketSimpleDto,
   MarketDto,
-  ExchangeDto,
+  ExchangeSimpleDto,
+  ExchangeDetailDto,
+  InstrumentDetailDto,
   CandleDto,
   MarketListQuery,
-  ExchangeListQuery,
   CandlesListQuery,
 } from '@/services/market.types'
 
@@ -39,24 +41,64 @@ export async function getMarkets(payload: MarketListQuery): Promise<MarketDto[]>
   return env.data.map(toMarketDto)
 }
 
-export async function getSimpleMarkets(payload: { search: string }): Promise<SimpleMarketDto[]> {
-  const env = await marketApi.getSimpleMarkets(payload)
+export async function getMarketSimples(payload: { search: string }): Promise<MarketSimpleDto[]> {
+  const env = await marketApi.getMarketSimples(payload)
 
   if (!env.success || !env.data) {
-    throw env.error ?? new Error('invalid_simple_market_list_response')
+    throw env.error ?? new Error('invalid_market_simple_list_response')
   }
 
-  return env.data.map(toSimpleMarketDto)
+  return env.data.map(toMarketSimpleDto)
 }
 
-export async function getExchanges(payload: ExchangeListQuery): Promise<ExchangeDto[]> {
-  const env = await marketApi.getExchanges(toExchangeListRequest(payload))
+export async function getExchangeSimples(): Promise<ExchangeSimpleDto[]> {
+  const env = await marketApi.getExchangeSimples()
 
   if (!env.success || !env.data) {
-    throw env.error ?? new Error('invalid_exchange_list_response')
+    throw env.error ?? new Error('invalid_exchange_simple_list_response')
   }
 
-  return env.data.map(toExchangeDto)
+  return env.data.map(toExchangeSimpleDto)
+}
+
+export async function getExchangeDetail(exchangeCode: string): Promise<ExchangeDetailDto> {
+  const env = await marketApi.getExchangeDetail(exchangeCode)
+
+  if (!env.success || !env.data) {
+    throw env.error ?? new Error('invalid_exchange_detail_response')
+  }
+
+  return toExchangeDetailDto(env.data)
+}
+
+export async function getExchangeMarkets(exchangeCode: string): Promise<MarketDto[]> {
+  const env = await marketApi.getExchangeMarkets(exchangeCode)
+
+  if (!env.success || !env.data) {
+    throw env.error ?? new Error('invalid_exchange_market_list_response')
+  }
+
+  return env.data.map(toMarketDto)
+}
+
+export async function getInstrumentDetail(instrumentSymbol: string): Promise<InstrumentDetailDto> {
+  const env = await marketApi.getInstrumentDetail(instrumentSymbol)
+
+  if (!env.success || !env.data) {
+    throw env.error ?? new Error('invalid_instrument_detail_response')
+  }
+
+  return toInstrumentDetailDto(env.data)
+}
+
+export async function getInstrumentMarkets(instrumentSymbol: string): Promise<MarketDto[]> {
+  const env = await marketApi.getInstrumentMarkets(instrumentSymbol)
+
+  if (!env.success || !env.data) {
+    throw env.error ?? new Error('invalid_instrument_market_list_response')
+  }
+
+  return env.data.map(toMarketDto)
 }
 
 export async function getCandles(payload: CandlesListQuery): Promise<CandleDto[]> {

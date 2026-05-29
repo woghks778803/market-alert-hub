@@ -60,21 +60,21 @@
                 />
 
                 <v-text-field
-                  v-model="simpleMarketListQuery.search"
+                  v-model="marketSimpleListQuery.search"
                   placeholder="거래소 및 심볼 검색"
-                  @update:model-value="onSimpleMarketSearchChanged"
+                  @update:model-value="onMarketSimpleSearchChanged"
                   @blur="onBlurValidate"
                 />
 
                 <div
-                  v-if="isSimpleMarketOpen && simpleMarkets.length > 0"
+                  v-if="isSimpleMarketOpen && marketSimples.length > 0"
                   class="rs-simple-market-dropdown"
                 >
                   <div
-                    v-for="item in simpleMarkets"
+                    v-for="item in marketSimples"
                     :key="item.exchangeInstrumentId"
                     class="rs-simple-market-item"
-                    @click="onSimpleMarketSelected(item)"
+                    @click="onMarketSimpleSelected(item)"
                   >
                     {{ item.label }}
                   </div>
@@ -327,7 +327,7 @@ import { useRuleForm } from '@/composables/alert/useRuleForm'
 import { getChangeAlertError, getCreateAlertError } from '@/composables/error/alertError.message'
 
 import { FormType, THROTTLE_TIMEFRAME_ITEMS } from '@/services/alert.types'
-import type { SimpleMarketDto } from '@/services/market.types'
+import type { MarketSimpleDto } from '@/services/market.types'
 import { useAlertStore } from '@/stores/alert.store'
 import { useMarketStore } from '@/stores/market.store'
 
@@ -341,7 +341,7 @@ const isEditMode = computed(() => alertId.value !== null)
 
 const marketStore = useMarketStore()
 const alertStore = useAlertStore()
-const { simpleMarkets, simpleMarketListQuery } = storeToRefs(marketStore)
+const { marketSimples, marketSimpleListQuery } = storeToRefs(marketStore)
 const { alertTypes } = storeToRefs(alertStore)
 const ruleAction = useAsyncAction()
 
@@ -373,7 +373,7 @@ const {
 
 onMounted(() => {
   ruleAction.run(async () => {
-    await marketStore.fetchSimpleMarkets()
+    await marketStore.fetchMarketSimples()
     await alertStore.fetchAlertTypes()
 
     if (isEditMode.value && alertId.value) {
@@ -449,18 +449,18 @@ async function onCreate() {
   }
 }
 
-function onSimpleMarketSelected(item: SimpleMarketDto) {
+function onMarketSimpleSelected(item: MarketSimpleDto) {
   form.exchangeInstrumentId = item.exchangeInstrumentId
   selectedSimpleMarketLabel.value = item.label
-  simpleMarketListQuery.value.search = ''
-  simpleMarkets.value = []
+  marketSimpleListQuery.value.search = ''
+  marketSimples.value = []
   isSimpleMarketOpen.value = false
   onInputChanged()
 }
 
-function onSimpleMarketSearchChanged(value: string) {
-  simpleMarketListQuery.value.search = value
+function onMarketSimpleSearchChanged(value: string) {
+  marketSimpleListQuery.value.search = value
   isSimpleMarketOpen.value = true
-  marketStore.setSimpleMarketSearch(value)
+  marketStore.setMarketSimpleSearch(value)
 }
 </script>

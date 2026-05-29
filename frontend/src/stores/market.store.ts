@@ -7,13 +7,14 @@ import { createWatchlist, removeWatchlist } from '@/services/watchlist.service'
 
 import { toCandleSnapshotDto, toTickerSnapshotDto } from '@/services/market.mapper'
 import type {
-  SimpleMarketDto,
+  MarketSimpleDto,
   MarketDto,
-  ExchangeDto,
+  ExchangeSimpleDto,
+  ExchangeDetailDto,
+  InstrumentDetailDto,
   CandleDto,
-  SimpleMarketListQuery,
+  MarketSimpleListQuery,
   MarketListQuery,
-  ExchangeListQuery,
   CandlesListQuery,
 } from '@/services/market.types'
 import {
@@ -33,10 +34,12 @@ export const useMarketStore = defineStore('market', () => {
   const currentCandle = ref<CandleDto | null>(null)
   const candles = ref<CandleDto[]>([])
 
+  const exchange = ref<ExchangeDetailDto | null>(null)
+  const exchangeSimples = ref<ExchangeSimpleDto[]>([])
+  const instrument = ref<InstrumentDetailDto | null>(null)
   const market = ref<MarketDto | null>(null)
   const markets = ref<MarketDto[]>([])
-  const simpleMarkets = ref<SimpleMarketDto[]>([])
-  const exchanges = ref<ExchangeDto[]>([])
+  const marketSimples = ref<MarketSimpleDto[]>([])
 
   const openSort = ref(false)
   const currentTimeframe = ref<ChartTimeframe>(ChartTimeframe.MIN_1)
@@ -44,7 +47,7 @@ export const useMarketStore = defineStore('market', () => {
 
   const candleHasMore = ref(true)
 
-  const simpleMarketListQuery = ref<SimpleMarketListQuery>({
+  const marketSimpleListQuery = ref<MarketSimpleListQuery>({
     search: '',
   })
 
@@ -55,14 +58,32 @@ export const useMarketStore = defineStore('market', () => {
     sort: MarketSort.VOLUME_DESC,
   })
 
-  const exchangeListQuery = ref<ExchangeListQuery>({})
-
   // Partial 모든 필드를 선택(optional)
   const candlesListQuery = ref<Partial<CandlesListQuery>>({})
 
   const currentSortLabel = computed(() => {
     return MarketSortLabel[marketListQuery.value.sort ?? MarketSort.VOLUME_DESC]
   })
+
+  async function fetchExchange(exchangeCode: string) {
+    exchange.value = await marketService.getExchangeDetail(exchangeCode)
+  }
+
+  async function fetchExchangeSimples() {
+    exchangeSimples.value = await marketService.getExchangeSimples()
+  }
+
+  async function fetchExchangeMarkets(exchangeCode: string) {
+    markets.value = await marketService.getExchangeMarkets(exchangeCode)
+  }
+
+  async function fetchInstrument(instrumentSymbol: string) {
+    instrument.value = await marketService.getInstrumentDetail(instrumentSymbol)
+  }
+
+  async function fetchInstrumentMarkets(instrumentSymbol: string) {
+    markets.value = await marketService.getInstrumentMarkets(instrumentSymbol)
+  }
 
   async function fetchMarket(exchangeCode: string, exchangeSymbol: string) {
     market.value = await marketService.getMarket(exchangeCode, exchangeSymbol)
@@ -72,13 +93,8 @@ export const useMarketStore = defineStore('market', () => {
     markets.value = await marketService.getMarkets(marketListQuery.value)
   }
 
-  async function fetchSimpleMarkets() {
-    simpleMarkets.value = await marketService.getSimpleMarkets(simpleMarketListQuery.value)
-    console.log('fetchSimpleMarkets', simpleMarkets)
-  }
-
-  async function fetchExchanges() {
-    exchanges.value = await marketService.getExchanges(exchangeListQuery.value)
+  async function fetchMarketSimples() {
+    marketSimples.value = await marketService.getMarketSimples(marketSimpleListQuery.value)
   }
 
   async function fetchCandles() {
@@ -149,13 +165,13 @@ export const useMarketStore = defineStore('market', () => {
     }, 500)
   }
 
-  function setSimpleMarketSearch(value: string) {
+  function setMarketSimpleSearch(value: string) {
     if (searchTimer)
       clearTimeout(searchTimer)
 
     searchTimer = setTimeout(() => {
-      simpleMarketListQuery.value.search = value
-      fetchSimpleMarkets()
+      marketSimpleListQuery.value.search = value
+      fetchMarketSimples()
     }, 500)
   }
 
@@ -402,17 +418,22 @@ export const useMarketStore = defineStore('market', () => {
     clearCandles()
     market.value = null
     markets.value = []
-    exchanges.value = []
+    marketSimples.value = []
+    exchange.value = null
+    exchangeSimples.value = []
+    instrument.value = null
     currentTimeframe.value = ChartTimeframe.MIN_1
     candlesListQuery.value = {}
   }
 
   return {
-    candles,
+    exchange,
+    exchangeSimples,
+    instrument,
     market,
     markets,
-    simpleMarkets,
-    exchanges,
+    marketSimples,
+    candles,
 
     currentCandle,
     currentSortLabel,
@@ -422,19 +443,24 @@ export const useMarketStore = defineStore('market', () => {
 
     marketListQuery,
     candlesListQuery,
-    simpleMarketListQuery,
+    marketSimpleListQuery,
+
+    fetchExchange,
+    fetchExchangeSimples,
+    fetchExchangeMarkets,
+    fetchInstrument,
+    fetchInstrumentMarkets,
 
     fetchMarket,
     fetchMarkets,
-    fetchSimpleMarkets,
-    fetchExchanges,
+    fetchMarketSimples,
     fetchCandles,
 
     resetMarket,
     toggleWatchlist,
     changeTimeFrame,
 
-    setSimpleMarketSearch,
+    setMarketSimpleSearch,
     setMarketSearch,
     setMarketFilter,
     setSort,
