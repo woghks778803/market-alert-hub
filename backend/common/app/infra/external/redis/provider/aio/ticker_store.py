@@ -14,6 +14,12 @@ class RedisTickerStore(MarketPort.AsyncTickerStore):
         self._prefix = prefix
 
     async def subscribe(self, channels: Sequence[str]):
+        if isinstance(channels, str):
+            raise TypeError("channels must be a sequence of channel names, not str")
+
+        if not channels:
+            raise ValueError("subscribe channels must not be empty")
+            
         pubsub = await self._redis.subscribe(*channels)
         return pubsub
 

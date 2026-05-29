@@ -39,13 +39,38 @@ async def run_alert_price_loop(
     alert_event = ctx.svcs.alert_event
     candle_store = ctx.svcs.candle_store
     cooldown = ctx.svcs.cooldown
+    markets = ctx.svcs.markets
 
-    pubsub = await candle_store.subscribe(CandleInterval.SEC_1.value)
+    interval_type = CandleInterval.SEC_1.value
+
+    subscribed_channels = await markets.get_candle_channels(
+        interval_type
+    )
+
+    pubsub = await candle_store.subscribe(list(subscribed_channels))
 
     last_close_by_symbol: dict[str, Decimal] = {}
+    last_refresh_at = asyncio.get_running_loop().time()
 
     try:
         while not stop_event.is_set():
+            now = asyncio.get_running_loop().time()
+
+            if now - last_refresh_at >= 5.0:
+                desired_channels = await markets.get_candle_channels(interval_type)
+
+                added_channels = desired_channels - subscribed_channels
+                removed_channels = subscribed_channels - desired_channels
+
+                if added_channels:
+                    await pubsub.subscribe(*added_channels)
+
+                if removed_channels:
+                    await pubsub.unsubscribe(*removed_channels)
+
+                subscribed_channels = desired_channels
+                last_refresh_at = now
+
             message = await pubsub.get_message(
                 ignore_subscribe_messages=True,
                 timeout=1.0,
@@ -54,7 +79,7 @@ async def run_alert_price_loop(
             if not message:
                 continue
 
-            if message.get("type") != "pmessage":
+            if message.get("type") != "message":
                 continue
 
             payload_raw = message.get("data")
@@ -143,6 +168,13 @@ async def evaluate_price_candle(
     # single은 평가할 수 있지만, 시작하자마자 기존 조건이 대량 발동될 수 있어서 일단 스킵
     if prev_close is None:
         return events
+    
+    logger.info(
+        "[PRICE_TICK] exchange=%s symbol=%s close=%s",
+        exchange_code,
+        exchange_symbol,
+        price_close,
+    )
 
     bucket_keys = build_price_eval_bucket_keys(
         exchange_code=str(exchange_code),
@@ -184,6 +216,15 @@ async def evaluate_price_candle(
             and alert.get("exchange_symbol") == exchange_symbol
         ):
             continue
+
+        logger.info(
+            "[PRICE_ALERT_EVAL] alert_id=%s direction=%s prev=%s current=%s threshold=%s",
+            alert.get("alert_id"),
+            alert.get("direction"),
+            prev_close,
+            price_close,
+            threshold,
+        )
 
         triggered = _evaluate_price_threshold(
             alert=alert,

@@ -13,25 +13,32 @@ async def run_candle_consumer(app, interval):
     svcs: AsyncServiceFactory = app.state.ws_svcs
     config: CoreDTO.WsConfigBag = app.state.ws_config
     
-    exchanges = await svcs.active_catalog.get_exchanges_snap()
+    subscribed_channels = await svcs.markets.get_candle_channels(
+        interval.value
+    )
 
-    channels: list[str] = []
+    pubsub = await svcs.candle_store.subscribe(list(subscribed_channels))
 
-    for exchange_code, exchange in exchanges.items():
-        symbols = await svcs.active_catalog.get_symbols_snap(exchange_code)
-
-        for exchange_symbol, symbol in symbols.items():
-            channels.append(
-                svcs.candle_store.channel_key(
-                    interval_type=interval.value,
-                    ex=exchange_code,
-                    symbol=exchange_symbol,
-                )
-            )
-
-    pubsub = await svcs.candle_store.subscribe(channels)
+    last_refresh_at = asyncio.get_running_loop().time()
 
     while True:
+        now = asyncio.get_running_loop().time()
+
+        if now - last_refresh_at >= 5.0:
+            desired_channels = await svcs.markets.get_candle_channels(interval.value)
+
+            added_channels = desired_channels - subscribed_channels
+            removed_channels = subscribed_channels - desired_channels
+
+            if added_channels:
+                await pubsub.subscribe(*added_channels)
+
+            if removed_channels:
+                await pubsub.unsubscribe(*removed_channels)
+
+            subscribed_channels = desired_channels
+            last_refresh_at = now
+
         msg = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
 
         if not msg:

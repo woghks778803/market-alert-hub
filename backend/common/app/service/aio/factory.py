@@ -6,6 +6,7 @@ from app.domain.shared.async_uow import AsyncUnitOfWork
 from app.domain import MarketPort, AlertPort, ThrottlePort, OutboxPort
 
 from .alert_service import AlertService
+from .market_service import MarketService
 from .outbox_service import OutboxService
 
 class AsyncServiceFactory:
@@ -75,6 +76,15 @@ class AsyncServiceFactory:
             alert_event=self.alert_event,
             alert_snapshot=self.alert_snapshot,
             alert_bucket=self.alert_bucket,
+        )
+
+    @cached_property
+    def markets(self) -> MarketService:
+        return MarketService(
+            uow_factory=self._uow,
+            active_catalog=self.active_catalog,
+            candle_store=self.candle_store,
+            ticker_store=self.ticker_store,
         )
 
     @cached_property
