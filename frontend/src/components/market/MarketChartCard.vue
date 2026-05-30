@@ -134,8 +134,13 @@ function applyAutoScale(): void {
   requestAnimationFrame(() => {
     if (!chart) return
 
-    isAutoScale.value =
+    const priceAutoScale =
       chart.priceScale('right', 0).options().autoScale
+
+    const volumeAutoScale =
+      chart.priceScale('right', 1).options().autoScale
+
+    isAutoScale.value = priceAutoScale && volumeAutoScale
   })
 }
 
@@ -163,10 +168,14 @@ function applyPriceScale() {
     autoScale: isAutoScale.value,
     mode: isLogScale.value ? 1 : 0,
   })
+
+  chart.priceScale('right', 1).applyOptions({
+    autoScale: isAutoScale.value,
+  })
 }
 
 function toggleAuto() {
-  if (!candleSeries) return
+  if (!candleSeries || !volumeSeries) return
 
   isAutoScale.value = !isAutoScale.value
   applyPriceScale()

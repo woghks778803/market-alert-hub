@@ -112,7 +112,7 @@
       <v-list lines="one">
         <v-list-item
           title="버전"
-          subtitle="1.0.0"
+          subtitle="1.0.1"
         />
       </v-list>
       <v-btn
