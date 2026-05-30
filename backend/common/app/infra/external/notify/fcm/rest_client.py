@@ -71,11 +71,14 @@ class FcmRestClient:
         fcm_messages = [
             messaging.Message(
                 token=item.token,
-                notification=messaging.Notification(
-                    title=item.title,
-                    body=item.body,
+                data={
+                    **(item.data or {}),
+                    "title": item.title,
+                    "body": item.body,
+                },
+                android=messaging.AndroidConfig(
+                    priority="high",
                 ),
-                data=item.data or {},
             )
             for item in messages
         ]

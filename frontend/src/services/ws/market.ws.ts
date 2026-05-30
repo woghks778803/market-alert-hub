@@ -36,12 +36,10 @@ export interface CandleSnapshotInfo {
 }
 
 class MarketWs {
-  // private markets: Set<string>
   private subscriptions: Set<string>
   private handlers: Record<string, WsHandler>
 
   constructor() {
-    // this.markets = new Set()
     this.subscriptions = new Set()
     this.handlers = {}
   }
@@ -56,22 +54,21 @@ class MarketWs {
     delete this.handlers[type]
   }
 
-  // subscribeList(markets: Set<string>) {
-  //     console.log("markets", markets)
-  //     markets.forEach(m => this.markets.add(m))
-  //     wsClient.send({
-  //         type: "SUBSCRIBE_LIST",
-  //         markets: Array.from(markets),
-  //     })
-  // }
+  subscribeList(keys: Set<string>) {
+    keys.forEach(m => this.subscriptions.add(m))
+    wsClient.send({
+      type: "SUBSCRIBE_LIST",
+      markets: Array.from(keys),
+    })
+  }
 
-  // unSubscribeList(markets: Set<string>) {
-  //     markets.forEach(m => this.markets.delete(m))
-  //     wsClient.send({
-  //         type: "UNSUBSCRIBE_LIST",
-  //         markets: Array.from(markets),
-  //     })
-  // }
+  unSubscribeList(keys: Set<string>) {
+    keys.forEach(m => this.subscriptions.delete(m))
+    wsClient.send({
+      type: "UNSUBSCRIBE_LIST",
+      markets: Array.from(keys),
+    })
+  }
 
   subscribe(key: string) {
     if (this.subscriptions.has(key)) return

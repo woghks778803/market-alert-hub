@@ -316,7 +316,6 @@ const initChart = async () => {
       
       chartTimer = setTimeout(async () => {
         if (from <= oldest + threshold) {
-          console.log("222")
           props.candleRun(async () => {
             candlesListQuery.value.cursor = new Date(oldest * 1000).toISOString()
             await marketStore.fetchCandles()
