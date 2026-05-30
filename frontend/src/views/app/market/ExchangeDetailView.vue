@@ -37,12 +37,12 @@
             </div>
           </div>
   
-          <v-btn
+          <!-- <v-btn
             icon="mdi-open-in-new"
             variant="text"
             color="medium-emphasis"
             aria-label="거래소 홈페이지 열기"
-          />
+          /> -->
         </div>
   
         <v-divider class="market-entity-divider" />

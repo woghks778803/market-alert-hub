@@ -52,7 +52,16 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { createChart, TickMarkType, type IChartApi, type ISeriesApi, type UTCTimestamp, type Time } from 'lightweight-charts'
+import {
+  createChart,
+  CandlestickSeries,
+  HistogramSeries,
+  TickMarkType,
+  type IChartApi,
+  type ISeriesApi,
+  type UTCTimestamp,
+  type Time,
+} from 'lightweight-charts'
 
 import { getDecimalPlaces } from '@/utils/number'
 import TimeframeTabs from '@/components/market/TimeframeTabs.vue'
@@ -72,8 +81,8 @@ const isLogScale = ref(false)
 const isResetTimeScale = ref(false)
 
 let chart: IChartApi | null = null
-let candleSeries: ISeriesApi<'Candlestick'>
-let volumeSeries: ISeriesApi<'Histogram'>
+let candleSeries: ISeriesApi<'Candlestick'> | null = null
+let volumeSeries: ISeriesApi<'Histogram'> | null = null
 let chartTimer: ReturnType<typeof setTimeout> | null = null
 let currentPricePrecision = 2
 
@@ -91,12 +100,6 @@ onBeforeUnmount(() => {
   cleanup()
 })
 
-function nextFrame(): Promise<void> {
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => resolve())
-  })
-}
-
 function toLocalDate(time: Time): Date {
   if (typeof time !== 'number') {
     throw new Error(`Unsupported chart time: ${String(time)}`)
@@ -106,8 +109,34 @@ function toLocalDate(time: Time): Date {
 }
 
 function cleanup() {
+  if (chartContainer.value) {
+    chartContainer.value.removeEventListener('pointerup', applyAutoScale)
+    chartContainer.value.removeEventListener('pointercancel', applyAutoScale)
+    chartContainer.value.removeEventListener('dblclick', applyAutoScale)
+
+    chartContainer.value = null
+  }
+
   chart?.remove()
+
   chart = null
+  candleSeries = null
+  volumeSeries = null
+}
+
+function nextFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => resolve())
+  })
+}
+
+function applyAutoScale(): void {
+  requestAnimationFrame(() => {
+    if (!chart) return
+
+    isAutoScale.value =
+      chart.priceScale('right', 0).options().autoScale
+  })
 }
 
 function applyPricePrecision(nextPrecision: number) {
@@ -128,18 +157,24 @@ function applyPricePrecision(nextPrecision: number) {
 }
 
 function applyPriceScale() {
-  chart?.priceScale('right').applyOptions({
+  if (!chart) return
+
+  chart.priceScale('right', 0).applyOptions({
     autoScale: isAutoScale.value,
     mode: isLogScale.value ? 1 : 0,
   })
 }
 
 function toggleAuto() {
+  if (!candleSeries) return
+
   isAutoScale.value = !isAutoScale.value
   applyPriceScale()
 }
 
 function toggleLog() {
+  if (!candleSeries) return
+
   isLogScale.value = !isLogScale.value
   applyPriceScale()
 }
@@ -184,13 +219,18 @@ const initChart = async () => {
     // throw new Error('TEST_CHART_INIT_ERROR')
     const isDark = document.documentElement.classList.contains(ThemeMode.DARK)
 
-    chart = createChart(chartContainer.value!, {
+    chart = createChart(chartContainer.value, {
       autoSize: true,
       kineticScroll: {
         touch: false,
         mouse: false,
       },
       layout: {
+        panes: {
+          enableResize: true,
+          separatorColor: isDark ? '#334155' : '#e5e7eb',
+          separatorHoverColor: isDark ? '#475569' : '#d1d5db',
+        },
         background: {
           color: isDark ? '#0f172a' : '#ffffff',
         },
@@ -252,39 +292,13 @@ const initChart = async () => {
       },
     })
 
-    candleSeries = chart.addCandlestickSeries({
-      upColor: '#26a69a',
-      downColor: '#ef5350',
-      borderUpColor: '#26a69a',
-      borderDownColor: '#ef5350',
-      wickUpColor: '#26a69a',
-      wickDownColor: '#ef5350',
-    })
-
-    volumeSeries = chart.addHistogramSeries({
-      priceFormat: { type: 'volume' },
-      priceScaleId: 'volume',
-    })
+    chartContainer.value.addEventListener('pointerup', applyAutoScale)
+    chartContainer.value.addEventListener('pointercancel', applyAutoScale)
+    chartContainer.value.addEventListener('dblclick', applyAutoScale)
 
     chart.timeScale().applyOptions({
       timeVisible: true,
       secondsVisible: false,
-    })
-
-    chart.priceScale('volume').applyOptions({
-      visible: true,
-      borderVisible: false,
-      scaleMargins: {
-        top: 0.8,
-        bottom: 0,
-      },
-    })
-
-    chart.priceScale('right').applyOptions({
-      scaleMargins: {
-        top: 0,
-        bottom: 0.2,
-      },
     })
 
     chart.timeScale().subscribeVisibleTimeRangeChange((range) => {
@@ -310,6 +324,34 @@ const initChart = async () => {
         }
       }, 300)
     })
+
+    candleSeries = chart.addSeries(
+      CandlestickSeries,
+      {
+        upColor: '#26a69a',
+        downColor: '#ef5350',
+        borderUpColor: '#26a69a',
+        borderDownColor: '#ef5350',
+        wickUpColor: '#26a69a',
+        wickDownColor: '#ef5350',
+      },
+      0,
+    )
+
+    volumeSeries = chart.addSeries(
+      HistogramSeries,
+      {
+        priceFormat: {
+          type: 'volume',
+        },
+      },
+      1,
+    )
+
+    const panes = chart.panes()
+
+    panes[0]?.setStretchFactor(4)
+    panes[1]?.setStretchFactor(1)
   } catch {
     cleanup()
 
@@ -343,7 +385,7 @@ watch(
 watch(
   () => candles.value.length,
   async (m) => {
-    if (!m || !candleSeries) return
+    if (!m || !candleSeries || !volumeSeries) return
     // console.log('candles length changed, updating chart data for:', m)
 
     if (!candles || candles.value.length === 0) {
@@ -393,7 +435,7 @@ watch(
 watch(
   () => currentCandle.value,
   (c) => {
-    if (!c || !candleSeries) return
+    if (!c || !candleSeries || !volumeSeries) return
     // console.log("currentCandle changed, updating chart data for:", c, candleSeries)
 
     const open = Number(c.open)

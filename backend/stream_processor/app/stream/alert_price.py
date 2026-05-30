@@ -169,12 +169,12 @@ async def evaluate_price_candle(
     if prev_close is None:
         return events
     
-    logger.info(
-        "[PRICE_TICK] exchange=%s symbol=%s close=%s",
-        exchange_code,
-        exchange_symbol,
-        price_close,
-    )
+    # logger.info(
+    #     "[PRICE_TICK] exchange=%s symbol=%s close=%s",
+    #     exchange_code,
+    #     exchange_symbol,
+    #     price_close,
+    # )
 
     bucket_keys = build_price_eval_bucket_keys(
         exchange_code=str(exchange_code),
@@ -190,7 +190,6 @@ async def evaluate_price_candle(
         bucket_keys=bucket_keys
     )
 
-    # logger.info("alert_ids", alert_ids)
     if not alert_ids:
         return events
 
@@ -199,7 +198,6 @@ async def evaluate_price_candle(
     if not snapshots:
         return events
         
-    # logger.info("snapshots", snapshots)
     for alert in snapshots:
         if not (
             alert.get("indicator") == IndicatorType.PRICE.value
@@ -217,14 +215,14 @@ async def evaluate_price_candle(
         ):
             continue
 
-        logger.info(
-            "[PRICE_ALERT_EVAL] alert_id=%s direction=%s prev=%s current=%s threshold=%s",
-            alert.get("alert_id"),
-            alert.get("direction"),
-            prev_close,
-            price_close,
-            threshold,
-        )
+        # logger.info(
+        #     "[PRICE_ALERT_EVAL] alert_id=%s direction=%s prev=%s current=%s threshold=%s",
+        #     alert.get("alert_id"),
+        #     alert.get("direction"),
+        #     prev_close,
+        #     price_close,
+        #     threshold,
+        # )
 
         triggered = _evaluate_price_threshold(
             alert=alert,
