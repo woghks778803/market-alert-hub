@@ -1,10 +1,9 @@
 import asyncio, json
 
 from app.core import dto as CoreDTO
-from app.core.constants import CANDLE
 from app.service.aio.factory import AsyncServiceFactory
 from app.ws.stores import MarketStore
-from app.ws.protocols import WsMessageType
+from app.ws.protocols import WsMessageType, WsChannelType
 
 
 async def run_candle_consumer(app, interval):
@@ -73,7 +72,7 @@ async def run_candle_consumer(app, interval):
         store.update_candle(
             public_channel,
             {
-                "type": f"{CANDLE}",
+                "type": WsChannelType.CANDLE.value,
                 "channel": public_channel,
                 "data": payload,
             },

@@ -1,5 +1,12 @@
-import { wsClient, type WsMessage } from './ws.client'
-export type WsHandler = (type: string, data: WsMessage) => void
+import {
+  wsClient,
+  type WsMessage
+} from '@/services/ws/ws.client'
+import {
+  WsChannelType,
+} from '@/services/market.types'
+
+export type WsHandler = (type: WsChannelType, data: WsMessage) => void
 
 export interface TickerSnapshotInfo {
   ts: number
@@ -35,56 +42,102 @@ export interface CandleSnapshotInfo {
   exchange_symbol: string
 }
 
+const WS_CHANNEL_TYPES = new Set<string>(
+  Object.values(WsChannelType),
+)
+
+const isWsChannelType = (
+  type: string,
+): type is WsChannelType => {
+  return WS_CHANNEL_TYPES.has(type)
+}
+
 class MarketWs {
-  private subscriptions: Set<string>
+  private listSubscriptions: Map<WsChannelType, Set<string>>
+  private singleSubscriptions: Map<WsChannelType, string>
   private handlers: Record<string, WsHandler>
 
   constructor() {
-    this.subscriptions = new Set()
+    this.listSubscriptions = new Map<WsChannelType, Set<string>>()
+    this.singleSubscriptions = new Map<WsChannelType, string>()
     this.handlers = {}
   }
 
-  addHandler(types: string[], handler: WsHandler) {
+  addHandler(types: WsChannelType[], handler: WsHandler) {
     for (const type of types) {
       this.handlers[type] = handler
     }
   }
 
-  removeHandler(type: string) {
+  removeHandler(type: WsChannelType) {
     delete this.handlers[type]
   }
 
-  subscribeList(keys: Set<string>) {
-    keys.forEach(m => this.subscriptions.add(m))
-    wsClient.send({
-      type: "SUBSCRIBE_LIST",
-      markets: Array.from(keys),
-    })
-  }
+  subscribeList(
+    channelType: WsChannelType,
+    channels: Iterable<string>,
+  ): void {
+    const next = new Set(channels)
+    const current = this.listSubscriptions.get(channelType)
 
-  unSubscribeList(keys: Set<string>) {
-    keys.forEach(m => this.subscriptions.delete(m))
-    wsClient.send({
-      type: "UNSUBSCRIBE_LIST",
-      markets: Array.from(keys),
-    })
-  }
+    const isSame =
+      current?.size === next.size &&
+      [...next].every(channel => current.has(channel))
 
-  subscribe(key: string) {
-    if (this.subscriptions.has(key)) return
-    this.subscriptions.add(key)
+    if (isSame) return
+
+    this.listSubscriptions.set(channelType, next)
+
     wsClient.send({
       type: 'SUBSCRIBE',
-      channel: key,
+      channel_type: channelType,
+      channels: [...next],
     })
   }
 
-  unSubscribe(key: string) {
-    if (!this.subscriptions.has(key)) return
-    this.subscriptions.delete(key)
+  unSubscribeList(
+    channelType: WsChannelType,
+  ) {
+    if (!this.listSubscriptions.has(channelType)) return
+
+    this.listSubscriptions.delete(channelType)
+
+    wsClient.send({
+      type: "UNSUBSCRIBE",
+      channel_type: channelType,
+    })
+  }
+
+  subscribe(
+    channelType: WsChannelType,
+    channel: string
+  ) {
+    const current = this.singleSubscriptions.get(channelType)
+
+    if (current == channel) return
+
+    this.singleSubscriptions.set(channelType, channel)
+
+    wsClient.send({
+      type: 'SUBSCRIBE',
+      channel_type: channelType,
+      channel,
+    })
+  }
+
+  unSubscribe(
+    channelType: WsChannelType,
+  ) {
+    const channel = this.singleSubscriptions.get(channelType)
+
+    if (!channel) return
+
+    this.singleSubscriptions.delete(channelType)
+
     wsClient.send({
       type: 'UNSUBSCRIBE',
-      channel: key,
+      channel_type: channelType,
+      channel
     })
   }
 
@@ -110,6 +163,8 @@ class MarketWs {
         // -----------------------------
         // market 데이터 처리
         // -----------------------------
+        if (!isWsChannelType(type)) return
+
         const payload = data?.data
         if (!payload) return
         const handler = this.handlers[type]
@@ -119,11 +174,22 @@ class MarketWs {
     }
   }
 
-  resubscribe = () => {
-    wsClient.send({
-      type: 'SUBSCRIBE_LIST',
-      channels: Array.from(this.subscriptions),
-    })
+  private resubscribe = () => {
+    for (const [channelType, channel] of this.singleSubscriptions) {
+      wsClient.send({
+        type: 'SUBSCRIBE',
+        channel_type: channelType,
+        channel,
+      })
+    }
+
+    for (const [channelType, channels] of this.listSubscriptions) {
+      wsClient.send({
+        type: 'SUBSCRIBE',
+        channel_type: channelType,
+        channels: Array.from(channels),
+      })
+    }
   }
 
   init() {

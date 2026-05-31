@@ -1,10 +1,9 @@
 import json, asyncio
 
 from app.core import dto as CoreDTO
-from app.core.constants import TICKER
 from app.service.aio.factory import AsyncServiceFactory
 from app.ws.stores import MarketStore
-from app.ws.protocols import WsMessageType
+from app.ws.protocols import WsMessageType, WsChannelType
 
 
 async def run_ticker_consumer(app, interval):
@@ -12,7 +11,7 @@ async def run_ticker_consumer(app, interval):
     svcs: AsyncServiceFactory = app.state.ws_svcs
     config: CoreDTO.WsConfigBag = app.state.ws_config
 
-    subscribed_channels = await svcs.markets.get_candle_channels(
+    subscribed_channels = await svcs.markets.get_ticker_channels(
         interval.value
     )
 
@@ -24,7 +23,7 @@ async def run_ticker_consumer(app, interval):
         now = asyncio.get_running_loop().time()
 
         if now - last_refresh_at >= 5.0:
-            desired_channels = await svcs.markets.get_candle_channels(interval.value)
+            desired_channels = await svcs.markets.get_ticker_channels(interval.value)
 
             added_channels = desired_channels - subscribed_channels
             removed_channels = subscribed_channels - desired_channels
@@ -71,7 +70,7 @@ async def run_ticker_consumer(app, interval):
         store.update_ticker(
             public_channel,
             {
-                "type": f"{TICKER}",
+                "type": WsChannelType.TICKER.value,
                 "channel": public_channel,
                 "data": payload,
             },

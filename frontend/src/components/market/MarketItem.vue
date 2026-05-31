@@ -59,8 +59,11 @@ import { getDecimalPlaces } from '@/utils/number'
 import type { MarketDto } from '@/services/market.types'
 import { useMarketStore } from '@/stores/market.store'
 
-const flash = ref(false)
 const marketStore = useMarketStore()
+
+const flash = ref(false)
+let flashTimer: ReturnType<typeof setTimeout> | null = null
+
 const props = defineProps<{
   item: MarketDto
 }>()
@@ -101,7 +104,11 @@ watch(
 function triggerFlash() {
   flash.value = true
 
-  setTimeout(() => {
+  if (flashTimer) {
+    clearTimeout(flashTimer)
+  }
+
+  flashTimer = setTimeout(() => {
     flash.value = false
   }, 500)
 }

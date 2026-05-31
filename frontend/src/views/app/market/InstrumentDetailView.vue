@@ -89,63 +89,14 @@
           </span>
         </div>
   
-        <div class="mk-list">
-
-          <v-card
-            v-for="market in markets"
-            :key="market.exchangeInstrumentId"
-            class="mk-card market-entity-market-card"
-            elevation="0"
-            @click="goMarketDetail(market)"
-          >
-            <div class="mk-row-top">
-              <div>
-                <div class="market-entity-symbol-row">
-                  <strong class="mk-symbol">
-                    {{ market.baseSymbol }}/{{ market.quoteSymbol }}
-                  </strong>
-  
-                  <v-chip
-                    size="x-small"
-                    variant="tonal"
-                  >
-                    {{ market.exchangeCode }}
-                  </v-chip>
-                </div>
-  
-                <div class="mk-name">
-                  {{ market.name }}
-                </div>
-              </div>
-  
-              <div class="mk-change-block">
-                <div class="mk-price">
-                  {{ formatPrice(market.closePrice, getDecimalPlaces(market.closePrice)) }}
-                  {{ market.quoteSymbol }}
-                </div>
-  
-                <div 
-                  :class="market.changeRate && market.changeRate < 0 ? 'mk-change-down' : 'mk-change-up'"
-                >
-                  {{ formatChange(market.changeRate) }}%
-                </div>
-              </div>
-            </div>
-  
-            <div class="mk-row-bottom">
-              <span class="mk-volume">
-                거래대금(원) {{ formatVolume(market.normalizedVolume) }}
-              </span>
-  
-              <v-icon
-                icon="mdi-chevron-right"
-                size="20"
-                color="medium-emphasis"
-              />
-            </div>
-          </v-card>
-  
-        </div>
+        <RelatedMarketList
+          :items="markets"
+          @select="goMarketDetail"
+        >
+          <template #chip="{ market }">
+            {{ market.exchangeCode }}
+          </template>
+        </RelatedMarketList>
       </section>
     </template>
   </v-container>
@@ -153,12 +104,11 @@
 
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
-import { onMounted } from 'vue'
+import { onMounted, onUnmounted, onDeactivated, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 
-import { formatPrice, formatChange, formatVolume } from '@/utils/format'
-import { getDecimalPlaces } from '@/utils/number'
 import AppLoading from '@/components/common/AppLoading.vue'
+import RelatedMarketList from '@/components/market/RelatedMarketList.vue'
 import { useAsyncAction } from '@/composables/common/useAsyncAction'
 import type { MarketDto } from '@/services/market.types'
 import { useMarketStore } from '@/stores/market.store'
@@ -178,8 +128,16 @@ onMounted(async () => {
     await marketStore.fetchInstrumentMarkets(instrumentSymbol)
   })
 
-  // marketStore.initWs()
+  marketStore.initWs()
 })
+
+onUnmounted(cleanup)
+onDeactivated(cleanup)
+
+function cleanup() {
+  marketStore.unsubscribeMarkets()
+  marketStore.cleanupWs()
+}
 
 function goMarketDetail(market: MarketDto) {
   router.push({
@@ -190,4 +148,12 @@ function goMarketDetail(market: MarketDto) {
     },
   })
 }
+
+watch(
+  () => markets.value,
+  async () => {
+    marketStore.subscribeMarkets()
+  },
+  { immediate: true }
+)
 </script>

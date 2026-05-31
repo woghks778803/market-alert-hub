@@ -87,8 +87,8 @@ onUnmounted(cleanup)
 onDeactivated(cleanup)
 
 function cleanup() {
-  marketStore.unsubscribeMarket(WsChannelType.TICKER, TickerInterval.HOUR_24)
-  marketStore.unsubscribeMarket(WsChannelType.CANDLE, CandleInterval.SEC_1)
+  marketStore.unsubscribeMarket(WsChannelType.TICKER)
+  marketStore.unsubscribeMarket(WsChannelType.CANDLE)
   // marketStore.unsubscribeMarket(WsChannelType.CANDLE, currentTimeframe.value)
   marketStore.cleanupWs()
   marketStore.resetMarket()

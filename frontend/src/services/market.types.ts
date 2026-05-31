@@ -164,7 +164,9 @@ export enum TickerInterval {
 
 export enum WsChannelType {
   CANDLE = 'candle',
+  CANDLE_LIST = 'candle_list',
   TICKER = 'ticker',
+  TICKER_LIST = 'ticker_list',
 }
 
 // UI 개념 객체는 Pascal

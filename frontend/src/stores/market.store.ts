@@ -31,6 +31,8 @@ import {
 
 export const useMarketStore = defineStore('market', () => {
   let searchTimer: ReturnType<typeof setTimeout> | null = null
+  let marketListRequestId = 0
+
   const currentCandle = ref<CandleDto | null>(null)
   const candles = ref<CandleDto[]>([])
 
@@ -90,7 +92,12 @@ export const useMarketStore = defineStore('market', () => {
   }
 
   async function fetchMarkets() {
-    markets.value = await marketService.getMarkets(marketListQuery.value)
+    const requestId = ++marketListRequestId
+
+    const rows = await marketService.getMarkets(marketListQuery.value)
+
+    if (requestId !== marketListRequestId) return
+    markets.value = rows
   }
 
   async function fetchMarketSimples() {
@@ -211,11 +218,10 @@ export const useMarketStore = defineStore('market', () => {
   // key 생성
   function buildMarketKey(
     channelType: WsChannelType,
-    interval: CandleInterval | TickerInterval | ChartTimeframe
-  ): string | null {
-    return market.value
-      ? `${channelType}:${interval}:${market.value.exchangeCode}:${market.value.exchangeSymbol}`
-      : null
+    interval: CandleInterval | TickerInterval | ChartTimeframe,
+    row: MarketDto
+  ): string {
+    return `${channelType}:${interval}:${row.exchangeCode}:${row.exchangeSymbol}`
   }
 
   // 구독
@@ -223,68 +229,92 @@ export const useMarketStore = defineStore('market', () => {
     channelType: WsChannelType,
     interval: CandleInterval | TickerInterval | ChartTimeframe
   ) {
-    const key = buildMarketKey(channelType, interval)
-    if (key) {
-      marketWs.subscribe(key)
-    }
+    const currentMarket = market.value
+    if (!currentMarket) return
+
+    const key = buildMarketKey(channelType, interval, currentMarket)
+    marketWs.subscribe(channelType, key)
   }
 
   function unsubscribeMarket(
     channelType: WsChannelType,
-    interval: CandleInterval | TickerInterval | ChartTimeframe
   ) {
-    const key = buildMarketKey(channelType, interval)
-    if (key) {
-      marketWs.unSubscribe(key)
-    }
+    marketWs.unSubscribe(channelType)
   }
 
   function subscribeMarkets() {
-    marketWs.subscribe('candle_list')
-    marketWs.subscribe('ticker_list')
+    marketWs.subscribeList(
+      WsChannelType.CANDLE_LIST,
+      markets.value.map(
+        market =>
+          buildMarketKey(WsChannelType.CANDLE, CandleInterval.SEC_1, market)
+      ),
+    )
+
+    marketWs.subscribeList(
+      WsChannelType.TICKER_LIST,
+      markets.value.map(
+        market =>
+          buildMarketKey(WsChannelType.TICKER, TickerInterval.HOUR_24, market)
+      ),
+    )
   }
 
   // 구독 해제
   function unsubscribeMarkets() {
-    marketWs.unSubscribe('candle_list')
-    marketWs.unSubscribe('ticker_list')
+    marketWs.unSubscribeList(WsChannelType.CANDLE_LIST)
+    marketWs.unSubscribeList(WsChannelType.TICKER_LIST)
   }
 
-  function initWs() {
-    marketWs.addHandler(['ticker', 'ticker_list'], tickerHandler)
-    marketWs.addHandler(['candle', 'candle_list'], candleHandler)
+  function initWs(): void {
+    marketWs.addHandler(
+      [
+        WsChannelType.TICKER,
+        WsChannelType.TICKER_LIST,
+        WsChannelType.CANDLE,
+        WsChannelType.CANDLE_LIST,
+      ],
+      marketHandler,
+    )
   }
 
   function cleanupWs() {
-    marketWs.removeHandler('ticker_list')
-    marketWs.removeHandler('ticker')
-    marketWs.removeHandler('candle_list')
-    marketWs.removeHandler('candle')
+    marketWs.removeHandler(WsChannelType.TICKER_LIST)
+    marketWs.removeHandler(WsChannelType.TICKER)
+    marketWs.removeHandler(WsChannelType.CANDLE_LIST)
+    marketWs.removeHandler(WsChannelType.CANDLE)
   }
 
-  const tickerHandler = (type: string, data: WsMessage | WsMessage[]) => {
-    if (type === 'ticker') {
-      applyTicker(data as WsMessage)
-    }
+  const marketHandler = (
+    type: WsChannelType,
+    data: WsMessage | WsMessage[],
+  ): void => {
+    switch (type) {
+      case WsChannelType.TICKER:
+        if (Array.isArray(data)) return
+        applyTicker(data)
+        return
 
-    if (type === 'ticker_list') {
-      applyTickers(data as WsMessage[])
-    }
-  }
+      case WsChannelType.TICKER_LIST:
+        if (!Array.isArray(data)) return
+        applyTickers(data)
+        return
 
-  const candleHandler = (type: string, data: WsMessage | WsMessage[]) => {
-    if (type === 'candle') {
-      applyCandle(data as WsMessage)
-    }
+      case WsChannelType.CANDLE:
+        if (Array.isArray(data)) return
+        applyCandle(data)
+        return
 
-    if (type === 'candle_list') {
-      applyCandles(data as WsMessage[])
+      case WsChannelType.CANDLE_LIST:
+        if (!Array.isArray(data)) return
+        applyCandles(data)
+        return
     }
   }
 
   function applyTicker(payload: WsMessage) {
     // console.log("applyTicker", payload)
-    if (payload.type !== 'ticker') return
+    if (payload.type !== WsChannelType.TICKER) return
     const d = toTickerSnapshotDto(payload.data as TickerSnapshotInfo)
     if (!market.value) return
 
@@ -299,7 +329,7 @@ export const useMarketStore = defineStore('market', () => {
   function applyTickers(payload: WsMessage[]) {
     // console.log("applyTickers", payload)
     for (const item of payload) {
-      if (item.type !== 'ticker') continue
+      if (item.type !== WsChannelType.TICKER) continue
       const d = toTickerSnapshotDto(item.data as TickerSnapshotInfo)
 
       const target = markets.value.find(
@@ -320,7 +350,7 @@ export const useMarketStore = defineStore('market', () => {
 
   function applyCandle(payload: WsMessage) {
     // console.log("applyCandle", payload)
-    if (payload.type !== 'candle') return
+    if (payload.type !== WsChannelType.CANDLE) return
 
     const d = toCandleSnapshotDto(payload.data as CandleSnapshotInfo)
     if (!market.value) return
@@ -376,7 +406,7 @@ export const useMarketStore = defineStore('market', () => {
   function applyCandles(payload: WsMessage[]) {
     // console.log("applyCandles", payload)
     for (const item of payload) {
-      if (item.type !== 'candle') continue
+      if (item.type !== WsChannelType.CANDLE) continue
 
       const d = toCandleSnapshotDto(item.data as CandleSnapshotInfo)
 

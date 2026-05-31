@@ -24,7 +24,11 @@ class MarketStore:
     def update_ticker(self, key, value):
         self._ticker_data[key] = value
 
-    def ticker_list_snapshot(self):
+    def ticker_list_snapshot(self, interval):
+        return [
+            v for k, v in self._ticker_data.items()
+            if f":{interval}:" in k
+        ]
         return list(self._ticker_data.values())
 
     def ticker_snapshot(self, key):

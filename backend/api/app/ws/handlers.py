@@ -2,7 +2,7 @@ from fastapi import WebSocket
 
 from app.service.aio.factory import AsyncServiceFactory
 from app.ws.hub import Hub
-from app.ws.protocols import WsMessageType
+from app.ws.protocols import WsMessageType, WsChannelType
 
 
 async def handle_message(
@@ -54,22 +54,74 @@ async def handle_message(
     # SUBSCRIBE (single)
     # -------------------------
     if msg_type == WsMessageType.SUBSCRIBE.value:
-        channel = data.get("channel")
-        if not channel:
+        channel_type = data.get("channel_type")
+
+        if not channel_type:
             return
 
-        await hub.subscribe(conn_id, channel)
+        if channel_type in {
+            WsChannelType.CANDLE_LIST.value,
+            WsChannelType.TICKER_LIST.value,
+        }:
+            channels = {
+                channel
+                for channel in data.get("channels", [])
+                if isinstance(channel, str) and channel
+            }
+
+            await hub.subscribe_list(
+                conn_id=conn_id,
+                channel_type=channel_type,
+                channels=channels,
+            )
+            return
+
+        if channel_type in {
+            WsChannelType.CANDLE.value,
+            WsChannelType.TICKER.value,
+        }:
+            channel = data.get("channel")
+
+            if not isinstance(channel, str) or not channel:
+                return
+
+            await hub.subscribe(
+                conn_id=conn_id,
+                channel_type=channel_type,
+                channel=channel,
+            )
+            return
+
         return
 
     # -------------------------
     # UNSUBSCRIBE (single)
     # -------------------------
     if msg_type == WsMessageType.UNSUBSCRIBE.value:
-        channel = data.get("channel")
-        if not channel:
+        channel_type = data.get("channel_type")
+        if not channel_type:
             return
 
-        await hub.unsubscribe(conn_id, channel)
+        if channel_type in {
+            WsChannelType.CANDLE_LIST.value,
+            WsChannelType.TICKER_LIST.value,
+        }:
+            await hub.unsubscribe_list(
+                conn_id=conn_id,
+                channel_type=channel_type,
+            )
+            return
+
+        if channel_type in {
+            WsChannelType.CANDLE.value,
+            WsChannelType.TICKER.value,
+        }:
+            await hub.unsubscribe(
+                conn_id=conn_id,
+                channel_type=channel_type,
+            )
+            return
+
         return
 
     # -------------------------

@@ -14,9 +14,14 @@ class WsMessageType(str, enum.Enum):
     # server → client
     INIT = "init"
     PONG = "pong"
-    TICKER = "ticker"
-    CANDLE = "candle"
     SNAPSHOT = "snapshot"
 
     # error
     ERROR = "error"
+
+
+class WsChannelType(str, enum.Enum):
+    TICKER_LIST = "ticker_list"
+    CANDLE_LIST = "candle_list"
+    TICKER = "ticker"
+    CANDLE = "candle"

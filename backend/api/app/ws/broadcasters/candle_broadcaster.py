@@ -3,7 +3,7 @@ import asyncio
 from app.core.constants import CandleInterval
 from app.ws.handlers import Hub
 from app.ws.stores import MarketStore
-
+from app.ws.protocols import WsChannelType
 
 async def run_candle_list_broadcaster(app):
     hub: Hub = app.state.ws_hub
@@ -18,9 +18,8 @@ async def run_candle_list_broadcaster(app):
             continue
 
         await hub.broadcast(
-            "candle_list",
             {
-                "type": "candle_list",
+                "type": WsChannelType.CANDLE_LIST.value,
                 "data": snapshot,
             },
         )
@@ -33,7 +32,7 @@ async def run_candle_broadcaster(app):
     config: CoreDTO.WsConfigBag = app.state.ws_config
 
     while True:
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0)
 
         key = await queue.get()
         snapshot = store.candle_snapshot(key)
@@ -41,4 +40,9 @@ async def run_candle_broadcaster(app):
         if not snapshot:
             continue
 
-        await hub.broadcast(key, {"type": "candle", "data": snapshot})
+        await hub.broadcast(
+            {
+                "type": WsChannelType.CANDLE.value, 
+                "data": snapshot
+            }
+        )

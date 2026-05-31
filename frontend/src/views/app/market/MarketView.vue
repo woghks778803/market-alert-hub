@@ -46,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, onDeactivated } from 'vue'
+import { onMounted, onUnmounted, onDeactivated, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 
 import AppLoading from '@/components/common/AppLoading.vue'
@@ -56,8 +56,8 @@ import MarketFilterTabs from '@/components/market/MarketFilterTabs.vue'
 import MarketList from '@/components/market/MarketList.vue'
 
 import { useAsyncAction } from '@/composables/common/useAsyncAction'
-import { useMarketStore } from '@/stores/market.store'
 import { MarketSortLabel, MarketSort } from '@/services/market.types'
+import { useMarketStore } from '@/stores/market.store'
 
 const marketStore = useMarketStore()
 const { markets, exchangeSimples, openSort } = storeToRefs(marketStore)
@@ -71,7 +71,6 @@ onMounted(() => {
     await marketStore.fetchMarkets()
   })
 
-  marketStore.subscribeMarkets()
   marketStore.initWs()
 })
 
@@ -95,4 +94,12 @@ const handleSearch = (keyword: string) => {
 const handleFilter = (filter: string[]) => {
   marketStore.setMarketFilter(filter)
 }
+
+watch(
+  () => markets.value,
+  async () => {
+    marketStore.subscribeMarkets()
+  },
+  { immediate: true }
+)
 </script>
